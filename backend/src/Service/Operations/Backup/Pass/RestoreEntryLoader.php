@@ -179,7 +179,7 @@ final class RestoreEntryLoader
         }
 
         try {
-            $linkIdsByUrl = $this->linkWriter->idsFor(self::collectCards($fresh));
+            $linkIdsByUrl = $this->linkWriter->ensureLinkIds(self::collectCards($fresh));
             $this->inserter->insert($target->feedId, $fresh, $linkIdsByUrl);
             $createdIds = $this->recordCreatedIds($target, $fresh);
             $this->inserter->insertLinkCards($createdIds, $fresh, $linkIdsByUrl);

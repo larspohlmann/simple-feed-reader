@@ -60,7 +60,7 @@ final readonly class ShareLinkCards
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
-            $cardsByRowId[$row->requireId()] = $this->targets->cardsFor(
+            $cardsByRowId[$row->requireId()] = $this->targets->findEntryCards(
                 $row->getEntry(),
                 $storedCards[$row->getEntry()->requireId()] ?? [],
                 $plan,
@@ -133,7 +133,7 @@ final readonly class ShareLinkCards
             $plans[$row->requireId()] = $plan;
             $reusableUrls[$row->requireId()] = ReusableShareUrls::filterUrls($entry, $plan);
         }
-        $known = $this->linkWriter->knownFor(array_merge(...array_values($reusableUrls)));
+        $known = $this->linkWriter->claimKnownLinks(array_merge(...array_values($reusableUrls)));
         foreach ($plans as $rowId => $plan) {
             $plans[$rowId] = $plan->withKnown(array_intersect_key($known, array_flip($reusableUrls[$rowId])));
         }

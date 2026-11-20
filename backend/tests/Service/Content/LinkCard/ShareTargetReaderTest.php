@@ -31,7 +31,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
 
-        $cards = $this->reader($source)->cardsFor(
+        $cards = $this->reader($source)->findEntryCards(
             self::entry(self::bodyQuoting(self::QUOTED)),
             [],
             new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
@@ -45,7 +45,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
 
-        $cards = $this->reader($source)->cardsFor(
+        $cards = $this->reader($source)->findEntryCards(
             self::entry(self::bodyQuoting(self::QUOTED . '?utm_source=mastodon')),
             [],
             new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
@@ -57,7 +57,7 @@ final class ShareTargetReaderTest extends TestCase
 
     public function testAPostedFormIsReadBesideItsTrackingFreeUrl(): void
     {
-        $cards = $this->reader(new StubQuotedPostSource())->cardsFor(
+        $cards = $this->reader(new StubQuotedPostSource())->findEntryCards(
             self::entry('<p><a href="' . self::PAGE . '">a</a></p>'),
             [],
             new ShareFetchPlanModel([self::PAGE], [self::PAGE => self::PAGE . '?cmp=rss']),
@@ -71,7 +71,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource();
 
-        $cards = $this->reader($source)->cardsFor(
+        $cards = $this->reader($source)->findEntryCards(
             self::entry(self::bodyQuoting(self::QUOTED)),
             [],
             new ShareFetchPlanModel([self::QUOTED, self::PAGE]),
@@ -91,7 +91,11 @@ final class ShareTargetReaderTest extends TestCase
             $logger,
         );
 
-        $reader->cardsFor(self::entry(self::bodyQuoting(self::QUOTED)), [], new ShareFetchPlanModel([self::QUOTED]));
+        $reader->findEntryCards(
+            self::entry(self::bodyQuoting(self::QUOTED)),
+            [],
+            new ShareFetchPlanModel([self::QUOTED]),
+        );
 
         self::assertCount(1, $logger->records);
         self::assertSame(self::QUOTED, $logger->records[0]['context']['url']);
@@ -101,7 +105,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
 
-        $cards = $this->reader($source)->cardsFor(
+        $cards = $this->reader($source)->findEntryCards(
             self::entry(self::bodyQuoting(self::QUOTED)),
             [],
             new ShareFetchPlanModel([self::PAGE]),
@@ -115,7 +119,7 @@ final class ShareTargetReaderTest extends TestCase
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);
 
-        $cards = $this->reader($source)->cardsFor(
+        $cards = $this->reader($source)->findEntryCards(
             self::entry('<p>Wow <a href="' . self::QUOTED . '">there</a></p>'),
             [],
             new ShareFetchPlanModel([self::QUOTED]),

@@ -27,7 +27,7 @@ final readonly class PostedUrlCheck
     }
 
     /** @throws PageFetchException when neither URL can be read */
-    public function cardAt(string $url, string $postedUrl): PageCardModel
+    public function resolveCard(string $url, string $postedUrl): PageCardModel
     {
         try {
             $cleaned = $this->pageCards->read($url);

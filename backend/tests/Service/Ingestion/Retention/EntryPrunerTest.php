@@ -562,7 +562,7 @@ final class EntryPrunerTest extends DbTestCase
         $link = PostEnrichers::sharedLinkWriter(
             $this->entityManager,
             new MockClock($this->daysAgo($daysAgo)),
-        )->linkFor(new LinkCardContent($url, 'Card', null, null, 'example'), null);
+        )->ensureLink(new LinkCardContent($url, 'Card', null, null, 'example'), null);
 
         return $link;
     }

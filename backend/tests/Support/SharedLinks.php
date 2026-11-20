@@ -16,7 +16,7 @@ final class SharedLinks
 
     public static function of(EntityManagerInterface $entityManager, LinkCardContent $preview): SharedLink
     {
-        return PostEnrichers::sharedLinkWriter($entityManager)->linkFor($preview, null);
+        return PostEnrichers::sharedLinkWriter($entityManager)->ensureLink($preview, null);
     }
 
     /** @return int the id of the stored link */

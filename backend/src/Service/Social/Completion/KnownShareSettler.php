@@ -53,7 +53,7 @@ final readonly class KnownShareSettler
     /** A quoted status the instance already answered: its RE: line leaves the body, and no other link waits for a card. */
     public function settleQuoted(Entry $entry, QuotedPostContent $quote): void
     {
-        $address = QuoteLine::targetIn((string) $entry->getText()->getContentHtml()) ?? $quote->url;
+        $address = QuoteLine::parseTarget((string) $entry->getText()->getContentHtml()) ?? $quote->url;
         $this->cardWriter->write($entry, EntryCardsModel::quoting(new QuotedTargetModel($address, $quote)));
     }
 

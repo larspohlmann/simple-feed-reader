@@ -167,7 +167,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [
             $this->entryLine('quote-guid', shareKind: 'quote', quote: $quote),
             $this->entryLine('plain-guid'),
-        ], PostEnrichers::sharedLinkWriter($this->entityManager)->idsFor([$card]));
+        ], PostEnrichers::sharedLinkWriter($this->entityManager)->ensureLinkIds([$card]));
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
@@ -281,7 +281,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert($feedId, [$withCards, $without], []);
         $entryIdsByGuidHash = $this->entryIdsByGuidHash($feedId);
 
-        $linkIds = PostEnrichers::sharedLinkWriter($this->entityManager)->idsFor($withCards->linkCards);
+        $linkIds = PostEnrichers::sharedLinkWriter($this->entityManager)->ensureLinkIds($withCards->linkCards);
 
         $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without], $linkIds);
 

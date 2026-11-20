@@ -47,14 +47,14 @@ final class QuoteLineTest extends TestCase
     #[DataProvider('bodies')]
     public function testRemovesTheQuoteLineOfThatUrl(string $html, string $expected): void
     {
-        self::assertSame($expected, QuoteLine::removedFrom($html, self::QUOTED));
+        self::assertSame($expected, QuoteLine::stripQuote($html, self::QUOTED));
     }
 
     public function testATrackedQuoteLineGoesUnderItsTrackingFreeUrl(): void
     {
         $html = '<p>RE: <a href="https://q.test/a?utm_source=m">https://q.test/a?utm_source=m</a></p><p>Yes.</p>';
 
-        self::assertSame('<p>Yes.</p>', QuoteLine::removedFrom($html, 'https://q.test/a'));
+        self::assertSame('<p>Yes.</p>', QuoteLine::stripQuote($html, 'https://q.test/a'));
     }
 
     /** @return iterable<string, array{string}> */
@@ -70,7 +70,7 @@ final class QuoteLineTest extends TestCase
     #[DataProvider('untouched')]
     public function testLeavesABodyWithoutThatQuoteByteForByte(string $html): void
     {
-        self::assertSame($html, QuoteLine::removedFrom($html, self::QUOTED));
+        self::assertSame($html, QuoteLine::stripQuote($html, self::QUOTED));
     }
 
     public function testTheTargetIsTheLinkTheReParagraphQuotes(): void
@@ -78,20 +78,20 @@ final class QuoteLineTest extends TestCase
         $html = '<p>See <a href="https://a.example/x">this</a></p>'
             . '<p class="quote-inline">RE: <a href="https://m.example/@b/9">https://m.example/@b/9</a></p>';
 
-        self::assertSame('https://m.example/@b/9', QuoteLine::targetIn($html));
+        self::assertSame('https://m.example/@b/9', QuoteLine::parseTarget($html));
     }
 
     public function testABodyWithoutAReParagraphQuotesNothing(): void
     {
-        self::assertNull(QuoteLine::targetIn('<p>RE is not here: <a href="https://m.example/@b/9">x</a></p>'));
+        self::assertNull(QuoteLine::parseTarget('<p>RE is not here: <a href="https://m.example/@b/9">x</a></p>'));
     }
 
     public function testTheTrackingFreeTargetDropsTrackers(): void
     {
         self::assertSame(
             'https://q.example/@a/1',
-            QuoteLine::trackingFreeTargetIn('<p>RE: <a href="https://q.example/@a/1?utm_source=x">q</a></p>'),
+            QuoteLine::parseTrackingFreeTarget('<p>RE: <a href="https://q.example/@a/1?utm_source=x">q</a></p>'),
         );
-        self::assertNull(QuoteLine::trackingFreeTargetIn('<p>No quote</p>'));
+        self::assertNull(QuoteLine::parseTrackingFreeTarget('<p>No quote</p>'));
     }
 }

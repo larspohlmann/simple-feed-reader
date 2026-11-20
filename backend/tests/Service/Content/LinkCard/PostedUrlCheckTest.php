@@ -31,7 +31,7 @@ final class PostedUrlCheckTest extends TestCase
         $card = $this->check([
             self::CLEANED => self::page(self::CLEANED, 'Story'),
             self::POSTED => self::page(self::POSTED, 'Story'),
-        ])->cardAt(self::CLEANED, self::POSTED);
+        ])->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertSame(self::CLEANED, $card->card?->url);
         self::assertSame([], $this->logger->records);
@@ -42,7 +42,7 @@ final class PostedUrlCheckTest extends TestCase
         $card = $this->check([
             self::CLEANED => self::page(self::CLEANED, 'Story'),
             self::POSTED => self::page(self::CLEANED . '&utm_source=x', 'Story'),
-        ])->cardAt(self::CLEANED, self::POSTED);
+        ])->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertSame(self::CLEANED, $card->card?->url);
     }
@@ -52,7 +52,7 @@ final class PostedUrlCheckTest extends TestCase
         $card = $this->check([
             self::CLEANED => self::page(self::CLEANED, 'Front page'),
             self::POSTED => self::page(self::POSTED, 'Story'),
-        ])->cardAt(self::CLEANED, self::POSTED);
+        ])->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertNotNull($card->card);
         self::assertSame(self::POSTED, $card->card->url);
@@ -73,14 +73,15 @@ final class PostedUrlCheckTest extends TestCase
         $this->check([
             self::CLEANED => self::page(self::CLEANED, 'Front page'),
             $posted => self::page($posted, 'Story'),
-        ])->cardAt(self::CLEANED, $posted);
+        ])->resolveCard(self::CLEANED, $posted);
 
         self::assertSame(['xtor'], $this->logger->records[0]['context']['strippedKeys'] ?? null);
     }
 
     public function testACleanedUrlThatFailsKeepsAPostedUrlThatWorks(): void
     {
-        $card = $this->check([self::POSTED => self::page(self::POSTED, 'Story')])->cardAt(self::CLEANED, self::POSTED);
+        $card = $this->check([self::POSTED => self::page(self::POSTED, 'Story')])
+            ->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertSame(self::POSTED, $card->card?->url);
         self::assertCount(1, $this->logger->records);
@@ -95,7 +96,7 @@ final class PostedUrlCheckTest extends TestCase
     public function testAPostedUrlThatFailsTrustsTheCleanedOne(): void
     {
         $card = $this->check([self::CLEANED => self::page(self::CLEANED, 'Story')])
-            ->cardAt(self::CLEANED, self::POSTED);
+            ->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertSame(self::CLEANED, $card->card?->url);
         self::assertSame([], $this->logger->records);
@@ -105,7 +106,7 @@ final class PostedUrlCheckTest extends TestCase
     {
         $this->expectException(PageFetchException::class);
 
-        $this->check([])->cardAt(self::CLEANED, self::POSTED);
+        $this->check([])->resolveCard(self::CLEANED, self::POSTED);
     }
 
     public function testAFileTrustsTheCleanedUrl(): void
@@ -113,7 +114,7 @@ final class PostedUrlCheckTest extends TestCase
         $file = new PageCardModel(null, null);
 
         $card = $this->check([self::CLEANED => $file, self::POSTED => self::page(self::POSTED, 'Story')])
-            ->cardAt(self::CLEANED, self::POSTED);
+            ->resolveCard(self::CLEANED, self::POSTED);
 
         self::assertSame($file, $card);
     }

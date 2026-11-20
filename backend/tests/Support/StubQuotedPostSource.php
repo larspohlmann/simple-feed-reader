@@ -18,7 +18,7 @@ final class StubQuotedPostSource implements QuotedPostSourceInterface
     {
     }
 
-    public function quotedPostAt(string $address): QuotedPostContent
+    public function fetchQuotedPost(string $address): QuotedPostContent
     {
         $this->asked[] = $address;
 

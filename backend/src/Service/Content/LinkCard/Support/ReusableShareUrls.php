@@ -20,7 +20,7 @@ final class ReusableShareUrls
         if (TitledShareTarget::detectTarget($entry) !== null) {
             return [];
         }
-        $quoted = QuoteLine::trackingFreeTargetIn((string) $entry->getText()->getContentHtml());
+        $quoted = QuoteLine::parseTrackingFreeTarget((string) $entry->getText()->getContentHtml());
 
         return array_values(array_filter($plan->urls, static fn (string $url): bool => $url !== $quoted));
     }

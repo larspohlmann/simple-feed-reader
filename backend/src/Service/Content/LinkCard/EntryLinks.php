@@ -29,18 +29,18 @@ final readonly class EntryLinks
         if ($cards === []) {
             return;
         }
-        $links = $this->linkWriter->linksFor($cards, $statedByUrl);
+        $links = $this->linkWriter->ensureLinks($cards, $statedByUrl);
         $this->linkCards->append($entry, array_map(static fn (LinkCardContent $card) => $links[$card->url], $cards));
     }
 
     public function attachToThreadPost(ThreadPost $post, LinkCardContent $card): void
     {
-        $this->linkCards->appendToThreadPost($post, $this->linkWriter->linkFor($card, null));
+        $this->linkCards->appendToThreadPost($post, $this->linkWriter->ensureLink($card, null));
     }
 
     public function quote(Entry $entry, QuotedPostContent $quote): void
     {
         $card = $quote->linkCard;
-        $entry->shareQuotedPost($quote, $card === null ? null : $this->linkWriter->linkFor($card, null));
+        $entry->shareQuotedPost($quote, $card === null ? null : $this->linkWriter->ensureLink($card, null));
     }
 }

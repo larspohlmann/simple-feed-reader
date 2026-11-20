@@ -22,7 +22,7 @@ final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterfa
     {
     }
 
-    public function quotedPostAt(string $address): QuotedPostContent
+    public function fetchQuotedPost(string $address): QuotedPostContent
     {
         $statusUrl = MastodonStatusAddress::parseAddress($address)?->apiUrl()
             ?? throw new QuotedPostUnavailableException('The address names no status on a Mastodon instance.');

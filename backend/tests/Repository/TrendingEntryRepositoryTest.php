@@ -224,7 +224,7 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         $this->entityManager->persist($thread);
         $this->entityManager->persist(new LinkCard($post, 0, $this->link('https://thread.example/reply'), $thread));
         $this->entityManager->persist(new LinkCard($post, 2, $this->link('https://later.example/second')));
-        $storm = $this->sharedLinks()->linkFor(
+        $storm = $this->sharedLinks()->ensureLink(
             new LinkCardContent(
                 'https://shared.example/storm',
                 'Storm floods the harbour',
