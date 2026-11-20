@@ -14,7 +14,7 @@ import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostActions } from '../composer/post-actions.service';
-import { itemKey } from '../../state/item-key';
+import { buildItemKey } from '../../state/item-key';
 import { SocialCountsService } from './social-counts.service';
 
 @Component({
@@ -30,7 +30,7 @@ export class SocialCountsComponent {
   private readonly service = inject(SocialCountsService);
   private readonly responses = inject(PostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly key = computed(() => itemKey(this.entry()));
+  private readonly key = computed(() => buildItemKey(this.entry()));
   private readonly loaded = computed(() => {
     const state = this.service.state(this.entry())();
     return state.status === 'ok' ? state : null;

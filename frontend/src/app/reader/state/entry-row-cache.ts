@@ -90,7 +90,7 @@ export class EntryRowCache {
     const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
     this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
       next: (answer) =>
-        this.patch(this.withCopies(entry), (row) => ({ ...row, myVote: answer.myVote })),
+        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, myVote: answer.myVote })),
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
@@ -131,7 +131,7 @@ export class EntryRowCache {
   /** Restyles entries as read in every list that holds them, with no request: the caller has marked them read on
    *  the server. */
   markHiddenLocally(ids: number[]): void {
-    this.patch(this.withCopyIds(ids), (entry) => ({ ...entry, isHidden: true }));
+    this.patch(this.collectIdsWithCopies(ids), (entry) => ({ ...entry, isHidden: true }));
   }
 
   /** Reflects a share the server already recorded, as for a repost; no request. */
@@ -161,7 +161,7 @@ export class EntryRowCache {
     field: keyof RowPatch,
     adopt: (entry: EntryDto) => EntryDto,
   ): void {
-    for (const id of this.withCopyIds([entryId])) {
+    for (const id of this.collectIdsWithCopies([entryId])) {
       if (!this.inFlight.onTheWire(id, field)) this.patch([id], adopt);
     }
   }
@@ -171,7 +171,7 @@ export class EntryRowCache {
   private optimistic<T>(target: EntryDto, patch: RowPatch, request$: Observable<T>): Observable<T> {
     const changes = [target, ...this.findCopies(target)].map((entry) => ({
       entry,
-      patch: entry === target ? patch : sharedPatch(entry, patch),
+      patch: entry === target ? patch : buildSharedPatch(entry, patch),
     }));
     const befores = changes.map((change) => valuesBefore(change.entry, change.patch));
     const releases = changes.map((change) => this.inFlight.add(change.entry.id, change.patch));
@@ -196,14 +196,14 @@ export class EntryRowCache {
       .filter((row) => row.id !== entry.id && row.canonicalItemId === entry.canonicalItemId);
   }
 
-  private withCopies(entry: EntryDto): number[] {
+  private collectCopyIds(entry: EntryDto): number[] {
     return [entry.id, ...this.findCopies(entry).map((copy) => copy.id)];
   }
 
-  private withCopyIds(ids: Iterable<number>): number[] {
+  private collectIdsWithCopies(ids: Iterable<number>): number[] {
     return [...new Set(ids)].flatMap((id) => {
       const entry = this.entry(id);
-      return entry === null ? [id] : this.withCopies(entry);
+      return entry === null ? [id] : this.collectCopyIds(entry);
     });
   }
 
@@ -214,7 +214,7 @@ export class EntryRowCache {
 }
 
 /** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
-function sharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
+function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
   const { isHidden, isViewed, myVote, score, social } = patch;
   const shared: RowPatch = { isHidden, isViewed, myVote, score };
   if (copy.social && social) shared.social = { ...copy.social, isLiked: social.isLiked };

@@ -8,7 +8,7 @@ import { SocialCountsDto } from '../../entry-social';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi, VoteAnswer } from '../../social-post-api';
 import { VoteValue, steppedScore } from '../../vote-pill/vote';
-import { ItemRef, itemKey } from '../../state/item-key';
+import { ItemRef, buildItemKey } from '../../state/item-key';
 import { withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
@@ -63,7 +63,7 @@ export class CommentsService {
   /** A reload waits out a like or repost on the wire, whose answer the reloaded thread might not include yet. */
   reload(item: ItemRef): void {
     const state = this.stateFor(item);
-    if (state().status === 'loading' || this.toggles.isBusy(itemKey(item))) return;
+    if (state().status === 'loading' || this.toggles.isBusy(buildItemKey(item))) return;
     this.fetch(state, this.api.comments(item.id, true));
   }
 
@@ -84,7 +84,7 @@ export class CommentsService {
     const state = this.stateFor(item);
     const show = (shown: VoteAnswer) =>
       state.update((current) => withVote(current, address, shown));
-    this.toggles.change(itemKey(item), {
+    this.toggles.change(buildItemKey(item), {
       key: `vote ${address}`,
       send: () => this.socialPosts.voteComment(item.id, address, to).pipe(tap(show)),
       apply: () => show({ myVote: to, score: steppedScore(score, from, to) }),
@@ -116,7 +116,7 @@ export class CommentsService {
     const to = !post[flag];
     const state = this.stateFor(item);
     const { set, unset } = POST_FLAGS[flag];
-    this.toggles.run(itemKey(item), {
+    this.toggles.run(buildItemKey(item), {
       key: `${flag} ${address}`,
       send: () => this.socialPosts[to ? set : unset](item.id, address),
       to,
@@ -128,7 +128,7 @@ export class CommentsService {
   }
 
   private stateFor(item: ItemRef): WritableSignal<CommentsState> {
-    const key = itemKey(item);
+    const key = buildItemKey(item);
     const state = this.states.get(key) ?? signal<CommentsState>({ status: 'idle' });
     this.states.delete(key);
     this.states.set(key, state);

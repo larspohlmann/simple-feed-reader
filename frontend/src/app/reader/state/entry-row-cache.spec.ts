@@ -12,13 +12,13 @@ describe('EntryRowCache', () => {
   let cache: EntryRowCache;
 
   const social = { network: 'lemmy' as const, isLiked: false, canLike: true, isOwn: false };
-  const copy = (id: number, canonicalItemId: number | null, overrides: Partial<EntryDto> = {}) =>
+  const aCopy = (id: number, canonicalItemId: number | null, overrides: Partial<EntryDto> = {}) =>
     anEntry({ id, canonicalItemId, social, myVote: 0, score: 10, ...overrides });
   const hold = (...entries: EntryDto[]) => {
     const held = cache.cached(entries);
     cache.hold(held, new Set(entries.map((entry) => entry.id)));
   };
-  const shown = (id: number) => cache.entry(id) as EntryDto;
+  const readShown = (id: number) => cache.entry(id) as EntryDto;
 
   beforeEach(() => {
     readerApi = { updateState: jest.fn(() => of({})) };
@@ -37,77 +37,81 @@ describe('EntryRowCache', () => {
   });
 
   it('setVote on a copy patches the other copy’s myVote and score', () => {
-    hold(copy(1, 7), copy(2, 7), copy(3, 8));
+    hold(aCopy(1, 7), aCopy(2, 7), aCopy(3, 8));
 
-    cache.setVote(shown(1), 1, jest.fn());
+    cache.setVote(readShown(1), 1, jest.fn());
 
-    expect(shown(2)).toEqual(expect.objectContaining({ myVote: 1, score: 11 }));
-    expect(shown(3)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
+    expect(readShown(2)).toEqual(expect.objectContaining({ myVote: 1, score: 11 }));
+    expect(readShown(3)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
   });
 
   it('puts the vote back on every copy when it fails', () => {
     socialPosts.vote.mockReturnValue(new Subject());
-    hold(copy(1, 7), copy(2, 7));
+    hold(aCopy(1, 7), aCopy(2, 7));
     const failing = new Subject<never>();
     socialPosts.vote.mockReturnValue(failing);
 
-    cache.setVote(shown(1), 1, jest.fn());
+    cache.setVote(readShown(1), 1, jest.fn());
     failing.error(new Error('no'));
 
-    expect(shown(2)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
+    expect(readShown(2)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
   });
 
   it('setLiked on a copy patches the other copy and keeps its own network facts', () => {
-    hold(copy(1, 7), copy(2, 7, { social: { ...social, isOwn: true } }));
+    hold(aCopy(1, 7), aCopy(2, 7, { social: { ...social, isOwn: true } }));
 
-    cache.setLiked(shown(1), true, jest.fn());
+    cache.setLiked(readShown(1), true, jest.fn());
 
-    expect(shown(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
+    expect(readShown(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
   });
 
   it('a vote on the wire for one copy holds back a vote on the other', () => {
     socialPosts.vote.mockReturnValue(new Subject());
-    hold(copy(1, 7), copy(2, 7));
+    hold(aCopy(1, 7), aCopy(2, 7));
 
-    cache.setVote(shown(1), 1, jest.fn());
-    cache.setVote(shown(2), -1, jest.fn());
+    cache.setVote(readShown(1), 1, jest.fn());
+    cache.setVote(readShown(2), -1, jest.fn());
 
     expect(socialPosts.vote).toHaveBeenCalledTimes(1);
   });
 
   it('saveState read on a copy patches the other copy and sends one request', () => {
-    hold(copy(1, 7), copy(2, 7));
+    hold(aCopy(1, 7), aCopy(2, 7));
 
     cache.saveState(1, { isViewed: true }, {});
 
-    expect(shown(2)).toEqual(expect.objectContaining({ isViewed: true, isHidden: true }));
+    expect(readShown(2)).toEqual(expect.objectContaining({ isViewed: true, isHidden: true }));
     expect(readerApi.updateState).toHaveBeenCalledTimes(1);
   });
 
   it('saveState leaves the other copy’s favourite alone', () => {
-    hold(copy(1, 7), copy(2, 7));
+    hold(aCopy(1, 7), aCopy(2, 7));
 
     cache.saveState(1, { isFavorite: true }, {});
 
-    expect(shown(1).isFavorite).toBe(true);
-    expect(shown(2).isFavorite).toBe(false);
+    expect(readShown(1).isFavorite).toBe(true);
+    expect(readShown(2).isFavorite).toBe(false);
   });
 
   it('markHiddenLocally restyles every copy', () => {
-    hold(copy(1, 7), copy(2, 7), copy(3, 8));
+    hold(aCopy(1, 7), aCopy(2, 7), aCopy(3, 8));
 
     cache.markHiddenLocally([1]);
 
-    expect([shown(1).isHidden, shown(2).isHidden, shown(3).isHidden]).toEqual([true, true, false]);
+    expect([readShown(1).isHidden, readShown(2).isHidden, readShown(3).isHidden]).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 
   it('an article’s patch touches only itself', () => {
-    hold(copy(1, null), copy(2, null));
+    hold(aCopy(1, null), aCopy(2, null));
 
     cache.saveState(1, { isViewed: true }, {});
-    cache.setVote(shown(1), 1, jest.fn());
+    cache.setVote(readShown(1), 1, jest.fn());
 
-    expect(shown(2)).toEqual(
+    expect(readShown(2)).toEqual(
       expect.objectContaining({ isViewed: false, isHidden: false, myVote: 0, score: 10 }),
     );
   });

@@ -14,7 +14,7 @@ import {
 } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialPostApi } from '../../social-post-api';
-import { ItemRef, itemKey } from '../../state/item-key';
+import { ItemRef, buildItemKey } from '../../state/item-key';
 import { EntryRowCache } from '../../state/entry-row-cache';
 import { RemovedPosts } from '../../removed-posts.service';
 import { NetworkShares } from '../share/network-shares.service';
@@ -67,7 +67,7 @@ export class SocialCountsService {
   /** A reload waits out a repost on the wire, whose answer the reloaded counts might not include yet. */
   reload(entry: CountedEntry): void {
     const state = this.stateFor(entry);
-    if (state().status === 'loading' || this.toggles.isBusy(itemKey(entry))) return;
+    if (state().status === 'loading' || this.toggles.isBusy(buildItemKey(entry))) return;
     this.fetch(entry, state, this.api.counts(entry.id, true));
   }
 
@@ -77,7 +77,7 @@ export class SocialCountsService {
     const current = state();
     if (current.status !== 'ok' || !current.actions?.canRepost) return;
     const isReposted = !current.actions.isReposted;
-    this.toggles.run(itemKey(entry), {
+    this.toggles.run(buildItemKey(entry), {
       key: 'repost',
       send: () => (isReposted ? this.repost(entry.id) : this.api.unrepost(entry.id)),
       to: isReposted,
@@ -107,7 +107,7 @@ export class SocialCountsService {
   }
 
   private stateFor(item: ItemRef): WritableSignal<SocialCountsState> {
-    const key = itemKey(item);
+    const key = buildItemKey(item);
     const state = this.states.get(key) ?? signal<SocialCountsState>({ status: 'idle' });
     this.states.delete(key);
     this.states.set(key, state);

@@ -22,7 +22,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { PostActions } from '../composer/post-actions.service';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
-import { itemKey } from '../../state/item-key';
+import { buildItemKey } from '../../state/item-key';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
@@ -74,7 +74,7 @@ export class EntryCommentsComponent {
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
-  private readonly key = computed(() => itemKey(this.entry()));
+  private readonly key = computed(() => buildItemKey(this.entry()));
   private readonly loadsOnOpen = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entry())());
