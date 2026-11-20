@@ -16,7 +16,6 @@ use App\Repository\EntryListRowSocial;
 use App\Repository\LemmyPostRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
-use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Library\EntryList\Model\ConnectedAccountStatesModel;
 use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\ProfileFeeds;
@@ -41,19 +40,16 @@ final readonly class ConnectedAccountStates
         $postAddresses = $this->collectPostAddresses($entries);
         $lemmyItemIds = self::collectItemIds(array_filter(
             $entries,
-            static fn (Entry $entry): bool => null !== LemmyPostAddress::findPost($entry),
+            static fn (Entry $entry): bool => CanonicalItemKind::Lemmy === $entry->getCanonicalItem()?->getKind(),
         ));
         $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyItemIds, $userId);
         $socialStates = $this->buildSocialStates($entries, $postAddresses, $accountsByNetwork, $userId);
         $votes = $this->loadVotes($lemmyItemIds, $accountsByNetwork, $userId);
-        $lemmyPosts = $this->lemmyPosts->findByCanonicalItemIds(self::collectItemIds(array_filter(
-            $entries,
-            static fn (Entry $entry): bool => CanonicalItemKind::Lemmy === $entry->getCanonicalItem()?->getKind(),
-        )));
+        $lemmyPosts = $this->lemmyPosts->findByCanonicalItemIds($lemmyItemIds);
 
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
-            $itemId = $entry->getCanonicalItem()?->getId();
+            $itemId = $entry->getCanonicalItemId();
             $lemmy = $this->buildLemmyRow(
                 $entry,
                 null === $itemId ? null : ($lemmyPosts[$itemId] ?? null),
@@ -76,7 +72,7 @@ final readonly class ConnectedAccountStates
     {
         $itemIds = [];
         foreach ($entries as $entry) {
-            $itemId = $entry->getCanonicalItem()?->getId();
+            $itemId = $entry->getCanonicalItemId();
             if (null !== $itemId) {
                 $itemIds[$itemId] = $itemId;
             }
@@ -156,7 +152,7 @@ final readonly class ConnectedAccountStates
     /** @param array<int, true> $likedItemIds */
     private static function isLikedAmong(Entry $entry, array $likedItemIds): bool
     {
-        $itemId = $entry->getCanonicalItem()?->getId();
+        $itemId = $entry->getCanonicalItemId();
 
         return null !== $itemId && isset($likedItemIds[$itemId]);
     }
