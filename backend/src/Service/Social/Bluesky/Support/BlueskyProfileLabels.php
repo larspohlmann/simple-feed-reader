@@ -21,7 +21,7 @@ final class BlueskyProfileLabels
         $hidden = [];
         foreach ($profiles as $actor => $profile) {
             if (self::hidesFromLoggedOut($profile)) {
-                $hidden[$actor] = self::hiddenProfileOf($profile);
+                $hidden[$actor] = self::buildHiddenProfile($profile);
             }
         }
 
@@ -46,7 +46,7 @@ final class BlueskyProfileLabels
         return false;
     }
 
-    private static function hiddenProfileOf(JsonNodeModel $profile): HiddenProfileModel
+    private static function buildHiddenProfile(JsonNodeModel $profile): HiddenProfileModel
     {
         $did = (string) $profile->string('did');
 

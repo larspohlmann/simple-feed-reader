@@ -43,7 +43,7 @@ final readonly class BlueskyImportRule implements ImportRuleInterface
 
     public function fetchResolvedIdentity(string $identity): string
     {
-        return $this->identities->didOf($identity);
+        return $this->identities->fetchDid($identity);
     }
 
     public function allowsFollowAvatarCache(): bool

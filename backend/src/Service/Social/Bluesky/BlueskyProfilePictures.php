@@ -93,7 +93,7 @@ final readonly class BlueskyProfilePictures implements ProfilePictureSourceInter
      */
     private function check(array $batch, \DateTimeImmutable $now): ProfileImageSweepReportModel
     {
-        $actors = self::actorsOf($batch);
+        $actors = self::collectActors($batch);
         $asked = array_values(array_unique($actors));
         $profiles = [] === $asked ? [] : $this->appView->profiles($asked);
         $calls = [] === $asked ? 0 : 1;
@@ -127,7 +127,7 @@ final readonly class BlueskyProfilePictures implements ProfilePictureSourceInter
      *
      * @return array<int, string> the actor each profile feed follows, by its position in $batch
      */
-    private static function actorsOf(array $batch): array
+    private static function collectActors(array $batch): array
     {
         $actors = [];
         foreach ($batch as $index => $feed) {

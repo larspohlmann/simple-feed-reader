@@ -337,7 +337,7 @@ final class BlueskyProfilePicturesTest extends DbTestCase
                 ),
                 'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
             ],
-            $this->profileVisibility->visibilitiesOf(['rusty.bsky.social', 'did:plc:bob']),
+            $this->profileVisibility->readVisibilities(['rusty.bsky.social', 'did:plc:bob']),
         );
     }
 

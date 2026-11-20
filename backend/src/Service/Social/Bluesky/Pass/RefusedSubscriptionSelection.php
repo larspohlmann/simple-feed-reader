@@ -53,7 +53,7 @@ final class RefusedSubscriptionSelection
 
     public function passed(Subscription $subscription): void
     {
-        $this->position = RefusedFeedPositionModel::of($subscription);
+        $this->position = RefusedFeedPositionModel::fromSubscription($subscription);
     }
 
     public function restart(): void

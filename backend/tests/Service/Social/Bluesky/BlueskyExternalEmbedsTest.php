@@ -56,7 +56,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
         $resizer->expects($this->once())->method('coverJpeg')
             ->with('original-bytes', 1200, 630)->willReturn('jpeg-bytes');
 
-        $embed = $this->embeds($http, $resizer)->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $resizer)->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertSame([
             '$type' => 'app.bsky.embed.external',
@@ -76,7 +76,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
         $this->page = self::pageDeclaring(null, self::IMAGE_URL);
         $http = $this->uploading(new MockResponse(json_encode(['blob' => self::BLOB], \JSON_THROW_ON_ERROR)));
 
-        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertSame('', self::externalOf($embed)['description']);
     }
@@ -85,7 +85,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
     {
         $this->page = self::pageDeclaring('A summary', null);
 
-        $embed = $this->embedsNeverDownloading()->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embedsNeverDownloading()->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertSame(
             ['uri' => self::URL, 'title' => 'An article', 'description' => 'A summary'],
@@ -97,7 +97,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
     {
         $http = $this->uploading(new MockResponse('{}'));
 
-        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertArrayNotHasKey('thumb', self::externalOf($embed));
     }
@@ -115,7 +115,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
         $this->downloader->willFail(self::IMAGE_URL, $failure);
 
         $embed = $this->embeds(new RoutedHttpClient([]), $this->resizer())
-            ->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+            ->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();
@@ -127,7 +127,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
         $resizer->method('coverJpeg')->willThrowException(new ImageProcessingException('not an image'));
 
         $embed = $this->embeds(new RoutedHttpClient([]), $resizer)
-            ->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+            ->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();
@@ -151,7 +151,7 @@ final class BlueskyExternalEmbedsTest extends TestCase
     {
         $http = $this->uploading(new MockResponse('{"error":"BlobTooLarge"}', ['http_code' => $status]));
 
-        $embed = $this->embeds($http, $this->resizer())->embedOf(SocialApiWiring::blueskyAccount(), self::URL);
+        $embed = $this->embeds($http, $this->resizer())->prepareEmbed(SocialApiWiring::blueskyAccount(), self::URL);
 
         self::assertArrayNotHasKey('thumb', self::externalOf($embed));
         $this->assertLoggedAtDebug();

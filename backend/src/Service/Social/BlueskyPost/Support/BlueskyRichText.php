@@ -59,7 +59,7 @@ final class BlueskyRichText
     {
         $spans = [];
         foreach ($facets as $facet) {
-            $span = self::spanOf($text, $facet);
+            $span = self::parseSpan($text, $facet);
             if (null !== $span) {
                 $spans[] = $span;
             }
@@ -79,12 +79,12 @@ final class BlueskyRichText
     }
 
     /** @return array{int, int, string}|null */
-    private static function spanOf(string $text, JsonNodeModel $facet): ?array
+    private static function parseSpan(string $text, JsonNodeModel $facet): ?array
     {
         $index = $facet->node('index');
         $start = $index->int('byteStart');
         $end = $index->int('byteEnd');
-        $href = self::hrefOf($facet->first('features'));
+        $href = self::resolveHref($facet->first('features'));
         if (null === $start || null === $end || null === $href || $start < 0 || $end <= $start) {
             return null;
         }
@@ -96,22 +96,22 @@ final class BlueskyRichText
         return [$start, $end, $href];
     }
 
-    private static function hrefOf(JsonNodeModel $feature): ?string
+    private static function resolveHref(JsonNodeModel $feature): ?string
     {
         return match ($feature->type()) {
             self::LINK => AbsoluteHttpUrl::orNull($feature->string('uri')),
-            self::MENTION => self::profileOf($feature->string('did')),
-            self::TAG => self::hashtagOf($feature->string('tag')),
+            self::MENTION => self::buildProfileUrl($feature->string('did')),
+            self::TAG => self::buildHashtagUrl($feature->string('tag')),
             default => null,
         };
     }
 
-    private static function profileOf(?string $did): ?string
+    private static function buildProfileUrl(?string $did): ?string
     {
         return null === $did ? null : BlueskyWeb::profileUrl($did);
     }
 
-    private static function hashtagOf(?string $tag): ?string
+    private static function buildHashtagUrl(?string $tag): ?string
     {
         return null === $tag ? null : self::HASHTAG . rawurlencode($tag);
     }

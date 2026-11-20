@@ -66,9 +66,9 @@ final class BlueskyThreadRepliesTest extends TestCase
         $contents = $this->fixture('Bluesky/self-thread-replies.json');
         $thread = JsonNodeModel::fromValue(json_decode($contents, true))->node('thread');
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
-        $node = $reader->of($thread->node('post')->string('uri') ?? '', $contents)[0];
+        $node = $reader->parseReplies($thread->node('post')->string('uri') ?? '', $contents)[0];
 
-        $selfReply = $reader->selfReplyOf($thread->nodes('replies')[0]->node('post'));
+        $selfReply = $reader->buildSelfReply($thread->nodes('replies')[0]->node('post'));
 
         self::assertEquals($node->comment(), $selfReply);
         self::assertTrue($selfReply->byEntryAuthor);
@@ -297,7 +297,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
 
-        return $reader->of($post, $answer ?? $this->fixture('social/bluesky-post-thread.json'));
+        return $reader->parseReplies($post, $answer ?? $this->fixture('social/bluesky-post-thread.json'));
     }
 
     /**

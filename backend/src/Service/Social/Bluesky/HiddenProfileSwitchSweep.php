@@ -88,10 +88,10 @@ final readonly class HiddenProfileSwitchSweep
      */
     private function selectAmong(array $page, RefusedSubscriptionSelection $selection): bool
     {
-        $actors = self::actorsOf($page);
-        $visibilities = $this->profileVisibility->visibilitiesOf($actors);
+        $actors = self::collectActors($page);
+        $visibilities = $this->profileVisibility->readVisibilities($actors);
         foreach ($page as $index => $subscription) {
-            $candidate = self::candidateOf($subscription, $actors[$index] ?? null, $visibilities);
+            $candidate = self::buildCandidate($subscription, $actors[$index] ?? null, $visibilities);
             if (null === $candidate) {
                 $selection->passed($subscription);
                 continue;
@@ -110,7 +110,7 @@ final readonly class HiddenProfileSwitchSweep
      *
      * @return RefusedProfileSubscriptionModel|null null when the feed names no actor, or one known public
      */
-    private static function candidateOf(
+    private static function buildCandidate(
         Subscription $subscription,
         ?string $actor,
         array $visibilities,
@@ -127,7 +127,7 @@ final readonly class HiddenProfileSwitchSweep
      *
      * @return array<int, string> the actor each refused feed follows, by its position in $page
      */
-    private static function actorsOf(array $page): array
+    private static function collectActors(array $page): array
     {
         $actors = [];
         foreach ($page as $index => $subscription) {

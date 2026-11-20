@@ -35,14 +35,14 @@ final readonly class BlueskyThreadReplies
      *
      * @throws CommentsUnavailableException when the answer holds no thread
      */
-    public function of(string $postAddress, string $answer): array
+    public function parseReplies(string $postAddress, string $answer): array
     {
         $thread = JsonNodeModel::fromValue(json_decode($answer, true))->node('thread');
         if ($thread->type() !== self::THREAD_VIEW) {
             throw new CommentsUnavailableException('Bluesky answered without the post\'s thread.');
         }
 
-        return $this->nodesOf($thread->nodes('replies'), AtPostUri::authorityOf($postAddress));
+        return $this->buildNodes($thread->nodes('replies'), AtPostUri::parseAuthority($postAddress));
     }
 
     /**
@@ -50,17 +50,17 @@ final readonly class BlueskyThreadReplies
      *
      * @return list<ReplyNode>
      */
-    private function nodesOf(array $replies, ?string $entryAuthor): array
+    private function buildNodes(array $replies, ?string $entryAuthor): array
     {
         $nodes = [];
         foreach ($replies as $reply) {
             if (self::isShown($reply)) {
                 $post = $reply->node('post');
                 $nodes[] = new ReplyNode(
-                    self::publishedAtOf($post),
+                    self::parsePublishedAt($post),
                     fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
-                        => $this->commentOf($post, $publishedAt, $entryAuthor),
-                    $this->nodesOf($reply->nodes('replies'), $entryAuthor),
+                        => $this->buildComment($post, $publishedAt, $entryAuthor),
+                    $this->buildNodes($reply->nodes('replies'), $entryAuthor),
                     url: AtPostUri::webUrl($post->string('uri') ?? ''),
                     byEntryAuthor: self::isByEntryAuthor($post->node('author'), $entryAuthor),
                     counts: BlueskyPostCounts::parsePost($post),
@@ -71,9 +71,9 @@ final readonly class BlueskyThreadReplies
         return $nodes;
     }
 
-    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel
+    public function buildSelfReply(JsonNodeModel $post): EntryCommentModel
     {
-        return $this->commentOf($post, self::publishedAtOf($post), $post->node('author')->string('did'));
+        return $this->buildComment($post, self::parsePublishedAt($post), $post->node('author')->string('did'));
     }
 
     private static function isShown(JsonNodeModel $reply): bool
@@ -86,7 +86,7 @@ final readonly class BlueskyThreadReplies
             && !$viewer->has('blocking');
     }
 
-    private function commentOf(
+    private function buildComment(
         JsonNodeModel $post,
         ?\DateTimeImmutable $publishedAt,
         ?string $entryAuthor,
@@ -95,12 +95,12 @@ final readonly class BlueskyThreadReplies
         $rendered = $this->embeds->render($post);
 
         return new EntryCommentModel(
-            self::authorOf($author),
+            self::buildAuthor($author),
             AtPostUri::webUrl($post->string('uri') ?? ''),
             $publishedAt,
-            $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
+            $this->buildHtml($post->node('record'), $rendered?->uncardedLink),
             self::isByEntryAuthor($author, $entryAuthor),
-            self::embedsOf($rendered),
+            self::buildEmbeds($rendered),
             post: BlueskyCommentPost::parsePost($post),
         );
     }
@@ -111,12 +111,12 @@ final readonly class BlueskyThreadReplies
             && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true);
     }
 
-    private static function publishedAtOf(JsonNodeModel $post): ?\DateTimeImmutable
+    private static function parsePublishedAt(JsonNodeModel $post): ?\DateTimeImmutable
     {
         return DateParser::parse($post->node('record')->string('createdAt') ?? $post->string('indexedAt'));
     }
 
-    private static function authorOf(JsonNodeModel $author): CommentAuthorModel
+    private static function buildAuthor(JsonNodeModel $author): CommentAuthorModel
     {
         $handle = $author->string('handle');
 
@@ -128,7 +128,7 @@ final readonly class BlueskyThreadReplies
         );
     }
 
-    private function htmlOf(JsonNodeModel $record, ?string $uncardedLink): string
+    private function buildHtml(JsonNodeModel $record, ?string $uncardedLink): string
     {
         $text = BlueskyRichText::asHtml($record->text('text') ?? '', $record->nodes('facets')) ?? '';
         $link = $uncardedLink === null ? '' : sprintf('<p>%s</p>', HtmlAnchor::to($uncardedLink, $uncardedLink));
@@ -136,7 +136,7 @@ final readonly class BlueskyThreadReplies
         return $this->sanitizer->sanitize($text . $link) ?? '';
     }
 
-    private static function embedsOf(?RenderedEmbedModel $rendered): CommentEmbedsModel
+    private static function buildEmbeds(?RenderedEmbedModel $rendered): CommentEmbedsModel
     {
         if ($rendered === null) {
             return new CommentEmbedsModel();

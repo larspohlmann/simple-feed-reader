@@ -19,7 +19,7 @@ final class BlueskyFacetsTest extends TestCase
     {
         $http = new RoutedHttpClient([self::RESOLVE . 'ann.bsky.social' => new MockResponse('{"did":"did:plc:ann"}')]);
 
-        $facets = $this->facets($http)->of('@ann.bsky.social https://x.test #news');
+        $facets = $this->facets($http)->buildFacets('@ann.bsky.social https://x.test #news');
 
         self::assertSame([
             [
@@ -46,7 +46,7 @@ final class BlueskyFacetsTest extends TestCase
             self::RESOLVE . 'down.test' => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
         ]);
 
-        self::assertSame([], $this->facets($http)->of('@nobody.test and @down.test'));
+        self::assertSame([], $this->facets($http)->buildFacets('@nobody.test and @down.test'));
     }
 
     public function testAHandleIsAskedOnceAndAnUnreachableNetworkStopsTheAsking(): void
@@ -55,7 +55,7 @@ final class BlueskyFacetsTest extends TestCase
             self::RESOLVE . 'down.test' => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
         ]);
 
-        self::assertSame([], $this->facets($http)->of('@down.test @down.test @later.test'));
+        self::assertSame([], $this->facets($http)->buildFacets('@down.test @down.test @later.test'));
         self::assertCount(3, $http->requests);
     }
 
@@ -66,7 +66,7 @@ final class BlueskyFacetsTest extends TestCase
             self::RESOLVE . 'bob.bsky.social' => new MockResponse('{"did":"did:plc:bob"}'),
         ]);
 
-        $facets = $this->facets($http)->of('@ann.bsky.social @bob.bsky.social @ann.bsky.social');
+        $facets = $this->facets($http)->buildFacets('@ann.bsky.social @bob.bsky.social @ann.bsky.social');
 
         self::assertSame(
             ['did:plc:ann', 'did:plc:bob', 'did:plc:ann'],
@@ -79,7 +79,7 @@ final class BlueskyFacetsTest extends TestCase
     {
         $http = new RoutedHttpClient([]);
 
-        self::assertSame([], $this->facets($http)->of('just words'));
+        self::assertSame([], $this->facets($http)->buildFacets('just words'));
         self::assertSame([], $http->requests);
     }
 

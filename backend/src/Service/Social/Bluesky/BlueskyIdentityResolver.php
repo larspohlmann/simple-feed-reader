@@ -30,16 +30,16 @@ final readonly class BlueskyIdentityResolver
      */
     public function resolve(string $handleOrDid): BlueskyIdentityModel
     {
-        $did = BlueskyActorKey::isDid($handleOrDid) ? $handleOrDid : $this->didOf($handleOrDid);
+        $did = BlueskyActorKey::isDid($handleOrDid) ? $handleOrDid : $this->fetchDid($handleOrDid);
 
-        return new BlueskyIdentityModel($did, $this->pdsOf($did));
+        return new BlueskyIdentityModel($did, $this->fetchPds($did));
     }
 
     /**
      * @throws SocialAccountUnresolvableException
      * @throws SocialNetworkUnreachableException
      */
-    public function didOf(string $handle): string
+    public function fetchDid(string $handle): string
     {
         $answer = $this->bluesky->answer(
             ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)),
@@ -57,7 +57,7 @@ final readonly class BlueskyIdentityResolver
         return $did;
     }
 
-    private function pdsOf(string $did): string
+    private function fetchPds(string $did): string
     {
         $answer = $this->bluesky->answer(ApiRequestModel::get($this->documentUrl($did)));
 
@@ -71,14 +71,14 @@ final readonly class BlueskyIdentityResolver
         $services = $answer->json()['service'] ?? [];
         foreach (\is_array($services) ? $services : [] as $service) {
             if (self::isPds($service)) {
-                return $this->originOf($service['serviceEndpoint'], $did);
+                return $this->requireOrigin($service['serviceEndpoint'], $did);
             }
         }
 
         throw new SocialAccountUnresolvableException(sprintf('The account %s names no PDS.', $did));
     }
 
-    private function originOf(string $endpoint, string $did): string
+    private function requireOrigin(string $endpoint, string $did): string
     {
         $parts = parse_url($endpoint);
 

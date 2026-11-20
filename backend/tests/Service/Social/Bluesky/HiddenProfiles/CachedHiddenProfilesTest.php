@@ -57,7 +57,7 @@ final class CachedHiddenProfilesTest extends TestCase
         } catch (SocialNetworkUnreachableException) {
         }
 
-        self::assertTrue($this->profileVisibility->visibilitiesOf([BlueskyProfiles::RUSTY])[BlueskyProfiles::RUSTY]
+        self::assertTrue($this->profileVisibility->readVisibilities([BlueskyProfiles::RUSTY])[BlueskyProfiles::RUSTY]
             ->isUnknown());
     }
 
@@ -99,7 +99,7 @@ final class CachedHiddenProfilesTest extends TestCase
         } catch (SocialNetworkUnreachableException) {
         }
 
-        $visibilities = $this->profileVisibility->visibilitiesOf([...$answered, BlueskyProfiles::RUSTY]);
+        $visibilities = $this->profileVisibility->readVisibilities([...$answered, BlueskyProfiles::RUSTY]);
         self::assertTrue($visibilities['did:plc:public1']->isPublic());
         self::assertTrue($visibilities[BlueskyProfiles::RUSTY]->isUnknown());
         self::assertCount(2, $this->appView->asked);

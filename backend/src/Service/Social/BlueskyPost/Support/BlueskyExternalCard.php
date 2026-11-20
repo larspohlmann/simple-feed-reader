@@ -16,16 +16,16 @@ final class BlueskyExternalCard
     private const string EXTERNAL = 'app.bsky.embed.external#view';
     private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
-    public static function ofEmbed(JsonNodeModel $embed): ?LinkCardContent
+    public static function fromEmbed(JsonNodeModel $embed): ?LinkCardContent
     {
         return match ($embed->type()) {
-            self::EXTERNAL => self::ofNonGif($embed->node('external')),
-            self::RECORD_WITH_MEDIA => self::ofEmbed($embed->node('media')),
+            self::EXTERNAL => self::fromNonGifExternal($embed->node('external')),
+            self::RECORD_WITH_MEDIA => self::fromEmbed($embed->node('media')),
             default => null,
         };
     }
 
-    public static function of(JsonNodeModel $external): ?LinkCardContent
+    public static function fromExternal(JsonNodeModel $external): ?LinkCardContent
     {
         $url = AbsoluteHttpUrl::orNull($external->string('uri'));
         $title = $external->string('title');
@@ -42,9 +42,9 @@ final class BlueskyExternalCard
         ));
     }
 
-    private static function ofNonGif(JsonNodeModel $external): ?LinkCardContent
+    private static function fromNonGifExternal(JsonNodeModel $external): ?LinkCardContent
     {
-        return BlueskyEmbedMedia::gif($external) === null ? self::of($external) : null;
+        return BlueskyEmbedMedia::gif($external) === null ? self::fromExternal($external) : null;
     }
 
     private function __construct()

@@ -27,7 +27,7 @@ final class StubHiddenProfiles implements HiddenProfilesInterface
     {
         $this->hidden[$profile->did] = $profile;
         foreach ($handles as $handle) {
-            $this->hidden[BlueskyActorKey::of($handle)] = $profile;
+            $this->hidden[BlueskyActorKey::normalizeActor($handle)] = $profile;
         }
     }
 

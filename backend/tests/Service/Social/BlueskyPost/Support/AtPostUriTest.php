@@ -46,7 +46,7 @@ final class AtPostUriTest extends TestCase
     #[DataProvider('authorities')]
     public function testTheAuthorityIsWhoseRepositoryHoldsThePost(string $uri, ?string $authority): void
     {
-        self::assertSame($authority, AtPostUri::authorityOf($uri));
+        self::assertSame($authority, AtPostUri::parseAuthority($uri));
     }
 
     /** @return iterable<string, array{string, string|null}> */
@@ -61,7 +61,7 @@ final class AtPostUriTest extends TestCase
     #[DataProvider('webUrls')]
     public function testAPostsWebUrlNamesItsPostByTheAuthorityItShows(string $url, ?string $uri): void
     {
-        self::assertSame($uri, AtPostUri::ofWebUrl($url));
+        self::assertSame($uri, AtPostUri::fromWebUrl($url));
     }
 
     /** @return iterable<string, array{string, string|null}> */

@@ -102,7 +102,7 @@ final readonly class PostEmbedRenderer
 
     private function linkCard(JsonNodeModel $external): ?RenderedEmbedModel
     {
-        $card = BlueskyExternalCard::of($external);
+        $card = BlueskyExternalCard::fromExternal($external);
         if ($card !== null) {
             return RenderedEmbedModel::card(
                 $card,
@@ -116,7 +116,7 @@ final readonly class PostEmbedRenderer
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel
     {
-        $quote = QuotedViewRecord::of($record);
+        $quote = QuotedViewRecord::fromRecord($record);
 
         return $quote === null ? null : RenderedEmbedModel::quoted($quote);
     }

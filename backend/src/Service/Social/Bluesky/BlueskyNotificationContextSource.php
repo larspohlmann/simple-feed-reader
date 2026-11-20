@@ -33,7 +33,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
 
         $contexts = [];
         foreach ($fresh as $row) {
-            $context = self::contextOf($account, $row, $posts);
+            $context = self::buildContext($account, $row, $posts);
             if ($context !== null) {
                 $contexts[$row->remoteId] = $context;
             }
@@ -51,35 +51,36 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
         $uris = [];
         foreach ($rows as $row) {
-            $uris[] = self::ownAnsweredOf($account, $row);
-            $uris[] = self::threadRootOf($account, $row);
+            $uris[] = self::detectOwnAnswered($account, $row);
+            $uris[] = self::detectForeignThreadRoot($account, $row);
         }
 
         return array_values(array_unique(array_filter($uris, static fn (?string $uri): bool => $uri !== null)));
     }
 
-    private static function ownAnsweredOf(SocialAccount $account, FetchedNotificationModel $row): ?string
+    private static function detectOwnAnswered(SocialAccount $account, FetchedNotificationModel $row): ?string
     {
         $answered = $row->references->answeredId;
+        $isOwn = $answered !== null && AtPostUri::parseAuthority($answered) === $account->getIdentity();
 
-        return $answered !== null && AtPostUri::authorityOf($answered) === $account->getIdentity() ? $answered : null;
+        return $isOwn ? $answered : null;
     }
 
-    private static function threadRootOf(SocialAccount $account, FetchedNotificationModel $row): ?string
+    private static function detectForeignThreadRoot(SocialAccount $account, FetchedNotificationModel $row): ?string
     {
         $root = $row->references->threadRootId;
 
-        return $root !== null && AtPostUri::authorityOf($root) !== $account->getIdentity() ? $root : null;
+        return $root !== null && AtPostUri::parseAuthority($root) !== $account->getIdentity() ? $root : null;
     }
 
     /** @param array<string, JsonNodeModel> $posts */
-    private static function contextOf(
+    private static function buildContext(
         SocialAccount $account,
         FetchedNotificationModel $row,
         array $posts,
     ): ?NotificationContext {
-        $ownAnswered = self::postAt($posts, self::ownAnsweredOf($account, $row));
-        $threadRoot = self::postAt($posts, self::threadRootOf($account, $row));
+        $ownAnswered = self::postAt($posts, self::detectOwnAnswered($account, $row));
+        $threadRoot = self::postAt($posts, self::detectForeignThreadRoot($account, $row));
         if ($ownAnswered === null && $threadRoot === null) {
             return null;
         }

@@ -24,7 +24,7 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
         }
         $hidden = [];
         foreach (array_chunk(array_unique($actors), AppViewClient::URIS_PER_CALL) as $batch) {
-            $hidden += BlueskyProfileLabels::hiddenAmong($this->profilesOf($batch));
+            $hidden += BlueskyProfileLabels::hiddenAmong($this->fetchProfiles($batch));
         }
 
         return $hidden;
@@ -35,7 +35,7 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
      *
      * @return array<string, JsonNodeModel>
      */
-    private function profilesOf(array $batch): array
+    private function fetchProfiles(array $batch): array
     {
         try {
             return $this->appView->profiles($batch);

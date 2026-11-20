@@ -22,7 +22,7 @@ final class QuotedViewRecord
     private const string RECORD = 'app.bsky.embed.record#view';
     private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
-    public static function of(JsonNodeModel $record): ?QuotedPostContent
+    public static function fromRecord(JsonNodeModel $record): ?QuotedPostContent
     {
         $value = $record->node('value');
         $url = AtPostUri::webUrl($record->string('uri') ?? '');
@@ -40,9 +40,9 @@ final class QuotedViewRecord
             $author->string('avatar'),
             DateParser::parse($value->string('createdAt') ?? $record->string('indexedAt')),
             $value->text('text') ?? '',
-            EntryMediaAssembler::assembleVisualMedia(self::mediaOf($embed)),
-            self::nestedQuoteOf($embed),
-            BlueskyExternalCard::ofEmbed($embed),
+            EntryMediaAssembler::assembleVisualMedia(self::parseMedia($embed)),
+            self::parseNestedQuote($embed),
+            BlueskyExternalCard::fromEmbed($embed),
         ));
     }
 
@@ -52,18 +52,18 @@ final class QuotedViewRecord
     }
 
     /** @return list<ParsedMediumModel> */
-    private static function mediaOf(JsonNodeModel $embed): array
+    private static function parseMedia(JsonNodeModel $embed): array
     {
         return match ($embed->type()) {
             self::IMAGES => BlueskyEmbedMedia::images($embed),
             self::VIDEO => array_filter([BlueskyEmbedMedia::video($embed)]),
             self::EXTERNAL => array_filter([BlueskyEmbedMedia::gif($embed->node('external'))]),
-            self::RECORD_WITH_MEDIA => self::mediaOf($embed->node('media')),
+            self::RECORD_WITH_MEDIA => self::parseMedia($embed->node('media')),
             default => [],
         };
     }
 
-    private static function nestedQuoteOf(JsonNodeModel $embed): ?QuotedPostReference
+    private static function parseNestedQuote(JsonNodeModel $embed): ?QuotedPostReference
     {
         $nested = match ($embed->type()) {
             self::RECORD => $embed->node('record'),

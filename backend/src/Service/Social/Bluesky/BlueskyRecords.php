@@ -37,7 +37,7 @@ final readonly class BlueskyRecords
             'collection' => $collection,
             'record' => [
                 '$type' => $collection,
-                'subject' => BlueskyStrongRef::of($post),
+                'subject' => BlueskyStrongRef::fromPost($post),
                 'createdAt' => $this->now(),
             ],
         ]);
@@ -62,7 +62,7 @@ final readonly class BlueskyRecords
             'record' => ['$type' => BlueskyRecordUri::POST, ...$fields, 'createdAt' => $this->now()],
         ]);
 
-        return self::uriOf($answer->json(), 'Bluesky took the post but named no address for it.');
+        return self::requireUri($answer->json(), 'Bluesky took the post but named no address for it.');
     }
 
     /**
@@ -81,7 +81,10 @@ final readonly class BlueskyRecords
             return null;
         }
 
-        return self::uriOf(BlueskySessions::accepted($answer)->json(), 'Bluesky found the post but named no address.');
+        return self::requireUri(
+            BlueskySessions::accepted($answer)->json(),
+            'Bluesky found the post but named no address.',
+        );
     }
 
     /**
@@ -91,7 +94,9 @@ final readonly class BlueskyRecords
      */
     public function delete(SocialAccount $account, string $collection, string $recordUri): PostDeletion
     {
-        $recordKey = BlueskyRecordUri::recordKeyOf(BlueskyRecordUri::ofCollection($recordUri, $collection) ?? '')
+        $recordKey = BlueskyRecordUri::parseRecordKey(
+            BlueskyRecordUri::keepIfInCollection($recordUri, $collection) ?? '',
+        )
             ?? throw new SocialPostRefusedException('The address names no Bluesky record of this kind.');
         try {
             $answer = $this->sessions->actAs($account, self::DELETE_RECORD, [
@@ -109,7 +114,7 @@ final readonly class BlueskyRecords
     }
 
     /** @param array<mixed> $answer */
-    private static function uriOf(array $answer, string $withoutOne): string
+    private static function requireUri(array $answer, string $withoutOne): string
     {
         return JsonNodeModel::fromValue($answer)->string('uri')
             ?? throw new SocialNetworkUnreachableException($withoutOne);

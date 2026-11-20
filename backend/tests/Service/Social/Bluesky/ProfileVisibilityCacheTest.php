@@ -26,7 +26,7 @@ final class ProfileVisibilityCacheTest extends TestCase
                 BlueskyProfiles::RUSTY => ProfileVisibilityModel::hiddenProfile($rusty),
                 'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
             ],
-            $cache->visibilitiesOf([BlueskyProfiles::RUSTY, 'did:plc:bob']),
+            $cache->readVisibilities([BlueskyProfiles::RUSTY, 'did:plc:bob']),
         );
     }
 
@@ -40,7 +40,7 @@ final class ProfileVisibilityCacheTest extends TestCase
 
         self::assertEquals(
             ['did:plc:bob' => ProfileVisibilityModel::publicProfile()],
-            $reader->visibilitiesOf(['did:plc:bob']),
+            $reader->readVisibilities(['did:plc:bob']),
         );
         $writer->clear();
     }
@@ -52,7 +52,7 @@ final class ProfileVisibilityCacheTest extends TestCase
 
         self::assertEquals(
             ['did:plc:carol' => ProfileVisibilityModel::unknown(), 'did:plc:dave' => ProfileVisibilityModel::unknown()],
-            $cache->visibilitiesOf(['did:plc:carol', 'did:plc:dave']),
+            $cache->readVisibilities(['did:plc:carol', 'did:plc:dave']),
         );
     }
 }

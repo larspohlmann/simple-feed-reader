@@ -24,7 +24,7 @@ final readonly class HiddenImportFollows
      */
     public function among(array $feeds): array
     {
-        $actorByIdentity = self::actorsOf($feeds);
+        $actorByIdentity = self::collectActors($feeds);
         if ([] === $actorByIdentity) {
             return [];
         }
@@ -42,12 +42,12 @@ final readonly class HiddenImportFollows
      * @return array<string, string> each valid identity's actor as the hidden map keys it: a DID as is, a handle
      *                               lower-cased
      */
-    private static function actorsOf(array $feeds): array
+    private static function collectActors(array $feeds): array
     {
         $actorByIdentity = [];
         foreach ($feeds as $feed) {
             if (BlueskyActor::isValid($feed->identity)) {
-                $actorByIdentity[$feed->identity] = BlueskyActorKey::of($feed->identity);
+                $actorByIdentity[$feed->identity] = BlueskyActorKey::normalizeActor($feed->identity);
             }
         }
 

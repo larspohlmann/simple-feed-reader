@@ -59,12 +59,12 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
 
     public function repliesIn(string $address, string $answer): array
     {
-        return $this->replies->of($address, $answer);
+        return $this->replies->parseReplies($address, $answer);
     }
 
     public function buildSelfReply(JsonNodeModel $post): EntryCommentModel
     {
-        return $this->replies->selfReplyOf($post);
+        return $this->replies->buildSelfReply($post);
     }
 
     private static function isMissingPost(ApiResponseModel $answer): bool

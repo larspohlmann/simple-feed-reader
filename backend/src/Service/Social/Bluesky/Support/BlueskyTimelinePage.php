@@ -22,9 +22,9 @@ final class BlueskyTimelinePage
     private const string REPOST = 'app.bsky.feed.defs#reasonRepost';
 
     /** @param list<JsonNodeModel> $items the answer's `feed` */
-    public static function of(array $items, string $accountDid): TimelinePageModel
+    public static function fromItems(array $items, string $accountDid): TimelinePageModel
     {
-        return self::pageOf($items, static fn (JsonNodeModel $item): bool => self::isShown($item, $accountDid));
+        return self::buildPage($items, static fn (JsonNodeModel $item): bool => self::isShown($item, $accountDid));
     }
 
     /**
@@ -32,27 +32,27 @@ final class BlueskyTimelinePage
      *
      * @param list<JsonNodeModel> $items the answer's `feed`
      */
-    public static function ofAuthor(array $items, string $authorDid): TimelinePageModel
+    public static function fromAuthorItems(array $items, string $authorDid): TimelinePageModel
     {
-        return self::pageOf($items, static fn (JsonNodeModel $item): bool => self::isAuthorsOwn($item, $authorDid));
+        return self::buildPage($items, static fn (JsonNodeModel $item): bool => self::isAuthorsOwn($item, $authorDid));
     }
 
     /**
      * @param list<JsonNodeModel>          $items
      * @param \Closure(JsonNodeModel): bool $isShown
      */
-    private static function pageOf(array $items, \Closure $isShown): TimelinePageModel
+    private static function buildPage(array $items, \Closure $isShown): TimelinePageModel
     {
         $entries = [];
         $selfReplies = [];
         $posts = [];
         foreach ($items as $item) {
-            $entry = $isShown($item) ? self::entryOf($item) : null;
+            $entry = $isShown($item) ? self::parseEntry($item) : null;
             if (null === $entry) {
                 continue;
             }
             $posts[$entry->guid] = $item->node('post');
-            $selfReply = self::selfReplyOf($item, $entry);
+            $selfReply = self::detectSelfReply($item, $entry);
             if (null === $selfReply) {
                 $entries[] = $entry;
                 continue;
@@ -64,7 +64,7 @@ final class BlueskyTimelinePage
             ->withSelfReplies($selfReplies);
     }
 
-    private static function selfReplyOf(JsonNodeModel $item, ParsedEntryModel $entry): ?TimelineSelfReplyModel
+    private static function detectSelfReply(JsonNodeModel $item, ParsedEntryModel $entry): ?TimelineSelfReplyModel
     {
         $reply = $item->node('reply');
         $rootUri = $reply->node('root')->string('uri');
@@ -110,7 +110,7 @@ final class BlueskyTimelinePage
             || null !== $parentAuthor->node('viewer')->string('following');
     }
 
-    private static function entryOf(JsonNodeModel $item): ?ParsedEntryModel
+    private static function parseEntry(JsonNodeModel $item): ?ParsedEntryModel
     {
         $post = $item->node('post');
         $uri = $post->string('uri');

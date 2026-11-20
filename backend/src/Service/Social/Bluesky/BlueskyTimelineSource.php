@@ -35,12 +35,12 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 
     public function requests(SocialFeed $socialFeed): array
     {
-        return [$this->sessions->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed))];
+        return [$this->sessions->authorizedGet($socialFeed->getSocialAccount(), self::buildPath($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
     {
-        $answer = BlueskyApiClient::answerOf($outcome);
+        $answer = BlueskyApiClient::requireAnswer($outcome);
         if (BlueskySessions::isStaleSession($answer)) {
             throw new SocialSessionStaleException(BlueskySessions::SESSION_REFUSED);
         }
@@ -53,12 +53,12 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         $answer = $accepted[0] ?? throw new \LogicException('A Bluesky timeline is read with one request.');
 
         return SocialFeedKind::Search === $socialFeed->getKind()
-            ? BlueskySearchPage::of(
+            ? BlueskySearchPage::fromAnswer(
                 $answer,
                 $socialFeed->getSocialAccount()->getIdentity(),
                 $socialFeed->getRemoteId(),
             )
-            : self::timelinePageOf($socialFeed, $answer);
+            : self::buildTimelinePage($socialFeed, $answer);
     }
 
     public function dropSession(SocialAccount $account): void
@@ -71,17 +71,17 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    private static function timelinePageOf(SocialFeed $socialFeed, ApiResponseModel $accepted): TimelinePageModel
+    private static function buildTimelinePage(SocialFeed $socialFeed, ApiResponseModel $accepted): TimelinePageModel
     {
         $items = JsonNodeModel::fromValue($accepted->json())->listAt('feed')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
 
         return SocialFeedKind::Author === $socialFeed->getKind()
-            ? BlueskyTimelinePage::ofAuthor($items, $socialFeed->getRemoteId())
-            : BlueskyTimelinePage::of($items, $socialFeed->getSocialAccount()->getIdentity());
+            ? BlueskyTimelinePage::fromAuthorItems($items, $socialFeed->getRemoteId())
+            : BlueskyTimelinePage::fromItems($items, $socialFeed->getSocialAccount()->getIdentity());
     }
 
-    private static function pathOf(SocialFeed $socialFeed): string
+    private static function buildPath(SocialFeed $socialFeed): string
     {
         $kind = $socialFeed->getKind();
         if (SocialFeedKind::Search === $kind) {

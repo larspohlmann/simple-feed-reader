@@ -26,7 +26,7 @@ final class AtPostUri
         return BlueskyWeb::profileUrl($parts[1]) . '/post/' . $parts[2];
     }
 
-    public static function authorityOf(string $uri): ?string
+    public static function parseAuthority(string $uri): ?string
     {
         return preg_match(self::PATTERN, $uri, $parts) === 1 ? $parts[1] : null;
     }
@@ -37,17 +37,17 @@ final class AtPostUri
     }
 
     /** The post a bsky.app address shows, named by the authority the address names: a handle or a DID. */
-    public static function ofWebUrl(string $url): ?string
+    public static function fromWebUrl(string $url): ?string
     {
-        return preg_match(self::WEB_POST_PATTERN, $url, $parts) === 1 ? self::of($parts[1], $parts[2]) : null;
+        return preg_match(self::WEB_POST_PATTERN, $url, $parts) === 1 ? self::buildUri($parts[1], $parts[2]) : null;
     }
 
     public static function withAuthority(string $uri, string $authority): string
     {
-        return preg_match(self::PATTERN, $uri, $parts) === 1 ? self::of($authority, $parts[2]) : $uri;
+        return preg_match(self::PATTERN, $uri, $parts) === 1 ? self::buildUri($authority, $parts[2]) : $uri;
     }
 
-    private static function of(string $authority, string $recordKey): string
+    private static function buildUri(string $authority, string $recordKey): string
     {
         return 'at://' . $authority . '/app.bsky.feed.post/' . $recordKey;
     }

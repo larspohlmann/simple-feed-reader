@@ -40,7 +40,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         return $this->published($target->account, $draft, static fn (): array => [
-            'reply' => self::replyRefsOf($target),
+            'reply' => self::buildReplyRefs($target),
         ]);
     }
 
@@ -48,14 +48,14 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     {
         return $this->published($target->account, $draft, static fn (): array => ['embed' => [
             '$type' => self::QUOTE_EMBED,
-            'record' => BlueskyStrongRef::of($target),
+            'record' => BlueskyStrongRef::fromPost($target),
         ]]);
     }
 
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
         return $this->published($account, $draft, fn (): array => [
-            'embed' => $this->externalEmbeds->embedOf($account, $url),
+            'embed' => $this->externalEmbeds->prepareEmbed($account, $url),
         ]);
     }
 
@@ -76,7 +76,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
         $fields = fn (): array => [
             'text' => $draft->text,
             ...$attachment(),
-            ...$this->facetsOf($draft->text),
+            ...$this->buildFacetsField($draft->text),
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
         ];
         $uri = null === $draft->idempotencyKey
@@ -121,9 +121,9 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     }
 
     /** @return array{root: array{uri: string, cid: ?string}, parent: array{uri: string, cid: ?string}} */
-    private static function replyRefsOf(SocialPostModel $target): array
+    private static function buildReplyRefs(SocialPostModel $target): array
     {
-        $parent = BlueskyStrongRef::of($target);
+        $parent = BlueskyStrongRef::fromPost($target);
         $root = $target->responseContext->threadRoot;
 
         return [
@@ -133,9 +133,9 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     }
 
     /** @return array{facets?: non-empty-list<mixed>} */
-    private function facetsOf(string $text): array
+    private function buildFacetsField(string $text): array
     {
-        $facets = $this->facets->of($text);
+        $facets = $this->facets->buildFacets($text);
 
         return [] === $facets ? [] : ['facets' => $facets];
     }

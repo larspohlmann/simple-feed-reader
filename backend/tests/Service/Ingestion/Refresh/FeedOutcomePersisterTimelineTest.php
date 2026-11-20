@@ -310,7 +310,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     /** @param list<JsonNodeModel> $items */
     private static function page(array $items): TimelinePageModel
     {
-        return BlueskyTimelinePage::of($items, self::ALICE);
+        return BlueskyTimelinePage::fromItems($items, self::ALICE);
     }
 
     private static function item(string $uri, ?string $replyRoot = null, ?string $replyParent = null): JsonNodeModel

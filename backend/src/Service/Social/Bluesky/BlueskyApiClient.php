@@ -54,7 +54,7 @@ final readonly class BlueskyApiClient
     }
 
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
-    public static function answerOf(FetchOutcomeModel $outcome): ApiResponseModel
+    public static function requireAnswer(FetchOutcomeModel $outcome): ApiResponseModel
     {
         return NetworkAnswer::orUnreachable($outcome->answerOrThrow(...), self::NETWORK);
     }

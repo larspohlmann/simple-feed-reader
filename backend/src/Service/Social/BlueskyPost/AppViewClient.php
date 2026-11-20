@@ -83,7 +83,7 @@ final readonly class AppViewClient
             $profiles[$did] = $profile;
             $handle = $profile->string('handle');
             if ($handle !== null) {
-                $profiles[BlueskyActorKey::of($handle)] = $profile;
+                $profiles[BlueskyActorKey::normalizeActor($handle)] = $profile;
             }
         }
 
