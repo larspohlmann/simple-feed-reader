@@ -244,22 +244,90 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         self::assertSame([self::COMMENTS_API], $this->fetcher->fetchedUrls);
     }
 
-    public function testThreadsByPathDepthFirst(): void
+    public function testThreadsByPathDepthFirstMostInterestingFirst(): void
     {
         self::assertSame(
             [
-                ['https://piefed.ca/comment/7077799', 0],
-                ['https://lemmy.world/comment/26859426', 0],
-                ['https://sh.itjust.works/comment/28579580', 1],
-                ['https://thelemmy.club/comment/30356546', 0],
-                ['https://sh.itjust.works/comment/28577929', 1],
                 ['https://lemmy.world/comment/26858462', 0],
                 ['https://lemmy.ml/comment/29014742', 1],
+                ['https://thelemmy.club/comment/30356546', 0],
+                ['https://sh.itjust.works/comment/28577929', 1],
+                ['https://lemmy.world/comment/26859426', 0],
+                ['https://sh.itjust.works/comment/28579580', 1],
+                ['https://piefed.ca/comment/7077799', 0],
             ],
             array_map(
                 static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
                 $this->comments(),
             ),
+        );
+    }
+
+    public function testATopLevelCommentsInterestIsItsScorePlusThreeTimesItsReplies(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5') + ['counts' => ['score' => 10, 'child_count' => 0]],
+            self::node(6, '0.6') + ['counts' => ['score' => 1, 'child_count' => 2]],
+            self::node(7, '0.7') + ['counts' => ['score' => -2, 'child_count' => 5]],
+        ]]);
+
+        self::assertSame(
+            [
+                ['https://lemmy.world/comment/7', 0],
+                ['https://lemmy.world/comment/5', 0],
+                ['https://lemmy.world/comment/6', 0],
+            ],
+            self::urlsAndDepths($this->read($answer)),
+        );
+    }
+
+    public function testTopLevelCommentsOfEqualInterestShowNewestFirst(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5', ['published' => '2026-11-14T05:00:00Z']),
+            self::node(6, '0.6', ['published' => '2026-11-14T07:00:00Z']),
+            self::node(7, '0.7', ['published' => '2026-11-14T06:00:00Z']),
+        ]]);
+
+        self::assertSame(
+            [
+                ['https://lemmy.world/comment/6', 0],
+                ['https://lemmy.world/comment/7', 0],
+                ['https://lemmy.world/comment/5', 0],
+            ],
+            self::urlsAndDepths($this->read($answer)),
+        );
+    }
+
+    public function testAnswersInsideAThreadShowOldestFirstWhateverTheirInterest(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5'),
+            self::node(6, '0.5.6', ['published' => '2026-11-14T07:00:00Z']) + ['counts' => ['score' => 50]],
+            self::node(7, '0.5.7', ['published' => '2026-11-14T06:00:00Z']),
+        ]]);
+
+        self::assertSame(
+            [
+                ['https://lemmy.world/comment/5', 0],
+                ['https://lemmy.world/comment/7', 1],
+                ['https://lemmy.world/comment/6', 1],
+            ],
+            self::urlsAndDepths($this->read($answer)),
+        );
+    }
+
+    public function testTheReplyToARemovedTopLevelCommentRanksByItsOwnInterest(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5', ['removed' => true]) + ['counts' => ['score' => 90, 'child_count' => 1]],
+            self::node(6, '0.6') + ['counts' => ['score' => 4]],
+            self::node(7, '0.5.7') + ['counts' => ['score' => 2]],
+        ]]);
+
+        self::assertSame(
+            [['https://lemmy.world/comment/6', 0], ['https://lemmy.world/comment/7', 0]],
+            self::urlsAndDepths($this->read($answer)),
         );
     }
 
@@ -353,17 +421,17 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     {
         $comments = $this->comments();
 
-        self::assertSame('ZeroCool', $comments[0]->author->name);
-        self::assertSame('@ZeroCool@piefed.ca', $comments[0]->author->handle);
-        self::assertSame('https://piefed.ca/u/ZeroCool', $comments[0]->author->profileUrl);
-        self::assertSame('https://media.piefed.ca/users/1N/ki/1Nkix9Rh7H5O55T.jpg', $comments[0]->author->avatarUrl);
-        self::assertSame('Pika', $comments[4]->author->name);
-        self::assertEquals(new \DateTimeImmutable('2026-11-14 08:18:08.294711'), $comments[0]->publishedAt);
+        self::assertSame('ZeroCool', $comments[6]->author->name);
+        self::assertSame('@ZeroCool@piefed.ca', $comments[6]->author->handle);
+        self::assertSame('https://piefed.ca/u/ZeroCool', $comments[6]->author->profileUrl);
+        self::assertSame('https://media.piefed.ca/users/1N/ki/1Nkix9Rh7H5O55T.jpg', $comments[6]->author->avatarUrl);
+        self::assertSame('Pika', $comments[3]->author->name);
+        self::assertEquals(new \DateTimeImmutable('2026-11-14 08:18:08.294711'), $comments[6]->publishedAt);
     }
 
     public function testACommenterWithoutADisplayNameIsNamedByAccount(): void
     {
-        $author = $this->comments()[1]->author;
+        $author = $this->comments()[4]->author;
 
         self::assertSame('lemonbun', $author->name);
         self::assertSame('@lemonbun@lemmy.world', $author->handle);
@@ -373,7 +441,7 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     public function testMarksThePostAuthorsReplies(): void
     {
         self::assertSame(
-            [false, false, false, false, false, true, false],
+            [true, false, false, false, false, false, false],
             array_map(static fn (EntryCommentModel $comment): bool => $comment->byEntryAuthor, $this->comments()),
         );
     }
@@ -444,10 +512,10 @@ final class LemmyCommentsSourceTest extends KernelTestCase
     }
 
     /**
-     * @param array<string, string|int|null> $comment
+     * @param array<string, string|int|bool|null> $comment
      * @param array<string, string|null>     $creator
      *
-     * @return array<string, array<string, string|int|null>>
+     * @return array<string, array<string, string|int|bool|null>>
      */
     private static function node(int $id, string $path, array $comment = [], array $creator = []): array
     {
