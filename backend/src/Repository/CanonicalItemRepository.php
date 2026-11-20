@@ -44,7 +44,7 @@ final class CanonicalItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * Its votes, likes and Lemmy post row go with it: their foreign keys cascade. A younger item is spared, as an
+     * Rows that reference an item by foreign key go with it, by cascade. A younger item is spared, as an
      * ingest may have ensured it and not yet flushed the entries that link to it.
      */
     public function deleteUnreferenced(\DateTimeImmutable $createdBefore): int
