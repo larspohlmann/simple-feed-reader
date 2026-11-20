@@ -23,14 +23,14 @@ final class RetryPlanModelTest extends TestCase
     {
         $plan = RetryPlanModel::blocking();
 
-        self::assertSame(1.0, $plan->waitSecondsFor(0, null));
-        self::assertSame(2.0, $plan->waitSecondsFor(1, null));
-        self::assertSame(4.0, $plan->waitSecondsFor(2, null));
+        self::assertSame(1.0, $plan->resolveWaitSeconds(0, null));
+        self::assertSame(2.0, $plan->resolveWaitSeconds(1, null));
+        self::assertSame(4.0, $plan->resolveWaitSeconds(2, null));
     }
 
     public function testRetryAfterOverridesTheBackoffStep(): void
     {
-        self::assertSame(30.0, RetryPlanModel::blocking()->waitSecondsFor(0, 30));
+        self::assertSame(30.0, RetryPlanModel::blocking()->resolveWaitSeconds(0, 30));
     }
 
     public function testItAllowsThreeRetriesWithinATwoMinuteBudget(): void

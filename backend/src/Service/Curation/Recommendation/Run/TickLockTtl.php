@@ -36,7 +36,7 @@ final readonly class TickLockTtl
     {
         $timeouts = null === $connection
             ? ProviderTimeoutsModel::standard()
-            : $this->connectionFactory->timeoutsFor($connection);
+            : $this->connectionFactory->buildTimeouts($connection);
 
         return $timeouts->firstByteSeconds + self::MARGIN_SECONDS;
     }

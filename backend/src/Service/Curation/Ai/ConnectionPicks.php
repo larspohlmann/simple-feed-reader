@@ -19,8 +19,11 @@ final readonly class ConnectionPicks
      *
      * @param \Closure(AiProviderSettings): bool $canServe
      */
-    public function usableGiven(User $user, ?AiProviderSettings $storedPick, \Closure $canServe): ?AiProviderSettings
-    {
+    public function findUsableConnectionGiven(
+        User $user,
+        ?AiProviderSettings $storedPick,
+        \Closure $canServe,
+    ): ?AiProviderSettings {
         $candidate = $storedPick ?? $user->getActiveAiProviderSettings();
 
         return null !== $candidate && $canServe($candidate) ? $candidate : null;
@@ -31,7 +34,7 @@ final readonly class ConnectionPicks
      *
      * @return list<AiProviderSettings>
      */
-    public function candidatesFor(User $user, \Closure $canServe): array
+    public function findCandidates(User $user, \Closure $canServe): array
     {
         return array_values(array_filter($this->configurations->all($user), $canServe));
     }

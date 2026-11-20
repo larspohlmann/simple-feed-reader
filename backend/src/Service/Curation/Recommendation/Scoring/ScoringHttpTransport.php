@@ -137,7 +137,7 @@ final readonly class ScoringHttpTransport
                 CredentialsRejectedException::refusedKey(),
             ),
             \in_array($status, self::RETRYABLE_STATUSES, true) => ScoringOutcomeModel::failed(
-                new RetryableProviderException($status, RetryAfter::secondsIn($response)),
+                new RetryableProviderException($status, RetryAfter::parseSeconds($response)),
             ),
             RejectingStatus::matches($status) => ScoringOutcomeModel::failed(new ProviderRejectedRequestException(
                 $status,

@@ -32,7 +32,7 @@ final readonly class ProfileConnections
 
     public function usableGiven(User $user, ?RecommendationSettings $storedSettings): ?AiProviderSettings
     {
-        return $this->connectionPicks->usableGiven(
+        return $this->connectionPicks->findUsableConnectionGiven(
             $user,
             $storedSettings?->profileSettings()->connection,
             $this->canBuildProfiles(...),
@@ -48,6 +48,6 @@ final readonly class ProfileConnections
     /** @return list<AiProviderSettings> */
     public function candidatesFor(User $user): array
     {
-        return $this->connectionPicks->candidatesFor($user, $this->canBuildProfiles(...));
+        return $this->connectionPicks->findCandidates($user, $this->canBuildProfiles(...));
     }
 }

@@ -28,6 +28,6 @@ final class RetryAfterTest extends TestCase
         $response = (new MockHttpClient(new MockResponse('', ['http_code' => 429, 'response_headers' => $headers])))
             ->request('POST', 'https://api.example.test/v1/systemone');
 
-        self::assertSame($seconds, RetryAfter::secondsIn($response));
+        self::assertSame($seconds, RetryAfter::parseSeconds($response));
     }
 }

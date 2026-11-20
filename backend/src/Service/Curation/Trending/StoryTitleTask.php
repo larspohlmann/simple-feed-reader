@@ -46,9 +46,9 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
         return StoryAiTask::Title;
     }
 
-    public function connectionFor(User $user): ?AiProviderSettings
+    public function findConnection(User $user): ?AiProviderSettings
     {
-        return $this->storySettings->titleConnectionFor($user);
+        return $this->storySettings->findTitleConnection($user);
     }
 
     /** Ranks the reader's windows only when a story a window could show is due at all. */

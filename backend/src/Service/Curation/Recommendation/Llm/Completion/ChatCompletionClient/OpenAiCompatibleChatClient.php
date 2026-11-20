@@ -320,7 +320,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         }
 
         if (\in_array($status, self::RETRYABLE_STATUSES, true)) {
-            throw new RetryableProviderException($status, RetryAfter::secondsIn($response));
+            throw new RetryableProviderException($status, RetryAfter::parseSeconds($response));
         }
 
         if ($status >= Response::HTTP_MULTIPLE_CHOICES) {

@@ -25,7 +25,10 @@ final readonly class ProviderConnectionFactory
      */
     public function forSettings(AiProviderSettings $settings): ProviderConnectionModel
     {
-        return new ProviderConnectionModel($this->configurator->credentials($settings), $this->timeoutsFor($settings));
+        return new ProviderConnectionModel(
+            $this->configurator->credentials($settings),
+            $this->buildTimeouts($settings),
+        );
     }
 
     /**
@@ -33,7 +36,7 @@ final readonly class ProviderConnectionFactory
      * call's duration without making one — the run advancer's lock TTL. No key
      * is opened, so this cannot fail.
      */
-    public function timeoutsFor(AiProviderSettings $settings): ProviderTimeoutsModel
+    public function buildTimeouts(AiProviderSettings $settings): ProviderTimeoutsModel
     {
         return $settings->isSlowModel() ? ProviderTimeoutsModel::forSlowModel() : ProviderTimeoutsModel::standard();
     }

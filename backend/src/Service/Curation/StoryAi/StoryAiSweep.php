@@ -53,7 +53,7 @@ final readonly class StoryAiSweep
     {
         $report = StoryAiReportModel::none();
         foreach ($this->tasks as $task) {
-            $connection = $task->connectionFor($reader);
+            $connection = $task->findConnection($reader);
             if ($connection === null) {
                 continue;
             }

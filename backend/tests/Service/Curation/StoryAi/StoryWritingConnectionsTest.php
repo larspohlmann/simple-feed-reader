@@ -33,7 +33,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
     {
         $active = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
 
-        self::assertSame($active, $this->connections()->usableFor($this->owner));
+        self::assertSame($active, $this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAChosenChatConnectionWinsOverTheActiveOne(): void
@@ -42,7 +42,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
         $chosen = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
         $this->storeSettings($chosen, true);
 
-        self::assertSame($chosen, $this->connections()->usableFor($this->owner));
+        self::assertSame($chosen, $this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAChosenScoringConnectionGivesNoneRatherThanTheActiveOne(): void
@@ -50,7 +50,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->storeSettings($this->fixtures->seedInactiveScoringSettings($this->owner), true);
 
-        self::assertNull($this->connections()->usableFor($this->owner));
+        self::assertNull($this->connections()->findUsableConnection($this->owner));
     }
 
     public function testAScoringConnectionCannotWrite(): void
@@ -58,7 +58,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
         $this->fixtures->seedReadyScoringSettings($this->owner);
         $chat = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
 
-        self::assertNull($this->connections()->usableFor($this->owner));
+        self::assertNull($this->connections()->findUsableConnection($this->owner));
         self::assertSame([$chat->getId()], $this->candidateIds());
     }
 
@@ -67,7 +67,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
         $active = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->storeSettings(null, false);
 
-        self::assertSame($active, $this->connections()->usableFor($this->owner));
+        self::assertSame($active, $this->connections()->findUsableConnection($this->owner));
     }
 
     /** @return list<?int> */
@@ -75,7 +75,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
     {
         return array_map(
             static fn (AiProviderSettings $connection): ?int => $connection->getId(),
-            $this->connections()->candidatesFor($this->owner),
+            $this->connections()->findCandidates($this->owner),
         );
     }
 
