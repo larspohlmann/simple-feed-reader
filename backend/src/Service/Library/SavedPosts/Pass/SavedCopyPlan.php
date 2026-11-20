@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Library\SavedPosts\Pass;
 
 use App\Entity\EntryGuid;
+use App\Service\Foundation\CanonicalItem\Support\SavedCopyGuid;
 
 /**
  * Which of a batch's posts the saved feed already holds. A guid is unique per feed only, so the same guid under
@@ -136,6 +137,6 @@ final class SavedCopyPlan
     /** @param array{guid: string, feedId: int} $original */
     private static function buildRenamedGuid(array $original): EntryGuid
     {
-        return new EntryGuid($original['guid'] . '#' . $original['feedId']);
+        return new EntryGuid(SavedCopyGuid::build($original['guid'], $original['feedId']));
     }
 }

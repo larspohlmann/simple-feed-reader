@@ -11,6 +11,11 @@ final class SavedCopyGuid
         return preg_replace('/#\d+\z/', '', $guid) ?? $guid;
     }
 
+    public static function build(string $guid, int $feedId): string
+    {
+        return $guid . '#' . $feedId;
+    }
+
     private function __construct()
     {
     }
