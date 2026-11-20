@@ -26,7 +26,7 @@ final readonly class LemmyThread
     }
 
     /**
-     * @param list<JsonNodeModel> $nodes the comments in the order the instance ranked them
+     * @param list<JsonNodeModel> $nodes the comments in any order
      *
      * @return list<EntryCommentModel>
      */
@@ -37,12 +37,78 @@ final readonly class LemmyThread
         foreach ($unique as $node) {
             $repliesByParent[self::extractParentId($node)][] = $node;
         }
-        $roots = array_filter(
+        $topLevel = array_filter(
             $unique,
             static fn (JsonNodeModel $node): bool => !isset($unique[self::extractParentId($node)]),
         );
+        $roots = $this->arranged($topLevel, $repliesByParent, self::mostInterestingFirst(...));
 
-        return $this->flattened(array_values($roots), $repliesByParent, 0);
+        return $this->flattened($roots, $repliesByParent, 0);
+    }
+
+    /**
+     * @param array<JsonNodeModel>                                                      $nodes
+     * @param array<string, list<JsonNodeModel>>                                       $repliesByParent
+     * @param \Closure(array{JsonNodeModel, EntryCommentModel}, array{JsonNodeModel, EntryCommentModel}): int $order
+     *
+     * @return list<array{JsonNodeModel, EntryCommentModel}>
+     */
+    private function arranged(array $nodes, array $repliesByParent, \Closure $order): array
+    {
+        $shown = $this->shown($nodes, $repliesByParent);
+        usort($shown, $order);
+
+        return $shown;
+    }
+
+    /**
+     * @param array<JsonNodeModel>               $nodes
+     * @param array<string, list<JsonNodeModel>> $repliesByParent
+     *
+     * @return list<array{JsonNodeModel, EntryCommentModel}> each hidden comment replaced by the replies it leaves
+     */
+    private function shown(array $nodes, array $repliesByParent): array
+    {
+        $shown = [];
+        foreach ($nodes as $node) {
+            $comment = $this->parseComment($node);
+            array_push($shown, ...(null === $comment
+                ? $this->shown($repliesByParent[self::readId($node)] ?? [], $repliesByParent)
+                : [[$node, $comment]]));
+        }
+
+        return $shown;
+    }
+
+    /**
+     * @param array{JsonNodeModel, EntryCommentModel} $left
+     * @param array{JsonNodeModel, EntryCommentModel} $right
+     */
+    private static function mostInterestingFirst(array $left, array $right): int
+    {
+        return [self::computeInterest($right[0]), self::sortableTime($right[1])]
+            <=> [self::computeInterest($left[0]), self::sortableTime($left[1])];
+    }
+
+    /**
+     * @param array{JsonNodeModel, EntryCommentModel} $left
+     * @param array{JsonNodeModel, EntryCommentModel} $right
+     */
+    private static function oldestFirst(array $left, array $right): int
+    {
+        return self::sortableTime($left[1]) <=> self::sortableTime($right[1]);
+    }
+
+    private static function computeInterest(JsonNodeModel $node): int
+    {
+        $counts = $node->node('counts');
+
+        return ($counts->int('score') ?? 0) + 3 * ($counts->int('child_count') ?? 0);
+    }
+
+    private static function sortableTime(EntryCommentModel $comment): int
+    {
+        return $comment->publishedAt?->getTimestamp() ?? PHP_INT_MIN;
     }
 
     /**
@@ -64,28 +130,25 @@ final readonly class LemmyThread
     }
 
     /**
-     * @param list<JsonNodeModel>                $nodes
-     * @param array<string, list<JsonNodeModel>> $repliesByParent
+     * @param list<array{JsonNodeModel, EntryCommentModel}> $shown
+     * @param array<string, list<JsonNodeModel>>            $repliesByParent
      *
      * @return list<EntryCommentModel>
      */
-    private function flattened(array $nodes, array $repliesByParent, int $depth): array
+    private function flattened(array $shown, array $repliesByParent, int $depth): array
     {
         $comments = [];
-        foreach ($nodes as $node) {
-            $comment = $this->parseComment($node, $depth);
-            if (null !== $comment) {
-                $comments[] = $comment;
-            }
-            $replyDepth = null === $comment ? $depth : $depth + 1;
+        foreach ($shown as [$node, $comment]) {
+            $comments[] = $comment->atDepth($depth);
             $replies = $repliesByParent[self::readId($node)] ?? [];
-            array_push($comments, ...$this->flattened($replies, $repliesByParent, $replyDepth));
+            $arranged = $this->arranged($replies, $repliesByParent, self::oldestFirst(...));
+            array_push($comments, ...$this->flattened($arranged, $repliesByParent, $depth + 1));
         }
 
         return $comments;
     }
 
-    private function parseComment(JsonNodeModel $node, int $depth): ?EntryCommentModel
+    private function parseComment(JsonNodeModel $node): ?EntryCommentModel
     {
         $comment = $node->node('comment');
         if ($comment->isTrue('removed') || $comment->isTrue('deleted')) {
@@ -106,7 +169,7 @@ final readonly class LemmyThread
             $html,
             null !== $profileUrl && $profileUrl === $this->entryAuthorUrl,
             score: $node->node('counts')->int('score'),
-        )->atDepth($depth);
+        );
 
         return $this->carriesVotes && null !== $address
             ? $entryComment->withVote(self::vote($node, $address))
