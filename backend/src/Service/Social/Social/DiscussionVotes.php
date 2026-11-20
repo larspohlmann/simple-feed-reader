@@ -80,7 +80,7 @@ final readonly class DiscussionVotes
         VoteScore $score,
     ): DiscussionVoteResultModel {
         $network = $this->requireVotingNetwork($entry);
-        if (null === AbsoluteHttpUrl::httpsOrNull($address)) {
+        if (null === AbsoluteHttpUrl::keepIfHttps($address)) {
             throw new NotASocialPostException(sprintf('The address names no %s comment.', $this->formatNetworkNames()));
         }
         $account = $this->accounts->accountFor($user, $entry, $network);

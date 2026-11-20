@@ -38,7 +38,7 @@ final readonly class UserPasskeyFactory
             userHandle: Base64UrlSafe::encodeUnpadded($record->userHandle),
             publicKey: Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
             signatureCounter: $record->counter,
-            aaguid: self::aaguidOrNull($record->aaguid),
+            aaguid: self::serializeAaguid($record->aaguid),
             transports: self::knownTransports($record->transports),
             label: $label,
             registeredAt: $this->clock->now(),
@@ -59,13 +59,13 @@ final readonly class UserPasskeyFactory
     }
 
     /** The spec's all-zero "no AAGUID assigned" is stored as null, not as an identifier that looks real. */
-    private static function aaguidOrNull(Uuid $aaguid): ?string
+    private static function serializeAaguid(Uuid $aaguid): ?string
     {
         return new NilUuid()->equals($aaguid) ? null : $aaguid->toRfc4122();
     }
 
     /**
-     * `response.transports` is unvalidated client data that excludeListFor() echoes to every later registration, so
+     * `response.transports` is unvalidated client data that loadExcludeList() echoes to every later registration, so
      * only the spec's values are stored.
      *
      * @param array<string> $transports

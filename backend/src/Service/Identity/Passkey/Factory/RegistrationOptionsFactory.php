@@ -21,8 +21,8 @@ use Webauthn\PublicKeyCredentialUserEntity;
 
 /**
  * Registration options: resident keys, user verification required, no attestation. create() mints the user handle
- * once and stores it with the challenge; AttestationVerifier rebuilds the options through optionsFor() from that
- * stored handle, since userHandleFor() mints anew while an account has no credential.
+ * once and stores it with the challenge; AttestationVerifier rebuilds the options through buildOptions() from that
+ * stored handle, since resolveUserHandle() mints anew while an account has no credential.
  */
 final readonly class RegistrationOptionsFactory
 {
@@ -44,8 +44,8 @@ final readonly class RegistrationOptionsFactory
     public function create(User $user): array
     {
         $challenge = random_bytes(self::CHALLENGE_LENGTH_BYTES);
-        $userHandle = $this->credentials->userHandleFor($user);
-        $options = $this->optionsFor($user, $challenge, $userHandle);
+        $userHandle = $this->credentials->resolveUserHandle($user);
+        $options = $this->buildOptions($user, $challenge, $userHandle);
 
         return [
             'options' => $this->serializeWithRelyingPartyName($options),
@@ -57,11 +57,11 @@ final readonly class RegistrationOptionsFactory
      * The exact options a ceremony started with, shared with AttestationVerifier: a second copy of these
      * security-relevant requirements could drift from what the browser was shown.
      */
-    public function optionsFor(User $user, string $challenge, string $userHandle): PublicKeyCredentialCreationOptions
+    public function buildOptions(User $user, string $challenge, string $userHandle): PublicKeyCredentialCreationOptions
     {
         return PublicKeyCredentialCreationOptions::create(
             rp: PublicKeyCredentialRpEntity::create('', $this->relyingParty->id()),
-            user: self::userEntityFor($user, $userHandle),
+            user: self::buildUserEntity($user, $userHandle),
             challenge: $challenge,
             pubKeyCredParams: [
                 PublicKeyCredentialParameters::createPk(ES256::ID),
@@ -72,11 +72,11 @@ final readonly class RegistrationOptionsFactory
                 residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_REQUIRED,
             ),
             attestation: PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
-            excludeCredentials: $this->credentials->excludeListFor($user),
+            excludeCredentials: $this->credentials->loadExcludeList($user),
         );
     }
 
-    private static function userEntityFor(User $user, string $userHandle): PublicKeyCredentialUserEntity
+    private static function buildUserEntity(User $user, string $userHandle): PublicKeyCredentialUserEntity
     {
         return PublicKeyCredentialUserEntity::create(
             $user->getEmail(),

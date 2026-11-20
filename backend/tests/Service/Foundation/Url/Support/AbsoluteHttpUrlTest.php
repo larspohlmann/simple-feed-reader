@@ -57,10 +57,10 @@ final class AbsoluteHttpUrlTest extends TestCase
 
     public function testHttpsOrNullKeepsOnlyHttpsInAnyCase(): void
     {
-        self::assertSame('HTTPS://example.org/a', AbsoluteHttpUrl::httpsOrNull('HTTPS://example.org/a'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull('http://example.org/a'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull('77'));
-        self::assertNull(AbsoluteHttpUrl::httpsOrNull(null));
+        self::assertSame('HTTPS://example.org/a', AbsoluteHttpUrl::keepIfHttps('HTTPS://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps('http://example.org/a'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps('77'));
+        self::assertNull(AbsoluteHttpUrl::keepIfHttps(null));
     }
 
     public function testHostAndPathAreReadFromAWebUrlWithTheHostLowerCased(): void

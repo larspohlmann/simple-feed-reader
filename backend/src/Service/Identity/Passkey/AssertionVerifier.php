@@ -115,14 +115,14 @@ final readonly class AssertionVerifier
         AuthenticatorAssertionResponse $response,
         string $challenge,
     ): int {
-        $record = $this->credentialRecordFor($storedPasskey);
+        $record = $this->buildCredentialRecord($storedPasskey);
         $userHandle = Base64UrlSafe::decodeNoPadding($storedPasskey->getUserHandle());
 
         try {
             $verified = AuthenticatorAssertionResponseValidator::create($this->ceremony->request())->check(
                 $record,
                 $response,
-                $this->optionsFactory->optionsFor($challenge),
+                $this->optionsFactory->buildOptions($challenge),
                 $this->ceremony->host(),
                 $userHandle,
             );
@@ -149,7 +149,7 @@ final readonly class AssertionVerifier
         ]);
     }
 
-    private function credentialRecordFor(UserPasskey $storedPasskey): CredentialRecord
+    private function buildCredentialRecord(UserPasskey $storedPasskey): CredentialRecord
     {
         return CredentialRecord::create(
             Base64UrlSafe::decodeNoPadding($storedPasskey->getCredentialId()),
@@ -157,15 +157,15 @@ final readonly class AssertionVerifier
             $storedPasskey->getTransports(),
             'none',
             EmptyTrustPath::create(),
-            self::aaguidOrNil($storedPasskey->getAaguid()),
+            self::deserializeAaguid($storedPasskey->getAaguid()),
             Base64UrlSafe::decodeNoPadding($storedPasskey->getPublicKey()),
             Base64UrlSafe::decodeNoPadding($storedPasskey->getUserHandle()),
             $storedPasskey->getSignatureCounter(),
         );
     }
 
-    /** The inverse of UserPasskeyFactory::aaguidOrNull(): a stored null becomes the spec's all-zero AAGUID. */
-    private static function aaguidOrNil(?string $aaguid): Uuid
+    /** The inverse of UserPasskeyFactory::serializeAaguid(): a stored null becomes the spec's all-zero AAGUID. */
+    private static function deserializeAaguid(?string $aaguid): Uuid
     {
         return null === $aaguid ? new NilUuid() : Uuid::fromString($aaguid);
     }

@@ -16,7 +16,7 @@ final class AbsoluteHttpUrl
         return $url !== null && self::matches($url) ? $url : null;
     }
 
-    public static function httpsOrNull(?string $url): ?string
+    public static function keepIfHttps(?string $url): ?string
     {
         return null !== $url && self::matches($url) && 0 === stripos($url, 'https://') ? $url : null;
     }

@@ -22,7 +22,7 @@ final readonly class OAuthUserFactory
     public function create(OAuthIdentityModel $identity): User
     {
         $now = $this->clock->now();
-        $user = new User($this->loginIdentifierFor($identity), $now);
+        $user = new User($this->resolveLoginIdentifier($identity), $now);
         if ($identity->isLinkableByEmail()) {
             $user->markEmailVerified($now);
         }
@@ -40,7 +40,7 @@ final readonly class OAuthUserFactory
      * Only a linkable address becomes the login identifier; anything else gets a placeholder and stays on the
      * UserIdentity row, or an unverified claim could squat a real address. docs/security.md#oauth-account-linking
      */
-    private function loginIdentifierFor(OAuthIdentityModel $identity): string
+    private function resolveLoginIdentifier(OAuthIdentityModel $identity): string
     {
         if ($identity->isLinkableByEmail()) {
             \assert(null !== $identity->email);

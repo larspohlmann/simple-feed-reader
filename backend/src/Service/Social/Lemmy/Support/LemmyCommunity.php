@@ -44,7 +44,7 @@ final class LemmyCommunity
 
     private static function parseHttpsHost(string $actorId): ?string
     {
-        $httpsActorId = AbsoluteHttpUrl::httpsOrNull($actorId);
+        $httpsActorId = AbsoluteHttpUrl::keepIfHttps($actorId);
 
         return null === $httpsActorId ? null : UrlOrigin::hostWithPort($httpsActorId);
     }

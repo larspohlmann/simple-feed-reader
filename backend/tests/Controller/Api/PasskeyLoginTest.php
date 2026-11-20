@@ -308,7 +308,7 @@ final class PasskeyLoginTest extends ApiTestCase
 
     /**
      * User verification is the only check between an unlocked device and a logged-in account. The requirement lives
-     * in AssertionOptionsFactory::optionsFor() alone, so relaxing it fails this test and the options test together.
+     * in AssertionOptionsFactory::buildOptions() alone, so relaxing it fails this test and the options test together.
      */
     public function testAnAssertionWithoutUserVerificationIsRejected(): void
     {

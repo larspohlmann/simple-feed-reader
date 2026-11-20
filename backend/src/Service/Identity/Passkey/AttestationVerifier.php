@@ -63,7 +63,7 @@ final readonly class AttestationVerifier
     }
 
     /**
-     * Builds the options outside checkAgainstLibrary()'s broad catch: a database failure in excludeListFor() is a
+     * Builds the options outside checkAgainstLibrary()'s broad catch: a database failure in loadExcludeList() is a
      * fault, not a credential to reject.
      *
      * @param array<string, mixed> $credential
@@ -73,7 +73,7 @@ final readonly class AttestationVerifier
         $userHandle = $challenge->userHandle ?? throw new \UnexpectedValueException(
             'A registration challenge must always carry a user handle.',
         );
-        $options = $this->optionsFactory->optionsFor($user, $challenge->challenge, $userHandle);
+        $options = $this->optionsFactory->buildOptions($user, $challenge->challenge, $userHandle);
 
         return $this->checkAgainstLibrary($credential, $options);
     }
@@ -115,7 +115,7 @@ final readonly class AttestationVerifier
     }
 
     /**
-     * A unique-constraint hit means a replayed or forged registration (excludeListFor() already names every
+     * A unique-constraint hit means a replayed or forged registration (loadExcludeList() already names every
      * credential to an honest authenticator): a 409, never a 500.
      */
     private function persist(User $user, UserPasskey $passkey): void

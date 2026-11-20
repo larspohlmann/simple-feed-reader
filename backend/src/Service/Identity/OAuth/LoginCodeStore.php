@@ -34,7 +34,7 @@ final readonly class LoginCodeStore
     {
         $code = bin2hex(random_bytes(32));
 
-        $item = $this->loginCodeCache->getItem(self::keyFor($code));
+        $item = $this->loginCodeCache->getItem(self::buildKey($code));
         // Note what is absent: the code and the browser token. The code is only
         // the hashed lookup key, and the token is stored only as a digest, so a
         // readable cache file yields neither a usable code nor a binding.
@@ -55,7 +55,7 @@ final readonly class LoginCodeStore
      */
     public function consume(string $code, ?string $browserToken): int
     {
-        $key = self::keyFor($code);
+        $key = self::buildKey($code);
         $item = $this->loginCodeCache->getItem($key);
 
         if (!$item->isHit()) {
@@ -88,7 +88,7 @@ final readonly class LoginCodeStore
         return $stored['user_id'];
     }
 
-    private static function keyFor(string $code): string
+    private static function buildKey(string $code): string
     {
         return self::KEY_PREFIX . self::digest($code);
     }

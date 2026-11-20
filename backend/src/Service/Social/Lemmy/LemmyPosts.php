@@ -76,7 +76,7 @@ final readonly class LemmyPosts
 
     private function resolve(SocialAccount $account, ?string $address): JsonNodeModel
     {
-        $absolute = AbsoluteHttpUrl::httpsOrNull($address);
+        $absolute = AbsoluteHttpUrl::keepIfHttps($address);
         if (null === $absolute) {
             throw new SocialPostNotFoundException(self::NOT_ON_HOME);
         }
