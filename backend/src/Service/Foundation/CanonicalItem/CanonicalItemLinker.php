@@ -6,6 +6,7 @@ namespace App\Service\Foundation\CanonicalItem;
 
 use App\Entity\Entry;
 use App\Repository\CanonicalItemRepository;
+use App\Service\Foundation\CanonicalItem\Model\CanonicalKeyModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 
 /** Links each unlinked entry a key rule claims to its canonical item, inserting the item when missing. The caller flushes. */
@@ -25,31 +26,30 @@ final readonly class CanonicalItemLinker
      */
     public function linkClaimed(array $entries): array
     {
-        $itemIds = $this->ensureItemIds($entries);
-        $items = $this->canonicalItems->findByIds(array_values(array_unique($itemIds)));
-        foreach ($itemIds as $position => $itemId) {
-            $entries[$position]->linkTo($items[$itemId]);
+        $keys = $this->collectClaimedKeys($entries);
+        $items = $this->canonicalItems->ensureAll(array_values($keys), $this->clock->now());
+        foreach ($keys as $position => $key) {
+            $entries[$position]->linkTo($items[$key->identity()]);
         }
 
-        return array_keys($itemIds);
+        return array_keys($keys);
     }
 
     /**
      * @param list<Entry> $entries
      *
-     * @return array<int, int> the item id of each unlinked entry a rule claims, by its position
+     * @return array<int, CanonicalKeyModel> the key of each unlinked entry a rule claims, by its position
      */
-    private function ensureItemIds(array $entries): array
+    private function collectClaimedKeys(array $entries): array
     {
-        $itemIds = [];
-        $now = $this->clock->now();
+        $keys = [];
         foreach ($entries as $position => $entry) {
             $key = $entry->getCanonicalItem() === null ? $this->canonicalKeys->findKey($entry) : null;
             if ($key !== null) {
-                $itemIds[$position] = $this->canonicalItems->ensure($key, $now);
+                $keys[$position] = $key;
             }
         }
 
-        return $itemIds;
+        return $keys;
     }
 }

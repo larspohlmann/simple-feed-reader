@@ -26,8 +26,8 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
 
-        $first = $this->items->ensure($key, self::buildCreatedAt());
-        $second = $this->items->ensure($key, self::buildCreatedAt());
+        $first = $this->ensureItem($key->kind, $key->key);
+        $second = $this->ensureItem($key->kind, $key->key);
 
         self::assertSame($first, $second);
         self::assertSame(1, $this->countRows());
@@ -37,7 +37,7 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://mastodon.social/users/a/statuses/1');
 
-        $id = $this->items->ensure($key, self::buildCreatedAt());
+        $id = $this->ensureItem($key->kind, $key->key);
 
         self::assertSame(
             [
@@ -62,6 +62,47 @@ final class CanonicalItemRepositoryTest extends DbTestCase
         self::assertSame(2, $this->countRows());
     }
 
+    public function testEnsureAllStoresOnlyTheMissingKeysOfABatchAndNamesEveryItem(): void
+    {
+        $existing = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://x.test/post/1');
+        $existingId = $this->ensureItem($existing->kind, $existing->key);
+        $fresh = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://x.test/post/2');
+        $sameKeyOtherKind = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://x.test/post/2');
+
+        $items = $this->items->ensureAll(
+            [$existing, $fresh, $sameKeyOtherKind, $fresh],
+            self::buildCreatedAt(),
+        );
+
+        self::assertCount(3, $items);
+        self::assertSame($existingId, $items[$existing->identity()]->requireId());
+        self::assertNotSame($items[$fresh->identity()], $items[$sameKeyOtherKind->identity()]);
+        self::assertSame(3, $this->countRows());
+    }
+
+    public function testEnsureAllSpansStatementsForALargeBatch(): void
+    {
+        $keys = array_map(
+            static fn (int $number): CanonicalKeyModel => new CanonicalKeyModel(
+                CanonicalItemKind::Bluesky,
+                'at://did:plc:x/app.bsky.feed.post/' . $number,
+            ),
+            range(1, 230),
+        );
+
+        $items = $this->items->ensureAll($keys, self::buildCreatedAt());
+
+        self::assertCount(230, $items);
+        self::assertSame(230, $this->countRows());
+        self::assertCount(230, $this->items->ensureAll($keys, self::buildCreatedAt()));
+        self::assertSame(230, $this->countRows());
+    }
+
+    public function testEnsureAllOfNoKeysAsksNothing(): void
+    {
+        self::assertSame([], $this->items->ensureAll([], self::buildCreatedAt()));
+    }
+
     public function testFindByIdsKeysTheItemsByIdAndSkipsUnknownIds(): void
     {
         $first = $this->ensureItem(CanonicalItemKind::Lemmy, 'https://x.test/post/1');
@@ -80,7 +121,9 @@ final class CanonicalItemRepositoryTest extends DbTestCase
 
     private function ensureItem(CanonicalItemKind $kind, string $canonicalKey): int
     {
-        return $this->items->ensure(new CanonicalKeyModel($kind, $canonicalKey), self::buildCreatedAt());
+        $key = new CanonicalKeyModel($kind, $canonicalKey);
+
+        return $this->items->ensureAll([$key], self::buildCreatedAt())[$key->identity()]->requireId();
     }
 
     private static function buildCreatedAt(): \DateTimeImmutable

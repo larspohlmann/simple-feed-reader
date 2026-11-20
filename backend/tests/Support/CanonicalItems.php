@@ -27,8 +27,9 @@ final class CanonicalItems
             return;
         }
         $items = self::readRepository($entityManager);
-        $itemId = $items->ensure($key, new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
-        $entry->linkTo($items->findByIds([$itemId])[$itemId]);
+        $entry->linkTo(
+            $items->ensureAll([$key], new \DateTimeImmutable('now', new \DateTimeZone('UTC')))[$key->identity()],
+        );
     }
 
     /** An item created well before any prune these tests run, so its age never decides whether it stays. */

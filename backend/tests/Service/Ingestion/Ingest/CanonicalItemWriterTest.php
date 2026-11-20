@@ -45,6 +45,38 @@ final class CanonicalItemWriterTest extends DbTestCase
         self::assertSame(1, $this->countItemRows());
     }
 
+    public function testAPageOfSeveralNewPostsLinksEachToItsOwnItem(): void
+    {
+        $feed = $this->buildFeed('https://example.com/a.xml');
+        $pages = array_map(static fn (int $number): string => 'https://lemmy.world/post/' . $number, range(20, 24));
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $entries = $this->requireIngestor()->ingest(
+            $feed,
+            self::buildParsedFeed(...array_map(
+                static fn (string $page): ParsedEntryModel => self::buildPost(1, 1, $page),
+                $pages,
+            )),
+            self::buildContext(),
+        );
+        $this->entityManager->flush();
+
+        $itemIds = array_map(static fn (Entry $entry): ?int => $entry->getCanonicalItem()?->requireId(), $entries);
+        self::assertCount(5, array_unique($itemIds));
+        self::assertNotContains(null, $itemIds);
+        self::assertSame(5, $this->countItemRows());
+        self::assertCount(
+            3,
+            array_merge(
+                $recorder->queriesMatching('from canonical_item'),
+                $recorder->queriesMatching('into canonical_item'),
+            ),
+        );
+    }
+
     public function testAnItemInsertedThisRequestGetsItsCountsFlushed(): void
     {
         $feed = $this->buildFeed('https://example.com/a.xml');

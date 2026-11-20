@@ -19,4 +19,9 @@ final readonly class CanonicalKeyModel
     {
         return CanonicalItem::hashKey($this->key);
     }
+
+    public function identity(): string
+    {
+        return $this->kind->value . '/' . $this->keyHash();
+    }
 }

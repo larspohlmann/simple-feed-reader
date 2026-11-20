@@ -16,31 +16,92 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class CanonicalItemRepository extends ServiceEntityRepository
 {
+    private const int KEYS_PER_STATEMENT = 100;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, CanonicalItem::class);
     }
 
-    /** The item's id, inserting its row when missing; another writer storing the key first raises no violation. */
-    public function ensure(CanonicalKeyModel $key, \DateTimeImmutable $createdAt): int
+    /**
+     * The item of each key, inserting the rows that are missing; another writer storing one first raises no violation.
+     *
+     * @param list<CanonicalKeyModel> $keys
+     *
+     * @return array<string, CanonicalItem> one per distinct key, by `CanonicalKeyModel::identity()`
+     */
+    public function ensureAll(array $keys, \DateTimeImmutable $createdAt): array
+    {
+        $distinct = [];
+        foreach ($keys as $key) {
+            $distinct[$key->identity()] = $key;
+        }
+        $items = $this->findByKeys($distinct);
+        $missing = array_diff_key($distinct, $items);
+        if ($missing === []) {
+            return $items;
+        }
+
+        $this->insertMissing(array_values($missing), $createdAt);
+        $items += $this->findByKeys($missing);
+        $unstored = array_diff_key($missing, $items);
+        if ($unstored !== []) {
+            throw new RecordNotFoundException('No canonical item for ' . array_values($unstored)[0]->key);
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param array<string, CanonicalKeyModel> $keys
+     *
+     * @return array<string, CanonicalItem> by `CanonicalKeyModel::identity()`
+     */
+    private function findByKeys(array $keys): array
+    {
+        $found = [];
+        foreach (array_chunk(array_values($keys), self::KEYS_PER_STATEMENT) as $chunk) {
+            $queryBuilder = $this->createQueryBuilder('item');
+            foreach ($chunk as $position => $key) {
+                $queryBuilder->orWhere(sprintf('(item.kind = :kind%1$d AND item.keyHash = :hash%1$d)', $position))
+                    ->setParameter('kind' . $position, $key->kind)
+                    ->setParameter('hash' . $position, $key->keyHash());
+            }
+            /** @var list<CanonicalItem> $items */
+            $items = $queryBuilder->getQuery()->getResult();
+            foreach ($items as $item) {
+                $found[new CanonicalKeyModel($item->getKind(), $item->getCanonicalKey())->identity()] = $item;
+            }
+        }
+
+        return $found;
+    }
+
+    /** @param list<CanonicalKeyModel> $keys */
+    private function insertMissing(array $keys, \DateTimeImmutable $createdAt): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement(
-            sprintf(
-                'INSERT %s INTO canonical_item (kind, canonical_key, key_hash, self_reply_count, created_at) '
-                . 'VALUES (?, ?, ?, 0, ?)',
-                DatabasePlatform::insertIgnoreClause($connection),
-            ),
-            [$key->kind->value, $key->key, $key->keyHash(), $createdAt],
-            [Types::STRING, Types::STRING, Types::STRING, Types::DATETIME_IMMUTABLE],
-        );
+        foreach (array_chunk($keys, self::KEYS_PER_STATEMENT) as $chunk) {
+            $parameters = [];
+            foreach ($chunk as $key) {
+                array_push($parameters, $key->kind->value, $key->key, $key->keyHash(), $createdAt);
+            }
 
-        $id = $connection->fetchOne(
-            'SELECT id FROM canonical_item WHERE kind = ? AND key_hash = ?',
-            [$key->kind->value, $key->keyHash()],
-        );
-
-        return is_numeric($id) ? (int) $id : throw new RecordNotFoundException('No canonical item for ' . $key->key);
+            $connection->executeStatement(
+                sprintf(
+                    'INSERT %s INTO canonical_item (kind, canonical_key, key_hash, self_reply_count, created_at)'
+                        . ' VALUES %s',
+                    DatabasePlatform::insertIgnoreClause($connection),
+                    implode(', ', array_fill(0, count($chunk), '(?, ?, ?, 0, ?)')),
+                ),
+                $parameters,
+                array_merge(...array_fill(
+                    0,
+                    count($chunk),
+                    [Types::STRING, Types::STRING, Types::STRING, Types::DATETIME_IMMUTABLE],
+                )),
+            );
+        }
     }
 
     /**
