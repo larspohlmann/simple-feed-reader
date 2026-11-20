@@ -21,8 +21,11 @@ final readonly class ImageVerificationBudgetModel
     }
 
     /** Half of what is left until $deadline, at most $cap, so the sweeps after it keep their share. */
-    public static function halfOfWhatIsLeft(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $cap): self
-    {
+    public static function fromHalfTheRemainingTime(
+        \DateTimeImmutable $deadline,
+        \DateTimeImmutable $now,
+        int $cap,
+    ): self {
         $remaining = $deadline->getTimestamp() - $now->getTimestamp();
 
         return self::seconds(max(0, min($cap, intdiv($remaining, 2))));

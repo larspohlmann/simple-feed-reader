@@ -138,7 +138,7 @@ final class SocialNotificationRepositoryTest extends DbTestCase
         $reply = $this->rows->add($this->bluesky, SocialNotificationKind::Reply, 'at://x/1');
 
         $groups = $this->groupsOfPage();
-        $newest = $this->notifications->newestOfGroups($groups, 2);
+        $newest = $this->notifications->findNewestPerGroup($groups, 2);
 
         self::assertSame([$reply->requireId()], $this->ids($newest[$groups[0]['latestId']]));
         self::assertCount(2, $newest[$groups[1]['latestId']]);
@@ -179,7 +179,7 @@ final class SocialNotificationRepositoryTest extends DbTestCase
     /** @return list<array{accountId: int, kind: string, groupKey: string, seen: bool, latestId: int, count: int}> */
     private function groupsOfPage(?int $before = null, int $limit = 30): array
     {
-        return $this->notifications->pageOfGroups([$this->bluesky->requireId()], $before, $limit);
+        return $this->notifications->findGroupPage([$this->bluesky->requireId()], $before, $limit);
     }
 
     private function persisted(SocialAccount $account): SocialAccount

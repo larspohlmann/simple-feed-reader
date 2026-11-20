@@ -230,7 +230,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
 
     private function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(self::memberOfAnySearch($aliases));
+        $qb->andWhere(self::buildSearchMembershipCondition($aliases));
         $this->scopes->inSavedSearches($qb, $aliases);
     }
 
@@ -239,7 +239,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
      * any entry alias; both parameters are bound once on the outer builder,
      * which the collapse subquery shares.
      */
-    private static function memberOfAnySearch(EntryAliases $aliases): string
+    private static function buildSearchMembershipCondition(EntryAliases $aliases): string
     {
         $member = 'member' . ucfirst($aliases->entry);
         $search = 'search' . ucfirst($aliases->entry);

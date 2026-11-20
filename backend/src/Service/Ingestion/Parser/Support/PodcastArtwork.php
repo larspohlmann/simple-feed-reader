@@ -44,7 +44,7 @@ final class PodcastArtwork
     private static function picturesTheShow(\DOMElement $element): bool
     {
         $type = trim($element->getAttribute('type'));
-        if ($type !== '' && FeedMediaClassifier::kindOfMimeType($type) !== FeedMediaKind::Image) {
+        if ($type !== '' && FeedMediaClassifier::classifyMimeType($type) !== FeedMediaKind::Image) {
             return false;
         }
 

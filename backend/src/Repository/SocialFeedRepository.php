@@ -87,7 +87,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
     /** @return list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> */
     public function findSubscribedCollections(SocialAccount $account): array
     {
-        return $this->subscribedCollectionsOfKinds($account, SocialFeedKind::cases());
+        return $this->findSubscribedCollectionsByKinds($account, SocialFeedKind::cases());
     }
 
     /**
@@ -95,7 +95,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
      *
      * @return list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}>
      */
-    public function subscribedCollectionsOfKinds(SocialAccount $account, array $kinds): array
+    public function findSubscribedCollectionsByKinds(SocialAccount $account, array $kinds): array
     {
         /** @var list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> $rows */
         $rows = $this->createQueryBuilder('sf')

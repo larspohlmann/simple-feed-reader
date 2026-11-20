@@ -44,10 +44,10 @@ final readonly class NotificationList
             }
         }
         $accountIds = array_keys($handles);
-        $found = $this->notifications->pageOfGroups($accountIds, $cursor, self::PAGE_SIZE);
+        $found = $this->notifications->findGroupPage($accountIds, $cursor, self::PAGE_SIZE);
         $hasNextPage = count($found) > self::PAGE_SIZE;
         $shown = array_slice($found, 0, self::PAGE_SIZE);
-        $newest = $this->notifications->newestOfGroups($shown, self::ACTORS_PER_GROUP);
+        $newest = $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP);
 
         $groups = [];
         foreach ($shown as $group) {

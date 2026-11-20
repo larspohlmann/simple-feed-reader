@@ -44,7 +44,7 @@ final class MastodonAuthor
     }
 
     /** The identity of the account a profile URL names: its `/@user` or `/users/user` page on its own server. */
-    public static function identityOfProfileUrl(?string $profileUrl): ?string
+    public static function parseProfileIdentity(?string $profileUrl): ?string
     {
         if (null === $profileUrl || 1 !== preg_match(self::PROFILE_URL, $profileUrl, $match)) {
             return null;

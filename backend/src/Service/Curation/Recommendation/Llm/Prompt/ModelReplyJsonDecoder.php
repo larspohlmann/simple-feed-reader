@@ -73,7 +73,7 @@ final readonly class ModelReplyJsonDecoder
             $character = $text[$index];
 
             if ('"' === $character) {
-                $index = $this->endOfString($text, $index);
+                $index = $this->skipString($text, $index);
             } elseif ('{' === $character) {
                 if (0 === $depth) {
                     $start = $index;
@@ -91,7 +91,7 @@ final readonly class ModelReplyJsonDecoder
      * Where the string opening at $openIndex closes. A backslash escapes the next character; an unterminated string
      * runs to the end.
      */
-    private function endOfString(string $text, int $openIndex): int
+    private function skipString(string $text, int $openIndex): int
     {
         $length = \strlen($text);
 

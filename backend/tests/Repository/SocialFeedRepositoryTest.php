@@ -180,7 +180,10 @@ final class SocialFeedRepositoryTest extends DbTestCase
                 ],
             ],
             SocialFeeds::repository($this->entityManager)
-                ->subscribedCollectionsOfKinds($this->account, [SocialFeedKind::UserList, SocialFeedKind::CustomFeed]),
+                ->findSubscribedCollectionsByKinds(
+                    $this->account,
+                    [SocialFeedKind::UserList, SocialFeedKind::CustomFeed],
+                ),
         );
     }
 

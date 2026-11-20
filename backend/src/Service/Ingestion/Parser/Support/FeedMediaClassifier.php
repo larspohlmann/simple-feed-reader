@@ -31,7 +31,7 @@ final class FeedMediaClassifier
 
         return self::fromMedium($element)
             ?? self::fromType($element)
-            ?? self::kindOfUrl($element->getAttribute('url'));
+            ?? self::classifyUrl($element->getAttribute('url'));
     }
 
     private static function fromMedium(\DOMElement $element): ?FeedMediaKind
@@ -49,10 +49,10 @@ final class FeedMediaClassifier
     {
         $type = $element->getAttribute('type');
 
-        return $type === '' ? null : self::kindOfMimeType($type);
+        return $type === '' ? null : self::classifyMimeType($type);
     }
 
-    public static function kindOfMimeType(string $mimeType): FeedMediaKind
+    public static function classifyMimeType(string $mimeType): FeedMediaKind
     {
         $type = strtolower($mimeType);
 
@@ -64,7 +64,7 @@ final class FeedMediaClassifier
         };
     }
 
-    public static function kindOfUrl(string $url): FeedMediaKind
+    public static function classifyUrl(string $url): FeedMediaKind
     {
         $extension = EntryAttachment::extractExtension($url);
         if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {

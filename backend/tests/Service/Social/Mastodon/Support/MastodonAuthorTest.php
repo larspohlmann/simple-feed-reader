@@ -91,7 +91,7 @@ final class MastodonAuthorTest extends TestCase
         self::assertSame('zoë@mastodon.example', MastodonAuthor::identity($account));
         self::assertSame(
             MastodonAuthor::identity($account),
-            MastodonAuthor::identityOfProfileUrl('https://Mastodon.Example/@ZOË'),
+            MastodonAuthor::parseProfileIdentity('https://Mastodon.Example/@ZOË'),
         );
     }
 }
