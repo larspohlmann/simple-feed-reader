@@ -53,7 +53,7 @@ final readonly class PrivateFeeds
     }
 
     /**
-     * For a caller that has just found no findSubscription() the feed.
+     * For a caller whose findSubscription() found none.
      *
      * @param list<Tag> $tags
      *
