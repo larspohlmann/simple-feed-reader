@@ -40,7 +40,7 @@ Paths are under `backend/src/`. The last column is what the reviewer checks the 
 | `Repository/SocialNotificationRepository.php` | `pageOfGroups` | `findGroupPage` | Queries one page of notification groups, newest first, one extra row as the next-page signal |
 | `Repository/SocialNotificationRepository.php` | `newestOfGroups` | `findNewestPerGroup` | For each group, queries its newest notifications; keyed by the group's latest id |
 | `Repository/SocialNotificationRepository.php` | `newestOfGroup` | `findNewestInGroup` | Queries one group's newest notifications, limited |
-| `Service/Curation/Recommendation/Llm/Prompt/ModelReplyJsonDecoder.php` | `endOfString` | `findStringEnd` | Scans from an opening quote to the index of its closing quote, honouring escapes; the text's length when unterminated |
+| `Service/Curation/Recommendation/Llm/Prompt/ModelReplyJsonDecoder.php` | `endOfString` | `skipString` | Moves the scan past the string literal opening at the given index: answers the index of its closing quote, honouring escapes, or the text's length when unterminated |
 | `Service/Curation/Trending/Model/HeadlineOverlapModel.php` | `shareOfLighter` | `computeLighterShare` | Divides the shared weight by the lighter headline's total |
 | `Service/Ingestion/Parser/ItemMediaExtractor.php` | `firstOfKind` | `findFirstWithKind` | Returns the first media node of a kind, or null |
 | `Service/Ingestion/Parser/Support/FeedMediaClassifier.php` | `kindOfMimeType` | `classifyMimeType` | Maps a MIME type's prefix to a media kind, `Other` when none matches |
