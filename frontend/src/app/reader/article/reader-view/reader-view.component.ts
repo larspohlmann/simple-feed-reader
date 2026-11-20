@@ -172,7 +172,7 @@ export class ReaderViewComponent implements OnChanges {
   }
 
   protected replyToPost(entry: EntryDto): void {
-    this.responses.reply(entry.id, 'lemmy', null);
+    this.responses.reply(entry, 'lemmy', null);
   }
 
   protected scrollToComments(): void {

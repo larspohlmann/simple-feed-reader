@@ -21,7 +21,7 @@ export class EntryDiscussionLinkComponent {
   protected readonly commentCount = computed(() => {
     const entry = this.entry();
     if (!entry.comments) return null;
-    const state = this.comments.state(entry.id)();
+    const state = this.comments.state(entry)();
     return state.status === 'ok' ? state.comments.length + state.omitted : entry.commentCount;
   });
 }

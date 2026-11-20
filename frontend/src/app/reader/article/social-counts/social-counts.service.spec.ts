@@ -33,6 +33,7 @@ describe('SocialCountsService', () => {
     canQuote: true,
     ...overrides,
   });
+  const ref = (id: number) => ({ id, canonicalItemId: null });
   const post = (id = 1, isLiked = false) =>
     anEntry({
       id,
@@ -68,7 +69,7 @@ describe('SocialCountsService', () => {
   afterEach(() => jest.useRealTimers());
 
   it('starts idle and asks nothing until a row is seen', () => {
-    expect(service.state(1)()).toEqual({ status: 'idle' });
+    expect(service.state(ref(1))()).toEqual({ status: 'idle' });
     expect(api.counts).not.toHaveBeenCalled();
   });
 
@@ -77,7 +78,7 @@ describe('SocialCountsService', () => {
     service.load(post());
 
     expect(api.counts).toHaveBeenCalledTimes(1);
-    expect(service.state(1)()).toEqual({
+    expect(service.state(ref(1))()).toEqual({
       status: 'ok',
       counts,
       likedAtLoad: false,
@@ -117,7 +118,7 @@ describe('SocialCountsService', () => {
 
     expect(api.viewer).toHaveBeenCalledWith(1);
     expect(rows.adoptLike).toHaveBeenCalledWith(1, { from: false, to: true });
-    expect(service.state(1)()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
+    expect(service.state(ref(1))()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
   });
 
   it('counts from the entry when the like state cannot be had', () => {
@@ -126,7 +127,11 @@ describe('SocialCountsService', () => {
     service.load(post(1, true));
 
     expect(rows.adoptLike).not.toHaveBeenCalled();
-    expect(service.state(1)()).toMatchObject({ status: 'ok', likedAtLoad: true, actions: null });
+    expect(service.state(ref(1))()).toMatchObject({
+      status: 'ok',
+      likedAtLoad: true,
+      actions: null,
+    });
   });
 
   it('asks no like state for a post the reader cannot like', () => {
@@ -143,7 +148,11 @@ describe('SocialCountsService', () => {
     );
 
     expect(api.viewer).not.toHaveBeenCalled();
-    expect(service.state(3)()).toMatchObject({ status: 'ok', likedAtLoad: false, actions: null });
+    expect(service.state(ref(3))()).toMatchObject({
+      status: 'ok',
+      likedAtLoad: false,
+      actions: null,
+    });
   });
 
   it('asks the like state again on a reload', () => {
@@ -171,7 +180,9 @@ describe('SocialCountsService', () => {
 
     service.load(post());
 
-    expect(service.state(1)()).toMatchObject({ actions: { isReposted: true, canRepost: false } });
+    expect(service.state(ref(1))()).toMatchObject({
+      actions: { isReposted: true, canRepost: false },
+    });
   });
 
   describe('toggleRepost', () => {
@@ -180,14 +191,14 @@ describe('SocialCountsService', () => {
 
       service.toggleRepost(post());
       expect(api.repost).toHaveBeenCalledWith(1);
-      expect(service.state(1)()).toMatchObject({
+      expect(service.state(ref(1))()).toMatchObject({
         counts: { reposts: 6 },
         actions: { isReposted: true },
       });
 
       service.toggleRepost(post());
       expect(api.unrepost).toHaveBeenCalledWith(1);
-      expect(service.state(1)()).toMatchObject({
+      expect(service.state(ref(1))()).toMatchObject({
         counts: { reposts: 5 },
         actions: { isReposted: false },
       });
@@ -226,7 +237,7 @@ describe('SocialCountsService', () => {
 
       service.toggleRepost(post());
 
-      expect(service.state(1)()).toMatchObject({
+      expect(service.state(ref(1))()).toMatchObject({
         counts: { reposts: 5 },
         actions: { isReposted: false },
       });
@@ -303,7 +314,7 @@ describe('SocialCountsService', () => {
 
       expect(announced).toEqual([{ id: 1, network: 'mastodon' }]);
       expect(api.viewer).not.toHaveBeenCalled();
-      expect(service.state(1)()).toMatchObject({ status: 'failed' });
+      expect(service.state(ref(1))()).toMatchObject({ status: 'failed' });
     });
 
     it('announces the removal the viewer reports', () => {
@@ -312,7 +323,7 @@ describe('SocialCountsService', () => {
       service.load(post(1));
 
       expect(announced).toEqual([{ id: 1, network: 'bluesky' }]);
-      expect(service.state(1)()).toMatchObject({ status: 'failed' });
+      expect(service.state(ref(1))()).toMatchObject({ status: 'failed' });
     });
 
     it('announces nothing once another account has signed in', () => {
@@ -333,7 +344,7 @@ describe('SocialCountsService', () => {
       service.load(post(1));
 
       expect(announced).toEqual([]);
-      expect(service.state(1)()).toMatchObject({ status: 'ok', actions: null });
+      expect(service.state(ref(1))()).toMatchObject({ status: 'ok', actions: null });
     });
   });
 
@@ -341,7 +352,7 @@ describe('SocialCountsService', () => {
     api.counts.mockReturnValue(throwError(() => new Error('offline')));
     service.load(post());
 
-    expect(service.state(1)()).toEqual({
+    expect(service.state(ref(1))()).toEqual({
       status: 'failed',
       failedAt: Date.parse('2026-10-13T12:00:00Z'),
     });
@@ -365,7 +376,7 @@ describe('SocialCountsService', () => {
     service.load(post());
 
     expect(api.counts).toHaveBeenCalledTimes(1);
-    expect(service.state(1)()).toEqual({ status: 'loading' });
+    expect(service.state(ref(1))()).toEqual({ status: 'loading' });
   });
 
   it.each([
@@ -382,36 +393,61 @@ describe('SocialCountsService', () => {
     service.load(post(1));
     api.counts.mockReturnValue(late);
     service.load(post(2));
-    const held = service.state(2);
+    const held = service.state(ref(2));
 
     tokens.set('account-b.jwt');
     TestBed.tick();
     settle(late);
 
-    expect(service.state(1)()).toEqual({ status: 'idle' });
+    expect(service.state(ref(1))()).toEqual({ status: 'idle' });
     expect(held()).toEqual({ status: 'loading' });
   });
 
   it('steps the replies count for a reply the reader published or deleted, never below zero', () => {
     service.load(post());
-    service.stepReplies(1, true);
-    expect(service.state(1)()).toMatchObject({ counts: { replies: 8 } });
+    service.stepReplies(ref(1), true);
+    expect(service.state(ref(1))()).toMatchObject({ counts: { replies: 8 } });
 
-    service.stepReplies(1, false);
-    service.stepReplies(1, false);
-    expect(service.state(1)()).toMatchObject({ counts: { replies: 6 } });
-    service.stepReplies(2, true);
-    expect(service.state(2)()).toEqual({ status: 'idle' });
+    service.stepReplies(ref(1), false);
+    service.stepReplies(ref(1), false);
+    expect(service.state(ref(1))()).toMatchObject({ counts: { replies: 6 } });
+    service.stepReplies(ref(2), true);
+    expect(service.state(ref(2))()).toEqual({ status: 'idle' });
   });
 
   it('steps the quotes count for a quote the reader published, where the network counts quotes', () => {
     service.load(post(1));
-    service.stepQuotes(1);
-    expect(service.state(1)()).toMatchObject({ counts: { quotes: 3 } });
+    service.stepQuotes(ref(1));
+    expect(service.state(ref(1))()).toMatchObject({ counts: { quotes: 3 } });
 
     api.counts.mockReturnValue(of({ ...counts, quotes: null }));
     service.load(post(2));
-    service.stepQuotes(2);
-    expect(service.state(2)()).toMatchObject({ counts: { quotes: null } });
+    service.stepQuotes(ref(2));
+    expect(service.state(ref(2))()).toMatchObject({ counts: { quotes: null } });
+  });
+
+  describe('copies of one item (#2404)', () => {
+    const copy = (id: number) => anEntry({ id, canonicalItemId: 7, social: post().social });
+
+    it('a repost on copy A steps copy B’s counts', () => {
+      service.load(copy(1));
+      service.toggleRepost(copy(1));
+
+      expect(service.state(copy(2))()).toMatchObject({ counts: { reposts: 6 } });
+    });
+
+    it('a reply on copy A counts on copy B', () => {
+      service.load(copy(1));
+      service.stepReplies(copy(1), true);
+
+      expect(service.state(copy(2))()).toMatchObject({ counts: { replies: 8 } });
+    });
+
+    it('loads the counts once for both copies', () => {
+      service.load(copy(1));
+      service.load(copy(2));
+
+      expect(api.counts).toHaveBeenCalledTimes(1);
+    });
   });
 });

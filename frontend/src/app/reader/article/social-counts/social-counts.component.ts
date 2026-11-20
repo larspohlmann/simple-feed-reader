@@ -14,6 +14,7 @@ import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostActions } from '../composer/post-actions.service';
+import { itemKey } from '../../state/item-key';
 import { SocialCountsService } from './social-counts.service';
 
 @Component({
@@ -29,9 +30,9 @@ export class SocialCountsComponent {
   private readonly service = inject(SocialCountsService);
   private readonly responses = inject(PostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly entryId = computed(() => this.entry().id);
+  private readonly key = computed(() => itemKey(this.entry()));
   private readonly loaded = computed(() => {
-    const state = this.service.state(this.entryId())();
+    const state = this.service.state(this.entry())();
     return state.status === 'ok' ? state : null;
   });
 
@@ -47,8 +48,8 @@ export class SocialCountsComponent {
 
   constructor() {
     effect(() => {
-      const id = this.entryId();
-      untracked(() => this.service.load({ id, social: this.entry().social }));
+      this.key();
+      untracked(() => this.service.load(this.entry()));
     });
   }
 
@@ -57,11 +58,11 @@ export class SocialCountsComponent {
   }
 
   protected reply(network: SocialNetworkName): void {
-    this.responses.reply(this.entry().id, network, null);
+    this.responses.reply(this.entry(), network, null);
   }
 
   protected quote(network: SocialNetworkName): void {
-    this.responses.quote(this.entry().id, network, null);
+    this.responses.quote(this.entry(), network, null);
   }
 
   reload(): void {

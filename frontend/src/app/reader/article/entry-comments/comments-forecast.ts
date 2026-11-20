@@ -2,7 +2,7 @@ import { EntryDto } from '../../models';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from './comments.service';
 
-type ForecastEntry = Pick<EntryDto, 'id' | 'comments' | 'social'>;
+type ForecastEntry = Pick<EntryDto, 'id' | 'canonicalItemId' | 'comments' | 'social'>;
 
 /** Rendered comments per direct reply a post counts, measured over 100 posts (#1662). */
 const COMMENTS_PER_REPLY = 1.7;
@@ -34,8 +34,8 @@ export class CommentsForecast {
   /** The section's height once its comments render, or null when it already shows what it will. */
   readonly expectedHeight = (section: HTMLElement, content: HTMLElement): number | null => {
     const entry = this.entry();
-    if (!entry?.social || entry.comments !== 'auto' || !this.awaitsComments(entry.id)) return null;
-    const replies = this.replies(entry.id);
+    if (!entry?.social || entry.comments !== 'auto' || !this.awaitsComments(entry)) return null;
+    const replies = this.replies(entry);
     if (replies === null || section.clientWidth === 0) return null;
     const readingFontSize = parseFloat(getComputedStyle(content).fontSize);
     if (!Number.isFinite(readingFontSize) || readingFontSize <= 0) return null;
@@ -44,13 +44,13 @@ export class CommentsForecast {
     );
   };
 
-  private awaitsComments(id: number): boolean {
-    const status = this.comments.state(id)().status;
+  private awaitsComments(item: ForecastEntry): boolean {
+    const status = this.comments.state(item)().status;
     return status === 'idle' || status === 'loading';
   }
 
-  private replies(id: number): number | null {
-    const state = this.counts.state(id)();
+  private replies(item: ForecastEntry): number | null {
+    const state = this.counts.state(item)();
     return state.status === 'ok' ? state.counts.replies : null;
   }
 }

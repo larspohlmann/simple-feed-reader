@@ -22,6 +22,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { PostActions } from '../composer/post-actions.service';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
+import { itemKey } from '../../state/item-key';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
@@ -35,7 +36,10 @@ import { LinkCardComponent } from '../../link-card/link-card.component';
 import { CommentActionsComponent } from './comment-actions.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 
-type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
+type CommentsEntry = Pick<
+  EntryDto,
+  'id' | 'canonicalItemId' | 'comments' | 'discussionUrl' | 'social'
+>;
 
 const DEEPEST_INDENT = 5;
 
@@ -70,10 +74,10 @@ export class EntryCommentsComponent {
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
-  private readonly entryId = computed(() => this.entry().id);
+  private readonly key = computed(() => itemKey(this.entry()));
   private readonly loadsOnOpen = computed(() => this.entry().comments === 'auto');
 
-  readonly state = computed(() => this.service.state(this.entryId())());
+  readonly state = computed(() => this.service.state(this.entry())());
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
   protected readonly socialNetwork = computed(() => this.entry().social?.network ?? null);
   readonly network = computed(() => {
@@ -92,8 +96,8 @@ export class EntryCommentsComponent {
 
   constructor() {
     effect(() => {
-      const id = this.entryId();
-      if (this.loadsOnOpen()) untracked(() => this.service.load(id));
+      this.key();
+      if (this.loadsOnOpen()) untracked(() => this.service.load(this.entry()));
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();
@@ -102,32 +106,32 @@ export class EntryCommentsComponent {
   }
 
   load(): void {
-    this.service.load(this.entryId());
+    this.service.load(this.entry());
   }
 
   reload(): void {
-    this.service.reload(this.entryId());
+    this.service.reload(this.entry());
   }
 
   refresh(): void {
-    this.service.reload(this.entryId());
+    this.service.reload(this.entry());
     this.refreshed.emit();
   }
 
   toggleLike(post: EntryCommentPostDto): void {
-    this.service.toggleLike(this.entryId(), post);
+    this.service.toggleLike(this.entry(), post);
   }
 
   toggleRepost(post: EntryCommentPostDto): void {
-    this.service.toggleRepost(this.entryId(), post);
+    this.service.toggleRepost(this.entry(), post);
   }
 
   reply(network: SocialNetworkName, post: EntryCommentPostDto): void {
-    this.responses.reply(this.entryId(), network, post.address);
+    this.responses.reply(this.entry(), network, post.address);
   }
 
   vote(comment: EntryCommentDto, to: VoteValue): void {
-    this.service.vote(this.entryId(), comment, to);
+    this.service.vote(this.entry(), comment, to);
   }
 
   lemmyActionsOf(vote: EntryCommentVoteDto): PostActionsView {
@@ -135,17 +139,17 @@ export class EntryCommentsComponent {
   }
 
   replyOnLemmy(vote: EntryCommentVoteDto): void {
-    this.responses.reply(this.entryId(), 'lemmy', vote.address);
+    this.responses.reply(this.entry(), 'lemmy', vote.address);
   }
 
   quote(network: SocialNetworkName, post: EntryCommentPostDto): void {
-    this.responses.quote(this.entryId(), network, post.address);
+    this.responses.quote(this.entry(), network, post.address);
   }
 
   deleteReply(comment: EntryCommentDto): void {
     const social = likeableSocial(this.entry());
     if (social !== null) {
-      this.responses.delete(this.entryId(), social.network, comment);
+      this.responses.delete(this.entry(), social.network, comment);
     }
   }
 
