@@ -4,6 +4,7 @@
     <h2 class="title">
       {{ 'reader.comments.heading' | transloco }}
       @if (total(); as total) {
+        <span class="total-separator" aria-hidden="true">·</span>&ngsp;
         <span class="total">{{ total }}</span>
       }
     </h2>
