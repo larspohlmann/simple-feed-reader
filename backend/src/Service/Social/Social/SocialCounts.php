@@ -83,7 +83,7 @@ final readonly class SocialCounts
     private function lookedUp(User $user, Entry $entry, SocialPostAddressModel $post): SocialCountsModel
     {
         try {
-            return $this->publicSourceOn($post->network)->countsOf($post->address);
+            return $this->publicSourceOn($post->network)->fetchCounts($post->address);
         } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
             return $this->actingAccountCountsOf($user, $entry, $publicFailure);
         }

@@ -24,7 +24,7 @@ final readonly class MastodonOriginCountsSource implements PostCountsSourceInter
     {
     }
 
-    public function countsOf(string $address): SocialCountsModel
+    public function fetchCounts(string $address): SocialCountsModel
     {
         $statusUrl = MastodonStatusAddress::ofOrNull($address)?->apiUrl()
             ?? throw new PostNotPubliclyCountableException('The address names no status on a Mastodon instance.');

@@ -30,7 +30,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUS => self::statusAnswer()]);
 
-        $counts = $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $counts = $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
 
         self::assertEquals(new SocialCountsModel(5, 2, 1, null), $counts);
         self::assertSame([self::STATUS], $http->requestLines());
@@ -41,21 +41,24 @@ final class MastodonOriginCountsSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUS => self::statusAnswer()]);
 
-        self::assertEquals(new SocialCountsModel(5, 2, 1, null), $this->source($http)->countsOf(self::USERS_ADDRESS));
+        self::assertEquals(
+            new SocialCountsModel(5, 2, 1, null),
+            $this->source($http)->fetchCounts(self::USERS_ADDRESS),
+        );
     }
 
     public function testAStatusThatNamesTheAddressOnlyByItsUrlIsThePost(): void
     {
         $http = new RoutedHttpClient([self::STATUS => self::statusAnswer(['uri' => 'https://mastodon.example/x/1'])]);
 
-        self::assertSame(5, $this->source($http)->countsOf(self::PROFILE_ADDRESS)->likes);
+        self::assertSame(5, $this->source($http)->fetchCounts(self::PROFILE_ADDRESS)->likes);
     }
 
     public function testAStatusThatNamesTheAddressOnlyByItsUriIsThePost(): void
     {
         $http = new RoutedHttpClient([self::STATUS => self::statusAnswer(['url' => 'https://mastodon.example/x/1'])]);
 
-        self::assertSame(5, $this->source($http)->countsOf(self::USERS_ADDRESS)->likes);
+        self::assertSame(5, $this->source($http)->fetchCounts(self::USERS_ADDRESS)->likes);
     }
 
     public function testAnAddressOfAnotherShapeDoesNotApplyAndAsksNothing(): void
@@ -63,7 +66,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
         $http = new RoutedHttpClient([]);
 
         $this->assertRefused(
-            fn (): SocialCountsModel => $this->source($http)->countsOf('https://pixelfed.example/p/alice/123'),
+            fn (): SocialCountsModel => $this->source($http)->fetchCounts('https://pixelfed.example/p/alice/123'),
             PostNotPubliclyCountableException::class,
             'A Pixelfed address names no Mastodon status.',
         );
@@ -80,7 +83,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
 
         $this->expectException(PostNotPubliclyCountableException::class);
 
-        $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
     }
 
     public function testAStatusGoneFromItsOriginIsNotFound(): void
@@ -89,7 +92,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
 
         $this->expectException(SocialPostNotFoundException::class);
 
-        $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
     }
 
     #[DataProvider('closedToThePublic')]
@@ -99,7 +102,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
 
         $this->expectException(PostNotPubliclyCountableException::class);
 
-        $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
     }
 
     /** @return iterable<string, array{int}> */
@@ -117,7 +120,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
         ])]);
 
         try {
-            $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+            $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
             self::fail('A throttling origin must reach the caller as a throttled network.');
         } catch (SocialNetworkThrottledException $exception) {
             self::assertSame(30, $exception->retryAfterSeconds);
@@ -130,7 +133,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
     }
 
     public function testAStatusWithoutItsCountsIsAnUnreachableNetwork(): void
@@ -139,7 +142,7 @@ final class MastodonOriginCountsSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http)->countsOf(self::PROFILE_ADDRESS);
+        $this->source($http)->fetchCounts(self::PROFILE_ADDRESS);
     }
 
     private function source(RoutedHttpClient $http): MastodonOriginCountsSource

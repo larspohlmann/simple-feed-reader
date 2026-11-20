@@ -21,5 +21,5 @@ interface PostCountsSourceInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function countsOf(string $address): SocialCountsModel;
+    public function fetchCounts(string $address): SocialCountsModel;
 }

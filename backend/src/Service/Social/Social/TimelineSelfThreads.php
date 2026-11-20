@@ -76,7 +76,7 @@ final readonly class TimelineSelfThreads
             if ($root === null) {
                 continue;
             }
-            $this->folder->foldAt($root, $reply->position, $source->selfReplyOf($reply->post));
+            $this->folder->foldAt($root, $reply->position, $source->buildSelfReply($reply->post));
         }
         self::countReplies($roots, $threads->replyCounts);
     }

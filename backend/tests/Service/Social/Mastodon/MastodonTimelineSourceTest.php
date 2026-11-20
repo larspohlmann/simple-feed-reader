@@ -120,7 +120,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
         $source = $this->source(new RoutedHttpClient([]));
         $search = self::socialFeed(SocialFeedKind::Search, 'hello');
-        $page = $source->pageOf($search, [$source->accepted($search, self::answered($body))]);
+        $page = $source->buildPage($search, [$source->accepted($search, self::answered($body))]);
 
         self::assertSame(['https://mastodon.example/@bob/111'], array_map(
             static fn (ParsedEntryModel $entry): ?string => $entry->url,
@@ -164,7 +164,7 @@ final class MastodonTimelineSourceTest extends TestCase
             self::searchStatus('109', null, '<p>atom</p>'),
         );
 
-        $page = $source->pageOf($search, [
+        $page = $source->buildPage($search, [
             $source->accepted($search, self::answered($first)),
             $source->accepted($search, self::answered($second)),
         ]);
@@ -291,7 +291,7 @@ final class MastodonTimelineSourceTest extends TestCase
         $source = $this->source(new RoutedHttpClient([]));
         $home = self::socialFeed(SocialFeedKind::Home, '');
 
-        return $source->pageOf($home, [$source->accepted($home, $outcome)]);
+        return $source->buildPage($home, [$source->accepted($home, $outcome)]);
     }
 
     /** @param array<array<string>> $headers */

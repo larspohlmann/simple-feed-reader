@@ -53,5 +53,5 @@ interface ReplyThreadSourceInterface
     public function repliesIn(string $address, string $answer): array;
 
     /** The author's own reply, from a timeline's post view, as a thread fold stores it. */
-    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel;
+    public function buildSelfReply(JsonNodeModel $post): EntryCommentModel;
 }

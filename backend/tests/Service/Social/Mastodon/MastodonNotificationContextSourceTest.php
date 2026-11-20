@@ -28,7 +28,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
     {
         $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $this->statuses()]);
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::mastodonAccount(),
             [self::row('1', '4000'), self::row('2', '4000')],
         );
@@ -45,7 +45,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
         $http = new RoutedHttpClient([
             'GET ' . self::STATUSES . 'id[]=4000&id[]=4002' => $this->statuses(),
         ]);
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::mastodonAccount(),
             [self::row('1', '4000'), self::row('2', '4002')],
         );
@@ -62,7 +62,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             ]),
         );
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
 
         self::assertSame([], $contexts);
     }
@@ -76,7 +76,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             ),
         );
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), [self::row('1', '4000')]);
 
         self::assertSame([], $contexts);
     }
@@ -89,7 +89,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
-        $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
+        $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), $rows);
 
         self::assertCount(2, $http->requests);
     }
@@ -120,7 +120,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             new NotificationContext(answeredExcerpt: 'Kept'),
         );
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), [$row]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), [$row]);
 
         self::assertSame($excerpt, $contexts['1']->answeredExcerpt);
         self::assertTrue($contexts['1']->onComment);
@@ -141,7 +141,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), $rows);
 
         self::assertSame(range(1, 21), array_keys($contexts));
         self::assertSame('Post 4001', $contexts['1']->answeredExcerpt);
@@ -161,7 +161,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
             $rows[] = self::row((string) $number, (string) (4000 + $number));
         }
 
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::mastodonAccount(), $rows);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::mastodonAccount(), $rows);
 
         self::assertSame([21], array_keys($contexts));
         self::assertSame('Later', $contexts['21']->answeredExcerpt);

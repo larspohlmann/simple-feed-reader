@@ -23,7 +23,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
     }
 
-    public function contextsOf(SocialAccount $account, array $fresh): array
+    public function findContexts(SocialAccount $account, array $fresh): array
     {
         try {
             $posts = $this->posts->byUri($account, self::uris($account, $fresh));

@@ -72,7 +72,7 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
                 return SocialNetwork::Bluesky->value;
             }
 
-            public function countsOf(string $address): SocialCountsModel
+            public function fetchCounts(string $address): SocialCountsModel
             {
                 $this->askedAddresses[] = $address;
 

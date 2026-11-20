@@ -27,7 +27,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
     {
         $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
@@ -45,7 +45,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
             'GET ' . self::COMMENT . '26906403' => new MockResponse((string) json_encode($parent)),
         ]);
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
@@ -60,7 +60,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 'http_code' => Response::HTTP_NOT_FOUND,
             ]),
         );
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
@@ -75,7 +75,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 ? new MockResponse('{"error":"banned"}', ['http_code' => Response::HTTP_BAD_REQUEST])
                 : $this->parentComment(),
         );
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2')],
         );
@@ -90,7 +90,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
             'GET ' . self::COMMENT . '1' => $this->parentComment(),
             'GET ' . self::COMMENT . '2' => new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
         ]);
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2'), self::row('reply:3', '3')],
         );
@@ -107,7 +107,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 ? new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])
                 : $this->parentComment(),
         );
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2'), self::row('reply:3', '3')],
         );
@@ -124,7 +124,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
     {
         $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
-        $contexts = $this->source($http)->contextsOf(
+        $contexts = $this->source($http)->findContexts(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403'), self::row('reply:8', '26906403')],
         );
@@ -138,7 +138,7 @@ final class LemmyNotificationContextSourceTest extends TestCase
     public function testRowsWithoutReferencesMakeNoCall(): void
     {
         $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse('{}'));
-        $contexts = $this->source($http)->contextsOf(SocialApiWiring::lemmyAccount(), [self::row('reply:6', null)]);
+        $contexts = $this->source($http)->findContexts(SocialApiWiring::lemmyAccount(), [self::row('reply:6', null)]);
 
         self::assertSame([], $contexts);
         self::assertSame([], $http->requests);

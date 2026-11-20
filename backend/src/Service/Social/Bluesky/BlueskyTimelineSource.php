@@ -48,7 +48,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         return BlueskySessions::accepted($answer);
     }
 
-    public function pageOf(SocialFeed $socialFeed, array $accepted): TimelinePageModel
+    public function buildPage(SocialFeed $socialFeed, array $accepted): TimelinePageModel
     {
         $answer = $accepted[0] ?? throw new \LogicException('A Bluesky timeline is read with one request.');
 

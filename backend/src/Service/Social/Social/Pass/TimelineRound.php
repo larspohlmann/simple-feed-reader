@@ -128,7 +128,7 @@ final class TimelineRound
         }
 
         unset($this->reads[$feedId]);
-        $page = $source->pageOf($socialFeed, $read->accepted());
+        $page = $source->buildPage($socialFeed, $read->accepted());
         $socialFeed->recordNewestSeen($page->newestId);
 
         return SettlementModel::outcome(new FetchedTimelineModel($page));

@@ -45,7 +45,7 @@ interface TimelineSourceInterface
      *
      * @throws SocialNetworkUnreachableException
      */
-    public function pageOf(SocialFeed $socialFeed, array $accepted): TimelinePageModel;
+    public function buildPage(SocialFeed $socialFeed, array $accepted): TimelinePageModel;
 
     /** After a stale answer, so the account's next request opens a fresh session; a network without one keeps none. */
     public function dropSession(SocialAccount $account): void;

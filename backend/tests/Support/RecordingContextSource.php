@@ -18,7 +18,7 @@ final class RecordingContextSource implements NotificationContextSourceInterface
     {
     }
 
-    public function contextsOf(SocialAccount $account, array $fresh): array
+    public function findContexts(SocialAccount $account, array $fresh): array
     {
         $remoteIds = array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $fresh);
         $this->asked[] = $remoteIds;

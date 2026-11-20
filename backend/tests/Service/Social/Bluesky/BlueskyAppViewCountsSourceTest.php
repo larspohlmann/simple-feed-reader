@@ -48,14 +48,14 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
             'quoteCount' => 1,
         ]);
 
-        self::assertEquals(new SocialCountsModel(12, 3, 4, 1), $this->source->countsOf(self::POST_URI));
+        self::assertEquals(new SocialCountsModel(12, 3, 4, 1), $this->source->fetchCounts(self::POST_URI));
         self::assertSame([[self::POST_URI]], $this->appView->requests);
     }
 
     public function testAPostAbsentFromTheAnswerIsNotFound(): void
     {
         $this->assertRefused(
-            fn (): SocialCountsModel => $this->source->countsOf(self::POST_URI),
+            fn (): SocialCountsModel => $this->source->fetchCounts(self::POST_URI),
             SocialPostNotFoundException::class,
             'A post the AppView does not show must be gone.',
         );
@@ -67,7 +67,7 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source->countsOf(self::POST_URI);
+        $this->source->fetchCounts(self::POST_URI);
     }
 
     public function testAThrottlingAppViewIsAThrottledNetworkWithItsWait(): void
@@ -75,7 +75,7 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
         $this->appView->failsWith(new FeedThrottledException('Slow down.', 120));
 
         try {
-            $this->source->countsOf(self::POST_URI);
+            $this->source->fetchCounts(self::POST_URI);
             self::fail('A throttling AppView must reach the caller as a throttled network.');
         } catch (SocialNetworkThrottledException $exception) {
             self::assertSame(120, $exception->retryAfterSeconds);
@@ -85,7 +85,7 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
     public function testAThrottledAppViewIsNotAskedAgainWhileTheWaitLasts(): void
     {
         $this->appView->failsWith(new FeedThrottledException('Slow down.', 120));
-        $attempt = fn (): SocialCountsModel => $this->source->countsOf(self::POST_URI);
+        $attempt = fn (): SocialCountsModel => $this->source->fetchCounts(self::POST_URI);
         $this->assertRefused($attempt, SocialNetworkThrottledException::class, 'The first ask must be throttled.');
         $this->appView->recovers();
 
@@ -104,7 +104,7 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
         $this->appView->failsWith(new FeedUnreachableException('Down.', Response::HTTP_BAD_GATEWAY));
 
         try {
-            $this->source->countsOf(self::POST_URI);
+            $this->source->fetchCounts(self::POST_URI);
             self::fail('An unreachable AppView must reach the caller.');
         } catch (SocialNetworkUnreachableException $exception) {
             self::assertNotInstanceOf(SocialNetworkThrottledException::class, $exception);
@@ -117,6 +117,6 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source->countsOf(self::POST_URI);
+        $this->source->fetchCounts(self::POST_URI);
     }
 }

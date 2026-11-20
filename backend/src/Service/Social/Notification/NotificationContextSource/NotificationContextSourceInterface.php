@@ -23,5 +23,5 @@ interface NotificationContextSourceInterface
      *
      * @throws SocialCredentialsRejectedException
      */
-    public function contextsOf(SocialAccount $account, array $fresh): array;
+    public function findContexts(SocialAccount $account, array $fresh): array;
 }
