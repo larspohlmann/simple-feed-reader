@@ -59,7 +59,7 @@ final readonly class SelfUpdater
 
     private function updaterPresent(): bool
     {
-        $heartbeat = $this->state->heartbeatAt();
+        $heartbeat = $this->state->findHeartbeat();
 
         return null !== $heartbeat
             && $this->clock->now()->getTimestamp() - $heartbeat->getTimestamp() <= self::HEARTBEAT_FRESH_SECONDS;

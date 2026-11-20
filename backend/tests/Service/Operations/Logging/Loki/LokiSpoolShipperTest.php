@@ -115,7 +115,7 @@ final class LokiSpoolShipperTest extends TestCase
 
     /**
      * A batch of several lines in one spool file must ship every line, not
-     * just the first: linesIn() decodes the whole file and hands it to
+     * just the first: loadLines() decodes the whole file and hands it to
      * push() unchanged.
      */
     public function testShipsEveryLineOfAMultiLineBatchNotJustTheFirst(): void

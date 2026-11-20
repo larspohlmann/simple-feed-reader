@@ -32,7 +32,7 @@ final class FileUpdateStateStoreTest extends TestCase
 
     public function testAnAbsentDirectoryHoldsNoState(): void
     {
-        self::assertNull($this->store->heartbeatAt());
+        self::assertNull($this->store->findHeartbeat());
         self::assertNull($this->store->pendingRequestId());
         self::assertNull($this->store->lastRun());
         self::assertSame('', $this->store->logTail());
@@ -42,7 +42,7 @@ final class FileUpdateStateStoreTest extends TestCase
     {
         $this->write('outbox/heartbeat', "1793440800\n");
 
-        $heartbeat = $this->store->heartbeatAt();
+        $heartbeat = $this->store->findHeartbeat();
 
         self::assertNotNull($heartbeat);
         self::assertSame('2026-10-31T10:00:00+00:00', $heartbeat->format(\DATE_ATOM));
@@ -52,14 +52,14 @@ final class FileUpdateStateStoreTest extends TestCase
     {
         $this->write('outbox/heartbeat', '');
 
-        self::assertNull($this->store->heartbeatAt());
+        self::assertNull($this->store->findHeartbeat());
     }
 
     public function testANonNumericHeartbeatIsNoHeartbeat(): void
     {
         $this->write('outbox/heartbeat', 'abc');
 
-        self::assertNull($this->store->heartbeatAt());
+        self::assertNull($this->store->findHeartbeat());
     }
 
     public function testReadsTheLastRunAndIgnoresUnknownFields(): void
@@ -257,7 +257,7 @@ final class FileUpdateStateStoreTest extends TestCase
         $this->write('run.log', 'misplaced');
         $this->write('outbox/request.json', '{"id":"0123456789abcdef"}');
 
-        self::assertNull($this->store->heartbeatAt());
+        self::assertNull($this->store->findHeartbeat());
         self::assertNull($this->store->lastRun());
         self::assertSame('', $this->store->logTail());
         self::assertNull($this->store->pendingRequestId());
