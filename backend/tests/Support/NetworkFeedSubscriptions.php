@@ -39,7 +39,7 @@ final readonly class NetworkFeedSubscriptions
         return $subscription;
     }
 
-    public function post(Subscription $subscription, string $guid, string $publishedAt): Entry
+    public function persistPost(Subscription $subscription, string $guid, string $publishedAt): Entry
     {
         $published = new \DateTimeImmutable($publishedAt);
         $entry = new Entry($subscription->getFeed(), $guid, null, $guid, $published, $published);

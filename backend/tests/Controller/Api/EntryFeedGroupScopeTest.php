@@ -50,7 +50,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
         $this->seedGroups($user);
         $stranger = $this->factory()->create('group-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://example.org/foreign.xml');
-        $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
+        $this->fixtures()->persistPost($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
         $this->client->request('GET', '/api/entries?group=feeds', server: $headers);
 
@@ -137,22 +137,22 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
         $twiceTagged = $fixtures->subscribe($user, 'https://example.com/twice.xml');
         $twiceTagged->addTag($news);
         $twiceTagged->addTag($tech);
-        $fixtures->post($twiceTagged, 'twice-tagged-post', '2026-10-04T00:00:00Z');
+        $fixtures->persistPost($twiceTagged, 'twice-tagged-post', '2026-10-04T00:00:00Z');
 
         $hiddenTagged = $fixtures->subscribe($user, 'https://example.com/hidden.xml');
         $hiddenTagged->addTag($news);
         $hiddenTagged->changeInclusions(new InclusionChange(allItems: false));
-        $fixtures->post($hiddenTagged, 'hidden-tagged-post', '2026-10-05T00:00:00Z');
+        $fixtures->persistPost($hiddenTagged, 'hidden-tagged-post', '2026-10-05T00:00:00Z');
 
         $taggedSocial = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
         $taggedSocial->addTag($tech);
-        $fixtures->post($taggedSocial, 'tagged-social-post', '2026-10-06T00:00:00Z');
+        $fixtures->persistPost($taggedSocial, 'tagged-social-post', '2026-10-06T00:00:00Z');
 
         $plain = $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
-        $fixtures->post($plain, 'plain-post', '2026-10-07T00:00:00Z');
+        $fixtures->persistPost($plain, 'plain-post', '2026-10-07T00:00:00Z');
 
         $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
-        $fixtures->post($home, 'home-post', '2026-10-08T00:00:00Z');
+        $fixtures->persistPost($home, 'home-post', '2026-10-08T00:00:00Z');
         $this->entityManager()->flush();
     }
 

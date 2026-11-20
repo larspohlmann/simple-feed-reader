@@ -199,7 +199,7 @@ final class SocialLikesTest extends DbTestCase
         $this->mastodonAccount();
 
         try {
-            $this->likes()->like($this->owner, $this->articleOn('https://example.com/feed.xml'));
+            $this->likes()->like($this->owner, $this->persistArticle('https://example.com/feed.xml'));
             self::fail('An ordinary article must not be liked.');
         } catch (NotASocialPostException) {
             self::assertSame([], $this->mastodon->calls);
@@ -211,7 +211,7 @@ final class SocialLikesTest extends DbTestCase
         $this->mastodonAccount();
 
         try {
-            $this->likes()->unlike($this->owner, $this->articleOn(self::FEED_URL));
+            $this->likes()->unlike($this->owner, $this->persistArticle(self::FEED_URL));
             self::fail('An entry without an item has no like to take back.');
         } catch (NotASocialPostException) {
             self::assertSame([], $this->mastodon->calls);
@@ -337,7 +337,7 @@ final class SocialLikesTest extends DbTestCase
     public function testASyncAsksTheAccountThatMadeTheLikeAndKeepsIt(): void
     {
         $this->mastodonAccount();
-        $other = $this->secondMastodonAccount();
+        $other = $this->persistSecondMastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->storeLike($other, '110');
         $this->mastodon->knowsTheLike();
@@ -364,7 +364,7 @@ final class SocialLikesTest extends DbTestCase
     public function testEveryCopyActsThroughTheAccountThatMadeTheLike(): void
     {
         $liker = $this->mastodonAccount();
-        $homeOwner = $this->secondMastodonAccount();
+        $homeOwner = $this->persistSecondMastodonAccount();
         $rssCopy = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $homeCopy = $this->persistHomeCopy($homeOwner);
         $this->likes()->like($this->owner, $rssCopy);
@@ -382,7 +382,7 @@ final class SocialLikesTest extends DbTestCase
     public function testWithoutALikeTheCopysOwnAccountLikes(): void
     {
         $this->mastodonAccount();
-        $homeOwner = $this->secondMastodonAccount();
+        $homeOwner = $this->persistSecondMastodonAccount();
 
         $this->likes()->like($this->owner, $this->persistHomeCopy($homeOwner));
 
@@ -423,7 +423,7 @@ final class SocialLikesTest extends DbTestCase
         return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
     }
 
-    private function secondMastodonAccount(): SocialAccount
+    private function persistSecondMastodonAccount(): SocialAccount
     {
         return SocialFeeds::persistedAccount(
             $this->entityManager,
@@ -455,7 +455,7 @@ final class SocialLikesTest extends DbTestCase
         return $entry;
     }
 
-    private function articleOn(string $feedUrl): Entry
+    private function persistArticle(string $feedUrl): Entry
     {
         return $this->persistEntry(new Feed($feedUrl), self::STATUS_URL);
     }

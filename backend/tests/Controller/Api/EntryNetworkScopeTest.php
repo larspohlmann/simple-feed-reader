@@ -42,7 +42,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
         $this->seedNetworks($user);
         $stranger = $this->factory()->create('network-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
-        $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
+        $this->fixtures()->persistPost($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
         $this->client->request('GET', '/api/entries?network=bluesky', server: $headers);
 
@@ -203,13 +203,13 @@ final class EntryNetworkScopeTest extends ApiTestCase
         $fixtures = $this->fixtures();
         $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
         $home->changeInclusions(new InclusionChange(allItems: false));
-        $fixtures->post($home, 'home-post', '2026-10-05T00:00:00Z');
+        $fixtures->persistPost($home, 'home-post', '2026-10-05T00:00:00Z');
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
-        $fixtures->post($profile, 'profile-post', '2026-10-06T00:00:00Z');
+        $fixtures->persistPost($profile, 'profile-post', '2026-10-06T00:00:00Z');
         $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
-        $fixtures->post($mastodon, 'mastodon-post', '2026-10-07T00:00:00Z');
+        $fixtures->persistPost($mastodon, 'mastodon-post', '2026-10-07T00:00:00Z');
         $plain = $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
-        $fixtures->post($plain, 'plain-post', '2026-10-08T00:00:00Z');
+        $fixtures->persistPost($plain, 'plain-post', '2026-10-08T00:00:00Z');
     }
 
     private function seedSearch(User $user): void
@@ -224,7 +224,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
             $this->entityManager(),
             new SocialFeed($account, $search->getFeed(), SocialFeedKind::Search, 'rust'),
         );
-        $this->fixtures()->post($search, 'search-post', '2026-10-04T00:00:00Z');
+        $this->fixtures()->persistPost($search, 'search-post', '2026-10-04T00:00:00Z');
     }
 
     /** @return list<string> */

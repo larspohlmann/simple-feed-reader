@@ -155,7 +155,7 @@ final class EntryTagScopeTest extends ApiTestCase
         foreach ($tags as $tag) {
             $subscription->addTag($tag);
         }
-        $fixtures->post($subscription, $host . ' ' . $feedName, $publishedAt);
+        $fixtures->persistPost($subscription, $host . ' ' . $feedName, $publishedAt);
     }
 
     private function tag(User $user, string $name, ?Tag $parent): Tag

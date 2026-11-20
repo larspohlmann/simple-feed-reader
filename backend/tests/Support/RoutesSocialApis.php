@@ -29,7 +29,7 @@ trait RoutesSocialApis
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
 
-        return $fixtures->post(
+        return $fixtures->persistPost(
             $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE),
             self::MASTODON_POST_URL,
             '2026-10-12T10:00:00Z',
@@ -45,7 +45,7 @@ trait RoutesSocialApis
             SourceFormat::SAVED,
         );
 
-        return $fixtures->post($saved, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
+        return $fixtures->persistPost($saved, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
     }
 
     private function mastodonAccountOf(User $user): SocialAccount
@@ -88,7 +88,7 @@ trait RoutesSocialApis
         return $account;
     }
 
-    private function lemmyPostFor(User $user, string $page = 'https://lemmy.example/post/42'): int
+    private function persistLemmyPost(User $user, string $page = 'https://lemmy.example/post/42'): int
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');

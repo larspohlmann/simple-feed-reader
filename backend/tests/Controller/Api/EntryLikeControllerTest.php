@@ -137,7 +137,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'like-plain@example.test');
         $this->mastodonAccountOf($user);
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-        $entryId = $fixtures->post(
+        $entryId = $fixtures->persistPost(
             $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
             self::MASTODON_POST_URL,
             '2026-10-12T10:00:00Z',

@@ -146,6 +146,24 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
         self::assertSame(VoteScore::Down, $stored?->getScore());
     }
 
+    public function testStoringOverAVoteACompetingRequestInsertedKeepsItsAccount(): void
+    {
+        $item = $this->persistItem('raced-account');
+        $this->vote($this->owner, $this->account, $item, VoteScore::Up);
+        $other = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'alice2@mastodon.example'),
+        );
+        $votedAt = new \DateTimeImmutable('2026-11-14 12:00:00');
+
+        $this->repository()->store(new DiscussionVote($this->owner, $item, $other, VoteScore::Down, $votedAt));
+        $this->entityManager->clear();
+
+        $stored = $this->repository()->findOneFor($this->owner, $item);
+        self::assertSame(VoteScore::Down, $stored?->getScore());
+        self::assertSame($this->account->requireId(), $stored->getSocialAccount()->requireId());
+    }
+
     public function testDeletingTheAccountDropsItsVotes(): void
     {
         $this->vote($this->owner, $this->account, $this->persistItem('by-account'), VoteScore::Up);

@@ -281,7 +281,7 @@ final class EntrySocialViewerControllerTest extends ApiTestCase
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
 
-        return $fixtures->post($profile, self::BLUESKY_POST, '2026-10-12T10:00:00Z')->requireId();
+        return $fixtures->persistPost($profile, self::BLUESKY_POST, '2026-10-12T10:00:00Z')->requireId();
     }
 
     private function blueskyAccountOf(User $user): void

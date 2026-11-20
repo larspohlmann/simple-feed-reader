@@ -32,41 +32,41 @@ final class SocialCountsCacheTest extends TestCase
 
     public function testAnUnaskedPostHasNoCounts(): void
     {
-        self::assertNull($this->cache->find(self::post(SocialNetwork::Mastodon, self::ADDRESS)));
+        self::assertNull($this->cache->find(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS)));
     }
 
     public function testRememberedCountsAreFoundAgain(): void
     {
-        $this->cache->remember(self::post(SocialNetwork::Mastodon, self::ADDRESS), self::counts());
+        $this->cache->remember(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS), self::buildCounts());
 
         self::assertEquals(
             new SocialCountsModel(5, 2, 1, null),
-            $this->cache->find(self::post(SocialNetwork::Mastodon, self::ADDRESS)),
+            $this->cache->find(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS)),
         );
     }
 
     public function testTheSameAddressOnAnotherNetworkIsAnotherPost(): void
     {
-        $this->cache->remember(self::post(SocialNetwork::Mastodon, self::ADDRESS), self::counts());
+        $this->cache->remember(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS), self::buildCounts());
 
-        self::assertNull($this->cache->find(self::post(SocialNetwork::Bluesky, self::ADDRESS)));
+        self::assertNull($this->cache->find(self::buildEntry(SocialNetwork::Bluesky, self::ADDRESS)));
     }
 
     public function testForgottenCountsAreGone(): void
     {
-        $this->cache->remember(self::post(SocialNetwork::Mastodon, self::ADDRESS), self::counts());
+        $this->cache->remember(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS), self::buildCounts());
 
-        $this->cache->forget(self::post(SocialNetwork::Mastodon, self::ADDRESS));
+        $this->cache->forget(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS));
 
-        self::assertNull($this->cache->find(self::post(SocialNetwork::Mastodon, self::ADDRESS)));
+        self::assertNull($this->cache->find(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS)));
     }
 
     public function testCopiesOfOneItemShareTheirCountsWhateverAddressEachCarries(): void
     {
         $item = self::withId(new CanonicalItem(CanonicalItemKind::Mastodon, self::URI), 7);
-        $rssCopy = self::post(SocialNetwork::Mastodon, self::ADDRESS);
+        $rssCopy = self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS);
         $rssCopy->linkTo($item);
-        $uriCopy = self::post(SocialNetwork::Mastodon, self::URI);
+        $uriCopy = self::buildEntry(SocialNetwork::Mastodon, self::URI);
         $uriCopy->linkTo($item);
 
         $this->cache->remember($rssCopy, new SocialCountsModel(5, 2, 1, null));
@@ -78,19 +78,19 @@ final class SocialCountsCacheTest extends TestCase
 
     public function testAnEntryThatIsNoPostHasNoCountsToKeep(): void
     {
-        $article = self::post(null, self::ADDRESS);
+        $article = self::buildEntry(null, self::ADDRESS);
 
         $this->cache->remember($article, new SocialCountsModel(5, 2, 1, null));
 
         self::assertNull($this->cache->find($article));
     }
 
-    private static function counts(): SocialCountsModel
+    private static function buildCounts(): SocialCountsModel
     {
         return new SocialCountsModel(5, 2, 1, null);
     }
 
-    private static function post(?SocialNetwork $network, string $address): Entry
+    private static function buildEntry(?SocialNetwork $network, string $address): Entry
     {
         $feed = new Feed('https://feeds.example/' . (null === $network ? 'articles' : $network->value) . '.xml');
         $feed->classifyAs($network);

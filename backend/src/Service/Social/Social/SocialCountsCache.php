@@ -21,7 +21,7 @@ final readonly class SocialCountsCache
 
     public function find(Entry $entry): ?SocialCountsModel
     {
-        $key = $this->findKey($entry);
+        $key = $this->parseKey($entry);
         if (null === $key) {
             return null;
         }
@@ -32,7 +32,7 @@ final readonly class SocialCountsCache
 
     public function remember(Entry $entry, SocialCountsModel $counts): void
     {
-        $key = $this->findKey($entry);
+        $key = $this->parseKey($entry);
         if (null === $key) {
             return;
         }
@@ -43,13 +43,13 @@ final readonly class SocialCountsCache
 
     public function forget(Entry $entry): void
     {
-        $key = $this->findKey($entry);
+        $key = $this->parseKey($entry);
         if (null !== $key) {
             $this->cache->deleteItem($key);
         }
     }
 
-    private function findKey(Entry $entry): ?string
+    private function parseKey(Entry $entry): ?string
     {
         $itemId = $entry->getCanonicalItem()?->getId();
         if (null !== $itemId) {

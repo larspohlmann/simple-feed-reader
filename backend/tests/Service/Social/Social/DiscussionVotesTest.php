@@ -106,7 +106,7 @@ final class DiscussionVotesTest extends DbTestCase
         $voter->expects($this->once())->method('fetchPostVote')
             ->with(self::identicalTo($caster), self::identicalTo($copy))
             ->willReturn(VoteScore::Down);
-        $votes = $this->votesThrough([SocialNetwork::Lemmy->value => $voter]);
+        $votes = $this->buildVotes([SocialNetwork::Lemmy->value => $voter]);
 
         $votes->vote($this->owner, $copy, VoteScore::Down);
         $votes->syncFromNetwork($this->owner, $copy);
@@ -118,19 +118,36 @@ final class DiscussionVotesTest extends DbTestCase
     {
         $this->lemmyAccount();
         $homeOwner = $this->lemmyAccount('feddit.example');
-        $homeFeed = $this->feed(sprintf('social:lemmy:%d:home', $homeOwner->requireId()));
-        $homeFeed->setSourceFormat(SourceFormat::LEMMY_API);
-        $this->entityManager->persist(new SocialFeed($homeOwner, $homeFeed, SocialFeedKind::Home, ''));
-        $copy = $this->persistCopy($homeFeed);
+        $copy = $this->persistCopy($this->persistHomeFeed($homeOwner));
         $voter = $this->createMock(PostVoterInterface::class);
         $voter->method('isVotablePost')->willReturn(true);
         $voter->expects($this->once())->method('castVoteOnPost')
             ->with(self::identicalTo($homeOwner), self::identicalTo($copy), VoteScore::Up)
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Up, 3));
 
-        $this->votesThrough([SocialNetwork::Lemmy->value => $voter])->vote($this->owner, $copy, VoteScore::Up);
+        $this->buildVotes([SocialNetwork::Lemmy->value => $voter])->vote($this->owner, $copy, VoteScore::Up);
 
         self::assertSame([[VoteScore::Up, $homeOwner->requireId()]], $this->storedVotes());
+    }
+
+    public function testASyncLeavesAVoteAnotherAccountStoredMeanwhile(): void
+    {
+        $caster = $this->lemmyAccount();
+        $homeOwner = $this->lemmyAccount('feddit.example');
+        $copy = $this->persistCopy($this->persistHomeFeed($homeOwner));
+        $voter = $this->createMock(PostVoterInterface::class);
+        $voter->method('isVotablePost')->willReturn(true);
+        $voter->expects($this->once())->method('fetchPostVote')
+            ->with(self::identicalTo($homeOwner), self::identicalTo($copy))
+            ->willReturnCallback(function () use ($caster): VoteScore {
+                $this->storeVote($caster, VoteScore::Up);
+
+                return VoteScore::None;
+            });
+
+        $this->buildVotes([SocialNetwork::Lemmy->value => $voter])->syncFromNetwork($this->owner, $copy);
+
+        self::assertSame([[VoteScore::Up, $caster->requireId()]], $this->storedVotes());
     }
 
     public function testAnEntryWithoutAnItemIsRefused(): void
@@ -230,11 +247,11 @@ final class DiscussionVotesTest extends DbTestCase
             $voters[$network->value] = $voter;
         }
 
-        return $this->votesThrough($voters);
+        return $this->buildVotes($voters);
     }
 
     /** @param array<string, PostVoterInterface> $votersByNetwork */
-    private function votesThrough(array $votersByNetwork): DiscussionVotes
+    private function buildVotes(array $votersByNetwork): DiscussionVotes
     {
         $container = self::getContainer();
 
@@ -338,6 +355,15 @@ final class DiscussionVotesTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function persistHomeFeed(SocialAccount $account): Feed
+    {
+        $homeFeed = $this->feed(sprintf('social:lemmy:%d:home', $account->requireId()));
+        $homeFeed->setSourceFormat(SourceFormat::LEMMY_API);
+        $this->entityManager->persist(new SocialFeed($account, $homeFeed, SocialFeedKind::Home, ''));
+
+        return $homeFeed;
     }
 
     private function feed(string $url): Feed
