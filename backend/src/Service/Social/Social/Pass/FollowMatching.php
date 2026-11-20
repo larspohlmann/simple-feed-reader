@@ -35,7 +35,7 @@ final class FollowMatching
         private readonly ImportRuleInterface $importRule,
         array $follows,
     ) {
-        $this->follows = self::firstOfEachIdentity($follows);
+        $this->follows = self::keepFirstPerIdentity($follows);
         $this->followByKey = $this->indexFollows();
     }
 
@@ -131,7 +131,7 @@ final class FollowMatching
      *
      * @return list<FollowedAccountModel>
      */
-    private static function firstOfEachIdentity(array $follows): array
+    private static function keepFirstPerIdentity(array $follows): array
     {
         $byIdentity = [];
         foreach ($follows as $follow) {

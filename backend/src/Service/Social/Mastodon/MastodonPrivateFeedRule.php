@@ -86,7 +86,7 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
     /** @return list<string> */
     private static function parseAuthorNames(SocialAccount $account, ?string $authorUrl): array
     {
-        $identity = MastodonAuthor::identityOfProfileUrl($authorUrl);
+        $identity = MastodonAuthor::parseProfileIdentity($authorUrl);
         if (null === $identity) {
             return [];
         }

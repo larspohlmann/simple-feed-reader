@@ -24,7 +24,7 @@ final readonly class ImageVerificationTickSweep implements MaintenanceSweepInter
     public function run(\DateTimeImmutable $deadline): ImageVerificationReportModel
     {
         return $this->imageVerificationSweep->verifyDue(
-            ImageVerificationBudgetModel::halfOfWhatIsLeft($deadline, $this->clock->now(), self::MAX_SECONDS),
+            ImageVerificationBudgetModel::fromHalfTheRemainingTime($deadline, $this->clock->now(), self::MAX_SECONDS),
         );
     }
 

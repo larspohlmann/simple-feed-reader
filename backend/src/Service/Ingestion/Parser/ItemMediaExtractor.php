@@ -81,7 +81,7 @@ final readonly class ItemMediaExtractor
     {
         $nodes = self::mediaNodesIn($group);
 
-        $video = self::firstOfKind($nodes, FeedMediaKind::Video);
+        $video = self::findFirstWithKind($nodes, FeedMediaKind::Video);
         if ($video !== null) {
             return new ParsedMediaBundleModel(
                 [$video->toVideo(self::posterIn($group))],
@@ -104,7 +104,7 @@ final readonly class ItemMediaExtractor
     /**
      * @param list<FeedMediaNode> $nodes
      */
-    private static function firstOfKind(array $nodes, FeedMediaKind $kind): ?FeedMediaNode
+    private static function findFirstWithKind(array $nodes, FeedMediaKind $kind): ?FeedMediaNode
     {
         foreach ($nodes as $node) {
             if ($node->kind() === $kind) {
@@ -118,7 +118,8 @@ final readonly class ItemMediaExtractor
     /** @param list<FeedMediaNode> $nodes */
     private static function firstPlayable(array $nodes): ?FeedMediaNode
     {
-        return self::firstOfKind($nodes, FeedMediaKind::Audio) ?? self::firstOfKind($nodes, FeedMediaKind::Other);
+        return self::findFirstWithKind($nodes, FeedMediaKind::Audio)
+            ?? self::findFirstWithKind($nodes, FeedMediaKind::Other);
     }
 
     /** @param list<FeedMediaNode> $nodes */

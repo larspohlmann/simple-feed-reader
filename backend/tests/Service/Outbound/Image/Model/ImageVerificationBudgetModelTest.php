@@ -26,7 +26,7 @@ final class ImageVerificationBudgetModelTest extends TestCase
         $now = new \DateTimeImmutable(self::NOW);
         $deadline = $now->modify(\sprintf('%+d seconds', $secondsLeft));
 
-        $budget = ImageVerificationBudgetModel::halfOfWhatIsLeft($deadline, $now, $cap);
+        $budget = ImageVerificationBudgetModel::fromHalfTheRemainingTime($deadline, $now, $cap);
 
         self::assertEquals(new \DateTimeImmutable($expectedDeadline), $budget->deadlineFrom($now));
     }

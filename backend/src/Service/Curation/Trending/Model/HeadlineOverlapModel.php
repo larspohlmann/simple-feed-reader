@@ -14,7 +14,7 @@ final readonly class HeadlineOverlapModel
     ) {
     }
 
-    public function shareOfLighter(): float
+    public function computeLighterShare(): float
     {
         return $this->sharedWeight / $this->lighterTotal;
     }

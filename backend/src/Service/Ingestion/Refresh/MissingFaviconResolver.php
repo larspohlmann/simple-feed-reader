@@ -22,7 +22,7 @@ final readonly class MissingFaviconResolver
      */
     public function resolveFor(array $feeds): void
     {
-        $baseUrls = self::baseUrlsOfFeedsWithoutIcon($feeds);
+        $baseUrls = self::collectBaseUrlsWithoutIcon($feeds);
         if ([] === $baseUrls) {
             return;
         }
@@ -43,7 +43,7 @@ final readonly class MissingFaviconResolver
      *
      * @return array<int, string>
      */
-    private static function baseUrlsOfFeedsWithoutIcon(array $feeds): array
+    private static function collectBaseUrlsWithoutIcon(array $feeds): array
     {
         $baseUrls = [];
         foreach ($feeds as $feed) {

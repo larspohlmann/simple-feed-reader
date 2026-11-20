@@ -45,7 +45,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string
     {
-        return MastodonAuthor::identityOfProfileUrl(
+        return MastodonAuthor::parseProfileIdentity(
             $entry->getAuthorUrl() ?? MastodonStatusAddress::parseAddress($post->address)?->authorPrefix,
         );
     }

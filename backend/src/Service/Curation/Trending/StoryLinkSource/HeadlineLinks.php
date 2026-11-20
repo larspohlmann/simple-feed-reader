@@ -70,7 +70,7 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
         if (!$this->sharesEnough($overlap)) {
             $failures[] = \sprintf(
                 'share of the lighter entry %.2f < %g',
-                $overlap->shareOfLighter(),
+                $overlap->computeLighterShare(),
                 self::MIN_SHARE_OF_LIGHTER,
             );
         }
@@ -106,6 +106,6 @@ final readonly class HeadlineLinks implements StoryLinkSourceInterface
 
     private function sharesEnough(HeadlineOverlapModel $overlap): bool
     {
-        return $overlap->shareOfLighter() >= self::MIN_SHARE_OF_LIGHTER;
+        return $overlap->computeLighterShare() >= self::MIN_SHARE_OF_LIGHTER;
     }
 }

@@ -90,14 +90,14 @@ final readonly class LemmyApiClient
 
     private static function failure(int $status, ?string $code): \RuntimeException
     {
-        return self::failureOfCode($code) ?? match ($status) {
+        return self::findFailureForCode($code) ?? match ($status) {
             Response::HTTP_UNAUTHORIZED => new SocialCredentialsRejectedException(self::REFUSED_SESSION),
             Response::HTTP_NOT_FOUND => new SocialPostNotFoundException(self::NOT_FOUND),
             default => new SocialNetworkUnreachableException(self::NETWORK . ' turned this request down.'),
         };
     }
 
-    private static function failureOfCode(?string $code): ?\RuntimeException
+    private static function findFailureForCode(?string $code): ?\RuntimeException
     {
         return match ($code) {
             'incorrect_login' => new SocialCredentialsRejectedException(self::WRONG_PASSWORD),
