@@ -105,6 +105,7 @@ describe('StoryLayerComponent (#2329)', () => {
     error: signal(null),
     nextCursor: signal<string | null>(null),
   };
+  const title = signal<string | null>(null);
   const synopsis = signal<string | null>(null);
   const heading = {
     title: signal('Harbour strike'),
@@ -156,7 +157,10 @@ describe('StoryLayerComponent (#2329)', () => {
           { provide: StoryFollowing, useValue: { following: signal(false), toggleOpen } },
           {
             provide: OpenStory,
-            useValue: { synopsisOf: (id: number) => (id === story.id ? synopsis() : null) },
+            useValue: {
+              titleOf: (id: number) => (id === story.id ? title() : null),
+              synopsisOf: (id: number) => (id === story.id ? synopsis() : null),
+            },
           },
         ],
       },
@@ -172,6 +176,7 @@ describe('StoryLayerComponent (#2329)', () => {
   }
 
   afterEach(() => {
+    title.set(null);
     synopsis.set(null);
     TestBed.resetTestingModule();
   });
@@ -187,23 +192,40 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(list.canMarkAllRead()).toBe(true);
   });
 
-  it("shows the story's synopsis above its rows once the page lands", () => {
+  it("heads its rows with the story's title and synopsis, as the Trending card does, once the page lands", () => {
     const fixture = mountFixture();
     const list = TestBed.inject(LISTS).at(-1)!;
 
+    title.set('Dockers strike at the harbour');
     synopsis.set('Dockers walked out at dawn. The port is shut.');
     fixture.detectChanges();
 
     expect(list.topBlock()).not.toBeNull();
-    const shown = (fixture.nativeElement as HTMLElement).querySelector('.top .story-synopsis');
-    expect(shown?.textContent?.trim()).toBe('Dockers walked out at dawn. The port is shut.');
+    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top .story-headline');
+    expect(headline?.querySelector('h3.title')?.textContent?.trim()).toBe(
+      'Dockers strike at the harbour',
+    );
+    expect(headline?.querySelector('p.synopsis')?.textContent?.trim()).toBe(
+      'Dockers walked out at dawn. The port is shut.',
+    );
   });
 
-  it('renders no synopsis block before the page lands or without a synopsis', () => {
+  it('heads its rows with the title alone when the story has no synopsis', () => {
+    const fixture = mountFixture();
+
+    title.set('Dockers strike at the harbour');
+    fixture.detectChanges();
+
+    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top .story-headline');
+    expect(headline?.querySelector('h3.title')).not.toBeNull();
+    expect(headline?.querySelector('.synopsis')).toBeNull();
+  });
+
+  it('renders no headline before the page lands', () => {
     const { element, list } = mount();
 
     expect(list.topBlock()).toBeNull();
-    expect(element.querySelector('.story-synopsis')).toBeNull();
+    expect(element.querySelector('.story-headline')).toBeNull();
   });
 
   it('lets rows leave its own list', () => {

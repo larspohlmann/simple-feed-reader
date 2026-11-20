@@ -1,0 +1,37 @@
+:host {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title,
+.synopsis {
+  margin: 0;
+  font-size: var(--fs-base);
+  line-height: var(--lh-tight);
+  overflow-wrap: break-word;
+}
+
+.title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.synopsis {
+  font-weight: 400;
+  color: var(--text-secondary);
+}

@@ -29,8 +29,16 @@
   </button>
 </ng-template>
 
-<ng-template #synopsisTemplate>
-  <p class="story-synopsis">{{ synopsis() }}</p>
+<ng-template #headlineTemplate>
+  @if (title(); as title) {
+    <app-story-headline
+      class="story-headline"
+      [class.in-magazine]="layout() === 'magazine'"
+      [storyId]="context.selection().id"
+      [title]="title"
+      [synopsis]="synopsis()"
+    />
+  }
 </ng-template>
 
 <app-entry-list

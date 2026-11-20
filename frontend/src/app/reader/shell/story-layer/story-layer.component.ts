@@ -24,6 +24,7 @@ import { ReadingLayout } from '../../reading-layout.service';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { ListContext } from '../../state/list-context';
 import { OpenStory } from '../../state/open-story';
+import { StoryHeadlineComponent } from '../../trending/story-headline/story-headline.component';
 import { TrendingFollowAction } from '../../trending/trending-follow-action';
 import { ListCover } from '../list-cover';
 import { ListHeading } from '../list-heading.service';
@@ -47,6 +48,7 @@ const NO_PULL_BACK = signal<ScrollHost | undefined>(undefined);
     IconButtonDirective,
     ListActionDirective,
     NgTemplateOutlet,
+    StoryHeadlineComponent,
     TranslocoPipe,
   ],
   templateUrl: './story-layer.component.html',
@@ -86,11 +88,12 @@ export class StoryLayerComponent {
   protected readonly markRead = inject(MarkReadActions);
   protected readonly gestures = inject(ArticleGestures);
   private readonly openStory = inject(OpenStory);
+  protected readonly title = computed(() => this.openStory.titleOf(this.context.selection().id));
   protected readonly synopsis = computed(() =>
     this.openStory.synopsisOf(this.context.selection().id),
   );
-  private readonly synopsisTemplate = viewChild.required<TemplateRef<unknown>>('synopsisTemplate');
-  protected readonly topBlock = computed(() => (this.synopsis() ? this.synopsisTemplate() : null));
+  private readonly headlineTemplate = viewChild.required<TemplateRef<unknown>>('headlineTemplate');
+  protected readonly topBlock = computed(() => (this.title() ? this.headlineTemplate() : null));
   readonly list = viewChild(EntryListComponent);
 
   constructor() {

@@ -4,6 +4,14 @@ import { TrendingStoryDto } from './trending.models';
 /** The glyph that marks a Trending story wherever a card names one. */
 export const STORY_ICON = 'trending_up';
 
+export function storyTitleId(storyId: number): string {
+  return `story-title-${storyId}`;
+}
+
+export function storySynopsisId(storyId: number): string {
+  return `story-synopsis-${storyId}`;
+}
+
 /** The router link to a story's list, followed or not (#2128, #2329). */
 export function storyListLink(storyId: number): [string, number] {
   return ['/trending/stories', storyId];

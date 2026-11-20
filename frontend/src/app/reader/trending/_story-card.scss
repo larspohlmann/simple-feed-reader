@@ -1,0 +1,11 @@
+@use '../../theme/glass-rim';
+
+@mixin card {
+  @include glass-rim.filled(var(--surface-sunken));
+
+  border-radius: var(--radius-lg);
+}
+
+@mixin card-padding {
+  padding: var(--space-2) var(--space-3);
+}
