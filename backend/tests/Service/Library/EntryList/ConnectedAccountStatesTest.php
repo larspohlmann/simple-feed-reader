@@ -5,21 +5,35 @@ declare(strict_types=1);
 namespace App\Tests\Service\Library\EntryList;
 
 use App\Entity\CanonicalItem;
+use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
+use App\Entity\SocialLike;
+use App\Entity\User;
 use App\Enum\CanonicalItemKind;
+use App\Enum\VoteScore;
 use App\Service\Library\EntryList\ConnectedAccountStates;
 use App\Service\Library\EntryList\Model\ConnectedAccountStatesModel;
 use App\Service\Social\Lemmy\Support\LemmyProfileFeed;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 
 final class ConnectedAccountStatesTest extends DbTestCase
 {
     use SeedsUsers;
+
+    private User $reader;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->reader = $this->user('states@example.com');
+    }
 
     public function testAPostInItsOwnCommunityFeedCarriesNoCommunity(): void
     {
@@ -48,11 +62,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
         $item = $first->getCanonicalItem();
         self::assertNotNull($item);
         $item->recordScore(12);
-        $otherFeed = $this->persistFeed('https://example.org/other.xml');
-        $second = LemmyPostEntries::buildEntry($otherFeed, LemmyPostEntries::PAGE, 'copy-b');
-        $second->linkTo($item);
-        $this->entityManager->persist($second);
-        $this->entityManager->flush();
+        $second = $this->persistLemmyCopy($item);
 
         $states = $this->buildStates([$first, $second]);
 
@@ -61,6 +71,42 @@ final class ConnectedAccountStatesTest extends DbTestCase
             self::assertNotNull($lemmy);
             self::assertSame(12, $lemmy->score);
             self::assertSame('technology@lemmy.world', $lemmy->community?->identity);
+        }
+    }
+
+    public function testAVoteOnOneCopyShowsOnTheOther(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->reader));
+        $first = $this->persistLemmyPost('https://example.com/feed.xml');
+        $item = $first->getCanonicalItem();
+        self::assertNotNull($item);
+        $second = $this->persistLemmyCopy($item);
+        $votedAt = new \DateTimeImmutable('2026-11-20 10:00:00');
+        $this->entityManager->persist(new DiscussionVote($this->reader, $item, $account, VoteScore::Up, $votedAt));
+        $this->entityManager->flush();
+
+        $states = $this->buildStates([$first, $second]);
+
+        foreach ([$first, $second] as $entry) {
+            self::assertSame(VoteScore::Up, ($states->lemmy[$entry->requireId()] ?? null)?->myVote);
+        }
+    }
+
+    public function testALikeOnOneCopyShowsOnTheOther(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->reader));
+        $item = new CanonicalItem(CanonicalItemKind::Mastodon, 'https://mastodon.example/users/alice/statuses/1');
+        $this->entityManager->persist($item);
+        $first = $this->persistMastodonCopy('https://mastodon.example/@alice.rss', $item);
+        $second = $this->persistMastodonCopy('https://mastodon.social/@alice.rss', $item);
+        $likedAt = new \DateTimeImmutable('2026-11-20 10:00:00');
+        $this->entityManager->persist(new SocialLike($this->reader, $item, $account, '1', $likedAt));
+        $this->entityManager->flush();
+
+        $states = $this->buildStates([$first, $second]);
+
+        foreach ([$first, $second] as $entry) {
+            self::assertTrue(($states->social[$entry->requireId()] ?? null)?->isLiked);
         }
     }
 
@@ -89,7 +135,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
             $byId[$entry->requireId()] = $entry;
         }
 
-        return $states->buildStates($byId, $this->user('states@example.com')->requireId());
+        return $states->buildStates($byId, $this->reader->requireId());
     }
 
     private function persistFeed(string $url): Feed
@@ -104,13 +150,35 @@ final class ConnectedAccountStatesTest extends DbTestCase
     {
         $states = self::getContainer()->get(ConnectedAccountStates::class);
         self::assertInstanceOf(ConnectedAccountStates::class, $states);
-        $user = $this->user('states@example.com');
 
         $entryId = $entry->requireId();
-        $lemmy = $states->buildStates([$entryId => $entry], $user->requireId())->lemmy[$entryId] ?? null;
+        $lemmy = $states->buildStates([$entryId => $entry], $this->reader->requireId())->lemmy[$entryId] ?? null;
         self::assertNotNull($lemmy);
 
         return $lemmy->community;
+    }
+
+    private function persistLemmyCopy(CanonicalItem $item): Entry
+    {
+        $otherFeed = $this->persistFeed('https://example.org/other.xml');
+        $copy = LemmyPostEntries::buildEntry($otherFeed, LemmyPostEntries::PAGE, 'copy-b');
+        $copy->linkTo($item);
+        $this->entityManager->persist($copy);
+        $this->entityManager->flush();
+
+        return $copy;
+    }
+
+    private function persistMastodonCopy(string $feedUrl, CanonicalItem $item): Entry
+    {
+        $feed = $this->persistFeed($feedUrl);
+        $published = new \DateTimeImmutable('2026-11-20 09:00:00');
+        $statusUrl = 'https://mastodon.example/@alice/1';
+        $copy = new Entry($feed, $statusUrl, $statusUrl, 'A status', $published, $published);
+        $copy->linkTo($item);
+        $this->entityManager->persist($copy);
+
+        return $copy;
     }
 
     private function persistLemmyPost(string $feedUrl): Entry

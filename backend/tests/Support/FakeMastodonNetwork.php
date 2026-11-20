@@ -31,6 +31,9 @@ final class FakeMastodonNetwork implements
     /** @var list<string> */
     public array $calls = [];
 
+    /** @var list<?int> the account behind each resolve and unlike, in order */
+    public array $actingAccountIds = [];
+
     private ?\Throwable $failure = null;
 
     private ?SocialCountsModel $counts = null;
@@ -100,6 +103,7 @@ final class FakeMastodonNetwork implements
 
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
+        $this->actingAccountIds[] = $account->getId();
         $this->record('resolve ' . $address);
         if (null !== $this->resolveHook) {
             ($this->resolveHook)($account);
@@ -122,6 +126,7 @@ final class FakeMastodonNetwork implements
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
+        $this->actingAccountIds[] = $account->getId();
         $this->record('unlike ' . $likeId);
     }
 

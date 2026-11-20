@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
@@ -14,6 +15,7 @@ use App\Entity\SavedEntryOrigin;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\EntryRepository;
@@ -83,10 +85,14 @@ final class SavedPostRescueTest extends DbTestCase
             'https://bsky.app/profile/did:plc:bob/post/1',
         );
         $this->state($this->user, $kept)->markKept();
+        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
+        $this->entityManager->persist($item);
+        $kept->linkTo($item);
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
         $likedAt = new \DateTimeImmutable(self::AT);
-        $this->entityManager->persist(new SocialLike($this->user, $kept, $account, 'at://like/1', $likedAt));
+        $this->entityManager->persist(new SocialLike($this->user, $item, $account, 'at://like/1', $likedAt));
         $this->entityManager->flush();
+        $itemId = $item->requireId();
 
         $this->service()->unsubscribe($subscription);
         $this->entityManager->clear();
@@ -96,7 +102,8 @@ final class SavedPostRescueTest extends DbTestCase
         self::assertSame('https://bsky.app/profile/did:plc:bob', $copy->getAuthorUrl());
         self::assertSame('https://cdn.example/bob.jpg', $copy->getAuthorAvatarUrl());
         self::assertTrue($this->stateOf($copy)->isKept());
-        self::assertSame(1, $this->entityManager->getRepository(SocialLike::class)->count(['entry' => $copy]));
+        self::assertSame($itemId, $copy->getCanonicalItem()?->requireId());
+        self::assertSame(1, $this->entityManager->getRepository(SocialLike::class)->count([]));
         self::assertNull($this->originOf($copy));
     }
 

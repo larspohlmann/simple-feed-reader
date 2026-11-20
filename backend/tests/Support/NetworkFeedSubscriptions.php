@@ -45,6 +45,7 @@ final readonly class NetworkFeedSubscriptions
         $entry = new Entry($subscription->getFeed(), $guid, null, $guid, $published, $published);
         $entry->setPublishedAt($published);
         $this->entityManager->persist($entry);
+        CanonicalItems::linkAsIngested($this->entityManager, $entry);
         $this->entityManager->flush();
 
         return $entry;

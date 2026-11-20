@@ -10,7 +10,6 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
-use App\Repository\SocialLikeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SavedStateMover
@@ -18,7 +17,6 @@ final readonly class SavedStateMover
     public function __construct(
         private EntryStateRepository $entryStates,
         private EntryShareRepository $entryShares,
-        private SocialLikeRepository $socialLikes,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -36,7 +34,6 @@ final readonly class SavedStateMover
         $targets = $this->entryStates->forUserByEntryIds($userId, array_values($targetByEntryId));
         foreach ($targetByEntryId as $entryId => $targetId) {
             self::merge($sources[$entryId] ?? null, $targets[$targetId] ?? null);
-            $this->socialLikes->copyLike($userId, $entryId, $targetId);
         }
         $this->moveShares($userId, $targetByEntryId);
         $this->entityManager->flush();

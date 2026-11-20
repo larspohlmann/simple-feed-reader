@@ -46,6 +46,20 @@ final readonly class SocialPostFinder
     }
 
     /**
+     * The post an entry is, found on the given account rather than the one the entry's feed would pick.
+     *
+     * @throws NotASocialPostException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function findThrough(SocialAccount $account, Entry $entry): SocialPostModel
+    {
+        return $this->findAs($account, $this->postAddresses->requirePost($entry));
+    }
+
+    /**
      * A reply in the entry's thread, found on the account that acts on the entry.
      *
      * @throws NotASocialPostException

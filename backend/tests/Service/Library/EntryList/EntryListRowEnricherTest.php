@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Library\EntryList;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Discussion;
 use App\Entity\DiscussionVote;
@@ -41,6 +42,7 @@ use App\Repository\LinkCardRepository;
 use App\Service\Library\EntryList\EntryListRowEnricher;
 use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
+use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
@@ -535,6 +537,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $feed = new Feed('https://lemmy.world/feeds/c/technology.xml');
         $this->entityManager->persist($feed);
         $entry = LemmyPostEntries::buildEntry($feed, 'https://lemmy.world/post/78', 'vote-only');
+        $this->entityManager->persist(LemmyPostEntries::linkItem($entry, 'https://lemmy.world/post/78'));
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::lemmyOf($this->user));
@@ -638,6 +641,8 @@ final class EntryListRowEnricherTest extends DbTestCase
         $entry = new Entry($feed, $url, $url, 'Post', $now, $now);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
+        CanonicalItems::linkAsIngested($this->entityManager, $entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -673,7 +678,7 @@ final class EntryListRowEnricherTest extends DbTestCase
     {
         $this->entityManager->persist(new DiscussionVote(
             $voter ?? $this->user,
-            $entry,
+            self::requireItem($entry),
             $account,
             $score,
             new \DateTimeImmutable('2026-11-14 10:00:00'),
@@ -683,10 +688,17 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     private function likeOf(SocialAccount $account, User $user, Entry $entry): void
     {
-        $this->entityManager->persist(
-            new SocialLike($user, $entry, $account, '1', new \DateTimeImmutable('2026-10-13 10:00:00')),
-        );
+        $likedAt = new \DateTimeImmutable('2026-10-13 10:00:00');
+        $this->entityManager->persist(new SocialLike($user, self::requireItem($entry), $account, '1', $likedAt));
         $this->entityManager->flush();
+    }
+
+    private static function requireItem(Entry $entry): CanonicalItem
+    {
+        $item = $entry->getCanonicalItem();
+        self::assertNotNull($item, 'A vote or a like needs the entry\'s item.');
+
+        return $item;
     }
 
     private function category(Entry $entry, int $position, string $label): void

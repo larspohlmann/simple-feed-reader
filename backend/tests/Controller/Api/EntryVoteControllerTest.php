@@ -437,10 +437,10 @@ final class EntryVoteControllerTest extends ApiTestCase
 
     private function storeVote(User $user, int $entryId, SocialAccount $account, VoteScore $score): void
     {
-        $entry = $this->entityManager()->find(Entry::class, $entryId);
-        self::assertInstanceOf(Entry::class, $entry);
+        $item = $this->entityManager()->find(Entry::class, $entryId)?->getCanonicalItem();
+        self::assertNotNull($item);
         $this->entityManager()->persist(
-            new DiscussionVote($user, $entry, $account, $score, new \DateTimeImmutable('2026-10-12 10:00:00')),
+            new DiscussionVote($user, $item, $account, $score, new \DateTimeImmutable('2026-10-12 10:00:00')),
         );
         $this->entityManager()->flush();
     }

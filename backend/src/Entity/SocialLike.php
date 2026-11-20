@@ -12,9 +12,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SocialLikeRepository::class)]
 #[ORM\Table(name: 'social_like')]
 #[ORM\Index(name: 'idx_social_like_user', columns: ['user_id'])]
-#[ORM\Index(name: 'idx_social_like_entry', columns: ['entry_id'])]
+#[ORM\Index(name: 'idx_social_like_canonical_item', columns: ['canonical_item_id'])]
 #[ORM\Index(name: 'idx_social_like_account', columns: ['social_account_id'])]
-#[ORM\UniqueConstraint(name: 'uniq_social_like_user_entry', columns: ['user_id', 'entry_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_social_like_user_canonical_item', columns: ['user_id', 'canonical_item_id'])]
 final class SocialLike
 {
     use PersistedId;
@@ -29,8 +29,8 @@ final class SocialLike
     private User $user;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private Entry $entry;
+    #[ORM\JoinColumn(name: 'canonical_item_id', nullable: false, onDelete: 'CASCADE')]
+    private CanonicalItem $canonicalItem;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -45,13 +45,13 @@ final class SocialLike
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         User $user,
-        Entry $entry,
+        CanonicalItem $canonicalItem,
         SocialAccount $socialAccount,
         string $remoteId,
         \DateTimeImmutable $likedAt,
     ) {
         $this->user = $user;
-        $this->entry = $entry;
+        $this->canonicalItem = $canonicalItem;
         $this->socialAccount = $socialAccount;
         $this->remoteId = $remoteId;
         $this->likedAt = $likedAt;
@@ -67,9 +67,9 @@ final class SocialLike
         return $this->user;
     }
 
-    public function getEntry(): Entry
+    public function getCanonicalItem(): CanonicalItem
     {
-        return $this->entry;
+        return $this->canonicalItem;
     }
 
     public function getSocialAccount(): SocialAccount
@@ -87,9 +87,8 @@ final class SocialLike
         return $this->likedAt;
     }
 
-    public function replaceWith(SocialAccount $socialAccount, string $remoteId, \DateTimeImmutable $likedAt): void
+    public function replaceWith(string $remoteId, \DateTimeImmutable $likedAt): void
     {
-        $this->socialAccount = $socialAccount;
         $this->remoteId = $remoteId;
         $this->likedAt = $likedAt;
     }

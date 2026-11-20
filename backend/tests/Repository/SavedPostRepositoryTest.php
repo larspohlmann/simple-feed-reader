@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
@@ -17,25 +18,22 @@ use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SharedLink;
-use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SourceFormat;
 use App\Repository\EntryRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
 use App\Repository\SavedPostRepository;
-use App\Repository\SocialLikeRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Library\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SharedLinks;
-use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -335,23 +333,23 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertSame('https://reply.example/', $replyCard->url);
     }
 
-    public function testALikeIsCopiedOnceAndNeverOverAnExistingOne(): void
+    public function testACopySharesTheCanonicalItemOfItsSource(): void
     {
-        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
-        $source = $this->subscribedFeed('https://liked.example/feed.xml');
-        $from = $this->entry($source, 'liked', 'https://liked.example/1');
-        $to = $this->entry($source, 'target', 'https://liked.example/2');
-        $likedAt = new \DateTimeImmutable(self::AT);
-        $this->entityManager->persist(new SocialLike($this->user, $from, $account, 'at://like/1', $likedAt));
+        $source = $this->subscribedFeed('https://item.example/feed.xml');
+        $entry = $this->entry($source, 'linked', 'https://item.example/1');
+        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
+        $this->entityManager->persist($item);
+        $entry->linkTo($item);
         $this->entityManager->flush();
-        /** @var SocialLikeRepository $likes */
-        $likes = $this->entityManager->getRepository(SocialLike::class);
 
-        $likes->copyLike($this->user->requireId(), $from->requireId(), $to->requireId());
-        $likes->copyLike($this->user->requireId(), $from->requireId(), $to->requireId());
+        $copies = $this->repository()->copyInto(
+            new SavedCopyModel($this->savedFeed()->requireId(), null),
+            [$entry->requireId()],
+        );
 
-        self::assertSame(1, $likes->count(['entry' => $to]));
-        self::assertSame('at://like/1', $likes->findOneFor($this->user, $to)?->getRemoteId());
+        $this->entityManager->clear();
+        $copy = $this->entityManager->find(Entry::class, $copies[$entry->requireId()]);
+        self::assertSame($item->requireId(), $copy?->getCanonicalItem()?->requireId());
     }
 
     public function testEntriesAreFoundByIdInIdOrderAndNoIdsFindNone(): void

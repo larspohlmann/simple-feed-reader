@@ -39,12 +39,17 @@ final readonly class ConnectedAccountStates
     public function buildStates(array $entries, int $userId): ConnectedAccountStatesModel
     {
         $postAddresses = $this->collectPostAddresses($entries);
-        $lemmyPostIds = self::collectLemmyPostIds($entries);
-        $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyPostIds, $userId);
+        $lemmyItemIds = self::collectItemIds(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => null !== LemmyPostAddress::findPost($entry),
+        ));
+        $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyItemIds, $userId);
         $socialStates = $this->buildSocialStates($entries, $postAddresses, $accountsByNetwork, $userId);
-        $votes = $this->loadVotes($lemmyPostIds, $accountsByNetwork, $userId);
-        $itemIds = self::collectItemIds($entries);
-        $lemmyPosts = $this->lemmyPosts->byCanonicalItemIds($itemIds);
+        $votes = $this->loadVotes($lemmyItemIds, $accountsByNetwork, $userId);
+        $lemmyPosts = $this->lemmyPosts->byCanonicalItemIds(self::collectItemIds(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => CanonicalItemKind::Lemmy === $entry->getCanonicalItem()?->getKind(),
+        )));
 
         $lemmyStates = [];
         foreach ($entries as $entryId => $entry) {
@@ -52,7 +57,7 @@ final readonly class ConnectedAccountStates
             $lemmy = $this->buildLemmyRow(
                 $entry,
                 null === $itemId ? null : ($lemmyPosts[$itemId] ?? null),
-                $votes[$entryId] ?? null,
+                null === $itemId ? null : ($votes[$itemId] ?? null),
             );
             if (null !== $lemmy) {
                 $lemmyStates[$entryId] = $lemmy;
@@ -82,13 +87,13 @@ final readonly class ConnectedAccountStates
 
     /**
      * @param array<int, SocialPostAddressModel> $postAddresses
-     * @param list<int> $lemmyPostIds
+     * @param list<int> $lemmyItemIds
      *
      * @return array<string, non-empty-list<SocialAccount>> by network value; read only when a post can use them
      */
-    private function loadAccountsByNetwork(array $postAddresses, array $lemmyPostIds, int $userId): array
+    private function loadAccountsByNetwork(array $postAddresses, array $lemmyItemIds, int $userId): array
     {
-        if ([] === $postAddresses && [] === $lemmyPostIds) {
+        if ([] === $postAddresses && [] === $lemmyItemIds) {
             return [];
         }
 
@@ -96,33 +101,20 @@ final readonly class ConnectedAccountStates
     }
 
     /**
-     * @param list<int> $lemmyPostIds
+     * @param list<int> $lemmyItemIds
      * @param array<string, non-empty-list<SocialAccount>> $accountsByNetwork
      *
-     * @return array<int, VoteScore> by entry id, for every Lemmy post of a reader with a Lemmy account in any status
+     * @return array<int, VoteScore> by item id, for every Lemmy post of a reader with a Lemmy account in any status
      */
-    private function loadVotes(array $lemmyPostIds, array $accountsByNetwork, int $userId): array
+    private function loadVotes(array $lemmyItemIds, array $accountsByNetwork, int $userId): array
     {
         if (!isset($accountsByNetwork[SocialNetwork::Lemmy->value])) {
             return [];
         }
 
-        $stored = $this->discussionVotes->findScores($userId, $lemmyPostIds);
+        $stored = $this->discussionVotes->findScores($userId, $lemmyItemIds);
 
-        return $stored + array_fill_keys($lemmyPostIds, VoteScore::None);
-    }
-
-    /**
-     * @param array<int, Entry> $entries
-     *
-     * @return list<int>
-     */
-    private static function collectLemmyPostIds(array $entries): array
-    {
-        return array_keys(array_filter(
-            $entries,
-            static fn (Entry $entry): bool => null !== LemmyPostAddress::findPost($entry),
-        ));
+        return $stored + array_fill_keys($lemmyItemIds, VoteScore::None);
     }
 
     /**
@@ -141,7 +133,10 @@ final readonly class ConnectedAccountStates
             $posts,
             static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
         );
-        $likedIds = $this->socialLikes->findLikedEntryIds($userId, array_keys($likeable));
+        $likedItemIds = $this->socialLikes->findLikedItemIds(
+            $userId,
+            self::collectItemIds(array_intersect_key($entries, $likeable)),
+        );
 
         $states = [];
         foreach ($posts as $entryId => $post) {
@@ -149,13 +144,21 @@ final readonly class ConnectedAccountStates
             $canLike = [] !== $networkAccounts;
             $states[$entryId] = new EntryListRowSocial(
                 $post->network,
-                isLiked: isset($likedIds[$entryId]),
+                isLiked: self::isLikedAmong($entries[$entryId], $likedItemIds),
                 canLike: $canLike,
                 isOwn: $canLike && null !== $this->postAddresses->findAuthorAmong($entries[$entryId], $networkAccounts),
             );
         }
 
         return $states;
+    }
+
+    /** @param array<int, true> $likedItemIds */
+    private static function isLikedAmong(Entry $entry, array $likedItemIds): bool
+    {
+        $itemId = $entry->getCanonicalItem()?->getId();
+
+        return null !== $itemId && isset($likedItemIds[$itemId]);
     }
 
     /**

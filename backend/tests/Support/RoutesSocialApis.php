@@ -94,6 +94,7 @@ trait RoutesSocialApis
         $subscription = $fixtures->subscribe($user, 'https://lemmy.example/feeds/' . md5($page) . '.xml');
         $entry = LemmyPostEntries::buildEntry($subscription->getFeed(), $page);
         $this->entityManager()->persist($entry);
+        CanonicalItems::linkAsIngested($this->entityManager(), $entry);
         $this->entityManager()->flush();
 
         return $entry->requireId();

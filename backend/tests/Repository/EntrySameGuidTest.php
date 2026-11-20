@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SocialLike;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Repository\EntryTwinRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -47,8 +49,12 @@ final class EntrySameGuidTest extends DbTestCase
         $this->entityManager->persist(new EntryState($stranger, $strangersPost));
         $account = SocialAccounts::blueskyOf($this->user);
         $this->entityManager->persist($account);
+        $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:rusty/app.bsky.feed.post/liked');
+        $this->entityManager->persist($item);
+        $liked->linkTo($item);
+        $likedTwin->linkTo($item);
         $this->entityManager->persist(
-            new SocialLike($this->user, $liked, $account, 'at://like', new \DateTimeImmutable()),
+            new SocialLike($this->user, $item, $account, 'at://like', new \DateTimeImmutable()),
         );
         $this->entityManager->flush();
 
