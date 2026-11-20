@@ -31,10 +31,11 @@ final class DiscussionVoteRepository extends ServiceEntityRepository
     public function store(DiscussionVote $vote): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $onConflict = DatabasePlatform::isMySql($connection)
-            ? 'ON DUPLICATE KEY UPDATE score = VALUES(score), voted_at = VALUES(voted_at)'
-            : 'ON CONFLICT (user_id, canonical_item_id) DO UPDATE SET score = excluded.score,'
-                . ' voted_at = excluded.voted_at';
+        $onConflict = DatabasePlatform::buildUpsertClause(
+            $connection,
+            ['user_id', 'canonical_item_id'],
+            ['score', 'voted_at'],
+        );
 
         $connection->executeStatement(
             'INSERT INTO discussion_vote (user_id, canonical_item_id, social_account_id, score, voted_at)'
