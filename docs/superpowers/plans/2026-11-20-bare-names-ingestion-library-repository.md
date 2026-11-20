@@ -55,9 +55,11 @@ The last column is what the reviewer checks the name against.
 | `EntryShareDql.php` | `existsFor` | `buildSharedCondition` | Returns the DQL `EXISTS` fragment "the user shared this entry" for an entry alias |
 | `EntryShareRepository.php` | `sharedAtFor` | `findSharedAt` | Queries when the user shared an entry, null when not shared |
 | `EntryTranscriptRepository.php` and `Service/Library/Search/TranscriptText/TranscriptTextInterface.php` | `searchTextsFor` | `findSearchTexts` | Queries the search text of each filled transcript among the given entries, by entry id |
+| `EntryRepository.php` | `forFeedAfterId` | `findForFeedAfterId` | Queries up to a limit of a feed's entries with an id above the given one, oldest id first |
 | `LinkCardRepository.php` | `nextPositionFor` | `computeNextPosition` | Works the next free position out of the cards scheduled for insertion and the stored maximum: one above the highest; runs no query for an unsaved entry |
 | `ProfileRunRepository.php` | `latestCompletedFingerprintFor` | `findLatestCompletedFingerprint` | Queries the fingerprint of the user's newest completed profile run, null when none |
 | `ReaderAuditRepository.php` | `idOrNull` | `parseId` | Turns a `fetchOne()` result into an int id; null when `fetchOne()` answered `false`; a non-numeric value throws in `DatabaseValue::int` |
+| `SocialFeedRepository.php` | `forFeed` | `findOneForFeed` | The social feed behind a feed (`findOneBy` on the feed), null when it has none |
 | `RecommendationRunHistoryRepository.php` | `historyRowsFor` | `buildHistoryRowsQuery` | Returns a `QueryBuilder` selecting a user's run history columns; runs nothing |
 | `RetentionRepository.php` | `unprotectedAmong` | `findUnprotectedIds` | Queries which of the given entry ids are not protected from retention |
 | `SavedPostRepository.php` | `copiesIn` | `findCopies` | Queries, per original entry id, the id of its copy in the saved feed |
