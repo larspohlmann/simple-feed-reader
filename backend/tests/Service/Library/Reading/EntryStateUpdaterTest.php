@@ -11,7 +11,6 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRow;
 use App\Service\Library\Reading\EntryStateUpdater;
 use App\Service\Library\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
@@ -77,6 +76,8 @@ final class EntryStateUpdaterTest extends DbTestCase
      */
     private function stateOf(User $user, Entry $entry): EntryState
     {
+        $this->entityManager->clear();
+
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId())
             ?? new EntryState($user, $entry);
@@ -94,6 +95,8 @@ final class EntryStateUpdaterTest extends DbTestCase
      */
     private function persistedStateOf(User $user, Entry $entry): ?EntryState
     {
+        $this->entityManager->clear();
+
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
@@ -216,21 +219,11 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertTrue($this->stateOf($user, $sibling)->isHidden());
     }
 
-    public function testSiblingRowsForUserExcludesTheTargetAndIsNotCollapsed(): void
-    {
-        [$user, $target, $sibling] = $this->seedGroup();
-
-        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $target);
-
-        self::assertCount(1, $siblingRows);
-        self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
-    }
-
-    public function testSiblingRowsForUserReachOnlyTheEntriesAtTheSameAddress(): void
+    public function testReadReachesOnlyTheEntriesAtTheSameAddress(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
         $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
-        $this->entityManager->persist(new Entry(
+        $stranger = new Entry(
             $sibling->getFeed(),
             'mirror-stranger',
             'https://news.example.com/other',
@@ -238,24 +231,28 @@ final class EntryStateUpdaterTest extends DbTestCase
             $effectiveDate,
             $effectiveDate,
             'other-url-hash',
-        ));
+        );
+        $this->entityManager->persist($stranger);
         $this->entityManager->flush();
 
-        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $target);
+        $this->applyChange($user, $target, $this->change(isHidden: true));
 
-        self::assertCount(1, $siblingRows);
-        self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
+        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+        self::assertNull($this->persistedStateOf($user, $stranger));
     }
 
-    public function testAnEntryWithoutItemOrAddressHasNoSiblingRows(): void
+    public function testReadOfAnEntryWithoutItemOrAddressReachesNoOtherEntry(): void
     {
-        [$user, $target] = $this->seedGroup();
+        [$user, $target, $sibling] = $this->seedGroup();
         $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
         $lone = new Entry($target->getFeed(), 'mirror-lone', null, 'Lone', $effectiveDate, $effectiveDate);
         $this->entityManager->persist($lone);
         $this->entityManager->flush();
 
-        self::assertSame([], $this->rows()->findSiblingRowsForUser($user->requireId(), $lone));
+        $this->applyChange($user, $lone, $this->change(isHidden: true));
+
+        self::assertTrue($this->stateOf($user, $lone)->isHidden());
+        self::assertNull($this->persistedStateOf($user, $sibling));
     }
 
     public function testToggleReadMarksTheCopy(): void
@@ -292,7 +289,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertFalse($this->stateOf($user, $sibling)->isHidden());
     }
 
-    public function testALinkedCopyMirrorsOnlyItsItemNotItsAddress(): void
+    public function testALinkedCopyReachesOnlyItsItemNotItsAddress(): void
     {
         $user = $this->persistReader();
         $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
@@ -322,11 +319,11 @@ final class EntryStateUpdaterTest extends DbTestCase
         $this->entityManager->persist($unlinkedArticle);
         $this->entityManager->flush();
 
-        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $linkedArticle);
+        $this->applyChange($user, $linkedArticle, $this->change(isHidden: true));
 
-        $siblingIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $siblingRows);
-        sort($siblingIds);
-        self::assertSame([$copies->localCopy->requireId(), $copies->allCopy->requireId()], $siblingIds);
+        self::assertTrue($this->stateOf($user, $copies->localCopy)->isHidden());
+        self::assertTrue($this->stateOf($user, $copies->allCopy)->isHidden());
+        self::assertNull($this->persistedStateOf($user, $unlinkedArticle));
     }
 
     private function persistReader(): User

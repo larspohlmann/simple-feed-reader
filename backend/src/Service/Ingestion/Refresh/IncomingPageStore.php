@@ -8,13 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Service\Ingestion\Feed\FeedScheduler;
-use App\Service\Ingestion\Ingest\CopyReadStateInheritor;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
+use App\Service\Library\Reading\CopyReadStatePropagator;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Social\Completion\ShareEnrichmentQueue;
 use App\Service\Social\Social\DeletedPostTombstones;
@@ -35,7 +35,7 @@ final readonly class IncomingPageStore
         private ShareEnrichmentQueue $enrichmentQueue,
         private TimelineSelfThreads $selfThreads,
         private DeletedPostTombstones $tombstones,
-        private CopyReadStateInheritor $copyReadStates,
+        private CopyReadStatePropagator $copyReadStates,
     ) {
     }
 

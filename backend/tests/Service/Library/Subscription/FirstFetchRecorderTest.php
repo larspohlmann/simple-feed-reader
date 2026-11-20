@@ -18,7 +18,7 @@ use App\Service\Library\Subscription\FirstFetchRecorder;
 use App\Service\Sourcing\Discovery\Model\DiscoveredFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\CopyReadStateInheritors;
+use App\Tests\Support\CopyReadStatePropagators;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
@@ -49,7 +49,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             $clock,
             EntryIndexers::with($this->indexWriter),
             PostEnrichers::queue($this->entityManager, $clock),
-            CopyReadStateInheritors::build($this->entityManager, $clock),
+            CopyReadStatePropagators::build($this->entityManager, $clock),
         );
     }
 

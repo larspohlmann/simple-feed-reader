@@ -207,35 +207,6 @@ final class EntryListRepository extends ServiceEntityRepository
         return $this->rowHydrator->hydrate($row);
     }
 
-    /**
-     * Every OTHER copy of the entry this caller subscribes to, as list rows: the entries of its canonical item when
-     * it has one, else those at its address — the group a read/viewed mirror must reach. Not collapsed: the mirror
-     * needs each copy, hidden or shown.
-     *
-     * @return list<EntryListRow>
-     */
-    public function findSiblingRowsForUser(int $userId, Entry $entry): array
-    {
-        $itemId = $entry->getCanonicalItemId();
-        $urlHash = $entry->getUrlHash();
-        if (null === $itemId && null === $urlHash) {
-            return [];
-        }
-
-        $qb = $this->projection->rowQueryBuilder($userId)
-            ->andWhere('e.id <> :self')
-            ->setParameter('self', $entry->requireId());
-        if (null !== $itemId) {
-            $qb->andWhere('e.canonicalItem = :item')->setParameter('item', $itemId);
-        } else {
-            $qb->andWhere('e.location.urlHash = :hash')->setParameter('hash', $urlHash);
-        }
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $qb->getQuery()->getResult();
-
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
-    }
-
     /** The entry only if the caller subscribes to its feed — the IDOR gate for per-entry state writes. */
     public function getOneSubscribedForUser(int $userId, int $entryId): Entry
     {

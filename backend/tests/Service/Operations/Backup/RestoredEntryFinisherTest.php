@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Backup;
 
 use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
+use App\Service\Library\Reading\CopyReadStatePropagator;
 use App\Service\Library\Search\EntryIndexer;
 use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Service\Operations\Backup\RestoreEntries\RestoreEntriesInterface;
@@ -64,10 +65,12 @@ final class RestoredEntryFinisherTest extends DbTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $linker = self::getContainer()->get(CanonicalItemLinker::class);
         $indexer = self::getContainer()->get(EntryIndexer::class);
+        $copyReadStates = self::getContainer()->get(CopyReadStatePropagator::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         self::assertInstanceOf(CanonicalItemLinker::class, $linker);
         self::assertInstanceOf(EntryIndexer::class, $indexer);
+        self::assertInstanceOf(CopyReadStatePropagator::class, $copyReadStates);
 
-        return new RestoredEntryFinisher($entityManager, $entries, $linker, $indexer);
+        return new RestoredEntryFinisher($entityManager, $entries, $linker, $indexer, $copyReadStates);
     }
 }

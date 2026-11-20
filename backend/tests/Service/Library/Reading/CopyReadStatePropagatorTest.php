@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingestion\Ingest;
+namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
@@ -16,13 +16,14 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Model\ParsedFeedModel;
 use App\Service\Ingestion\Refresh\IncomingPageStore;
 use App\Service\Ingestion\Refresh\Model\IncomingFeedModel;
+use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
 
-final class CopyReadStateInheritorTest extends DbTestCase
+final class CopyReadStatePropagatorTest extends DbTestCase
 {
     use SeedsUsers;
 
@@ -88,6 +89,18 @@ final class CopyReadStateInheritorTest extends DbTestCase
         self::assertNull($this->findState($this->reader, $lateCopy));
     }
 
+    public function testARestoredCopyOfAReadPostArrivesRead(): void
+    {
+        $this->hide($this->reader, $this->localCopy);
+        $restored = LemmyPostEntries::buildEntry($this->all, guid: 'restored-copy');
+        $this->entityManager->persist($restored);
+        $this->entityManager->flush();
+
+        $this->requireFinisher()->finishCreated([$restored->requireId()]);
+
+        self::assertTrue($this->findState($this->reader, $restored)?->isHidden());
+    }
+
     private function storeLateCopy(): Entry
     {
         $parsed = new ParsedEntryModel(
@@ -141,6 +154,14 @@ final class CopyReadStateInheritorTest extends DbTestCase
 
         return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($reader->requireId(), $entry->requireId());
+    }
+
+    private function requireFinisher(): RestoredEntryFinisher
+    {
+        $finisher = self::getContainer()->get(RestoredEntryFinisher::class);
+        self::assertInstanceOf(RestoredEntryFinisher::class, $finisher);
+
+        return $finisher;
     }
 
     private function requirePageStore(): IncomingPageStore

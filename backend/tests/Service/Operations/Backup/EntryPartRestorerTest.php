@@ -31,6 +31,7 @@ use App\Service\Operations\Backup\RestoredEntryFinisher;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\CanonicalItems;
+use App\Tests\Support\CopyReadStatePropagators;
 use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
@@ -616,6 +617,7 @@ final class EntryPartRestorerTest extends DbTestCase
                 $entries,
                 CanonicalItems::buildLinker($this->entityManager, new MockClock('2026-08-20 00:00:00', 'UTC')),
                 EntryIndexers::with($this->indexWriter),
+                CopyReadStatePropagators::build($this->entityManager, new MockClock('2026-08-20 00:00:00', 'UTC')),
             ),
         );
     }

@@ -9,10 +9,8 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\CanonicalItemKind;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
-use App\Tests\Support\CanonicalItems;
 
 final class EntryStateRepositoryTest extends DbTestCase
 {
@@ -197,40 +195,5 @@ final class EntryStateRepositoryTest extends DbTestCase
         self::assertNotNull($state);
         self::assertFalse($state->isHidden());
         self::assertNull($state->getHiddenAt());
-    }
-
-    public function testAnArrivingCopyIsReadOnlyForTheSubscriberWhoseOwnWatermarkCoversTheOtherCopy(): void
-    {
-        $item = CanonicalItems::buildItem(CanonicalItemKind::Mastodon, 'https://mastodon.social/users/a/statuses/1');
-        $this->entityManager->persist($item);
-        $otherFeed = new Feed('https://example.com/other.xml');
-        $this->entityManager->persist($otherFeed);
-        $stranger = new User('state-repo-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($stranger);
-        $watermarked = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $this->user]);
-        self::assertInstanceOf(Subscription::class, $watermarked);
-        $watermarked->setMarkedReadUntil(new \DateTimeImmutable('2026-12-31T00:00:00Z'));
-        $this->entityManager->persist(
-            new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
-        );
-        $this->entityManager->persist(
-            new Subscription($stranger, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
-        );
-        $now = new \DateTimeImmutable('2026-07-10T00:00:00Z');
-        $readCopy = new Entry($this->feed, 'covered', 'https://example.com/covered', 'Covered', $now, $now);
-        $arrived = new Entry($otherFeed, 'arrived', 'https://example.com/arrived', 'Arrived', $now, $now);
-        $readCopy->linkTo($item);
-        $arrived->linkTo($item);
-        $this->entityManager->persist($readCopy);
-        $this->entityManager->persist($arrived);
-        $this->entityManager->flush();
-
-        $inserted = $this->repository()->ensureReadWhereAnotherCopyIsRead([$arrived->requireId()], $now);
-
-        self::assertSame(1, $inserted);
-        $this->entityManager->clear();
-        $ownState = $this->repository()->findOneForUserEntry($this->user->requireId(), $arrived->requireId());
-        self::assertTrue($ownState?->isHidden());
-        self::assertNull($this->repository()->findOneForUserEntry($stranger->requireId(), $arrived->requireId()));
     }
 }
