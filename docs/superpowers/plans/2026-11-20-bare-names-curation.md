@@ -40,15 +40,17 @@ The last column is what the reviewer checks the name against.
 | File | Old | New | What it does |
 |---|---|---|---|
 | `Ai/ConnectionPicks.php` | `candidatesFor` | `findCandidates` | The user's AI configurations that pass the given capability check |
-| `Ai/Factory/ProviderConnectionFactory.php` | `timeoutsFor` | `pickTimeouts` | The slow-model timeouts for a slow model, else the standard ones; opens no key |
-| `Ai/Model/RetryPlanModel.php` | `waitSecondsFor` | `computeWaitSeconds` | The provider's retry-after when given, else the backoff step for the retry index, the last step beyond the table |
+| `Ai/Factory/ProviderConnectionFactory.php` | `timeoutsFor` | `buildTimeouts` | Assembles the timeouts model for the settings through one of two named constructors: the slow-model timeouts for a slow model, else the standard ones; opens no key |
+| `Ai/Model/RetryPlanModel.php` | `waitSecondsFor` | `resolveWaitSeconds` | The provider's retry-after when given, else the backoff step for the retry index, the last step beyond the table |
 | `Ai/Support/RetryAfter.php` | `secondsIn` | `parseSeconds` | Reads integer seconds out of a response's `Retry-After` header; null when absent or a date |
 | `StoryAi/StoryAiTask/StoryAiTaskInterface.php` and every implementation | `connectionFor` | `findConnection` | The connection a task calls for a user; null skips the user for this task |
-| `StoryAi/StorySettingsEditor.php` | `connectionFor` | `requireAllowedConnectionIfSet` | Null for a null id; else the user's configuration with that id, throwing when it does not exist or may not write text |
+| `StoryAi/StorySettingsEditor.php` | `connectionFor` | `requireAllowedConnectionIfSet` | Null for a null id; else the user's configuration with that id, throwing when it does not exist or may not write text, unless it is the already stored pick, which passes even when it no longer serves |
 | `StoryAi/StorySettingsProvider.php` | `titleConnectionFor` | `findTitleConnection` | The connection that writes the user's story titles; null while titles are off or none can write |
 | `StoryAi/StorySettingsProvider.php` | `titlesEnabledIn` | `hasTitlesEnabled` | Whether stored settings enable titles, the default when there are none |
 | `StoryAi/StoryWritingConnections.php` | `candidatesFor` | `findCandidates` | The user's AI configurations that can write text |
 | `StoryAi/StoryWritingConnections.php` | `usableFor` | `findUsableConnection` | The writing connection usable for the user under their stored settings, null when none |
+| `Ai/ConnectionPicks.php` | `usableGiven` | `findUsableConnectionGiven` | The stored pick, or the user's active connection when none is stored, when it passes the check; null otherwise (a failing stored pick does not fall back) |
+| `StoryAi/StoryWritingConnections.php` | `usableGiven` | `findUsableConnectionGiven` | The same, passing the stored writing pick and the can-write-text check to `ConnectionPicks` |
 
 ### Trending (paths under `backend/src/Service/Curation/Trending/`)
 
@@ -56,24 +58,29 @@ The last column is what the reviewer checks the name against.
 |---|---|---|---|
 | `FallbackTitles.php` | `candidatesIn` | `buildCandidates` | Cleans the headlines of a pool's members and builds a title candidate per usable one, scored against the centroid |
 | `HeadlineEquivalents.php` | `phraseAt` | `matchPhrase` | Matches a known phrase starting at a word index: its length and canonical form, or length 1 and null |
-| `HeadlineEquivalents.php` | `stemsFor` | `pickStems` | The stem table of a language, the cut stems for no language |
+| `HeadlineEquivalents.php` | `stemsFor` | `readStems` | The stem table of a language, the cut stems for no language: a keyed table read with a fallback table |
 | `Model/LanguageCoverageModel.php` | `entriesIn` | `readEntryCount` | The stored entry count of a language, 0 when none |
 | `Model/TrendingLastBuildsModel.php` | `builtAt` | `findBuiltAt` | When a window was last built, null when never |
 | `Model/TrendingLastBuildsModel.php` | `dueAt` | `computeDueAt` | The window's last build plus its rebuild interval; null while never built |
 | `Model/TrendingLastBuildsModel.php` | `nextBuildDueAt` | `computeNextBuildDueAt` | The earliest due time over all windows; null when one was never built |
+| `Pass/CompoundSplitSearch.php` | `bestSplit` | `findBestSplit` | The best-scoring split of the whole word; null when there is none |
+| `Pass/CompoundSplitSearch.php` | `bestFrom` | `findBestFrom` | The best split of the suffix from an offset, memoised: the whole suffix as one noun part when it is one, else the best compound; null when there is none |
+| `Pass/CompoundSplitSearch.php` | `bestCompoundFrom` | `findBestCompoundFrom` | The best-scoring compound split of the suffix from an offset over every end offset; null when there is none |
 | `Pass/CompoundSplitSearch.php` | `compoundSplitAt` | `findCompoundSplit` | The split that puts a modifier between two offsets before the best tail; null when there is no tail, too many parts or no modifier |
+| `Pass/CompoundSplitSearch.php` | `modifierBetween` | `findModifierBetween` | The most frequent noun part among the linking variants of the letters between two offsets, shortest first; null when none qualifies |
 | `SnapshotBuilder/TrendingSnapshotBuilder.php` | `policyFor` | `selectPolicy` | Picks the story build policy registered for a window; throws `LogicException` when none is wired |
 | `StoryLinkSource/SharedUrlLinks.php` | `linksAmong` | `buildLinks` | Builds a same-URL link for every pair of the entries that may link |
 | `StoryTitleTask.php` | `connectionFor` | `findConnection` | Implements `StoryAiTaskInterface`: the user's title connection |
 | `TrendingStories.php` | `sourceFor` | `loadCardSource` | Queries the shown entries, rows, viewed and followed stories and headings of the ranked stories and builds the card source from them |
-| `TrendingStories.php` | `unopenedFor` | `countUnopened` | Counts the ranked stories of a window the user has not viewed; 0 without a query when Trending is off |
+| `TrendingStories.php` | `unopenedFor` | `tallyUnopened` | Works out how many ranked stories of a window the user has not viewed and returns the tally model; 0 without a query when Trending is off |
 
 ### Recommendation (paths under `backend/src/Service/Curation/Recommendation/`)
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Engine/RecommendationEngineResolver.php` | `kindFor` | `resolveKind` | The engine kind a connection runs: its model kind |
-| `Engine/RecommendationEngineResolver.php` | `capabilitiesFor` | `resolveCapabilities` | The capabilities of the engine kind a connection runs |
+| `Engine/RecommendationEngineResolver.php` | `kindFor` | `readKind` | The engine kind a connection runs: a plain read of its model kind |
+| `Engine/RecommendationEngineResolver.php` | `capabilitiesFor` | `buildCapabilities` | Assembles the capabilities model from the kind a connection runs |
+| `Engine/RecommendationEngineResolver.php` | `capabilitiesForAccount` | `resolveAccountCapabilities` | The capabilities of the user's active connection, falling back to the default kind's when the user has none; the comment in `tests/Support/ScriptedRecommendationEngine.php` follows |
 | `Feed/RecommendationFeedPager.php` | `nextCursorFor` | `buildNextCursor` | Encodes a cursor from the last row of a full page; null for an empty or short page |
 | `Llm/Completion/ChatCompletionClient/OpenAiCompatibleChatClient.php` | `responsesIn` | `collectResponses` | The responses held in the context storage, as a list |
 | `Llm/Completion/CompletionBodyDecoder.php` | `firstChoiceIn` | `readFirstChoice` | The first element of the decoded body's `choices`, null when missing or mistyped |
@@ -83,7 +90,8 @@ The last column is what the reviewer checks the name against.
 | `Llm/Run/OutputCapFallback.php` | `capNamedIn` | `parseCap` | Reads the output cap a "too large" rejection names in its message; null when it is another rejection or names none |
 | `Profile/ProfileConnections.php` | `candidatesFor` | `findCandidates` | The user's AI configurations that can build profiles |
 | `Profile/ProfileConnections.php` | `usableFor` | `findUsableConnection` | The profile connection usable for the user under their stored settings, null when none |
-| `Profile/ProfileForRun/ProfileForRunInterface.php` and every implementation | `profileFor` | `ensureProfile` | The profile state for a run: the stored profile, or the state of the latest profile run; starts a profile run when there is no profile and none has run since the run was created |
+| `Profile/ProfileConnections.php` | `usableGiven` | `findUsableConnectionGiven` | The same as in `ConnectionPicks`, passing the stored profile pick and the can-build-profiles check |
+| `Profile/ProfileForRun/ProfileForRunInterface.php` and every implementation | `profileFor` | `prepareProfile` | Gets the profile ready for a run and reports where that stands: ready with the stored profile, or the state of the latest profile run (building or failed); starts a profile run when there is no profile and none has run since the run was created; throws `LogicException` for a cancelled run or a failed one without an error |
 | `Profile/ProfileRunTick.php` | `tickFor` | `loadTick` | Resolves the settings for the connection, loads the profile inputs and builds the tick from them |
 | `Profile/ProfileSettingsEditor.php` | `connectionFor` | `requireAllowedConnectionIfSet` | Null for a null id; else the user's configuration with that id, throwing when it does not exist or may not build profiles |
 | `Run/BatchWaveRounds.php` | `abortDetailFor` | `pickAbortDetail` | The outcome's own cause message when it has one, else the wave failure's |
@@ -101,14 +109,14 @@ The last column is what the reviewer checks the name against.
 | `Scoring/Support/SystemOneReplyDecoder.php` | `countIn` | `readCount` | The token count under the first of two keys that carries one |
 | `Settings/Pass/AccountRecommendationSettings.php` | `batchCeilingFor` | `resolveBatchCeiling` | The connection's configured maximum batch size, the default when unset or without a connection |
 | `Support/ProviderErrorReason.php` | `identifiersIn` | `parseIdentifiers` | Reads the error's `code` and `param` out of a provider error body |
-| `Support/ProviderErrorReason.php` | `reasonIn` | `parseReason` | Reads the error reason out of a provider error body: `detail` or `error.message`; null when neither is usable |
+| `Support/ProviderErrorReason.php` | `reasonIn` | `parseReason` | Reads the error reason out of a provider error body: `detail` or `error.message`, JSON-encoding an array reason; null when neither is usable |
 
 ## Review Focus
 
 - `StoryAiTaskInterface::connectionFor` and `ProfileForRunInterface::profileFor` are renamed with every implementation and test double. The two private `connectionFor` methods in the settings editors are a different act and get a different name.
 - `candidatesFor` is four methods with two new names (`findCandidates` three times, `loadCandidates` in `SnapshotPhase`); `secondsIn` in `Content/Chapter` was renamed in the Content batch and is not this row.
 - `nextBuildDueAt`, `builtAt` and `dueAt` are also properties, array keys and JSON fields (`FollowedStoryJson`, `TrendingSnapshotRepository`): only the three methods of `TrendingLastBuildsModel` are renamed.
-- `usableGiven` beside `usableFor` in both connection classes, `bestFrom` and `modifierBetween` in `CompoundSplitSearch`: bare names in touched classes that the endings pattern misses; they have no row. Report what their bodies do with your review.
+- `usableGiven` (three classes), `capabilitiesForAccount` and the four bare searches in `CompoundSplitSearch` got rows after review. `phraseAt` → `matchPhrase`, `secondsIn` → `parseSeconds` and `identifiersIn` → `parseIdentifiers` were contested and stay. `TrendingContainerWiringTest` reaches `policyFor` through `new \ReflectionMethod($builder, 'policyFor')`; the test double `tests/Service/Curation/StoryAi/RecordingStoryAiTask.php` implements `connectionFor`. `TimelineSelfThreads::sourceFor` (Social) and the private `reasonIn` helper in `ProviderErrorReasonTest` stay.
 - `docs/recommendations-runs.md:179` names `UserTickLock::nameFor()` and is updated by hand in a `docs(#2400)` commit.
 - String method names in mocks: search `backend/tests` for each bare old name.
 
