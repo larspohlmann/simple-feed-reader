@@ -58,7 +58,6 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     public function testAVoteIsFoundForItsOwnUserAndItemOnly(): void
     {
         $voted = $this->persistItem('voted');
-        $vote = $this->vote($this->owner, $this->account, $voted, VoteScore::Down);
         $stranger = $this->user('discussion-votes-finder@example.test');
         $this->vote(
             $stranger,
@@ -66,6 +65,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
             $voted,
             VoteScore::Up,
         );
+        $vote = $this->vote($this->owner, $this->account, $voted, VoteScore::Down);
 
         self::assertSame($vote, $this->repository()->findOneFor($this->owner, $voted));
         self::assertNull($this->repository()->findOneFor($this->owner, $this->persistItem('unvoted')));

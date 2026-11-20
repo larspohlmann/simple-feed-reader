@@ -226,6 +226,38 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
     }
 
+    public function testSiblingRowsForUserReachOnlyTheEntriesAtTheSameAddress(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->entityManager->persist(new Entry(
+            $sibling->getFeed(),
+            'mirror-stranger',
+            'https://news.example.com/other',
+            'Other Article',
+            $effectiveDate,
+            $effectiveDate,
+            'other-url-hash',
+        ));
+        $this->entityManager->flush();
+
+        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $target);
+
+        self::assertCount(1, $siblingRows);
+        self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
+    }
+
+    public function testAnEntryWithoutItemOrAddressHasNoSiblingRows(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $lone = new Entry($target->getFeed(), 'mirror-lone', null, 'Lone', $effectiveDate, $effectiveDate);
+        $this->entityManager->persist($lone);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->rows()->siblingRowsForUser($user->requireId(), $lone));
+    }
+
     public function testToggleReadMarksTheCopy(): void
     {
         $user = $this->persistReader();

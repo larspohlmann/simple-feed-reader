@@ -57,6 +57,14 @@ final class LemmyCanonicalKeyRuleTest extends TestCase
         self::assertSame('https://lemmy.world/post/7', $key?->key);
     }
 
+    public function testTheGuidWinsOverTheDiscussionAddress(): void
+    {
+        $entry = $this->entry('https://lemmy.world/post/7', SocialNetwork::Lemmy);
+        $entry->setDiscussion(Discussion::platformThread('https://lemmy.ml/post/9'));
+
+        self::assertSame('https://lemmy.world/post/7', new LemmyCanonicalKeyRule()->findKey($entry)?->key);
+    }
+
     public function testEntryOfAnotherNetworkHasNoKey(): void
     {
         $entry = $this->entry('https://lemmy.world/post/7', SocialNetwork::Mastodon);

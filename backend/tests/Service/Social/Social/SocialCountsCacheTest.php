@@ -76,6 +76,20 @@ final class SocialCountsCacheTest extends TestCase
         self::assertNull($this->cache->find($rssCopy));
     }
 
+    public function testOtherItemsAndOtherAddressesKeepTheirOwnCounts(): void
+    {
+        $first = self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS);
+        $first->linkTo(self::withId(CanonicalItems::buildItem(CanonicalItemKind::Mastodon, self::URI), 7));
+        $second = self::buildEntry(SocialNetwork::Mastodon, self::URI);
+        $second->linkTo(self::withId(CanonicalItems::buildItem(CanonicalItemKind::Mastodon, self::URI . '2'), 8));
+        $this->cache->remember($first, new SocialCountsModel(5, 2, 1, null));
+
+        self::assertNull($this->cache->find($second));
+
+        $this->cache->remember(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS), self::buildCounts());
+        self::assertNull($this->cache->find(self::buildEntry(SocialNetwork::Mastodon, self::ADDRESS . '1')));
+    }
+
     public function testAnEntryThatIsNoPostHasNoCountsToKeep(): void
     {
         $article = self::buildEntry(null, self::ADDRESS);

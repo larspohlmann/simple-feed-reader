@@ -95,6 +95,49 @@ final class DuplicateCollapseTest extends DbTestCase
         self::assertSame([$higher->getId()], self::collectIds($rows[0]->duplicates));
     }
 
+    public function testEverySurvivorCarriesOnlyItsOwnGroupsCopies(): void
+    {
+        $hashLower = $this->entry($this->feedA, 'h1-a', 'https://x.example/1', 'urlhash-1', '2026-07-05T09:00:00Z');
+        $hashHigher = $this->entry($this->feedB, 'h1-b', 'https://x.example/1', 'urlhash-1', '2026-07-05T10:00:00Z');
+        $otherHashLower = $this->entry(
+            $this->feedA,
+            'h2-a',
+            'https://x.example/2',
+            'urlhash-2',
+            '2026-07-05T11:00:00Z',
+        );
+        $otherHashHigher = $this->entry(
+            $this->feedB,
+            'h2-b',
+            'https://x.example/2',
+            'urlhash-2',
+            '2026-07-05T12:00:00Z',
+        );
+        $itemLower = $this->entry($this->feedA, 'i1-a', null, null, '2026-07-05T13:00:00Z');
+        $itemHigher = $this->entry($this->feedB, 'i1-b', null, null, '2026-07-05T14:00:00Z');
+        $otherItemLower = $this->entry($this->feedA, 'i2-a', null, null, '2026-07-05T15:00:00Z');
+        $otherItemHigher = $this->entry($this->feedB, 'i2-b', null, null, '2026-07-05T16:00:00Z');
+        $this->entityManager->persist($item = LemmyPostEntries::linkItem($itemLower, 'https://lemmy.world/post/1'));
+        $itemHigher->linkTo($item);
+        $other = LemmyPostEntries::linkItem($otherItemLower, 'https://lemmy.world/post/2');
+        $this->entityManager->persist($other);
+        $otherItemHigher->linkTo($other);
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+
+        $duplicatesBySurvivor = [];
+        foreach ($rows as $row) {
+            $duplicatesBySurvivor[$row->entry->requireId()] = self::collectIds($row->duplicates);
+        }
+        self::assertSame([
+            $otherItemLower->requireId() => [$otherItemHigher->requireId()],
+            $itemLower->requireId() => [$itemHigher->requireId()],
+            $otherHashLower->requireId() => [$otherHashHigher->requireId()],
+            $hashLower->requireId() => [$hashHigher->requireId()],
+        ], $duplicatesBySurvivor);
+    }
+
     public function testFeedViewStillShowsItsCopy(): void
     {
         [, $higher] = LemmyPostEntries::persistCopies($this->entityManager, $this->feedA, $this->feedB);

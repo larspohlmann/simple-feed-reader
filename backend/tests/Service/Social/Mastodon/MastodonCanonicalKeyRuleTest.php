@@ -33,6 +33,24 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
         self::assertSame(self::KEY, $rssByUrl?->key);
     }
 
+    public function testTheGuidWinsOverTheUrl(): void
+    {
+        $key = new MastodonCanonicalKeyRule()->findKey(
+            $this->entry(self::KEY, 'https://mastodon.social/@bob/999', SocialNetwork::Mastodon),
+        );
+
+        self::assertSame(self::KEY, $key?->key);
+    }
+
+    public function testAnAbsoluteGuidWinsOverAnAbsoluteUrlWhenNeitherIsAStatus(): void
+    {
+        $key = new MastodonCanonicalKeyRule()->findKey(
+            $this->entry('https://example.org/plain/1', 'https://example.org/plain/2', SocialNetwork::Mastodon),
+        );
+
+        self::assertSame('https://example.org/plain/1', $key?->key);
+    }
+
     public function testSavedCopyGuidKeysAsItsOriginal(): void
     {
         $key = new MastodonCanonicalKeyRule()->findKey($this->entry(self::KEY . '#42', null, SocialNetwork::Mastodon));
