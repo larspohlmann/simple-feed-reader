@@ -85,7 +85,7 @@ final readonly class SavedPostRescue
         $held = [];
         $created = [];
         while ([] !== $entryIds) {
-            $plan = $this->planFor($copy->savedFeedId, $entryIds);
+            $plan = $this->loadPlan($copy->savedFeedId, $entryIds);
             $made = $this->copyEntries($copy, $plan);
             $this->savedPosts->copyCompanions($made, $origin);
             $held += $plan->merged();
@@ -97,7 +97,7 @@ final readonly class SavedPostRescue
     }
 
     /** @param list<int> $entryIds */
-    private function planFor(int $savedFeedId, array $entryIds): SavedCopyPlan
+    private function loadPlan(int $savedFeedId, array $entryIds): SavedCopyPlan
     {
         $originals = $this->savedPosts->findOriginals($entryIds);
 

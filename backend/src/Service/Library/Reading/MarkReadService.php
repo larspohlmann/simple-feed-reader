@@ -26,11 +26,11 @@ final readonly class MarkReadService
     public function mark(User $user, ReadScopeModel $scope, \DateTimeImmutable $until): void
     {
         $userId = $user->requireId();
-        $this->readMarker->markSubscriptionsReadUntil($userId, $this->subscriptionsIn($userId, $scope), $until);
+        $this->readMarker->markSubscriptionsReadUntil($userId, $this->resolveSubscriptions($userId, $scope), $until);
     }
 
     /** @return list<Subscription> */
-    private function subscriptionsIn(int $userId, ReadScopeModel $scope): array
+    private function resolveSubscriptions(int $userId, ReadScopeModel $scope): array
     {
         return match ($scope->kind) {
             ReadScopeKind::All => $this->subscriptionScope->findIncludedInAllItemsForUser($userId),
