@@ -39,15 +39,15 @@ The last column is what the method does, which is what the reviewer checks the n
 |---|---|---|---|
 | `Bluesky/BlueskyApiClient.php` | `answerOf` | `requireAnswer` | the answer of a fetch outcome, whatever its status; throws unreachable when none arrived |
 | `Bluesky/BlueskyCandidateSource.php` | `urisOf` (private) | `collectUris` | the lists' ids as a set |
-| `Bluesky/BlueskyExternalEmbeds.php` | `embedOf` | `buildEmbed` | the external embed of a URL from its page card, thumbnail uploaded |
-| `Bluesky/BlueskyExternalEmbeds.php` | `thumbnailOf` (private) | `uploadThumbnail` | uploads the card image and returns the thumb field, empty without one |
-| `Bluesky/BlueskyFacets.php` | `of` | `buildFacets` | the link, mention and tag facets of a text |
-| `Bluesky/BlueskyFacets.php` | `didsOf` (private) | `resolveDids` | the DID of each handle, asked once; the rest stay unresolved once the network is unreachable |
+| `Bluesky/BlueskyExternalEmbeds.php` | `embedOf` | `prepareEmbed` | reads the page's card, uploads its image as a thumbnail when it can, and returns the external embed for a post |
+| `Bluesky/BlueskyExternalEmbeds.php` | `thumbnailOf` (private) | `tryUploadThumbnail` | uploads the card image and returns the thumb field; empty without an image or when the upload fails |
+| `Bluesky/BlueskyFacets.php` | `of` | `buildFacets` | the link, mention and tag facets of a text; mentions are looked up on the network |
+| `Bluesky/BlueskyFacets.php` | `didsOf` (private) | `findDids` | the DID of each handle that resolves; stops asking once the network is unreachable |
 | `Bluesky/BlueskyIdentityResolver.php` | `didOf` | `fetchDid` | asks for a handle's DID; throws unresolvable or unreachable |
 | `Bluesky/BlueskyIdentityResolver.php` | `pdsOf` (private) | `fetchPds` | asks for a DID's PDS from its DID document; throws |
 | `Bluesky/BlueskyIdentityResolver.php` | `originOf` (private) | `requireOrigin` | a PDS endpoint's https origin; throws when it is not https |
-| `Bluesky/BlueskyNotificationContextSource.php` | `ownAnsweredOf` (private) | `findOwnAnswered` | the answered post's id when the account wrote it, or null |
-| `Bluesky/BlueskyNotificationContextSource.php` | `threadRootOf` (private) | `findForeignThreadRoot` | the thread root's id when someone else wrote it, or null |
+| `Bluesky/BlueskyNotificationContextSource.php` | `ownAnsweredOf` (private) | `detectOwnAnswered` | the answered post's id when the account wrote it, else null |
+| `Bluesky/BlueskyNotificationContextSource.php` | `threadRootOf` (private) | `detectForeignThreadRoot` | the thread root's id unless the account wrote it, else null |
 | `Bluesky/BlueskyNotificationContextSource.php` | `contextOf` (private) | `buildContext` | a row's context from the looked-up posts, or null |
 | `Bluesky/BlueskyNotificationSource.php` | `subjectOf` (private) | `buildSubject` | what a notification is about |
 | `Bluesky/BlueskyNotificationSource.php` | `kindOf` (private) | `parseKind` | the notification kind an entry's reason names, or null |
@@ -62,7 +62,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Bluesky/BlueskySavedCollections.php` | `handleFormOf` (private) | `buildHandleForm` | an at:// URI with the creator's handle as authority |
 | `Bluesky/BlueskySessionCache.php` | `keyOf` (private) | `buildKey` | the cache key of an account's session, bound to its credential |
 | `Bluesky/BlueskyThreadReplies.php` | `of` | `parseReplies` | the direct replies of a thread answer; throws when it holds no thread |
-| `Bluesky/BlueskyThreadReplies.php` | `nodesOf` (private) | `buildNodes` | a reply node for each shown reply |
+| `Bluesky/BlueskyThreadReplies.php` | `nodesOf` (private) | `buildNodes` | a reply node for each reply that is shown, muted, blocked and non-thread ones dropped, recursively |
 | `Bluesky/BlueskyThreadReplies.php` | `selfReplyOf` | `buildSelfReply` | the author's own reply as a comment |
 | `Bluesky/BlueskyThreadReplies.php` | `commentOf` (private) | `buildComment` | a post view as a comment |
 | `Bluesky/BlueskyThreadReplies.php` | `publishedAtOf` (private) | `parsePublishedAt` | a post's created or indexed time, or null |
@@ -75,25 +75,25 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Bluesky/HiddenProfileSwitchSweep.php` | `candidateOf` (private) | `buildCandidate` | a refused subscription to switch; null for a feed without actor or a public one |
 | `Bluesky/HiddenProfileSwitchSweep.php` | `actorsOf` (private) | `collectActors` | the RSS actor of each subscription that names one, by index |
 | `Bluesky/ProfileVisibilityCache.php` | `visibilitiesOf` | `readVisibilities` | each actor's cached visibility, unknown when not cached |
-| `Bluesky/ProfileVisibilityCache.php` | `itemsOf` (private) | `loadItems` | the cache items of the actors by key |
+| `Bluesky/ProfileVisibilityCache.php` | `itemsOf` (private) | `readItems` | the cache items of the actors by key |
 | `Bluesky/ProfileVisibilityCache.php` | `keyOf` (private) | `hashKey` | the xxh128 of an actor |
 | `Bluesky/HiddenProfiles/AppViewHiddenProfiles.php` | `profilesOf` (private) | `fetchProfiles` | asks the AppView for a batch of profiles; throws unreachable |
 | `Bluesky/Model/RefusedFeedPositionModel.php` | `of` | `fromSubscription` | a subscription's feed id and id as a keyset position |
 | `Bluesky/Support/BlueskyProfileLabels.php` | `hiddenProfileOf` (private) | `buildHiddenProfile` | a profile node as a hidden profile |
 | `Bluesky/Support/BlueskyRecordUri.php` | `recordKeyOf` | `parseRecordKey` | the record key of a record URI, or null |
-| `Bluesky/Support/BlueskyRecordUri.php` | `ofCollection` | `parseInCollection` | the URI when it names a record of the collection, else null |
+| `Bluesky/Support/BlueskyRecordUri.php` | `ofCollection` | `keepIfInCollection` | the URI unchanged when it names a record of the collection and is not over length, else null |
 | `Bluesky/Support/BlueskyRecordUri.php` | `partsOf` (private) | `parseParts` | DID, collection and record key of a record URI, or null |
 | `Bluesky/Support/BlueskyReplyReferences.php` | `of` | `fromRecord` | the posts a reply or quote record refers to |
 | `Bluesky/Support/BlueskyReplyReferences.php` | `replyOf` (private) | `fromReply` | parent and root of a reply field |
 | `Bluesky/Support/BlueskySearchPage.php` | `of` | `fromAnswer` | a search answer as a timeline page; throws without results |
-| `Bluesky/Support/BlueskySearchPage.php` | `itemsOf` (private) | `filterItems` | the posts that are no replies and match the query |
+| `Bluesky/Support/BlueskySearchPage.php` | `itemsOf` (private) | `filterItems` | the posts that are no replies and match the query, each wrapped as a timeline item |
 | `Bluesky/Support/BlueskySearchPage.php` | `searchedPostOf` (private) | `buildSearchedPost` | author names and own texts of a post |
-| `Bluesky/Support/BlueskySearchPage.php` | `ownTextsOf` (private) | `collectOwnTexts` | a post's own texts, a quoted post's left out |
+| `Bluesky/Support/BlueskySearchPage.php` | `ownTextsOf` (private) | `buildSearchTexts` | the two texts a search matches against: the post's and its quoted post's, '' without one |
 | `Bluesky/Support/BlueskyStrongRef.php` | `of` | `fromPost` | a post's URI and CID |
 | `Bluesky/Support/BlueskyTimelinePage.php` | `of` | `fromItems` | a timeline's shown items as a page |
 | `Bluesky/Support/BlueskyTimelinePage.php` | `ofAuthor` | `fromAuthorItems` | an author's own posts and self-replies as a page |
 | `Bluesky/Support/BlueskyTimelinePage.php` | `pageOf` (private) | `buildPage` | the page of the items a check lets through |
-| `Bluesky/Support/BlueskyTimelinePage.php` | `selfReplyOf` (private) | `findSelfReply` | an item as a reply in the author's own thread, or null |
+| `Bluesky/Support/BlueskyTimelinePage.php` | `selfReplyOf` (private) | `detectSelfReply` | recognises an item that continues the author's own thread and returns it as a self-reply, or null |
 | `Bluesky/Support/BlueskyTimelinePage.php` | `entryOf` (private) | `parseEntry` | an item as a parsed entry, or null |
 | `BlueskyPost/EntryEmbedWriter/EntryEmbedWriter.php` | `textBodyOf` (private) | `buildTextBody` | the entry body, rebuilt from the post's facets when it links a web page |
 | `BlueskyPost/EntryEmbedWriter/EntryEmbedWriter.php` | `shareKindOf` (private) | `classifyShareKind` | link, media or no share, from the rendered embed |
@@ -106,7 +106,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `BlueskyPost/Support/BlueskyExternalCard.php` | `of` | `fromExternal` | the link card of an external node, or null without URL or title |
 | `BlueskyPost/Support/BlueskyExternalCard.php` | `ofNonGif` (private) | `fromNonGifExternal` | the same, null for a GIF |
 | `BlueskyPost/Support/BlueskyRichText.php` | `spanOf` (private) | `parseSpan` | a facet's byte range and link target, or null |
-| `BlueskyPost/Support/BlueskyRichText.php` | `hrefOf` (private) | `buildHref` | where a link, mention or tag feature points, or null |
+| `BlueskyPost/Support/BlueskyRichText.php` | `hrefOf` (private) | `resolveHref` | where a feature points: a link's own URL when valid, a mention's profile, a tag's hashtag page, else null |
 | `BlueskyPost/Support/BlueskyRichText.php` | `profileOf` (private) | `buildProfileUrl` | a DID's profile URL, or null |
 | `BlueskyPost/Support/BlueskyRichText.php` | `hashtagOf` (private) | `buildHashtagUrl` | a tag's hashtag URL, or null |
 | `BlueskyPost/Support/QuotedViewRecord.php` | `of` | `fromRecord` | a quoted record view as a quoted post, or null |
