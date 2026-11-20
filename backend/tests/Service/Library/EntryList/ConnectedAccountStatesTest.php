@@ -23,28 +23,28 @@ final class ConnectedAccountStatesTest extends DbTestCase
 
     public function testAPostInItsOwnCommunityFeedCarriesNoCommunity(): void
     {
-        $entry = $this->lemmyPostIn(LemmyProfileFeed::buildUrl('technology', 'lemmy.world'));
+        $entry = $this->persistLemmyPost(LemmyProfileFeed::buildUrl('technology', 'lemmy.world'));
 
         self::assertNull($this->findCommunity($entry));
     }
 
     public function testTheOwnCommunityFeedMatchesWhateverCaseTheFeedUrlHas(): void
     {
-        $entry = $this->lemmyPostIn(LemmyProfileFeed::buildUrl('Technology', 'lemmy.world'));
+        $entry = $this->persistLemmyPost(LemmyProfileFeed::buildUrl('Technology', 'lemmy.world'));
 
         self::assertNull($this->findCommunity($entry));
     }
 
     public function testAPostInAnotherFeedCarriesItsCommunity(): void
     {
-        $entry = $this->lemmyPostIn('https://example.com/feed.xml');
+        $entry = $this->persistLemmyPost('https://example.com/feed.xml');
 
         self::assertSame('technology@lemmy.world', $this->findCommunity($entry)?->identity);
     }
 
     public function testBothCopiesShowTheItemScore(): void
     {
-        $first = $this->lemmyPostIn('https://example.com/feed.xml');
+        $first = $this->persistLemmyPost('https://example.com/feed.xml');
         $item = $first->getCanonicalItem();
         self::assertNotNull($item);
         $item->recordScore(12);
@@ -113,7 +113,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
         return $lemmy->community;
     }
 
-    private function lemmyPostIn(string $feedUrl): Entry
+    private function persistLemmyPost(string $feedUrl): Entry
     {
         $feed = new Feed($feedUrl);
         $this->entityManager->persist($feed);
