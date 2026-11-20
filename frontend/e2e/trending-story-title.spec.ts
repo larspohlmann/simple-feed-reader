@@ -229,7 +229,7 @@ for (const [device, viewport] of [
     test('shows beneath the title on the card and at the top of its list', async ({ page }) => {
       await openStoryFromTrending(page, 'magazine');
 
-      await expect(layer(page).locator('.story-synopsis')).toHaveText(SYNOPSIS);
+      await expect(layer(page).locator('p.synopsis')).toHaveText(SYNOPSIS);
       await closeStory(page);
       const card = page.locator('app-story-title', { hasText: TITLE });
       await expect(card.locator('h3.title + p.synopsis')).toHaveText(SYNOPSIS);
@@ -245,7 +245,7 @@ for (const [device, viewport] of [
 
       await card.locator('a').click();
       await expect(layer(page)).toContainText(titleOf(FALLBACK_ID));
-      await expect(layer(page).locator('.story-synopsis')).toHaveCount(0);
+      await expect(layer(page).locator('p.synopsis')).toHaveCount(0);
     });
   });
 }
