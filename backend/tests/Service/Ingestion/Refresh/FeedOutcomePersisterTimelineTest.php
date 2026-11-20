@@ -93,7 +93,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
             $timelineFeed,
             TimelinePageModel::fromEntries(
                 $this->parsedMotherJones($rssFeed)->entries,
-                KnownSharesModel::ofBlueskyPosts([
+                KnownSharesModel::fromBlueskyPosts([
                     self::TISCH => Bluesky::post('external'),
                     self::VIDEO_POST => Bluesky::post('video'),
                 ]),

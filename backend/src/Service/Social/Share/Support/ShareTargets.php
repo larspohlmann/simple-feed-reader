@@ -17,9 +17,9 @@ final class ShareTargets
      *
      * @param list<string> $cardedUrls
      */
-    public static function planOf(Entry $entry, array $cardedUrls): ShareFetchPlanModel
+    public static function buildPlan(Entry $entry, array $cardedUrls): ShareFetchPlanModel
     {
-        $target = TitledShareTarget::of($entry);
+        $target = TitledShareTarget::detectTarget($entry);
         if ($target !== null) {
             $carded = \in_array(
                 TrackingFreeUrl::stripTracking($target),
@@ -30,7 +30,7 @@ final class ShareTargets
             return new ShareFetchPlanModel($carded ? [] : [$target]);
         }
 
-        $shared = SharedLinks::of((string) $entry->getText()->getContentHtml());
+        $shared = SharedLinks::fromBodyHtml((string) $entry->getText()->getContentHtml());
         $urls = $shared->uncardedBy($cardedUrls);
 
         return new ShareFetchPlanModel($urls, array_intersect_key($shared->postedForms, array_flip($urls)));

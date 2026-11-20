@@ -12,7 +12,7 @@ final class OwnProse
 {
     private const string METADATA_LINE = '/^[#\p{L}][\p{L}\p{N} #]{0,40}:\s*[\p{N}.,]*$/u';
 
-    public static function of(?Element $body): string
+    public static function fromBody(?Element $body): string
     {
         if ($body === null) {
             return '';

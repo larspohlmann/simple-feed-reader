@@ -55,10 +55,10 @@ final readonly class EntryCompletion
         if ($queued === []) {
             return;
         }
-        $this->postEnricher->complete(self::ofKind($queued, ShareEnrichmentKind::AppView));
-        $this->selfThreads->complete($this->queuedOfKind($entries, ShareEnrichmentKind::SelfThread));
+        $this->postEnricher->complete(self::filterByKind($queued, ShareEnrichmentKind::AppView));
+        $this->selfThreads->complete($this->loadClaimableByKind($entries, ShareEnrichmentKind::SelfThread));
         $this->shareLinkCards->complete(
-            $this->queuedOfKind($entries, ShareEnrichmentKind::LinkCards),
+            $this->loadClaimableByKind($entries, ShareEnrichmentKind::LinkCards),
             LinkCardBudgetModel::fetches(self::LINK_CARD_FETCHES),
         );
     }
@@ -68,9 +68,9 @@ final readonly class EntryCompletion
      *
      * @return list<ShareEnrichment>
      */
-    private function queuedOfKind(array $entries, ShareEnrichmentKind $kind): array
+    private function loadClaimableByKind(array $entries, ShareEnrichmentKind $kind): array
     {
-        return self::ofKind($this->enrichments->findClaimableFor($entries, $this->clock->now()), $kind);
+        return self::filterByKind($this->enrichments->findClaimableFor($entries, $this->clock->now()), $kind);
     }
 
     /**
@@ -78,7 +78,7 @@ final readonly class EntryCompletion
      *
      * @return list<ShareEnrichment>
      */
-    private static function ofKind(array $queued, ShareEnrichmentKind $kind): array
+    private static function filterByKind(array $queued, ShareEnrichmentKind $kind): array
     {
         return array_values(array_filter($queued, static fn (ShareEnrichment $row): bool => $row->getKind() === $kind));
     }

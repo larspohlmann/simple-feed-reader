@@ -27,13 +27,13 @@ final readonly class NotificationStore
     public function record(SocialAccount $account, NotificationPageModel $page): int
     {
         $retained = $this->retained($page->oldestFirst());
-        $stored = $this->storedOf($account, $retained);
+        $stored = $this->loadStored($account, $retained);
 
         $inserted = 0;
         foreach ($retained as $fetched) {
             $row = $stored[$fetched->remoteId] ?? null;
             if ($row === null) {
-                $this->entityManager->persist($this->rowOf($account, $fetched, $page->seenUntil));
+                $this->entityManager->persist($this->buildRow($account, $fetched, $page->seenUntil));
                 ++$inserted;
                 continue;
             }
@@ -54,7 +54,7 @@ final readonly class NotificationStore
     public function unstored(SocialAccount $account, NotificationPageModel $page): array
     {
         $retained = $this->retained($page->oldestFirst());
-        $stored = $this->storedOf($account, $retained);
+        $stored = $this->loadStored($account, $retained);
 
         return array_values(array_filter(
             $retained,
@@ -92,7 +92,7 @@ final readonly class NotificationStore
      * @param list<FetchedNotificationModel> $retained
      * @return array<string, SocialNotification>
      */
-    private function storedOf(SocialAccount $account, array $retained): array
+    private function loadStored(SocialAccount $account, array $retained): array
     {
         return $this->notifications->findByRemoteIds(
             $account,
@@ -105,7 +105,7 @@ final readonly class NotificationStore
         return $line !== null && $moment <= $line;
     }
 
-    private function rowOf(
+    private function buildRow(
         SocialAccount $account,
         FetchedNotificationModel $fetched,
         ?\DateTimeImmutable $seenUntil,

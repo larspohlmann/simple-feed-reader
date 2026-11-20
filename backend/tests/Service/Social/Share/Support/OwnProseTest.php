@@ -12,7 +12,7 @@ final class OwnProseTest extends TestCase
 {
     private static function ownProse(string $html): string
     {
-        return OwnProse::of(HtmlDocumentParser::parseFragment($html)->body);
+        return OwnProse::fromBody(HtmlDocumentParser::parseFragment($html)->body);
     }
 
     public function testAHackerNewsBodyHasNoOwnText(): void
@@ -66,7 +66,7 @@ final class OwnProseTest extends TestCase
 
     public function testReadsNothingFromNoBody(): void
     {
-        self::assertSame('', OwnProse::of(null));
+        self::assertSame('', OwnProse::fromBody(null));
     }
 
     public function testReadsPlainText(): void

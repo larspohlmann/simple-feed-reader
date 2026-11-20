@@ -102,7 +102,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
 
     private static function withExcerptOf(NotificationContext $context, JsonNodeModel $answered): NotificationContext
     {
-        $excerpt = Excerpt::ofHtml($answered->text('content'));
+        $excerpt = Excerpt::cutHtml($answered->text('content'));
         if ($excerpt === null) {
             return $context;
         }

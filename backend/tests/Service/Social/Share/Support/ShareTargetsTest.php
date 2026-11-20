@@ -37,8 +37,8 @@ final class ShareTargetsTest extends TestCase
     {
         $entry = self::titledShare();
 
-        self::assertSame([self::TARGET], ShareTargets::planOf($entry, [])->urls);
-        self::assertSame([], ShareTargets::planOf($entry, [self::TARGET])->urls);
+        self::assertSame([self::TARGET], ShareTargets::buildPlan($entry, [])->urls);
+        self::assertSame([], ShareTargets::buildPlan($entry, [self::TARGET])->urls);
     }
 
     public function testATitledShareStillCarryingATrackerMatchesItsCleanedCard(): void
@@ -49,12 +49,12 @@ final class ShareTargetsTest extends TestCase
             self::TARGET . '?utm_source=x',
         );
 
-        self::assertSame([], ShareTargets::planOf($entry, [self::TARGET])->urls);
+        self::assertSame([], ShareTargets::buildPlan($entry, [self::TARGET])->urls);
     }
 
     public function testATitledShareMatchesACardKeptUnderATrackedForm(): void
     {
-        self::assertSame([], ShareTargets::planOf(self::titledShare(), [self::TARGET . '?utm_source=x'])->urls);
+        self::assertSame([], ShareTargets::buildPlan(self::titledShare(), [self::TARGET . '?utm_source=x'])->urls);
     }
 
     public function testAPostTargetsTheLinksItsBodyShares(): void
@@ -66,31 +66,31 @@ final class ShareTargetsTest extends TestCase
             . '<a href="https://b.example/2">https://b.example/2</a></p>',
         ));
 
-        self::assertSame(['https://b.example/2'], ShareTargets::planOf($entry, ['https://a.example/1'])->urls);
+        self::assertSame(['https://b.example/2'], ShareTargets::buildPlan($entry, ['https://a.example/1'])->urls);
     }
 
     public function testAPostsTrackedLinkNamesItsPostedForm(): void
     {
         $entry = self::trackedPost();
 
-        $plan = ShareTargets::planOf($entry, []);
+        $plan = ShareTargets::buildPlan($entry, []);
 
         self::assertSame(['https://a.example/1', 'https://b.example/2'], $plan->urls);
         self::assertSame(['https://a.example/1' => 'https://a.example/1?cmp=rss'], $plan->postedForms);
-        self::assertSame([], ShareTargets::planOf($entry, ['https://a.example/1'])->postedForms);
+        self::assertSame([], ShareTargets::buildPlan($entry, ['https://a.example/1'])->postedForms);
     }
 
     public function testACardKeptUnderItsPostedFormCardsItsLink(): void
     {
         self::assertSame(
             ['https://b.example/2'],
-            ShareTargets::planOf(self::trackedPost(), ['https://a.example/1?cmp=rss'])->urls,
+            ShareTargets::buildPlan(self::trackedPost(), ['https://a.example/1?cmp=rss'])->urls,
         );
     }
 
     public function testATitledShareNamesNoPostedForm(): void
     {
-        self::assertSame([], ShareTargets::planOf(self::titledShare(), [])->postedForms);
+        self::assertSame([], ShareTargets::buildPlan(self::titledShare(), [])->postedForms);
     }
 
     private static function trackedPost(): Entry
@@ -113,6 +113,6 @@ final class ShareTargetsTest extends TestCase
             'https://bsky.app/profile/someone/post/3abc',
         );
 
-        self::assertSame([self::BODY_LINK], ShareTargets::planOf($entry, [])->urls);
+        self::assertSame([self::BODY_LINK], ShareTargets::buildPlan($entry, [])->urls);
     }
 }

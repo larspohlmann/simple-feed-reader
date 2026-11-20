@@ -107,7 +107,7 @@ final class SharedLinksTest extends TestCase
     #[DataProvider('bodies')]
     public function testFindsTheSharedUrls(string $body, array $expected): void
     {
-        self::assertSame($expected, SharedLinks::of($body)->urls);
+        self::assertSame($expected, SharedLinks::fromBodyHtml($body)->urls);
     }
 
     public function testASharedUrlIsTrackingFreeAndCountsOnce(): void
@@ -115,7 +115,7 @@ final class SharedLinksTest extends TestCase
         $body = '<p><a href="https://example.com/a?utm_source=x">https://example.com/a?utm_source=x</a>'
             . ' and https://example.com/a</p>';
 
-        self::assertSame(['https://example.com/a'], SharedLinks::of($body)->urls);
+        self::assertSame(['https://example.com/a'], SharedLinks::fromBodyHtml($body)->urls);
     }
 
     public function testALinkThatLostAnUndocumentedKeyRemembersHowItWasPosted(): void
@@ -125,7 +125,7 @@ final class SharedLinksTest extends TestCase
 
         self::assertSame(
             ['https://example.com/a' => 'https://example.com/a?cmp=rss'],
-            SharedLinks::of($body)->postedForms,
+            SharedLinks::fromBodyHtml($body)->postedForms,
         );
     }
 
@@ -137,7 +137,7 @@ final class SharedLinksTest extends TestCase
         );
         $body = '<p>' . implode(' ', $links) . ' https://example.com/late?cmp=rss</p>';
 
-        self::assertSame([], SharedLinks::of($body)->postedForms);
+        self::assertSame([], SharedLinks::fromBodyHtml($body)->postedForms);
     }
 
     public function testALinkThatLostOnlyDocumentedTrackersNeedsNoCheck(): void
@@ -145,15 +145,15 @@ final class SharedLinksTest extends TestCase
         $posted = 'https://example.com/a?utm_source=x&amp;fbclid=1';
         $body = '<p><a href="' . $posted . '">' . $posted . '</a></p>';
 
-        self::assertSame(['https://example.com/a'], SharedLinks::of($body)->urls);
-        self::assertSame([], SharedLinks::of($body)->postedForms);
+        self::assertSame(['https://example.com/a'], SharedLinks::fromBodyHtml($body)->urls);
+        self::assertSame([], SharedLinks::fromBodyHtml($body)->postedForms);
     }
 
     public function testLinksABareUrlAndKeepsPunctuationOutside(): void
     {
         self::assertSame(
             '<p>See <a href="https://example.com/a">https://example.com/a</a>.</p>',
-            SharedLinks::of('<p>See https://example.com/a.</p>')->linkedHtml,
+            SharedLinks::fromBodyHtml('<p>See https://example.com/a.</p>')->linkedHtml,
         );
     }
 
@@ -161,7 +161,7 @@ final class SharedLinksTest extends TestCase
     {
         self::assertStringContainsString(
             '<a href="HTTPS://EXAMPLE.COM/A">',
-            SharedLinks::of('<p>HTTPS://EXAMPLE.COM/A</p>')->linkedHtml,
+            SharedLinks::fromBodyHtml('<p>HTTPS://EXAMPLE.COM/A</p>')->linkedHtml,
         );
     }
 
@@ -169,11 +169,11 @@ final class SharedLinksTest extends TestCase
     {
         $body = '<p><a href="https://example.com/a">https://example.com/a</a></p>';
 
-        self::assertSame($body, SharedLinks::of($body)->linkedHtml);
+        self::assertSame($body, SharedLinks::fromBodyHtml($body)->linkedHtml);
     }
 
     public function testLeavesABodyWithoutUrlsByteForByte(): void
     {
-        self::assertSame('<p>a &#64; b</p>', SharedLinks::of('<p>a &#64; b</p>')->linkedHtml);
+        self::assertSame('<p>a &#64; b</p>', SharedLinks::fromBodyHtml('<p>a &#64; b</p>')->linkedHtml);
     }
 }

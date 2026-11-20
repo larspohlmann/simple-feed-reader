@@ -124,7 +124,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function excerptOf(?string $markdown): ?string
     {
-        return $markdown === null ? null : Excerpt::ofHtml($this->markdown->toHtml($markdown));
+        return $markdown === null ? null : Excerpt::cutHtml($this->markdown->toHtml($markdown));
     }
 
     private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string
@@ -137,7 +137,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         $community = $entry->node('community')->string('name');
 
         return new NotificationContext(
-            threadTitle: Excerpt::of($entry->node('post')->text('name')),
+            threadTitle: Excerpt::cutText($entry->node('post')->text('name')),
             threadPlace: $community === null ? null : 'c/' . $community,
         );
     }

@@ -11,16 +11,16 @@ final class Excerpt
 {
     private const int LENGTH = 280;
 
-    public static function of(?string $text): ?string
+    public static function cutText(?string $text): ?string
     {
         $trimmed = trim($text ?? '');
 
         return $trimmed === '' ? null : ClippedText::cutScrubbedText($trimmed, self::LENGTH);
     }
 
-    public static function ofHtml(?string $html): ?string
+    public static function cutHtml(?string $html): ?string
     {
-        return self::of(PlainText::fromHtmlBlocks($html));
+        return self::cutText(PlainText::fromHtmlBlocks($html));
     }
 
     private function __construct()

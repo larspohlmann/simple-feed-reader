@@ -47,7 +47,7 @@ final readonly class KnownShareSettler
     {
         $this->cardWriter->write($entry, new EntryCardsModel([], [new PageCardModel($card, null)]));
 
-        return ShareTargets::planOf($entry, [$card->url])->urls !== [] ? ShareEnrichmentKind::LinkCards : null;
+        return ShareTargets::buildPlan($entry, [$card->url])->urls !== [] ? ShareEnrichmentKind::LinkCards : null;
     }
 
     /** A quoted status the instance already answered: its RE: line leaves the body, and no other link waits for a card. */

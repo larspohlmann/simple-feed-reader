@@ -11,20 +11,20 @@ final class ExcerptTest extends TestCase
 {
     public function testNullAndBlankAreNull(): void
     {
-        self::assertNull(Excerpt::of(null));
-        self::assertNull(Excerpt::of("  \n "));
+        self::assertNull(Excerpt::cutText(null));
+        self::assertNull(Excerpt::cutText("  \n "));
     }
 
     public function testTrimsAndCutsToTwoHundredEightyCharacters(): void
     {
-        self::assertSame('hi', Excerpt::of('  hi '));
-        self::assertSame(str_repeat('ä', 280) . '…', Excerpt::of(str_repeat('ä', 300)));
-        self::assertSame(str_repeat('a', 280), Excerpt::of(str_repeat('a', 280)));
+        self::assertSame('hi', Excerpt::cutText('  hi '));
+        self::assertSame(str_repeat('ä', 280) . '…', Excerpt::cutText(str_repeat('ä', 300)));
+        self::assertSame(str_repeat('a', 280), Excerpt::cutText(str_repeat('a', 280)));
     }
 
     public function testInvalidUtf8IsScrubbedSoTheExcerptStaysEncodable(): void
     {
-        $excerpt = Excerpt::of("caf\xE9 ok");
+        $excerpt = Excerpt::cutText("caf\xE9 ok");
 
         self::assertIsString($excerpt);
         self::assertTrue(mb_check_encoding($excerpt, 'UTF-8'));
@@ -32,8 +32,8 @@ final class ExcerptTest extends TestCase
 
     public function testOfHtmlReadsBlocksAsPlainTextAndNullsBlank(): void
     {
-        self::assertSame('one two', Excerpt::ofHtml('<p>one</p><p>two</p>'));
-        self::assertNull(Excerpt::ofHtml(null));
-        self::assertNull(Excerpt::ofHtml('<p> </p>'));
+        self::assertSame('one two', Excerpt::cutHtml('<p>one</p><p>two</p>'));
+        self::assertNull(Excerpt::cutHtml(null));
+        self::assertNull(Excerpt::cutHtml('<p> </p>'));
     }
 }
