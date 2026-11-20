@@ -38,7 +38,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
     {
         self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
-        $answer = $this->lemmy->post($target->account, '/api/v3/comment', self::commentOf($target, $draft));
+        $answer = $this->lemmy->post($target->account, '/api/v3/comment', self::buildCommentPayload($target, $draft));
 
         return self::publishedAt($answer, 'comment_view', 'comment');
     }
@@ -50,7 +50,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
 
     public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
     {
-        $answer = $this->lemmy->post($account, '/api/v3/post', self::linkPostOf($url, $draft));
+        $answer = $this->lemmy->post($account, '/api/v3/post', self::buildLinkPostPayload($url, $draft));
 
         return self::publishedAt($answer, 'post_view', 'post');
     }
@@ -61,11 +61,11 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     }
 
     /** @return array<string, string|int> */
-    private static function linkPostOf(string $url, PostDraftModel $draft): array
+    private static function buildLinkPostPayload(string $url, PostDraftModel $draft): array
     {
         $communityId = $draft->communityId
             ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
-        $title = self::titleOf($draft);
+        $title = self::requireValidTitle($draft);
         self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
 
         return ['name' => $title, 'url' => $url]
@@ -73,7 +73,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
             + ['community_id' => $communityId];
     }
 
-    private static function titleOf(PostDraftModel $draft): string
+    private static function requireValidTitle(PostDraftModel $draft): string
     {
         $title = trim($draft->title ?? '');
         if (mb_strlen($title) < self::MIN_TITLE_CHARACTERS) {
@@ -109,7 +109,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     }
 
     /** @return array<string, string|int> */
-    private static function commentOf(SocialPostModel $target, PostDraftModel $draft): array
+    private static function buildCommentPayload(SocialPostModel $target, PostDraftModel $draft): array
     {
         $comment = ['content' => $draft->text, 'post_id' => (int) $target->postId];
         if (null !== $target->commentId) {

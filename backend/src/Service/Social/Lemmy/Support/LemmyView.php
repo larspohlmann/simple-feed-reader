@@ -21,7 +21,7 @@ final class LemmyView
     }
 
     /** @throws SocialPostNotFoundException */
-    public static function ofPost(JsonNodeModel $postView): LemmyTargetModel
+    public static function fromPostView(JsonNodeModel $postView): LemmyTargetModel
     {
         $post = $postView->node('post');
         $postId = $post->int('id') ?? throw new SocialPostNotFoundException(self::MISSING);
@@ -30,7 +30,7 @@ final class LemmyView
     }
 
     /** @throws SocialPostNotFoundException */
-    public static function ofComment(JsonNodeModel $commentView): LemmyTargetModel
+    public static function fromCommentView(JsonNodeModel $commentView): LemmyTargetModel
     {
         $comment = $commentView->node('comment');
         $commentId = $comment->int('id') ?? throw new SocialPostNotFoundException(self::MISSING);

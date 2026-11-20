@@ -26,7 +26,7 @@ final readonly class MastodonOriginCountsSource implements PostCountsSourceInter
 
     public function fetchCounts(string $address): SocialCountsModel
     {
-        $statusUrl = MastodonStatusAddress::ofOrNull($address)?->apiUrl()
+        $statusUrl = MastodonStatusAddress::parseAddress($address)?->apiUrl()
             ?? throw new PostNotPubliclyCountableException('The address names no status on a Mastodon instance.');
         $answer = MastodonApiClient::acceptedPublicStatus(
             $this->mastodon->answer(ApiRequestModel::get($statusUrl)),

@@ -17,9 +17,9 @@ final class LemmySearchTerms
      *
      * @throws SearchQueryTooBroadException
      */
-    public static function of(array $alternatives): array
+    public static function fromAlternatives(array $alternatives): array
     {
-        $terms = array_values(array_unique(array_map(self::longestTermOf(...), $alternatives)));
+        $terms = array_values(array_unique(array_map(self::pickLongestTerm(...), $alternatives)));
         if ([] === $terms) {
             throw self::termless();
         }
@@ -28,14 +28,14 @@ final class LemmySearchTerms
     }
 
     /** @param list<string> $factors */
-    private static function longestTermOf(array $factors): string
+    private static function pickLongestTerm(array $factors): string
     {
         $positives = array_values(array_filter($factors, self::isPositive(...)));
         $checked = array_values(array_filter(
             $positives,
             static fn (string $factor): bool => !SearchQueryTokens::isFilter($factor),
         ));
-        $longest = self::longestOf([] === $checked ? $positives : $checked);
+        $longest = self::pickLongest([] === $checked ? $positives : $checked);
 
         return '' === $longest ? throw self::termless() : $longest;
     }
@@ -46,7 +46,7 @@ final class LemmySearchTerms
     }
 
     /** @param list<string> $factors */
-    private static function longestOf(array $factors): string
+    private static function pickLongest(array $factors): string
     {
         $longest = '';
         foreach ($factors as $factor) {

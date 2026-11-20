@@ -45,27 +45,27 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
         $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(MastodonPostCounts::parseStatus($status));
 
-        return self::withViewer($post, $status, $statusId)->inResponseContext(self::responseContextOf($status));
+        return self::withViewer($post, $status, $statusId)->inResponseContext(self::buildResponseContext($status));
     }
 
-    private static function responseContextOf(JsonNodeModel $status): ResponseContextModel
+    private static function buildResponseContext(JsonNodeModel $status): ResponseContextModel
     {
         return new ResponseContextModel(
             authorIdentity: MastodonAuthor::identity($status->node('account')),
             visibility: $status->string('visibility'),
             canQuote: MastodonQuoting::allows($status),
-            preview: self::previewOf($status),
+            preview: self::buildPreview($status),
         );
     }
 
-    private static function previewOf(JsonNodeModel $status): PostPreviewModel
+    private static function buildPreview(JsonNodeModel $status): PostPreviewModel
     {
         $author = $status->node('account');
         return new PostPreviewModel(
             MastodonAuthor::name($author),
             MastodonAuthor::mention($author),
             PlainText::fromHtmlBlocks($status->string('content')) ?? '',
-            MastodonCard::of($status->node('card')),
+            MastodonCard::fromNode($status->node('card')),
         );
     }
 

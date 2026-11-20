@@ -39,18 +39,18 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         $account = $target->account;
 
         return new ComposerDefaultsModel(
-            $this->maxCharactersOf($account),
-            MastodonVisibility::stricterOf(
+            $this->resolveMaxCharacters($account),
+            MastodonVisibility::pickStricter(
                 $target->responseContext->visibility ?? self::DEFAULT_VISIBILITY,
-                $this->privacyOf($account),
+                $this->resolvePrivacy($account),
             ),
-            self::mentionsOf($target, $threadStarter),
+            self::collectMentions($target, $threadStarter),
         );
     }
 
     public function forAccount(SocialAccount $account): ComposerDefaultsModel
     {
-        return new ComposerDefaultsModel($this->maxCharactersOf($account), $this->privacyOf($account));
+        return new ComposerDefaultsModel($this->resolveMaxCharacters($account), $this->resolvePrivacy($account));
     }
 
     public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
@@ -60,15 +60,17 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return $defaults->withMaxCharacters($defaults->maxCharacters - ComposerStartingText::LINK_ROOM);
     }
 
-    private function maxCharactersOf(SocialAccount $account): int
+    private function resolveMaxCharacters(SocialAccount $account): int
     {
-        return $this->answerOf($account, self::INSTANCE)->node('configuration')->node('statuses')->int('max_characters')
+        return $this->fetchAnswerOrEmpty($account, self::INSTANCE)
+            ->node('configuration')->node('statuses')->int('max_characters')
             ?? self::DEFAULT_MAX_CHARACTERS;
     }
 
-    private function privacyOf(SocialAccount $account): string
+    private function resolvePrivacy(SocialAccount $account): string
     {
-        return $this->answerOf($account, MastodonApiClient::VERIFY_CREDENTIALS)->node('source')->string('privacy')
+        return $this->fetchAnswerOrEmpty($account, MastodonApiClient::VERIFY_CREDENTIALS)
+            ->node('source')->string('privacy')
             ?? self::DEFAULT_VISIBILITY;
     }
 
@@ -77,7 +79,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
      *
      * @return list<string>
      */
-    private static function mentionsOf(SocialPostModel $target, \Closure $threadStarter): array
+    private static function collectMentions(SocialPostModel $target, \Closure $threadStarter): array
     {
         $account = $target->account;
         $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
@@ -89,7 +91,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return array_values(array_map(static fn (string $author): string => '@' . $author, array_unique($others)));
     }
 
-    private function answerOf(SocialAccount $account, string $path): JsonNodeModel
+    private function fetchAnswerOrEmpty(SocialAccount $account, string $path): JsonNodeModel
     {
         try {
             $answer = $this->mastodon->answer($this->accountApi->authorizedGet($account, $path));

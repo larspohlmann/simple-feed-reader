@@ -58,7 +58,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface
     {
         $request = ApiRequestModel::postJson(
             $account->getServiceUrl() . self::STATUSES,
-            self::statusOf($draft, $attachment),
+            self::buildStatusPayload($draft, $attachment),
             null === $draft->idempotencyKey ? [] : ['Idempotency-Key' => $draft->idempotencyKey],
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
@@ -86,7 +86,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface
      *
      * @return array<string, string>
      */
-    private static function statusOf(PostDraftModel $draft, array $attachment): array
+    private static function buildStatusPayload(PostDraftModel $draft, array $attachment): array
     {
         return array_filter([
             'status' => $draft->text,

@@ -12,7 +12,7 @@ final class LemmyLanguageTag
     private const array TAGS = [32 => 'de', 37 => 'en', 39 => 'es', 47 => 'fr'];
 
     /** @return string|null null when the post states no language; a private-use tag for one outside the four */
-    public static function of(?int $languageId): ?string
+    public static function fromLanguageId(?int $languageId): ?string
     {
         if (null === $languageId || self::UNDETERMINED === $languageId) {
             return null;

@@ -13,8 +13,8 @@ final class MastodonVisibilityTest extends TestCase
     #[DataProvider('pairs')]
     public function testTheStricterVisibilityWinsOnEitherSide(string $left, string $right, string $stricter): void
     {
-        self::assertSame($stricter, MastodonVisibility::stricterOf($left, $right));
-        self::assertSame($stricter, MastodonVisibility::stricterOf($right, $left));
+        self::assertSame($stricter, MastodonVisibility::pickStricter($left, $right));
+        self::assertSame($stricter, MastodonVisibility::pickStricter($right, $left));
     }
 
     /** @return iterable<string, array{string, string, string}> */

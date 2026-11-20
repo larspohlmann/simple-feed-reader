@@ -42,7 +42,7 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
     public function buildSiteUrl(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
         $instance = rtrim($account->getServiceUrl(), '/');
-        $listing = LemmyListing::ofFeedKind($privateFeed->kind);
+        $listing = LemmyListing::fromFeedKind($privateFeed->kind);
         if (null !== $listing) {
             return $instance . '/?listingType=' . $listing->value;
         }
@@ -69,11 +69,13 @@ final readonly class LemmyPrivateFeedRule implements PrivateFeedRuleInterface
 
     public function buildSearchQueries(string $query): array
     {
-        return LemmySearchTerms::of(new SearchQueryAlternatives(SearchQueryTokens::tokenizeQuery($query))->factors());
+        return LemmySearchTerms::fromAlternatives(
+            new SearchQueryAlternatives(SearchQueryTokens::tokenizeQuery($query))->factors(),
+        );
     }
 
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
-        return LemmySearchedPost::of($post->title, $post->contentHtml, $post->authorUrl);
+        return LemmySearchedPost::buildSearchedPost($post->title, $post->contentHtml, $post->authorUrl);
     }
 }

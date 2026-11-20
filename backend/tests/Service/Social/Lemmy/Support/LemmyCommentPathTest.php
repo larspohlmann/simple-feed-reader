@@ -25,6 +25,6 @@ final class LemmyCommentPathTest extends TestCase
     #[DataProvider('paths')]
     public function testParentOf(?string $path, ?string $parent): void
     {
-        self::assertSame($parent, LemmyCommentPath::parentOf($path));
+        self::assertSame($parent, LemmyCommentPath::parseParentId($path));
     }
 }

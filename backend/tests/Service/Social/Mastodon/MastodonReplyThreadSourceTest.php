@@ -42,7 +42,8 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
         $answer = $this->source($http)->asAccount(SocialAccounts::mastodon(), self::STATUS_URL);
 
-        self::assertEquals(CommentsAnswerModel::settled(MastodonContextReplies::answerOf('9', self::CONTEXT)), $answer);
+        $envelope = MastodonContextReplies::buildEnvelope('9', self::CONTEXT);
+        self::assertEquals(CommentsAnswerModel::settled($envelope), $answer);
         self::assertSame([self::SEARCH, self::ACCOUNT_CONTEXT], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[1]['headers']);
     }
@@ -56,7 +57,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
         $answer = $this->source($http)->asAccount(SocialAccounts::mastodon(), self::STATUS_URL);
 
         self::assertEquals(
-            CommentsAnswerModel::stillGathering(MastodonContextReplies::answerOf('9', self::CONTEXT)),
+            CommentsAnswerModel::stillGathering(MastodonContextReplies::buildEnvelope('9', self::CONTEXT)),
             $answer,
         );
     }
@@ -77,7 +78,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
         $answer = $this->source($http)->inPublic(self::STATUS_URL);
 
         self::assertEquals(
-            CommentsAnswerModel::settled(MastodonContextReplies::answerOf('110', self::CONTEXT)),
+            CommentsAnswerModel::settled(MastodonContextReplies::buildEnvelope('110', self::CONTEXT)),
             $answer,
         );
         self::assertSame([self::PUBLIC_CONTEXT], $http->requestLines());
@@ -161,7 +162,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
     {
         $replies = $this->source(new RoutedHttpClient([]))->repliesIn(
             self::STATUS_URL,
-            MastodonContextReplies::answerOf('110', self::CONTEXT),
+            MastodonContextReplies::buildEnvelope('110', self::CONTEXT),
         );
 
         self::assertCount(1, $replies);

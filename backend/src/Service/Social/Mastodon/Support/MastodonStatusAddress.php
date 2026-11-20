@@ -18,7 +18,7 @@ final class MastodonStatusAddress
     {
     }
 
-    public static function ofOrNull(string $address): ?MastodonStatusModel
+    public static function parseAddress(string $address): ?MastodonStatusModel
     {
         foreach (self::STATUS_SHAPES as $shape) {
             if (1 === preg_match($shape, $address, $match)) {

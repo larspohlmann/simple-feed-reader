@@ -114,9 +114,9 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         ?string $lastReadId,
     ): ?FetchedNotificationModel {
         $remoteId = $entry->string('id');
-        $kind = self::kindOf($entry, $ownId);
+        $kind = self::parseKind($entry, $ownId);
         $createdAt = NetworkTimestamp::toUtc($entry->string('created_at'));
-        $actor = self::actorOf($account, $entry->node('account'));
+        $actor = self::buildActor($account, $entry->node('account'));
         if ($remoteId === null || $kind === null || $createdAt === null || $actor === null) {
             return null;
         }
@@ -125,14 +125,14 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             $remoteId,
             $kind,
             $actor,
-            self::subjectOf($account, $kind, $entry, $remoteId, $actor->profileUrl),
+            self::buildSubject($account, $kind, $entry, $remoteId, $actor->profileUrl),
             $createdAt,
             $lastReadId !== null && MastodonIds::atOrBefore($remoteId, $lastReadId),
-            self::referencesOf($kind, $entry->node('status')),
+            self::buildReferences($kind, $entry->node('status')),
         );
     }
 
-    private static function actorOf(SocialAccount $account, JsonNodeModel $node): ?NotificationActor
+    private static function buildActor(SocialAccount $account, JsonNodeModel $node): ?NotificationActor
     {
         $acct = $node->string('acct');
         if ($acct === null) {
@@ -147,7 +147,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         );
     }
 
-    private static function subjectOf(
+    private static function buildSubject(
         SocialAccount $account,
         SocialNotificationKind $kind,
         JsonNodeModel $entry,
@@ -173,28 +173,28 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             $groupKey,
             Excerpt::cutHtml($status->text('content')),
             $linkUrl,
-            self::contextOf($kind, $status),
+            self::buildContext($kind, $status),
         );
     }
 
-    private static function referencesOf(SocialNotificationKind $kind, JsonNodeModel $status): ContextReferenceModel
+    private static function buildReferences(SocialNotificationKind $kind, JsonNodeModel $status): ContextReferenceModel
     {
         return new ContextReferenceModel(
             answeredId: $kind === SocialNotificationKind::Reply ? $status->string('in_reply_to_id') : null,
         );
     }
 
-    private static function contextOf(SocialNotificationKind $kind, JsonNodeModel $status): NotificationContext
+    private static function buildContext(SocialNotificationKind $kind, JsonNodeModel $status): NotificationContext
     {
         return match ($kind) {
             SocialNotificationKind::Like, SocialNotificationKind::Repost
                 => self::aboutYourCommentWhenAReply(new NotificationContext(), $status),
-            SocialNotificationKind::Quote => self::quotedContextOf($status->node('quote')->node('quoted_status')),
+            SocialNotificationKind::Quote => self::buildQuotedContext($status->node('quote')->node('quoted_status')),
             default => new NotificationContext(),
         };
     }
 
-    private static function quotedContextOf(JsonNodeModel $quoted): NotificationContext
+    private static function buildQuotedContext(JsonNodeModel $quoted): NotificationContext
     {
         return self::aboutYourCommentWhenAReply(
             new NotificationContext(answeredExcerpt: Excerpt::cutHtml($quoted->text('content'))),
@@ -209,7 +209,7 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
         return $status->string('in_reply_to_id') === null ? $context : $context->withOnComment();
     }
 
-    private static function kindOf(JsonNodeModel $entry, string $ownId): ?SocialNotificationKind
+    private static function parseKind(JsonNodeModel $entry, string $ownId): ?SocialNotificationKind
     {
         return match ($entry->string('type')) {
             'favourite' => SocialNotificationKind::Like,

@@ -32,7 +32,7 @@ final class MastodonStatusAddressTest extends TestCase
     #[DataProvider('statusAddresses')]
     public function testAStatusAddressNamesItsStatusAndContextEndpoint(string $address): void
     {
-        $status = MastodonStatusAddress::ofOrNull($address);
+        $status = MastodonStatusAddress::parseAddress($address);
 
         self::assertNotNull($status);
         self::assertSame('110', $status->id);
@@ -43,7 +43,7 @@ final class MastodonStatusAddressTest extends TestCase
     #[DataProvider('otherAddresses')]
     public function testAnyOtherAddressIsNoStatus(string $address): void
     {
-        self::assertNull(MastodonStatusAddress::ofOrNull($address));
+        self::assertNull(MastodonStatusAddress::parseAddress($address));
     }
 
     #[DataProvider('statusAddresses')]
@@ -51,14 +51,14 @@ final class MastodonStatusAddressTest extends TestCase
     {
         self::assertSame(
             'https://mastodon.social/users/Gargron/statuses/110',
-            MastodonStatusAddress::ofOrNull($address)?->uri(),
+            MastodonStatusAddress::parseAddress($address)?->uri(),
         );
     }
 
     #[DataProvider('authorPrefixes')]
     public function testAStatusAddressNamesItsAuthorsProfilePrefix(string $address, string $prefix): void
     {
-        self::assertSame($prefix, MastodonStatusAddress::ofOrNull($address)?->authorPrefix);
+        self::assertSame($prefix, MastodonStatusAddress::parseAddress($address)?->authorPrefix);
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -74,7 +74,7 @@ final class MastodonStatusAddressTest extends TestCase
     #[DataProvider('servers')]
     public function testAStatusAddressSaysWhetherItsInstanceOwnsTheStatus(string $address, bool $isOwnServer): void
     {
-        self::assertSame($isOwnServer, MastodonStatusAddress::ofOrNull($address)?->isOnItsOwnServer());
+        self::assertSame($isOwnServer, MastodonStatusAddress::parseAddress($address)?->isOnItsOwnServer());
     }
 
     /** @return iterable<string, array{string, bool}> */

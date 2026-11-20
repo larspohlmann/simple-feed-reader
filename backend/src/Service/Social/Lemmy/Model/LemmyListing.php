@@ -14,7 +14,7 @@ enum LemmyListing: string
 
     public const int PAGE_SIZE = 50;
 
-    public static function ofFeedKind(SocialFeedKind $kind): ?self
+    public static function fromFeedKind(SocialFeedKind $kind): ?self
     {
         return match ($kind) {
             SocialFeedKind::Home => self::Subscribed,

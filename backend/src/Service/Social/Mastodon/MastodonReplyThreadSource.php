@@ -34,7 +34,7 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
     {
         $post = $this->resolver->resolve($account, $address);
         $answer = $this->mastodon->askAboutPost($account, '/api/v1/statuses/' . $post->postId . '/context');
-        $body = MastodonContextReplies::answerOf($post->postId, $answer->body);
+        $body = MastodonContextReplies::buildEnvelope($post->postId, $answer->body);
 
         return null === $answer->header('Mastodon-Async-Refresh')
             ? CommentsAnswerModel::settled($body)
@@ -43,7 +43,7 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
 
     public function inPublic(string $address): CommentsAnswerModel
     {
-        $status = MastodonStatusAddress::ofOrNull($address)
+        $status = MastodonStatusAddress::parseAddress($address)
             ?? throw new SocialNetworkUnreachableException('The address names no status on a Mastodon instance.');
         $answer = MastodonApiClient::acceptedPublicStatus(
             $this->publicMastodon->answer(ApiRequestModel::get($status->contextApiUrl())),
@@ -51,7 +51,7 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
                 => new SocialNetworkUnreachableException($message),
         );
 
-        return CommentsAnswerModel::settled(MastodonContextReplies::answerOf($status->id, $answer->body));
+        return CommentsAnswerModel::settled(MastodonContextReplies::buildEnvelope($status->id, $answer->body));
     }
 
     public function publicThreadThrottledForSeconds(): int
@@ -61,11 +61,11 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
 
     public function repliesIn(string $address, string $answer): array
     {
-        return $this->replies->of($address, $answer);
+        return $this->replies->parseReplies($address, $answer);
     }
 
     public function buildSelfReply(JsonNodeModel $post): EntryCommentModel
     {
-        return $this->replies->selfReplyOf($post);
+        return $this->replies->buildSelfReply($post);
     }
 }

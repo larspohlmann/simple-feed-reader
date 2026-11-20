@@ -78,13 +78,13 @@ final readonly class MastodonPrivateFeedRule implements PrivateFeedRuleInterface
     public function buildSearchedPost(SocialAccount $account, StoredPostModel $post): SearchedPostModel
     {
         return new SearchedPostModel(
-            self::authorNamesOf($account, $post->authorUrl),
+            self::parseAuthorNames($account, $post->authorUrl),
             [PlainText::fromHtmlBlocks($post->contentHtml) ?? ''],
         );
     }
 
     /** @return list<string> */
-    private static function authorNamesOf(SocialAccount $account, ?string $authorUrl): array
+    private static function parseAuthorNames(SocialAccount $account, ?string $authorUrl): array
     {
         $identity = MastodonAuthor::identityOfProfileUrl($authorUrl);
         if (null === $identity) {

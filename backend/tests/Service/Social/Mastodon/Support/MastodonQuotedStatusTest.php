@@ -30,7 +30,7 @@ final class MastodonQuotedStatusTest extends TestCase
 
     public function testAnAcceptedQuoteIsTheQuotedStatusWithItsLineBreaksAndMedia(): void
     {
-        $quote = self::quoted(MastodonQuotedStatus::ofQuote(
+        $quote = self::quoted(MastodonQuotedStatus::fromQuote(
             JsonNodeModel::fromValue(['state' => 'accepted', 'quoted_status' => self::statusFields()]),
         ));
 
@@ -78,19 +78,19 @@ final class MastodonQuotedStatusTest extends TestCase
     {
         $quote = JsonNodeModel::fromValue(['state' => $state, 'quoted_status' => self::statusFields()]);
 
-        self::assertNull(MastodonQuotedStatus::ofQuote($quote));
+        self::assertNull(MastodonQuotedStatus::fromQuote($quote));
     }
 
     public function testAShallowQuoteNamingOnlyAnIdIsNone(): void
     {
         $quote = JsonNodeModel::fromValue(['state' => 'accepted', 'quoted_status_id' => '113']);
 
-        self::assertNull(MastodonQuotedStatus::ofQuote($quote));
+        self::assertNull(MastodonQuotedStatus::fromQuote($quote));
     }
 
     public function testARemoteAuthorKeepsTheirFullAcct(): void
     {
-        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields([
+        $quote = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields([
             'account' => ['acct' => 'bob@other.example', 'url' => 'https://other.example/@bob'],
         ]))));
 
@@ -99,7 +99,7 @@ final class MastodonQuotedStatusTest extends TestCase
 
     public function testAContentWarningLeadsTheText(): void
     {
-        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields([
+        $quote = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields([
             'spoiler_text' => 'spoilers',
         ]))));
 
@@ -108,7 +108,7 @@ final class MastodonQuotedStatusTest extends TestCase
 
     public function testTheQuotedStatusesOwnQuoteIsTheNestedLineAndLeavesItsText(): void
     {
-        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields([
+        $quote = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields([
             'content' => '<p>Look at this</p><p class="quote-inline">RE: '
                 . '<a href="https://third.example/@carol/7">https://third.example/@carol/7</a></p>',
             'quote' => ['state' => 'accepted', 'quoted_status_id' => '7'],
@@ -125,7 +125,7 @@ final class MastodonQuotedStatusTest extends TestCase
             'account' => ['acct' => 'carol@third.example'],
         ]);
 
-        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields([
+        $quote = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields([
             'quote' => ['state' => 'accepted', 'quoted_status' => $nested],
         ]))));
 
@@ -137,7 +137,7 @@ final class MastodonQuotedStatusTest extends TestCase
 
     public function testAQuotedStatusCarriesItsPreviewCard(): void
     {
-        $quote = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields(['card' => [
+        $quote = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields(['card' => [
             'url' => 'https://news.example/story',
             'title' => 'The story',
             'description' => 'What happened.',
@@ -159,14 +159,14 @@ final class MastodonQuotedStatusTest extends TestCase
 
     public function testAQuotedStatusWithoutACardHasNone(): void
     {
-        $quoted = self::quoted(MastodonQuotedStatus::of(JsonNodeModel::fromValue(self::statusFields())));
+        $quoted = self::quoted(MastodonQuotedStatus::fromStatus(JsonNodeModel::fromValue(self::statusFields())));
         self::assertNull($quoted->linkCard);
     }
 
     /** @param array<string, string> $account */
     private static function quotedBy(array $account): QuotedPostContent
     {
-        return self::quoted(MastodonQuotedStatus::ofQuote(JsonNodeModel::fromValue([
+        return self::quoted(MastodonQuotedStatus::fromQuote(JsonNodeModel::fromValue([
             'state' => 'accepted',
             'quoted_status' => self::statusFields(['account' => $account]),
         ])));

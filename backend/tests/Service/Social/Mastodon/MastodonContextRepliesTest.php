@@ -45,7 +45,7 @@ final class MastodonContextRepliesTest extends TestCase
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
         $node = $this->replies()[0]->replies[0];
 
-        $selfReply = $reader->selfReplyOf($status);
+        $selfReply = $reader->buildSelfReply($status);
 
         self::assertEquals($node->comment(), $selfReply);
         self::assertTrue($selfReply->byEntryAuthor);
@@ -110,7 +110,7 @@ final class MastodonContextRepliesTest extends TestCase
         $context = self::contextOf([self::statusOf('300', '9', []), self::statusOf('301', '110', [])]);
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
 
-        $replies = $reader->of(self::POST, MastodonContextReplies::answerOf('9', $context));
+        $replies = $reader->parseReplies(self::POST, MastodonContextReplies::buildEnvelope('9', $context));
 
         self::assertSame(['https://example.social/@someone/300'], self::urlsOf($replies));
     }
@@ -264,7 +264,7 @@ final class MastodonContextRepliesTest extends TestCase
 
         $answer = json_encode(['context' => json_decode($this->fixture(self::CONTEXT))], \JSON_THROW_ON_ERROR);
 
-        $reader->of(self::POST, $answer);
+        $reader->parseReplies(self::POST, $answer);
     }
 
     public function testAContextThatIsNoJsonCannotRenameThePost(): void
@@ -279,7 +279,9 @@ final class MastodonContextRepliesTest extends TestCase
     {
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
 
-        return $reader->of($post, MastodonContextReplies::answerOf('110', $answer ?? $this->fixture(self::CONTEXT)));
+        $envelope = MastodonContextReplies::buildEnvelope('110', $answer ?? $this->fixture(self::CONTEXT));
+
+        return $reader->parseReplies($post, $envelope);
     }
 
     /**

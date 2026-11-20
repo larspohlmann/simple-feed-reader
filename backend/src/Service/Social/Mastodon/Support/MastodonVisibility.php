@@ -22,7 +22,7 @@ final class MastodonVisibility
     }
 
     /** An unknown visibility counts as public. */
-    public static function stricterOf(string $left, string $right): string
+    public static function pickStricter(string $left, string $right): string
     {
         return self::closedness($left) >= self::closedness($right) ? self::known($left) : self::known($right);
     }

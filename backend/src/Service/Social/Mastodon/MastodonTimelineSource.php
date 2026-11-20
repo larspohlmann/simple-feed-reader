@@ -39,12 +39,12 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             return $this->search->buildRequests($account, $socialFeed->getRemoteId(), $socialFeed->getNewestSeenId());
         }
 
-        return [$this->mastodon->authorizedGet($account, self::pathOf($socialFeed))];
+        return [$this->mastodon->authorizedGet($account, self::buildPath($socialFeed))];
     }
 
     public function accepted(SocialFeed $socialFeed, FetchOutcomeModel $outcome): ApiResponseModel
     {
-        return MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome));
+        return MastodonApiClient::accepted(MastodonApiClient::requireAnswer($outcome));
     }
 
     public function buildPage(SocialFeed $socialFeed, array $accepted): TimelinePageModel
@@ -67,7 +67,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         $statuses = JsonNodeModel::parseNodes(json_decode($accepted->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a timeline.');
 
-        return MastodonTimelinePage::of($statuses);
+        return MastodonTimelinePage::fromStatuses($statuses);
     }
 
     private static function listId(SocialFeed $socialFeed): string
@@ -88,7 +88,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             : throw new SocialNetworkUnreachableException('The Mastodon tag name is not a hashtag.');
     }
 
-    private static function pathOf(SocialFeed $socialFeed): string
+    private static function buildPath(SocialFeed $socialFeed): string
     {
         return match ($socialFeed->getKind()) {
             SocialFeedKind::Home => self::timelinePath($socialFeed, 'home'),

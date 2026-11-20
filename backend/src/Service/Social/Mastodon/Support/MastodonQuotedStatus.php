@@ -18,14 +18,14 @@ final class MastodonQuotedStatus
     private const string ACCEPTED = 'accepted';
 
     /** A status's `quote`: only an accepted one with the whole status counts; a shallow one names an id alone. */
-    public static function ofQuote(JsonNodeModel $quote): ?QuotedPostContent
+    public static function fromQuote(JsonNodeModel $quote): ?QuotedPostContent
     {
-        return $quote->string('state') === self::ACCEPTED ? self::of($quote->node('quoted_status')) : null;
+        return $quote->string('state') === self::ACCEPTED ? self::fromStatus($quote->node('quoted_status')) : null;
     }
 
-    public static function of(JsonNodeModel $status): ?QuotedPostContent
+    public static function fromStatus(JsonNodeModel $status): ?QuotedPostContent
     {
-        $url = MastodonStatusUrl::of($status);
+        $url = MastodonStatusUrl::resolveUrl($status);
         $account = $status->node('account');
         $handle = MastodonAuthor::handle($account);
         if ($url === null || $handle === null) {
@@ -41,23 +41,23 @@ final class MastodonQuotedStatus
             $handle,
             MastodonAuthor::avatar($account),
             DateParser::parse($status->string('created_at')),
-            self::textOf($body, $status->string('spoiler_text')),
-            MastodonAttachments::entryMediaOf($status),
-            self::nestedOf($status->node('quote'), $quoted),
-            MastodonCard::of($status->node('card')),
+            self::buildText($body, $status->string('spoiler_text')),
+            MastodonAttachments::assembleEntryMedia($status),
+            self::resolveNestedQuote($status->node('quote'), $quoted),
+            MastodonCard::fromNode($status->node('card')),
         ));
     }
 
-    private static function textOf(string $html, ?string $warning): string
+    private static function buildText(string $html, ?string $warning): string
     {
         $lines = PlainText::linesFromHtmlBlocks($html);
 
         return implode("\n", $warning === null ? $lines : ['CW: ' . $warning, ...$lines]);
     }
 
-    private static function nestedOf(JsonNodeModel $quote, ?string $reTarget): ?QuotedPostReference
+    private static function resolveNestedQuote(JsonNodeModel $quote, ?string $reTarget): ?QuotedPostReference
     {
-        $full = self::ofQuote($quote);
+        $full = self::fromQuote($quote);
         if ($full !== null) {
             return new QuotedPostReference($full->url, $full->authorHandle);
         }

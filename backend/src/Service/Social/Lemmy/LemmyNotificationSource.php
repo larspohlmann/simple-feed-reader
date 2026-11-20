@@ -66,7 +66,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private function markRead(SocialAccount $account, SocialNotification $row): void
     {
-        $id = self::itemIdOf($row->getRemoteId());
+        $id = self::parseItemId($row->getRemoteId());
         try {
             if ($row->getKind() === SocialNotificationKind::Reply) {
                 $this->lemmy->post($account, self::MARK_REPLY, ['comment_reply_id' => $id, 'read' => true]);
@@ -95,16 +95,16 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         $item = $entry->node($envelope);
         $itemId = $item->int('id');
         $createdAt = NetworkTimestamp::toUtc($item->string('published'));
-        $actor = self::actorOf($account, $entry->node('creator'));
+        $actor = self::buildActor($account, $entry->node('creator'));
         $commentId = $entry->node('comment')->int('id');
         if ($itemId === null || $createdAt === null || $actor === null || $commentId === null) {
             return null;
         }
-        $remoteId = self::remoteIdOf($kind, $itemId);
+        $remoteId = self::buildRemoteId($kind, $itemId);
         $answeredId = $kind === SocialNotificationKind::Reply
-            ? LemmyCommentPath::parentOf($entry->node('comment')->string('path'))
+            ? LemmyCommentPath::parseParentId($entry->node('comment')->string('path'))
             : null;
-        $context = self::contextOf($entry);
+        $context = self::buildContext($entry);
 
         return new FetchedNotificationModel(
             $remoteId,
@@ -112,7 +112,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
             $actor,
             new NotificationSubject(
                 $remoteId,
-                $this->excerptOf($entry->node('comment')->string('content')),
+                $this->buildExcerpt($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
                 $answeredId === null ? $context : $context->withOnComment(),
             ),
@@ -122,17 +122,17 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         );
     }
 
-    private function excerptOf(?string $markdown): ?string
+    private function buildExcerpt(?string $markdown): ?string
     {
         return $markdown === null ? null : Excerpt::cutHtml($this->markdown->toHtml($markdown));
     }
 
-    private static function remoteIdOf(SocialNotificationKind $kind, int $itemId): string
+    private static function buildRemoteId(SocialNotificationKind $kind, int $itemId): string
     {
         return $kind->value . ':' . $itemId;
     }
 
-    private static function contextOf(JsonNodeModel $entry): NotificationContext
+    private static function buildContext(JsonNodeModel $entry): NotificationContext
     {
         $community = $entry->node('community')->string('name');
 
@@ -142,12 +142,12 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
         );
     }
 
-    private static function itemIdOf(string $remoteId): int
+    private static function parseItemId(string $remoteId): int
     {
         return (int) substr(strstr($remoteId, ':') ?: '', 1);
     }
 
-    private static function actorOf(SocialAccount $account, JsonNodeModel $creator): ?NotificationActor
+    private static function buildActor(SocialAccount $account, JsonNodeModel $creator): ?NotificationActor
     {
         $handle = LemmyAuthor::identity($creator->string('name'), $creator->string('actor_id'));
         if ($handle === null) {

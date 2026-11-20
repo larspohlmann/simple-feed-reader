@@ -48,7 +48,7 @@ final class LemmySearchTermsTest extends TestCase
     #[DataProvider('queries')]
     public function testEachAlternativeAsksItsLongestTerm(string $query, array $terms): void
     {
-        self::assertSame($terms, LemmySearchTerms::of(self::factorsOf($query)));
+        self::assertSame($terms, LemmySearchTerms::fromAlternatives(self::factorsOf($query)));
     }
 
     /** @return iterable<string, array{string}> */
@@ -67,7 +67,7 @@ final class LemmySearchTermsTest extends TestCase
         $this->expectException(SearchQueryTooBroadException::class);
         $this->expectExceptionMessage('Lemmy needs a word to search for in every alternative.');
 
-        LemmySearchTerms::of(self::factorsOf($query));
+        LemmySearchTerms::fromAlternatives(self::factorsOf($query));
     }
 
     /** @return list<list<string>> */
