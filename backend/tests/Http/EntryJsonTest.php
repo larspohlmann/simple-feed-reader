@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
@@ -17,6 +18,7 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
+use App\Enum\CanonicalItemKind;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
@@ -31,11 +33,14 @@ use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Content\Chapter\Model\ServedChaptersModel;
 use App\Service\Social\Social\Model\ThreadPostModel;
+use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testEmitsMediaAndAttachmentsAsStructuredArrays(): void
     {
         $entry = new Entry(
@@ -346,6 +351,39 @@ final class EntryJsonTest extends TestCase
         self::assertSame('2026-09-07T00:00:00+00:00', $json['createdAt']);
     }
 
+    public function testPostCarriesItsItemId(): void
+    {
+        $item = self::withId(new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7'), 41);
+        $item->recordCounts(DiscussionCounts::fromScoreAndComments(12, 5));
+        $lemmy = new EntryListRowLemmy(score: 12, community: null, myVote: VoteScore::Up);
+        $copies = [$this->entryTitled('Copy one'), $this->entryTitled('Copy two')];
+        foreach ($copies as $copy) {
+            $copy->linkTo($item);
+        }
+
+        [$first, $second] = array_map(
+            fn (Entry $copy): array => JsonMappers::entryJson()->listRow(
+                $this->row($copy, new EntryListRowEnrichment(lemmy: $lemmy)),
+            ),
+            $copies,
+        );
+
+        self::assertSame(41, $first['canonicalItemId']);
+        self::assertSame($first['canonicalItemId'], $second['canonicalItemId']);
+        self::assertSame(5, $first['commentCount']);
+        self::assertSame($first['commentCount'], $second['commentCount']);
+        self::assertSame($first['myVote'], $second['myVote']);
+        self::assertSame($first['score'], $second['score']);
+    }
+
+    public function testArticleCarriesNullItemId(): void
+    {
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
+
+        self::assertArrayHasKey('canonicalItemId', $json);
+        self::assertNull($json['canonicalItemId']);
+    }
+
     public function testAnEntryWithoutASocialStateSaysSo(): void
     {
         self::assertNull(JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')))['social']);
@@ -508,8 +546,8 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote', 'title', 'url',
-                'discussionUrl',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote',
+                'canonicalItemId', 'title', 'url', 'discussionUrl',
                 'comments', 'score', 'commentCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',

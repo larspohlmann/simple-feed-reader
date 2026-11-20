@@ -27,7 +27,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-import-type ThreadPostRow from ThreadPostJson
  * @phpstan-type EntryRow array{
- *   id: int|null, title: string, url: string|null, author: string|null,
+ *   id: int|null, canonicalItemId: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
  *   chapters?: list<array{startSeconds: int, title: string}>|null,
  *   transcript?: array{
@@ -86,6 +86,7 @@ final readonly class EntryJson
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return $this->completed($row) + [
+            'canonicalItemId' => $entry->getCanonicalItem()?->requireId(),
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
         ] + self::buildDiscussionRow($row) + [
