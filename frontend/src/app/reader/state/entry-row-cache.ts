@@ -201,10 +201,24 @@ export class EntryRowCache {
   }
 
   private collectIdsWithCopies(ids: Iterable<number>): number[] {
-    return [...new Set(ids)].flatMap((id) => {
-      const entry = this.entry(id);
-      return entry === null ? [id] : this.collectCopyIds(entry);
+    const distinct = [...new Set(ids)];
+    const itemIds = distinct.map((id) => this.entry(id)?.canonicalItemId ?? null);
+    if (itemIds.every((itemId) => itemId === null)) return distinct;
+    const idsByItem = this.groupIdsByItem();
+    return distinct.flatMap((id, index) => {
+      const itemId = itemIds[index];
+      return (itemId === null ? undefined : idsByItem.get(itemId)) ?? [id];
     });
+  }
+
+  private groupIdsByItem(): Map<number, number[]> {
+    const idsByItem = new Map<number, number[]>();
+    for (const [id, record] of this.records) {
+      const itemId = record().canonicalItemId;
+      if (itemId === null) continue;
+      idsByItem.set(itemId, [...(idsByItem.get(itemId) ?? []), id]);
+    }
+    return idsByItem;
   }
 
   /** An entry keeps its identity when `patch` hands it back, so nothing derived from it recomputes. */
@@ -213,14 +227,18 @@ export class EntryRowCache {
   }
 }
 
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
+
 /** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
-  const { isHidden, isViewed, myVote, score, social } = patch;
-  const shared: RowPatch = { isHidden, isViewed, myVote, score };
-  if (copy.social && social) shared.social = { ...copy.social, isLiked: social.isLiked };
-  return Object.fromEntries(
-    Object.entries(shared).filter(([, value]) => value !== undefined),
-  ) as RowPatch;
+  const shared: RowPatch = {};
+  for (const key of SHARED_KEYS) {
+    if (patch[key] !== undefined) Object.assign(shared, { [key]: patch[key] });
+  }
+  if (copy.social && patch.social) {
+    shared.social = { ...copy.social, isLiked: patch.social.isLiked };
+  }
+  return shared;
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides
