@@ -5,6 +5,7 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { OptimisticToggles, steppedCounts } from '../optimistic-toggles';
 import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { SocialCountsDto } from '../../entry-social';
+import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi, VoteAnswer } from '../../social-post-api';
 import { VoteValue, steppedScore } from '../../vote-pill/vote';
@@ -37,6 +38,15 @@ export type CommentsState =
     }
   | { status: 'throttled'; retryAt: number }
   | { status: 'failed'; failedAt: number };
+
+/** How many comments an entry has: the loaded thread's total once it is in, the stored count before. */
+export function commentTotal(
+  entry: Pick<EntryDto, 'comments' | 'commentCount'>,
+  state: CommentsState,
+): number | null {
+  if (!entry.comments) return null;
+  return state.status === 'ok' ? state.comments.length + state.omitted : entry.commentCount;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
