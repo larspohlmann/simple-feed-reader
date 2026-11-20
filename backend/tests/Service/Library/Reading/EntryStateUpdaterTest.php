@@ -70,7 +70,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     }
 
     /** The persisted state, or an unpersisted all-false default when no row was ever created for it. */
-    private function findStateOrDefault(User $user, Entry $entry): EntryState
+    private function readStateOrDefault(User $user, Entry $entry): EntryState
     {
         $this->entityManager->clear();
 
@@ -86,7 +86,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     }
 
     /**
-     * Null when no row was ever created. findStateOrDefault() cannot tell that apart from a row created but never
+     * Null when no row was ever created. readStateOrDefault() cannot tell that apart from a row created but never
      * written to: its unpersisted fallback reads all-false too.
      */
     private function findPersistedState(User $user, Entry $entry): ?EntryState
@@ -120,8 +120,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isHidden: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $target)->isHidden());
-        self::assertTrue($this->findStateOrDefault($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
     }
 
     public function testFavoriteDoesNotMirror(): void
@@ -131,8 +131,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isFavorite: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $target)->isFavorite());
-        self::assertFalse($this->findStateOrDefault($user, $sibling)->isFavorite());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isFavorite());
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isFavorite());
         self::assertNull($this->findPersistedState($user, $sibling));
     }
 
@@ -143,8 +143,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isKept: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $target)->isKept());
-        self::assertFalse($this->findStateOrDefault($user, $sibling)->isKept());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isKept());
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isKept());
         self::assertNull($this->findPersistedState($user, $sibling));
     }
 
@@ -198,8 +198,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isFavorite: false, isKept: false));
 
-        self::assertFalse($this->findStateOrDefault($user, $target)->isFavorite());
-        self::assertFalse($this->findStateOrDefault($user, $target)->isKept());
+        self::assertFalse($this->readStateOrDefault($user, $target)->isFavorite());
+        self::assertFalse($this->readStateOrDefault($user, $target)->isKept());
     }
 
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
@@ -209,10 +209,10 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->updater()->apply($user, $row, $this->change(isViewed: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $target)->isViewed());
-        self::assertTrue($this->findStateOrDefault($user, $sibling)->isViewed());
+        self::assertTrue($this->readStateOrDefault($user, $target)->isViewed());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isViewed());
         // A viewed row is always hidden, on the mirrored copy too.
-        self::assertTrue($this->findStateOrDefault($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
     }
 
     public function testReadReachesOnlyTheEntriesAtTheSameAddress(): void
@@ -233,7 +233,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->applyChange($user, $target, $this->change(isHidden: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
         self::assertNull($this->findPersistedState($user, $stranger));
     }
 
@@ -247,7 +247,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->applyChange($user, $lone, $this->change(isHidden: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $lone)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $lone)->isHidden());
         self::assertNull($this->findPersistedState($user, $sibling));
     }
 
@@ -258,7 +258,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->applyChange($user, $copies->localCopy, $this->change(isHidden: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $copies->allCopy)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
     }
 
     public function testToggleUnreadUnmarksTheCopy(): void
@@ -269,20 +269,20 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->applyChange($user, $copies->localCopy, $this->change(isHidden: false));
 
-        self::assertFalse($this->findStateOrDefault($user, $copies->localCopy)->isHidden());
+        self::assertFalse($this->readStateOrDefault($user, $copies->localCopy)->isHidden());
         self::assertNotNull($this->findPersistedState($user, $copies->allCopy));
-        self::assertFalse($this->findStateOrDefault($user, $copies->allCopy)->isHidden());
+        self::assertFalse($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
     }
 
     public function testArticleCopiesKeepUrlHashMirror(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
         $this->applyChange($user, $target, $this->change(isHidden: true));
-        self::assertTrue($this->findStateOrDefault($user, $sibling)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $sibling)->isHidden());
 
         $this->applyChange($user, $target, $this->change(isHidden: false));
 
-        self::assertFalse($this->findStateOrDefault($user, $sibling)->isHidden());
+        self::assertFalse($this->readStateOrDefault($user, $sibling)->isHidden());
     }
 
     public function testALinkedCopyReachesOnlyItsItemNotItsAddress(): void
@@ -317,8 +317,8 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         $this->applyChange($user, $linkedArticle, $this->change(isHidden: true));
 
-        self::assertTrue($this->findStateOrDefault($user, $copies->localCopy)->isHidden());
-        self::assertTrue($this->findStateOrDefault($user, $copies->allCopy)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $copies->localCopy)->isHidden());
+        self::assertTrue($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
         self::assertNull($this->findPersistedState($user, $unlinkedArticle));
     }
 
