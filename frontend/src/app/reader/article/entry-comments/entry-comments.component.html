@@ -1,7 +1,13 @@
 @let s = state();
 <section class="comments" [attr.aria-busy]="s.status === 'loading' ? 'true' : null">
   <header class="head">
-    <h2 class="title">{{ 'reader.comments.heading' | transloco }}</h2>
+    <h2 class="title">
+      {{ 'reader.comments.heading' | transloco }}
+      @if (total(); as total) {
+        <span class="total-separator" aria-hidden="true">·</span>&ngsp;
+        <span class="total">{{ total }}</span>
+      }
+    </h2>
     @if (s.status === 'ok') {
       <span class="age">{{
         'reader.comments.updated' | transloco: { when: when(s.fetchedAt) }

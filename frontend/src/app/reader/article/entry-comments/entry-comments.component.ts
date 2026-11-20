@@ -23,7 +23,7 @@ import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-ne
 import { PostActions } from '../composer/post-actions.service';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { buildItemKey } from '../../state/item-key';
-import { CommentsService } from './comments.service';
+import { CommentsService, commentTotal } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto, EntryCommentVoteDto } from '../../entry-comment';
@@ -38,7 +38,7 @@ import { SocialCountsRowComponent } from '../social-counts/social-counts-row.com
 
 type CommentsEntry = Pick<
   EntryDto,
-  'id' | 'canonicalItemId' | 'comments' | 'discussionUrl' | 'social'
+  'id' | 'canonicalItemId' | 'comments' | 'commentCount' | 'discussionUrl' | 'social'
 >;
 
 const DEEPEST_INDENT = 5;
@@ -78,6 +78,7 @@ export class EntryCommentsComponent {
   private readonly loadsOnOpen = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entry())());
+  protected readonly total = computed(() => commentTotal(this.entry(), this.state()));
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
   protected readonly socialNetwork = computed(() => this.entry().social?.network ?? null);
   readonly network = computed(() => {
