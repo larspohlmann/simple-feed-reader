@@ -12,7 +12,7 @@ use App\Service\Content\Comments\Model\LemmyPostModel;
 
 interface LemmyThreadReaderInterface
 {
-    public function readerFor(User $user): ?SocialAccount;
+    public function findReader(User $user): ?SocialAccount;
 
     /**
      * @return string the comment list the account's own instance gave for the post
@@ -20,5 +20,5 @@ interface LemmyThreadReaderInterface
      * @throws CommentsUnavailableException
      * @throws CommentsThrottledException
      */
-    public function threadAs(SocialAccount $account, LemmyPostModel $post): string;
+    public function fetchThread(SocialAccount $account, LemmyPostModel $post): string;
 }

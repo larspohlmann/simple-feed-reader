@@ -25,7 +25,7 @@ final class GuardedTranscriptSourceTest extends TestCase
     {
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient(new MockResponse("WEBVTT\n"))));
 
-        self::assertSame("WEBVTT\n", $source->bodyAt('https://cdn.test/ep.vtt', 10.0));
+        self::assertSame("WEBVTT\n", $source->fetchBody('https://cdn.test/ep.vtt', 10.0));
     }
 
     #[DataProvider('refusedAnswers')]
@@ -37,7 +37,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         ]))));
 
         $this->expectException(TranscriptUnusableException::class);
-        $source->bodyAt('https://cdn.test/ep.vtt', 10.0);
+        $source->fetchBody('https://cdn.test/ep.vtt', 10.0);
     }
 
     /** @return iterable<string, array{int}> */
@@ -56,7 +56,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         )));
 
         $this->expectException(TranscriptUnreachableException::class);
-        $source->bodyAt('https://cdn.test/ep.vtt', 10.0);
+        $source->fetchBody('https://cdn.test/ep.vtt', 10.0);
     }
 
     /** @return iterable<string, array{int}> */
@@ -78,7 +78,7 @@ final class GuardedTranscriptSourceTest extends TestCase
             return new MockResponse("WEBVTT\n");
         });
 
-        (new GuardedTranscriptSource($this->client($http)))->bodyAt('https://cdn.test/ep.vtt', 10.0);
+        (new GuardedTranscriptSource($this->client($http)))->fetchBody('https://cdn.test/ep.vtt', 10.0);
 
         self::assertSame(10.0, $seenOptions['timeout']);
         self::assertSame(10.0, $seenOptions['max_duration']);
@@ -93,7 +93,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         $body = str_pad("WEBVTT\n", ResponseSizeLimit::TranscriptFile->bytes(), ' ');
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient(new MockResponse($body))));
 
-        self::assertSame($body, $source->bodyAt('https://cdn.test/ep.vtt', 10.0));
+        self::assertSame($body, $source->fetchBody('https://cdn.test/ep.vtt', 10.0));
     }
 
     public function testAFileBeyondTheSizeLimitIsUnusable(): void
@@ -102,7 +102,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient(new MockResponse($body))));
 
         $this->expectException(TranscriptUnusableException::class);
-        $source->bodyAt('https://cdn.test/ep.vtt', 10.0);
+        $source->fetchBody('https://cdn.test/ep.vtt', 10.0);
     }
 
     public function testTheSizeLimitReadsOneMegabyte(): void
@@ -115,7 +115,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient()));
 
         $this->expectException(TranscriptUnusableException::class);
-        $source->bodyAt('http://127.0.0.1/ep.vtt', 10.0);
+        $source->fetchBody('http://127.0.0.1/ep.vtt', 10.0);
     }
 
     public function testAnUnresolvableHostIsUnreachable(): void
@@ -123,7 +123,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient()));
 
         $this->expectException(TranscriptUnreachableException::class);
-        $source->bodyAt('https://unknown.test/ep.vtt', 10.0);
+        $source->fetchBody('https://unknown.test/ep.vtt', 10.0);
     }
 
     public function testANetworkFailureIsUnreachable(): void
@@ -133,7 +133,7 @@ final class GuardedTranscriptSourceTest extends TestCase
         )));
 
         $this->expectException(TranscriptUnreachableException::class);
-        $source->bodyAt('https://cdn.test/ep.vtt', 10.0);
+        $source->fetchBody('https://cdn.test/ep.vtt', 10.0);
     }
 
     private function client(MockHttpClient $http): GuardedApiClient

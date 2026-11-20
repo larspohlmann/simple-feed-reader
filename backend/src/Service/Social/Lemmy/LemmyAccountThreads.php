@@ -37,12 +37,12 @@ final readonly class LemmyAccountThreads implements LemmyThreadReaderInterface
     ) {
     }
 
-    public function readerFor(User $user): ?SocialAccount
+    public function findReader(User $user): ?SocialAccount
     {
         return $this->socialAccounts->findReadyActingOnNetwork($user, SocialNetwork::Lemmy);
     }
 
-    public function threadAs(SocialAccount $account, LemmyPostModel $post): string
+    public function fetchThread(SocialAccount $account, LemmyPostModel $post): string
     {
         try {
             $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $account->getUser());

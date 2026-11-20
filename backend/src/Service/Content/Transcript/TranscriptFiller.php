@@ -26,7 +26,7 @@ final readonly class TranscriptFiller
     {
         try {
             $read = $this->reader->read(
-                $this->source->bodyAt($transcript->getUrl(), $budgetSeconds),
+                $this->source->fetchBody($transcript->getUrl(), $budgetSeconds),
                 $transcript->getFormat(),
             );
         } catch (TranscriptUnusableException $exception) {

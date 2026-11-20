@@ -26,7 +26,7 @@ final readonly class FeedDimensionStamper implements BodyCleaningStepInterface
         if ($element->hasAttribute('width') || $element->hasAttribute('height')) {
             return;
         }
-        $medium = $feedMedia->declaredMediumFor($element->getAttribute('src') ?? '');
+        $medium = $feedMedia->findDeclaredMedium($element->getAttribute('src') ?? '');
         if ($medium === null || $medium->width === null || $medium->height === null) {
             return;
         }

@@ -133,7 +133,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
             );
         }
 
-        $poster = $page->posterUrl ?? $this->playerPoster->near($holders[0]);
+        $poster = $page->posterUrl ?? $this->playerPoster->findNearbyPoster($holders[0]);
 
         return new MediaCandidateModel($kind, $best, $poster, null, $precedingText);
     }

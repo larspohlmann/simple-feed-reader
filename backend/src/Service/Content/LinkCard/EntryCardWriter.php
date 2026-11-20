@@ -54,7 +54,7 @@ final readonly class EntryCardWriter
         $html = (string) $entry->getText()->getContentHtml();
         $withoutQuotes = $html;
         foreach ($urls as $url) {
-            $withoutQuotes = QuoteLine::removedFrom($withoutQuotes, $url);
+            $withoutQuotes = QuoteLine::stripQuote($withoutQuotes, $url);
         }
         if ($withoutQuotes === $html) {
             return;

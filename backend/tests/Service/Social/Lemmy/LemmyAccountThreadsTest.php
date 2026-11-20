@@ -64,7 +64,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
 
     public function testTheReaderIsTheirReadyLemmyAccount(): void
     {
-        self::assertSame($this->account, $this->threads($this->federated())->readerFor($this->account->getUser()));
+        self::assertSame($this->account, $this->threads($this->federated())->findReader($this->account->getUser()));
     }
 
     public function testAnAccountThatNeedsReconnectingReadsNothing(): void
@@ -72,14 +72,14 @@ final class LemmyAccountThreadsTest extends DbTestCase
         $this->account->markNeedsReconnect();
         $this->entityManager->flush();
 
-        self::assertNull($this->threads($this->federated())->readerFor($this->account->getUser()));
+        self::assertNull($this->threads($this->federated())->findReader($this->account->getUser()));
     }
 
     public function testThreadsAreReadByTheLocalPostId(): void
     {
         $http = $this->federated();
 
-        $body = $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://feddit.example', 7));
+        $body = $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://feddit.example', 7));
 
         self::assertSame([self::FEDERATED_POST, self::RESOLVE, self::THREAD], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::LEMMY_JWT, $http->requests[2]['headers']);
@@ -96,7 +96,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         ));
 
         try {
-            $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
+            $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://lemmy.example', 990));
             self::fail('A refused session must not read as a thread.');
         } catch (CommentsUnavailableException) {
             self::assertSame(SocialAccountStatus::NeedsReconnect, $this->account->getStatus());
@@ -111,7 +111,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         ]));
 
         try {
-            $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
+            $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://lemmy.example', 990));
             self::fail('A 429 must not read as a thread.');
         } catch (CommentsThrottledException $exception) {
             self::assertSame(30, $exception->retryAfterSeconds);
@@ -126,7 +126,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         ));
 
         try {
-            $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
+            $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://lemmy.example', 990));
             self::fail('A 429 must not read as a thread.');
         } catch (CommentsThrottledException $exception) {
             self::assertSame(60, $exception->retryAfterSeconds);
@@ -141,7 +141,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         ));
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
+        $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://lemmy.example', 990));
     }
 
     public function testAnUnreachableInstanceIsUnavailable(): void
@@ -152,7 +152,7 @@ final class LemmyAccountThreadsTest extends DbTestCase
         ));
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->threads($http)->threadAs($this->account, new LemmyPostModel('https://lemmy.example', 990));
+        $this->threads($http)->fetchThread($this->account, new LemmyPostModel('https://lemmy.example', 990));
     }
 
     public function testAnExhaustedRepliesBudgetIsUnavailableAfterOneUnitPerFetch(): void
@@ -163,11 +163,11 @@ final class LemmyAccountThreadsTest extends DbTestCase
         $threads = $this->threads($http);
         $post = new LemmyPostModel('https://lemmy.example', 990);
         for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
-            $threads->threadAs($this->account, $post);
+            $threads->fetchThread($this->account, $post);
         }
         $this->expectException(CommentsUnavailableException::class);
 
-        $threads->threadAs($this->account, $post);
+        $threads->fetchThread($this->account, $post);
     }
 
     private function federated(): RoutedHttpClient

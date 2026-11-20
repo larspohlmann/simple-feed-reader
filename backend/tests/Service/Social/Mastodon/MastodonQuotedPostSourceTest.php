@@ -25,7 +25,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUS => self::answer()]);
 
-        $quote = $this->source($http)->quotedPostAt(self::ADDRESS);
+        $quote = $this->source($http)->fetchQuotedPost(self::ADDRESS);
 
         self::assertSame(['alice@mastodon.example', 'Quoted.'], [$quote->authorHandle, $quote->text]);
         self::assertSame([], preg_grep('/^Authorization:/i', $http->requests[0]['headers']));
@@ -35,7 +35,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUS => self::answer()]);
 
-        $quote = $this->source($http)->quotedPostAt('https://mastodon.example/users/alice/statuses/113');
+        $quote = $this->source($http)->fetchQuotedPost('https://mastodon.example/users/alice/statuses/113');
 
         self::assertSame(self::ADDRESS, $quote->url);
     }
@@ -48,7 +48,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
         ])]);
 
         $this->assertRefused(
-            fn () => $this->source($http)->quotedPostAt(self::ADDRESS),
+            fn () => $this->source($http)->fetchQuotedPost(self::ADDRESS),
             QuotedPostUnavailableException::class,
             'An instance that answers with another status gives no quote.',
         );
@@ -59,7 +59,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
         $http = new RoutedHttpClient([self::STATUS => self::answer(['account' => []])]);
 
         $this->assertRefused(
-            fn () => $this->source($http)->quotedPostAt(self::ADDRESS),
+            fn () => $this->source($http)->fetchQuotedPost(self::ADDRESS),
             QuotedPostUnavailableException::class,
             'A status without an author has nothing to show.',
         );
@@ -70,7 +70,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
         $http = new RoutedHttpClient([]);
 
         $this->assertRefused(
-            fn () => $this->source($http)->quotedPostAt('https://bsky.app/profile/a/post/b'),
+            fn () => $this->source($http)->fetchQuotedPost('https://bsky.app/profile/a/post/b'),
             QuotedPostUnavailableException::class,
             'A Bluesky address is no Mastodon status.',
         );
@@ -92,7 +92,7 @@ final class MastodonQuotedPostSourceTest extends TestCase
         $http = new RoutedHttpClient([self::STATUS => new MockResponse('{}', ['http_code' => $status])]);
 
         $this->assertRefused(
-            fn () => $this->source($http)->quotedPostAt(self::ADDRESS),
+            fn () => $this->source($http)->fetchQuotedPost(self::ADDRESS),
             QuotedPostUnavailableException::class,
             'A failed answer falls through to a link card.',
         );

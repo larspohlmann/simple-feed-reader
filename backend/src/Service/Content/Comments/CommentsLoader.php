@@ -30,7 +30,7 @@ final readonly class CommentsLoader
     /** @throws NoCommentsFeedException when no source serves the entry */
     public function load(User $user, Entry $entry): CommentsResultModel
     {
-        $request = new CommentsRequest($this->sourceFor($entry), $user, $entry);
+        $request = new CommentsRequest($this->requireSource($entry), $user, $entry);
         $cached = $this->cache->find($request->cacheKey);
 
         return null === $cached ? $this->fetched($request) : $this->cachedOrFetched($request, $cached);
@@ -39,12 +39,12 @@ final readonly class CommentsLoader
     /** As load(), but asks the source again whatever is cached. */
     public function refreshed(User $user, Entry $entry): CommentsResultModel
     {
-        return $this->fetched(new CommentsRequest($this->sourceFor($entry), $user, $entry));
+        return $this->fetched(new CommentsRequest($this->requireSource($entry), $user, $entry));
     }
 
     public function forget(User $user, Entry $entry): void
     {
-        $source = $this->sourceOrNull($entry);
+        $source = $this->findSource($entry);
         if (null !== $source) {
             $this->cache->forget(new CommentsRequest($source, $user, $entry)->cacheKey);
         }
@@ -75,12 +75,12 @@ final readonly class CommentsLoader
         }
     }
 
-    private function sourceFor(Entry $entry): CommentsSourceInterface
+    private function requireSource(Entry $entry): CommentsSourceInterface
     {
-        return $this->sourceOrNull($entry) ?? throw new NoCommentsFeedException('No comments source serves the entry.');
+        return $this->findSource($entry) ?? throw new NoCommentsFeedException('No comments source serves the entry.');
     }
 
-    private function sourceOrNull(Entry $entry): ?CommentsSourceInterface
+    private function findSource(Entry $entry): ?CommentsSourceInterface
     {
         foreach ($this->sources as $source) {
             if ($source->serves($entry)) {

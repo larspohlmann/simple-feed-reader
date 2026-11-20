@@ -36,7 +36,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             if ($this->furniture->holds($script)) {
                 continue;
             }
-            foreach ($this->declarationsIn(JsonLd::decode($script)) as $declaration) {
+            foreach ($this->collectDeclarations(JsonLd::decode($script)) as $declaration) {
                 $candidate = $this->firstPlayable($declaration, $page->blocks->before($script));
                 if ($candidate !== null) {
                     $found[$candidate->url] ??= $candidate;
@@ -55,13 +55,13 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
      *
      * @return list<array{urls: list<string>, poster: ?string}>
      */
-    private function declarationsIn(array $block): array
+    private function collectDeclarations(array $block): array
     {
         $declarations = [];
         foreach (JsonLd::walkNodes($block) as $node) {
-            $urls = $this->urlsIn($node);
+            $urls = $this->collectUrls($node);
             if ($urls !== []) {
-                $declarations[] = ['urls' => $urls, 'poster' => $this->thumbnailIn($node)];
+                $declarations[] = ['urls' => $urls, 'poster' => $this->readThumbnail($node)];
             }
         }
 
@@ -73,7 +73,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
      *
      * @return list<string>
      */
-    private function urlsIn(array $node): array
+    private function collectUrls(array $node): array
     {
         $urls = [];
         foreach (self::URL_KEYS as $key) {
@@ -86,7 +86,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     }
 
     /** @param array<mixed> $node */
-    private function thumbnailIn(array $node): ?string
+    private function readThumbnail(array $node): ?string
     {
         $thumbnail = $node['thumbnailUrl'] ?? null;
         if (\is_string($thumbnail)) {

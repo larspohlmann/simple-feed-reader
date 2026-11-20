@@ -23,7 +23,7 @@ final readonly class PaywallSignals
 
     public function isPreview(HTMLDocument $rawDocument, HTMLDocument $normalized): bool
     {
-        return match (SchemaOrgAccess::declaredIn($rawDocument)) {
+        return match (SchemaOrgAccess::detectAccess($rawDocument)) {
             AccessDeclaration::Paywalled => true,
             AccessDeclaration::Free => false,
             AccessDeclaration::Undeclared => $this->gatedInBody($normalized),
@@ -32,7 +32,7 @@ final readonly class PaywallSignals
 
     private function gatedInBody(HTMLDocument $normalized): bool
     {
-        return $this->blocks->foundOutsideFurnitureIn($normalized)
-            || $this->checkout->foundOutsideFurnitureIn($normalized);
+        return $this->blocks->hasMatchOutsideFurniture($normalized)
+            || $this->checkout->hasMatchOutsideFurniture($normalized);
     }
 }

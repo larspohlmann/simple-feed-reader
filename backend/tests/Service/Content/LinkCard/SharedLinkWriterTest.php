@@ -28,14 +28,14 @@ final class SharedLinkWriterTest extends DbTestCase
     {
         $writer = $this->writer();
 
-        $first = $writer->linkFor(self::card('https://example.com/a', 'First'), null);
-        $again = $writer->linkFor(self::card('https://example.com/a', 'Second'), FeedLanguage::French);
-        $tracked = $writer->linkFor(self::card('https://example.com/a?utm_source=x', 'Third'), null);
+        $first = $writer->ensureLink(self::card('https://example.com/a', 'First'), null);
+        $again = $writer->ensureLink(self::card('https://example.com/a', 'Second'), FeedLanguage::French);
+        $tracked = $writer->ensureLink(self::card('https://example.com/a?utm_source=x', 'Third'), null);
 
         self::assertSame($first->requireId(), $again->requireId());
         self::assertSame($first->requireId(), $tracked->requireId());
         $this->entityManager->clear();
-        $stored = $writer->linkFor(self::card('https://example.com/a', 'Fourth'), null);
+        $stored = $writer->ensureLink(self::card('https://example.com/a', 'Fourth'), null);
         self::assertSame('First', $stored->preview()->title);
         self::assertSame('https://example.com/a', $stored->preview()->url);
         self::assertNull($stored->getLanguage());
@@ -43,26 +43,29 @@ final class SharedLinkWriterTest extends DbTestCase
 
     public function testAShortLinkIsQueued(): void
     {
-        $link = $this->writer()->linkFor(self::card('https://n.pr/4kcyxuV', 'Short'), null);
+        $link = $this->writer()->ensureLink(self::card('https://n.pr/4kcyxuV', 'Short'), null);
 
         self::assertSame(LinkResolution::Pending, $this->resolutionOf($link->requireId()));
     }
 
     public function testAnArticleUrlIsNotQueued(): void
     {
-        $link = $this->writer()->linkFor(self::card('https://example.com/2026/11/some-story', 'Story'), null);
+        $link = $this->writer()->ensureLink(self::card('https://example.com/2026/11/some-story', 'Story'), null);
 
         self::assertNull($this->resolutionOf($link->requireId()));
     }
 
     public function testAKnownRowKeepsItsResolution(): void
     {
-        $link = $this->writer()->linkFor(self::card('https://n.pr/4kcyxuV', 'Short'), null);
+        $link = $this->writer()->ensureLink(self::card('https://n.pr/4kcyxuV', 'Short'), null);
         $this->entityManager->getConnection()->executeStatement(
             "UPDATE shared_link_resolution SET status = 'unchanged'",
         );
 
-        $this->writer()->linksFor([self::card('https://n.pr/4kcyxuV', 'Again'), self::card('https://n.pr/new', 'New')]);
+        $this->writer()->ensureLinks([
+            self::card('https://n.pr/4kcyxuV', 'Again'),
+            self::card('https://n.pr/new', 'New'),
+        ]);
 
         self::assertSame(LinkResolution::Unchanged, $this->resolutionOf($link->requireId()));
         self::assertSame(2, $this->rowsOf('shared_link_resolution'));
@@ -70,10 +73,10 @@ final class SharedLinkWriterTest extends DbTestCase
 
     public function testANewUrlIsStoredWithItsLanguage(): void
     {
-        $link = $this->writer()->linkFor(self::card('https://example.com/fr', 'Bonjour'), FeedLanguage::French);
+        $link = $this->writer()->ensureLink(self::card('https://example.com/fr', 'Bonjour'), FeedLanguage::French);
 
         $this->entityManager->clear();
-        $stored = $this->writer()->linkFor(self::card('https://example.com/fr', 'Other'), null);
+        $stored = $this->writer()->ensureLink(self::card('https://example.com/fr', 'Other'), null);
         self::assertSame($link->requireId(), $stored->requireId());
         self::assertSame(FeedLanguage::French, $stored->getLanguage());
         self::assertSame(LanguageSource::Stated, $stored->getLanguageSource());
@@ -83,14 +86,14 @@ final class SharedLinkWriterTest extends DbTestCase
     public function testAReuseClearsTheUnreferencedMark(): void
     {
         $writer = $this->writer();
-        $writer->linkFor(self::card('https://example.com/marked', 'Marked'), null);
-        $writer->idsFor([self::card('https://example.com/batch', 'Batch')]);
+        $writer->ensureLink(self::card('https://example.com/marked', 'Marked'), null);
+        $writer->ensureLinkIds([self::card('https://example.com/batch', 'Batch')]);
         $this->entityManager->getConnection()->executeStatement(
             "UPDATE shared_link SET unreferenced_since = '2026-11-01 10:00:00'",
         );
 
-        $writer->linkFor(self::card('https://example.com/marked', 'Again'), null);
-        $writer->idsFor([self::card('https://example.com/batch', 'Again')]);
+        $writer->ensureLink(self::card('https://example.com/marked', 'Again'), null);
+        $writer->ensureLinkIds([self::card('https://example.com/batch', 'Again')]);
 
         self::assertSame(
             [null, null],
@@ -100,7 +103,7 @@ final class SharedLinkWriterTest extends DbTestCase
 
     public function testABatchKeepsOneRowPerUrlAndItsStatedLanguages(): void
     {
-        $links = $this->writer()->linksFor(
+        $links = $this->writer()->ensureLinks(
             [
                 self::card('https://example.com/a', 'A'),
                 self::card('https://example.com/a?utm_source=x', 'A again'),
@@ -122,12 +125,16 @@ final class SharedLinkWriterTest extends DbTestCase
     public function testKnownLinksAreFoundByUrlAndClaimed(): void
     {
         $writer = $this->writer();
-        $writer->linkFor(self::card('https://example.com/known', 'Known'), null);
+        $writer->ensureLink(self::card('https://example.com/known', 'Known'), null);
         $this->entityManager->getConnection()->executeStatement(
             "UPDATE shared_link SET unreferenced_since = '2026-11-01 10:00:00'",
         );
 
-        $known = $writer->knownFor(['https://example.com/known?utm_source=x', 'https://example.com/new', '/relative']);
+        $known = $writer->claimKnownLinks([
+            'https://example.com/known?utm_source=x',
+            'https://example.com/new',
+            '/relative',
+        ]);
 
         self::assertSame(['https://example.com/known?utm_source=x'], array_keys($known));
         self::assertSame(1, $this->storedRows());
@@ -137,7 +144,7 @@ final class SharedLinkWriterTest extends DbTestCase
     public function testAnExistingLinkIsReadWithoutCreatingOne(): void
     {
         $writer = $this->writer();
-        $writer->linkFor(self::card('https://example.com/known', 'Known'), null);
+        $writer->ensureLink(self::card('https://example.com/known', 'Known'), null);
 
         self::assertSame('Known', $writer->existing('https://example.com/known?utm_source=x')?->preview()->title);
         self::assertNull($writer->existing('https://example.com/new'));
@@ -149,7 +156,7 @@ final class SharedLinkWriterTest extends DbTestCase
     {
         $this->expectException(UnhashableLinkException::class);
 
-        $this->writer()->linkFor(self::card('/relative', 'Relative'), null);
+        $this->writer()->ensureLink(self::card('/relative', 'Relative'), null);
     }
 
     public function testARowThatCannotBeReadBackNamesThatCause(): void
@@ -163,22 +170,22 @@ final class SharedLinkWriterTest extends DbTestCase
         $this->expectException(SharedLinkNotReadBackException::class);
         $this->expectExceptionMessage('https://example.com/gone');
 
-        $this->writer()->linkFor(self::card('https://example.com/gone', 'Gone'), null);
+        $this->writer()->ensureLink(self::card('https://example.com/gone', 'Gone'), null);
     }
 
     public function testABatchWithAUrlThatDoesNotHashIsRefused(): void
     {
         $this->expectException(UnhashableLinkException::class);
 
-        $this->writer()->idsFor([self::card('/relative', 'Relative')]);
+        $this->writer()->ensureLinkIds([self::card('/relative', 'Relative')]);
     }
 
     public function testIdsForMergesABatch(): void
     {
         $writer = $this->writer();
-        $existing = $writer->linkFor(self::card('https://example.com/known', 'Known'), null)->requireId();
+        $existing = $writer->ensureLink(self::card('https://example.com/known', 'Known'), null)->requireId();
 
-        $ids = $writer->idsFor([
+        $ids = $writer->ensureLinkIds([
             self::card('https://example.com/known?utm_source=x', 'Known again'),
             self::card('https://example.com/new', 'New'),
             self::card('https://example.com/new#part', 'New again'),
@@ -189,14 +196,17 @@ final class SharedLinkWriterTest extends DbTestCase
         self::assertNotSame($existing, $ids['https://example.com/new']);
         self::assertSame(2, $this->storedRows());
         $this->entityManager->clear();
-        $known = $writer->linkFor(self::card('https://example.com/known', 'X'), null);
+        $known = $writer->ensureLink(self::card('https://example.com/known', 'X'), null);
         self::assertSame('Known', $known->preview()->title);
-        self::assertSame('New', $writer->linkFor(self::card('https://example.com/new', 'X'), null)->preview()->title);
+        self::assertSame(
+            'New',
+            $writer->ensureLink(self::card('https://example.com/new', 'X'), null)->preview()->title,
+        );
     }
 
     public function testIdsForNoCardsIsEmpty(): void
     {
-        self::assertSame([], $this->writer()->idsFor([]));
+        self::assertSame([], $this->writer()->ensureLinkIds([]));
     }
 
     public function testIdsForGuessesTheLanguageOfALongCard(): void
@@ -205,9 +215,9 @@ final class SharedLinkWriterTest extends DbTestCase
             . ' und einem kleinen Regal mit Reiseführern, die Besucher für eine Woche ausleihen dürfen.';
         $card = new LinkCardContent('https://example.com/de', 'Lesesaal', $description, null, 'example.com');
 
-        $this->writer()->idsFor([$card]);
+        $this->writer()->ensureLinkIds([$card]);
 
-        $stored = $this->writer()->linkFor($card, null);
+        $stored = $this->writer()->ensureLink($card, null);
         self::assertSame(FeedLanguage::German, $stored->getLanguage());
         self::assertSame(LanguageSource::Guessed, $stored->getLanguageSource());
     }
@@ -215,11 +225,11 @@ final class SharedLinkWriterTest extends DbTestCase
     public function testAReusedUrlBurnsNoId(): void
     {
         $writer = $this->writer();
-        $first = $writer->linkFor(self::card('https://example.com/a', 'A'), null)->requireId();
-        $writer->linkFor(self::card('https://example.com/a', 'A again'), null);
-        $writer->idsFor([self::card('https://example.com/a', 'A in a batch')]);
+        $first = $writer->ensureLink(self::card('https://example.com/a', 'A'), null)->requireId();
+        $writer->ensureLink(self::card('https://example.com/a', 'A again'), null);
+        $writer->ensureLinkIds([self::card('https://example.com/a', 'A in a batch')]);
 
-        $next = $writer->linkFor(self::card('https://example.com/b', 'B'), null)->requireId();
+        $next = $writer->ensureLink(self::card('https://example.com/b', 'B'), null)->requireId();
 
         self::assertSame($first + 1, $next);
     }

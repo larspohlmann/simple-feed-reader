@@ -87,14 +87,14 @@ final class PaywallBlocksTest extends TestCase
             . '<article><p>The full article, served in one piece.</p></article></body></html>',
         );
 
-        self::assertFalse($this->blocks()->foundOutsideFurnitureIn($document));
+        self::assertFalse($this->blocks()->hasMatchOutsideFurniture($document));
     }
 
     private function hasGate(string $body): bool
     {
         $document = $this->document('<html><body>' . $body . '</body></html>');
 
-        return $this->blocks()->foundOutsideFurnitureIn($document);
+        return $this->blocks()->hasMatchOutsideFurniture($document);
     }
 
     private function blocks(): PaywallBlocks

@@ -62,7 +62,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
         $this->transcriptOf($entryId)->fail();
         $this->flush();
         $source = $this->createMock(TranscriptSourceInterface::class);
-        $source->expects($this->never())->method('bodyAt');
+        $source->expects($this->never())->method('fetchBody');
         self::getContainer()->set(TranscriptSourceInterface::class, $source);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);

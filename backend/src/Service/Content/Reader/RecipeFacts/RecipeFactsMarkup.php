@@ -15,7 +15,7 @@ use Dom\HTMLDocument;
 final readonly class RecipeFactsMarkup
 {
     /** @param list<RecipeFactModel> $facts */
-    public function figureFor(HTMLDocument $document, array $facts): Element
+    public function buildFigure(HTMLDocument $document, array $facts): Element
     {
         $figure = $document->createElement('figure');
         $figure->setAttribute('class', 'reader-recipe-facts');

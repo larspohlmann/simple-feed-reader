@@ -28,7 +28,7 @@ final readonly class PhraseMarkers
     {
         $markers = [];
         foreach ($this->phrases->families() as $family) {
-            $marker = $this->firstMatch($family, $this->scopeFor($family, $body));
+            $marker = $this->firstMatch($family, $this->collectBlocksInScope($family, $body));
             if ($marker !== null) {
                 $markers[] = $marker;
             }
@@ -38,7 +38,7 @@ final readonly class PhraseMarkers
     }
 
     /** @return list<BodyBlockModel> */
-    private function scopeFor(PhraseFamilyModel $family, ExtractedBodyModel $body): array
+    private function collectBlocksInScope(PhraseFamilyModel $family, ExtractedBodyModel $body): array
     {
         return match ($family->scope) {
             PhraseScope::AboveTheArticle => $this->leadingRegion->collectLeadingBlocks($body),
@@ -53,7 +53,7 @@ final readonly class PhraseMarkers
             if ($block->isInPageAffordance()) {
                 continue;
             }
-            $phrase = $family->matchIn(mb_strtolower($block->text));
+            $phrase = $family->findPhrase(mb_strtolower($block->text));
             if ($phrase === null) {
                 continue;
             }

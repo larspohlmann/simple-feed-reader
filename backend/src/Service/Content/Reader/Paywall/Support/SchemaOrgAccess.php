@@ -17,7 +17,7 @@ final readonly class SchemaOrgAccess
 {
     private const string KEY = 'isAccessibleForFree';
 
-    public static function declaredIn(HTMLDocument $rawDocument): AccessDeclaration
+    public static function detectAccess(HTMLDocument $rawDocument): AccessDeclaration
     {
         $sawDeclaration = false;
         foreach (JsonLd::findScripts($rawDocument) as $script) {

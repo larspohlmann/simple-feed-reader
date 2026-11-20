@@ -41,7 +41,7 @@ final class ScriptedTranscriptSource implements TranscriptSourceInterface
         return $this;
     }
 
-    public function bodyAt(string $url, float $budgetSeconds): string
+    public function fetchBody(string $url, float $budgetSeconds): string
     {
         $this->fetchedUrls[] = $url;
         $this->budgets[] = $budgetSeconds;

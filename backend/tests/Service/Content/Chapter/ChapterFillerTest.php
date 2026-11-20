@@ -22,7 +22,7 @@ final class ChapterFillerTest extends TestCase
     {
         $entry = self::episode('https://cdn.test/ch.json');
         $files = $this->createMock(ChapterFileSourceInterface::class);
-        $files->expects($this->once())->method('chaptersAt')->with('https://cdn.test/ch.json')
+        $files->expects($this->once())->method('fetchChapters')->with('https://cdn.test/ch.json')
             ->willReturn([new EntryChapter(0, 'A'), new EntryChapter(60, 'B')]);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
@@ -36,7 +36,7 @@ final class ChapterFillerTest extends TestCase
     public function testAnEntryWithNothingPendingFetchesNothing(): void
     {
         $files = $this->createMock(ChapterFileSourceInterface::class);
-        $files->expects($this->never())->method('chaptersAt');
+        $files->expects($this->never())->method('fetchChapters');
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->never())->method('flush');
 
@@ -47,7 +47,7 @@ final class ChapterFillerTest extends TestCase
     {
         $entry = self::episode('https://cdn.test/ch.json');
         $files = $this->createStub(ChapterFileSourceInterface::class);
-        $files->method('chaptersAt')->willThrowException(
+        $files->method('fetchChapters')->willThrowException(
             ChapterFileUnreachableException::from('https://cdn.test/ch.json', new FeedUnreachableException('reset')),
         );
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -65,7 +65,7 @@ final class ChapterFillerTest extends TestCase
             new FeedUnreachableException('reset'),
         );
         $files = $this->createStub(ChapterFileSourceInterface::class);
-        $files->method('chaptersAt')->willThrowException($cause);
+        $files->method('fetchChapters')->willThrowException($cause);
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())->method('info')->with(
             $this->anything(),

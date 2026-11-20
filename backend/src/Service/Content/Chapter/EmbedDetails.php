@@ -35,7 +35,7 @@ final readonly class EmbedDetails
             return $cached;
         }
 
-        $details = self::detailsFrom($this->sourceFor($embed->provider)->fetchDescription($embed));
+        $details = self::detailsFrom($this->selectSource($embed->provider)->fetchDescription($embed));
         $this->cache->remember($embed, $details);
 
         return $details;
@@ -46,20 +46,20 @@ final readonly class EmbedDetails
         return new EmbedDetailsModel(
             $described->title,
             $described->durationSeconds,
-            ChapterSequence::before(self::chaptersIn($described->description), $described->durationSeconds),
+            ChapterSequence::before(self::parseChapters($described->description), $described->durationSeconds),
             $described->artworkUrl,
         );
     }
 
     /** @return list<EntryChapter> */
-    private static function chaptersIn(string $description): array
+    private static function parseChapters(string $description): array
     {
         $html = LinkedPlainText::asHtml($description);
 
         return $html === null ? [] : DescriptionChapters::in($html)->chapters;
     }
 
-    private function sourceFor(ChapteredEmbed $provider): EmbedDetailsSourceInterface
+    private function selectSource(ChapteredEmbed $provider): EmbedDetailsSourceInterface
     {
         $source = $this->sources->get($provider->value);
         \assert($source instanceof EmbedDetailsSourceInterface);

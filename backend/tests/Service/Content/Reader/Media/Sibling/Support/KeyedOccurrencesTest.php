@@ -56,7 +56,7 @@ final class KeyedOccurrencesTest extends TestCase
         $second = strrpos($html, 'clip-77');
         self::assertIsInt($second);
 
-        $occurrence = KeyedOccurrences::at($html, 'clip-77', $second);
+        $occurrence = KeyedOccurrences::findOccurrenceAt($html, 'clip-77', $second);
 
         self::assertNotNull($occurrence);
         self::assertSame('x', $occurrence->key);

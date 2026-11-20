@@ -14,5 +14,5 @@ interface ChapterFileSourceInterface
      *
      * @throws ChapterFileUnreachableException
      */
-    public function chaptersAt(string $url): array;
+    public function fetchChapters(string $url): array;
 }

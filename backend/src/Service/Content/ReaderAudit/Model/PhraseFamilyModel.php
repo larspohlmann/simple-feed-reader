@@ -22,7 +22,7 @@ final readonly class PhraseFamilyModel
     }
 
     /** The first phrase this block contains, or null when it holds none. */
-    public function matchIn(string $lowerCasedBlock): ?string
+    public function findPhrase(string $lowerCasedBlock): ?string
     {
         if (mb_strlen($lowerCasedBlock) > $this->maxBlockChars) {
             return null;

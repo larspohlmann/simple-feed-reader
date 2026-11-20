@@ -13,5 +13,5 @@ interface TranscriptSourceInterface
      * @throws TranscriptUnusableException
      * @throws TranscriptUnreachableException
      */
-    public function bodyAt(string $url, float $budgetSeconds): string;
+    public function fetchBody(string $url, float $budgetSeconds): string;
 }

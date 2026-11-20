@@ -96,7 +96,7 @@ final class PhraseMarkersTest extends TestCase
         // finds. What matters is that no listed wording goes unrecognised.
         foreach ($this->phrases->families() as $family) {
             foreach ($family->phrases as $phrase) {
-                self::assertNotNull($family->matchIn($phrase), $family->code . ' / ' . $phrase);
+                self::assertNotNull($family->findPhrase($phrase), $family->code . ' / ' . $phrase);
             }
         }
     }
@@ -110,8 +110,8 @@ final class PhraseMarkersTest extends TestCase
             $atLimit = str_pad($phrase, $family->maxBlockChars, 'x');
             $overLimit = str_pad($phrase, $family->maxBlockChars + 1, 'x');
 
-            self::assertNotNull($family->matchIn($atLimit), $family->code);
-            self::assertNull($family->matchIn($overLimit), $family->code);
+            self::assertNotNull($family->findPhrase($atLimit), $family->code);
+            self::assertNull($family->findPhrase($overLimit), $family->code);
         }
     }
 

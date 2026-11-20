@@ -59,7 +59,7 @@ final class EntryChaptersControllerTest extends ApiTestCase
         [$headers, $user] = $this->bearerAndUser('chapters-file@example.com');
         $entryId = $this->seedEntry($user, 'https://pod.test/ep1', '<p>Notes</p>', 'https://pod.test/ch.json');
         $files = $this->createMock(ChapterFileSourceInterface::class);
-        $files->expects($this->once())->method('chaptersAt')
+        $files->expects($this->once())->method('fetchChapters')
             ->willReturn([new EntryChapter(0, 'Intro'), new EntryChapter(60, 'Talk')]);
         self::getContainer()->set(ChapterFileSourceInterface::class, $files);
 

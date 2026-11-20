@@ -16,7 +16,7 @@ final class QuoteLine
 {
     private const string MARKER = 'RE:';
 
-    public static function removedFrom(string $html, string $url): string
+    public static function stripQuote(string $html, string $url): string
     {
         $document = HtmlDocumentParser::parseFragment($html);
         $target = TrackingFreeUrl::stripTracking($url);
@@ -38,13 +38,13 @@ final class QuoteLine
     }
 
     /** The quoted link without its tracking parameters, as the share plans compare it. */
-    public static function trackingFreeTargetIn(string $html): ?string
+    public static function parseTrackingFreeTarget(string $html): ?string
     {
-        return TrackingFreeUrl::stripTrackingIfSet(self::targetIn($html));
+        return TrackingFreeUrl::stripTrackingIfSet(self::parseTarget($html));
     }
 
     /** The link the body's first "RE:" paragraph quotes; null when it quotes nothing. */
-    public static function targetIn(string $html): ?string
+    public static function parseTarget(string $html): ?string
     {
         $document = HtmlDocumentParser::parseFragment($html);
         foreach ($document->querySelectorAll('a[href]') as $anchor) {

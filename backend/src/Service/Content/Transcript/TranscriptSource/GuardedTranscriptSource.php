@@ -21,7 +21,7 @@ final readonly class GuardedTranscriptSource implements TranscriptSourceInterfac
     {
     }
 
-    public function bodyAt(string $url, float $budgetSeconds): string
+    public function fetchBody(string $url, float $budgetSeconds): string
     {
         try {
             $response = $this->api->sendWithin(

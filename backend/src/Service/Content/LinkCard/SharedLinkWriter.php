@@ -29,9 +29,9 @@ final readonly class SharedLinkWriter
     ) {
     }
 
-    public function linkFor(LinkCardContent $card, ?FeedLanguage $statedLanguage): SharedLink
+    public function ensureLink(LinkCardContent $card, ?FeedLanguage $statedLanguage): SharedLink
     {
-        return $this->linksFor([$card], $statedLanguage === null ? [] : [$card->url => $statedLanguage])[$card->url];
+        return $this->ensureLinks([$card], $statedLanguage === null ? [] : [$card->url => $statedLanguage])[$card->url];
     }
 
     /**
@@ -42,7 +42,7 @@ final readonly class SharedLinkWriter
      *
      * @return array<string, SharedLink> by card URL
      */
-    public function linksFor(array $cards, array $statedByUrl = []): array
+    public function ensureLinks(array $cards, array $statedByUrl = []): array
     {
         $hashesByUrl = $this->hashesByUrl(array_map(static fn (LinkCardContent $card): string => $card->url, $cards));
         $links = $this->sharedLinks->claimByUrlHashes(array_values($hashesByUrl));
@@ -72,9 +72,9 @@ final readonly class SharedLinkWriter
      *
      * @return array<string, int> the shared link id by card URL
      */
-    public function idsFor(array $cards): array
+    public function ensureLinkIds(array $cards): array
     {
-        return array_map(static fn (SharedLink $link): int => $link->requireId(), $this->linksFor($cards));
+        return array_map(static fn (SharedLink $link): int => $link->requireId(), $this->ensureLinks($cards));
     }
 
     /**
@@ -84,7 +84,7 @@ final readonly class SharedLinkWriter
      *
      * @return array<string, SharedLink> by URL
      */
-    public function knownFor(array $urls): array
+    public function claimKnownLinks(array $urls): array
     {
         $hashesByUrl = $this->hashesByUrl($urls);
         $links = $this->sharedLinks->claimByUrlHashes(array_values($hashesByUrl));

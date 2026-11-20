@@ -14,14 +14,14 @@ final readonly class PlayerPoster
 {
     private const int ANCESTOR_LEVELS = 3;
 
-    public function near(Element $holder): ?string
+    public function findNearbyPoster(Element $holder): ?string
     {
         $scope = $holder;
         for ($level = 0; $level <= self::ANCESTOR_LEVELS; $level++) {
             if (!$scope instanceof Element || $scope->localName === 'body') {
                 return null;
             }
-            $poster = self::firstImageIn($scope);
+            $poster = self::findFirstImage($scope);
             if ($poster !== null) {
                 return $poster;
             }
@@ -31,7 +31,7 @@ final readonly class PlayerPoster
         return null;
     }
 
-    private static function firstImageIn(Element $scope): ?string
+    private static function findFirstImage(Element $scope): ?string
     {
         foreach ($scope->querySelectorAll('img[src]') as $image) {
             $source = $image->getAttribute('src') ?? '';

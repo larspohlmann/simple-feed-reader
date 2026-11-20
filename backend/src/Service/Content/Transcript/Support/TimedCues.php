@@ -43,7 +43,7 @@ final class TimedCues
         foreach ($lines as $index => $line) {
             $start = self::parseStart($line);
             if ($start !== null) {
-                return self::cueAt($start, \array_slice($lines, $index + 1));
+                return self::parseCueText($start, \array_slice($lines, $index + 1));
             }
         }
 
@@ -60,7 +60,7 @@ final class TimedCues
     }
 
     /** @param list<string> $textLines */
-    private static function cueAt(int $start, array $textLines): ?TranscriptCueModel
+    private static function parseCueText(int $start, array $textLines): ?TranscriptCueModel
     {
         $raw = trim(implode(' ', $textLines));
         $voice = preg_match(self::VOICE, $raw, $match) === 1 ? trim($match[1]) : '';

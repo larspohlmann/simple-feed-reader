@@ -16,7 +16,7 @@ use Dom\HTMLDocument;
  */
 final readonly class SlideshowMarkup
 {
-    public function figureFor(HTMLDocument $document, SlideshowModel $slideshow): Element
+    public function buildFigure(HTMLDocument $document, SlideshowModel $slideshow): Element
     {
         $figure = $document->createElement('figure');
         $figure->setAttribute('class', 'reader-slideshow');

@@ -22,7 +22,7 @@ final readonly class PaywallBlocks
     {
     }
 
-    public function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    public function hasMatchOutsideFurniture(HTMLDocument $document): bool
     {
         return $this->outsideFurniture->holdsMatchFor($document, self::paywallClassQuery());
     }

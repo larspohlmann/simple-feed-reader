@@ -26,7 +26,7 @@ final class PlayerPosterTest extends TestCase
     {
         $holder = $this->holder('<div data-v="x"><img src="https://x.test/still.jpg"></div>');
 
-        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->near($holder));
+        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->findNearbyPoster($holder));
     }
 
     /** tagesschau: the still sits in the player wrapper, one level above the element holding the URL. */
@@ -36,7 +36,7 @@ final class PlayerPosterTest extends TestCase
             '<div class="wrapper"><picture><img src="https://x.test/still.jpg"></picture><div data-v="x"></div></div>',
         );
 
-        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->near($holder));
+        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->findNearbyPoster($holder));
     }
 
     public function testReachesThreeLevelsUp(): void
@@ -45,7 +45,7 @@ final class PlayerPosterTest extends TestCase
             '<section><img src="https://x.test/still.jpg"><div><div><div data-v="x"></div></div></div></section>',
         );
 
-        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->near($holder));
+        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->findNearbyPoster($holder));
     }
 
     public function testDoesNotReachAFourthLevel(): void
@@ -55,7 +55,7 @@ final class PlayerPosterTest extends TestCase
             . '<div data-v="x"></div></div></div></div></section>',
         );
 
-        self::assertNull((new PlayerPoster())->near($holder));
+        self::assertNull((new PlayerPoster())->findNearbyPoster($holder));
     }
 
     /** A shallow holder must not inherit the page's first picture, typically the logo. */
@@ -63,7 +63,7 @@ final class PlayerPosterTest extends TestCase
     {
         $holder = $this->holder('<img src="https://x.test/logo.svg"><div data-v="x"></div>');
 
-        self::assertNull((new PlayerPoster())->near($holder));
+        self::assertNull((new PlayerPoster())->findNearbyPoster($holder));
     }
 
     public function testSkipsANonHttpsSource(): void
@@ -73,13 +73,13 @@ final class PlayerPosterTest extends TestCase
             . '<img src="https://x.test/still.jpg"></div>',
         );
 
-        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->near($holder));
+        self::assertSame('https://x.test/still.jpg', (new PlayerPoster())->findNearbyPoster($holder));
     }
 
     public function testNullWhenThereIsNoImage(): void
     {
         $holder = $this->holder('<div><div data-v="x"><p>text</p></div></div>');
 
-        self::assertNull((new PlayerPoster())->near($holder));
+        self::assertNull((new PlayerPoster())->findNearbyPoster($holder));
     }
 }

@@ -13,6 +13,6 @@ trait SignsReaderUrls
         $signature = self::getContainer()->get(ReaderUrlSignature::class);
         self::assertInstanceOf(ReaderUrlSignature::class, $signature);
 
-        return $signature->tokenFor($url);
+        return $signature->computeToken($url);
     }
 }

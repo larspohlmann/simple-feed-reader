@@ -29,25 +29,25 @@ final readonly class ShareTargetReader
     }
 
     /** @param list<LinkCardContent> $stored */
-    public function cardsFor(Entry $entry, array $stored, ShareFetchPlanModel $plan): EntryCardsModel
+    public function findEntryCards(Entry $entry, array $stored, ShareFetchPlanModel $plan): EntryCardsModel
     {
-        $quoted = $this->quotedTargetAmong((string) $entry->getText()->getContentHtml(), $plan->urls);
+        $quoted = $this->findQuotedTarget((string) $entry->getText()->getContentHtml(), $plan->urls);
         $pageUrls = $quoted === null
             ? $plan->urls
             : array_values(array_filter($plan->urls, static fn (string $url): bool => $url !== $quoted->address));
 
-        return new EntryCardsModel($stored, $this->pageCardsFor($pageUrls, $plan), $quoted);
+        return new EntryCardsModel($stored, $this->findPageCards($pageUrls, $plan), $quoted);
     }
 
     /** @param list<string> $uncardedUrls */
-    private function quotedTargetAmong(string $html, array $uncardedUrls): ?QuotedTargetModel
+    private function findQuotedTarget(string $html, array $uncardedUrls): ?QuotedTargetModel
     {
-        $target = QuoteLine::trackingFreeTargetIn($html);
+        $target = QuoteLine::parseTrackingFreeTarget($html);
         if ($target === null || !\in_array($target, $uncardedUrls, true)) {
             return null;
         }
         try {
-            return new QuotedTargetModel($target, $this->quotedPosts->quotedPostAt($target));
+            return new QuotedTargetModel($target, $this->quotedPosts->fetchQuotedPost($target));
         } catch (QuotedPostUnavailableException $exception) {
             $this->logger->info('No quoted post at {url}', ['url' => $target, 'exception' => $exception::class]);
 
@@ -60,12 +60,12 @@ final readonly class ShareTargetReader
      *
      * @return list<PageCardModel>
      */
-    private function pageCardsFor(array $uncardedUrls, ShareFetchPlanModel $plan): array
+    private function findPageCards(array $uncardedUrls, ShareFetchPlanModel $plan): array
     {
         $pageCards = [];
         foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $pageCards[] = $this->pageCardAt($uncardedUrl, $plan);
+                $pageCards[] = $this->resolvePageCard($uncardedUrl, $plan);
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',
@@ -78,14 +78,14 @@ final readonly class ShareTargetReader
     }
 
     /** @throws PageFetchException */
-    private function pageCardAt(string $url, ShareFetchPlanModel $plan): PageCardModel
+    private function resolvePageCard(string $url, ShareFetchPlanModel $plan): PageCardModel
     {
         if (isset($plan->known[$url])) {
             return PageCardModel::known($plan->known[$url]);
         }
 
         return isset($plan->postedForms[$url])
-            ? $this->postedUrls->cardAt($url, $plan->postedForms[$url])
+            ? $this->postedUrls->resolveCard($url, $plan->postedForms[$url])
             : $this->pageCards->read($url);
     }
 }

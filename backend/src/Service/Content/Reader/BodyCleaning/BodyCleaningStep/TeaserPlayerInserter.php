@@ -95,7 +95,7 @@ final readonly class TeaserPlayerInserter implements BodyCleaningStepInterface
     private function replace(HTMLDocument $document, Element $image, TeaserPlayerModel $teaser): void
     {
         $target = $this->orphanWrapper($image) ?? $image;
-        $target->parentNode?->replaceChild($this->markup->figureFor($document, $teaser), $target);
+        $target->parentNode?->replaceChild($this->markup->buildFigure($document, $teaser), $target);
     }
 
     /** The <p> a thumbnail sits alone in goes with it, so no empty paragraph is left behind. */

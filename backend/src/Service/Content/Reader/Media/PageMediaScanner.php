@@ -54,7 +54,7 @@ final readonly class PageMediaScanner
     {
         return array_map(
             static fn (MediaCandidateModel $candidate): MediaCandidateModel => $candidate->withMimeType(
-                $feedMedia->declaredAttachmentFor($candidate->url)?->mimeType,
+                $feedMedia->findDeclaredAttachment($candidate->url)?->mimeType,
             ),
             $candidates,
         );

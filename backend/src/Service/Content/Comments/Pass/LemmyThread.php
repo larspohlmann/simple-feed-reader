@@ -73,7 +73,7 @@ final readonly class LemmyThread
     {
         $comments = [];
         foreach ($nodes as $node) {
-            $comment = $this->commentOrNull($node, $depth);
+            $comment = $this->parseComment($node, $depth);
             if (null !== $comment) {
                 $comments[] = $comment;
             }
@@ -85,7 +85,7 @@ final readonly class LemmyThread
         return $comments;
     }
 
-    private function commentOrNull(JsonNodeModel $node, int $depth): ?EntryCommentModel
+    private function parseComment(JsonNodeModel $node, int $depth): ?EntryCommentModel
     {
         $comment = $node->node('comment');
         if ($comment->isTrue('removed') || $comment->isTrue('deleted')) {

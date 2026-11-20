@@ -39,7 +39,7 @@ final readonly class SubstackThread
     {
         $comments = [];
         foreach ($nodes as $node) {
-            $comment = $this->commentOrNull($node, $depth);
+            $comment = $this->parseComment($node, $depth);
             if (null !== $comment) {
                 $comments[] = $comment;
             }
@@ -50,7 +50,7 @@ final readonly class SubstackThread
         return $comments;
     }
 
-    private function commentOrNull(JsonNodeModel $node, int $depth): ?EntryCommentModel
+    private function parseComment(JsonNodeModel $node, int $depth): ?EntryCommentModel
     {
         $id = $node->int('id');
         $html = LinkedPlainText::asHtml($node->text('body') ?? '');
