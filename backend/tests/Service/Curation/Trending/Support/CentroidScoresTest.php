@@ -27,7 +27,7 @@ final class CentroidScoresTest extends TestCase
         $this->add($headlines, self::SECOND, 'Hafenstreik Hamburg');
         $this->add($headlines, self::THIRD, 'Hafenstreik Container');
 
-        $scores = CentroidScores::of($headlines, [self::FIRST, self::SECOND, self::THIRD]);
+        $scores = CentroidScores::computeScores($headlines, [self::FIRST, self::SECOND, self::THIRD]);
 
         self::assertGreaterThan($scores[self::SECOND], $scores[self::FIRST]);
         self::assertGreaterThan($scores[self::THIRD], $scores[self::FIRST]);

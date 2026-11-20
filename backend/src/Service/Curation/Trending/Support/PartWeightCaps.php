@@ -19,8 +19,8 @@ final class PartWeightCaps
     {
         foreach ($parts as $earlierEntryId => $partsOfPair) {
             $shared[$earlierEntryId] = ($shared[$earlierEntryId] ?? 0.0) + (\count($partsOfPair) === 1
-                ? self::cappedWeightOfOne($partsOfPair[0], $rarityOf)
-                : self::cappedWeightOf($partsOfPair, $rarityOf));
+                ? self::computeOneCappedWeight($partsOfPair[0], $rarityOf)
+                : self::computeCappedWeight($partsOfPair, $rarityOf));
         }
 
         return $shared;
@@ -30,7 +30,7 @@ final class PartWeightCaps
      * @param array{float, array<int, float>} $part
      * @param \Closure(int): float $rarityOf
      */
-    private static function cappedWeightOfOne(array $part, \Closure $rarityOf): float
+    private static function computeOneCappedWeight(array $part, \Closure $rarityOf): float
     {
         [$weight, $compounds] = $part;
         foreach ($compounds as $compoundStemId => $placeWeight) {
@@ -46,7 +46,7 @@ final class PartWeightCaps
      * @param list<array{float, array<int, float>}> $parts
      * @param \Closure(int): float $rarityOf
      */
-    private static function cappedWeightOf(array $parts, \Closure $rarityOf): float
+    private static function computeCappedWeight(array $parts, \Closure $rarityOf): float
     {
         $weightThrough = [];
         $ownWeights = [];

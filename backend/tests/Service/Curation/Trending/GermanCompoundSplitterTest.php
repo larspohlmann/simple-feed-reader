@@ -20,7 +20,7 @@ final class GermanCompoundSplitterTest extends TestCase
     {
         $splitter = new GermanCompoundSplitter(TrendingWiring::germanLexicon());
 
-        $this->assertSame($expectedParts, $splitter->partsOf($word));
+        $this->assertSame($expectedParts, $splitter->splitParts($word));
     }
 
     /** @return iterable<string, array{string, list<string>}> */
@@ -63,7 +63,7 @@ final class GermanCompoundSplitterTest extends TestCase
     #[DataProvider('bundledLexiconSplits')]
     public function testRecordsHowTheBundledLexiconSplitsTheIssueExamples(string $word, array $expectedParts): void
     {
-        $this->assertSame($expectedParts, self::bundledSplitter()->partsOf($word));
+        $this->assertSame($expectedParts, self::bundledSplitter()->splitParts($word));
     }
 
     /** @return iterable<string, array{string, list<string>}> */
@@ -94,7 +94,7 @@ final class GermanCompoundSplitterTest extends TestCase
     #[DataProvider('knownWrongBundledLexiconSplits')]
     public function testRecordsTheBundledLexiconsKnownWrongSplits(string $word, array $wrongParts): void
     {
-        $this->assertSame($wrongParts, self::bundledSplitter()->partsOf($word));
+        $this->assertSame($wrongParts, self::bundledSplitter()->splitParts($word));
     }
 
     /** @return iterable<string, array{string, list<string>}> */

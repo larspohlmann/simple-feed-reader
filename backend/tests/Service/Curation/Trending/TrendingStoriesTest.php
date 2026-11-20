@@ -135,7 +135,7 @@ final class TrendingStoriesTest extends DbTestCase
         $this->storyOf('2031-05-14 10:00:00', $socials);
 
         self::assertSame([], $this->storyRepository()->rankedForUser(
-            $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day),
+            $this->readerWindows()->loadWindow($this->reader->requireId(), TrendingWindow::Day),
             TrendingStories::MAX_STORIES,
         ));
         self::assertSame([], $this->storiesFor(TrendingWindow::Day));
@@ -157,7 +157,7 @@ final class TrendingStoriesTest extends DbTestCase
         $covered = $this->storyOf('2031-05-14 11:00:00', [$alpha, $beta, ...$socials]);
 
         $ranked = $this->rankedDay();
-        self::assertSame([$covered->requireId()], RankedStoryModel::storyIdsOf($ranked));
+        self::assertSame([$covered->requireId()], RankedStoryModel::collectStoryIds($ranked));
         self::assertSame([2], self::outletCountsOf($ranked));
     }
 
@@ -170,7 +170,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         $ranked = $this->rankedDay(1);
 
-        self::assertSame([$wider->requireId()], RankedStoryModel::storyIdsOf($ranked));
+        self::assertSame([$wider->requireId()], RankedStoryModel::collectStoryIds($ranked));
         self::assertSame([4], self::outletCountsOf($ranked));
     }
 
@@ -334,7 +334,7 @@ final class TrendingStoriesTest extends DbTestCase
 
         self::assertSame(
             [$wider->requireId(), $narrower->requireId()],
-            RankedStoryModel::storyIdsOf($ranked),
+            RankedStoryModel::collectStoryIds($ranked),
             'the newer story is narrower once its syndicated copy is counted once',
         );
         self::assertSame([4, 3], self::outletCountsOf($ranked));
@@ -778,7 +778,7 @@ final class TrendingStoriesTest extends DbTestCase
      */
     private function rankedDayStoryIdsOf(User $user): array
     {
-        return RankedStoryModel::storyIdsOf($this->rankedDay(TrendingStories::MAX_STORIES, $user));
+        return RankedStoryModel::collectStoryIds($this->rankedDay(TrendingStories::MAX_STORIES, $user));
     }
 
     /**
@@ -858,12 +858,12 @@ final class TrendingStoriesTest extends DbTestCase
 
     private function dayOf(int $userId): ReaderWindowModel
     {
-        return $this->readerWindows()->of($userId, TrendingWindow::Day);
+        return $this->readerWindows()->loadWindow($userId, TrendingWindow::Day);
     }
 
     private function minimumOutletsOf(TrendingWindow $window): int
     {
-        return $this->readerWindows()->of($this->reader->requireId(), $window)->minimumOutlets;
+        return $this->readerWindows()->loadWindow($this->reader->requireId(), $window)->minimumOutlets;
     }
 
     private function readerWindows(): ReaderWindows

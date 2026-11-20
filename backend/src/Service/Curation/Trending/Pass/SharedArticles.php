@@ -24,7 +24,7 @@ final class SharedArticles
     {
     }
 
-    public function of(WindowEntryModel $entry): ?SharedArticleModel
+    public function buildArticle(WindowEntryModel $entry): ?SharedArticleModel
     {
         $card = $entry->links->storyCard();
         if ($card === null) {
@@ -43,7 +43,8 @@ final class SharedArticles
         return new SharedArticleModel(
             $card->title,
             $body,
-            $card->language ?? $this->cardLanguage->of(PreviewText::joined($card->title, $body), $postLanguage),
+            $card->language
+                ?? $this->cardLanguage->resolveLanguage(PreviewText::joined($card->title, $body), $postLanguage),
         );
     }
 }

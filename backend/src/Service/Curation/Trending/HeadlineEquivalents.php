@@ -61,7 +61,7 @@ final readonly class HeadlineEquivalents
     }
 
     /** @return list<array{string, string}> each kept word or phrase canonical, with its bare form */
-    public function wordsOf(string $text): array
+    public function canonicalizeWords(string $text): array
     {
         return array_values(array_filter(
             $this->collapsePhrases(CasefoldedWords::splitWords($this->replaceExactWords($text))),
@@ -70,12 +70,12 @@ final readonly class HeadlineEquivalents
     }
 
     /** @return list<string> distinct stems: the whole word's, then those of a German compound's parts */
-    public function wordStemsOf(string $word, string $bare, ?FeedLanguage $language): array
+    public function stemWordAndParts(string $word, string $bare, ?FeedLanguage $language): array
     {
-        $stems = [$this->stemOf($word, $bare, $language)];
+        $stems = [$this->stemWord($word, $bare, $language)];
         if ($language === FeedLanguage::German && !isset($this->canonicals[$bare])) {
-            foreach ($this->splitter->partsOf($word) as $part) {
-                $stems[] = $this->stemOf($part, HeadlineStems::bare($part), $language);
+            foreach ($this->splitter->splitParts($word) as $part) {
+                $stems[] = $this->stemWord($part, HeadlineStems::bare($part), $language);
             }
         }
 
@@ -83,7 +83,7 @@ final readonly class HeadlineEquivalents
     }
 
     /** A canonical is a stem already: stemming it in a language would split it from the others. */
-    private function stemOf(string $word, string $bare, ?FeedLanguage $language): string
+    private function stemWord(string $word, string $bare, ?FeedLanguage $language): string
     {
         if (isset($this->canonicals[$bare])) {
             return $bare;

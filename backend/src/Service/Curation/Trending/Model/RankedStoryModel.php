@@ -26,7 +26,7 @@ final readonly class RankedStoryModel
      *
      * @return list<int>
      */
-    public static function storyIdsOf(array $stories): array
+    public static function collectStoryIds(array $stories): array
     {
         return array_map(static fn (self $story): int => $story->storyId, $stories);
     }

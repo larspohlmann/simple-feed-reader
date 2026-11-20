@@ -13,7 +13,7 @@ final readonly class FallbackChoice
     /** @param non-empty-list<TitleCandidateModel> $candidates */
     public function choose(array $candidates, ?int $currentEntryId): TitleCandidateModel
     {
-        $best = $this->bestOf($candidates);
+        $best = $this->pickBest($candidates);
         $current = array_find(
             $candidates,
             static fn (TitleCandidateModel $candidate): bool => $candidate->entryId === $currentEntryId,
@@ -26,7 +26,7 @@ final readonly class FallbackChoice
     }
 
     /** @param non-empty-list<TitleCandidateModel> $candidates */
-    private function bestOf(array $candidates): TitleCandidateModel
+    private function pickBest(array $candidates): TitleCandidateModel
     {
         $markerFree = array_values(array_filter(
             $candidates,
@@ -37,7 +37,7 @@ final readonly class FallbackChoice
         return array_reduce(
             $pool,
             static fn (TitleCandidateModel $best, TitleCandidateModel $candidate): TitleCandidateModel
-                => self::rankOf($candidate) > self::rankOf($best) ? $candidate : $best,
+                => self::buildRank($candidate) > self::buildRank($best) ? $candidate : $best,
             $pool[0],
         );
     }
@@ -49,7 +49,7 @@ final readonly class FallbackChoice
     }
 
     /** @return array{float, int, int} */
-    private static function rankOf(TitleCandidateModel $candidate): array
+    private static function buildRank(TitleCandidateModel $candidate): array
     {
         return [$candidate->score, $candidate->effectiveTime, $candidate->entryId];
     }

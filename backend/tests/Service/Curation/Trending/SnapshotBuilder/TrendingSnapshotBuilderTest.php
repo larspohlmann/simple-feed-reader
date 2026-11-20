@@ -488,7 +488,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         self::assertSame([[1, 1]], $this->flagsOfEveryMember());
         self::assertSame(
             $storyIds,
-            RankedStoryModel::storyIdsOf(
+            RankedStoryModel::collectStoryIds(
                 $this->readerWindows()->shownStories($this->ownerId(), TrendingWindow::Day),
             ),
         );
@@ -1370,7 +1370,7 @@ final class TrendingSnapshotBuilderTest extends DbTestCase
         $stories = $grouping->stories($run);
         self::assertCount(1, $stories);
 
-        $scores = CentroidScores::of($run->headlines, $stories[0]->entryIds());
+        $scores = CentroidScores::computeScores($run->headlines, $stories[0]->entryIds());
         if ($scores === []) {
             self::fail('the story has no members to score');
         }

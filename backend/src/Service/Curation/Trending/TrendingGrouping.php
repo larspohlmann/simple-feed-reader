@@ -32,7 +32,7 @@ final readonly class TrendingGrouping
         $run = new TrendingRun($window, $since, new HeadlineWindow($this->filler, $this->equivalents));
         $sharedArticles = new SharedArticles($this->cardLanguage);
         foreach ($this->windowEntries->windowEntries($userId, $since) as $entry) {
-            $run->add($entry, $entry->links->urlHashes(), $sharedArticles->of($entry));
+            $run->add($entry, $entry->links->urlHashes(), $sharedArticles->buildArticle($entry));
         }
 
         return $run;
@@ -42,7 +42,7 @@ final readonly class TrendingGrouping
     public function groups(TrendingRun $run): array
     {
         return array_map(
-            static fn (array $entryIds): TrendingStoryModel => self::storyOf($run, $entryIds),
+            static fn (array $entryIds): TrendingStoryModel => self::buildStory($run, $entryIds),
             $this->storyGrouping->group($run, $this->storyLinks->between($run)),
         );
     }
@@ -57,10 +57,10 @@ final readonly class TrendingGrouping
     }
 
     /** @param non-empty-list<int> $entryIds */
-    private static function storyOf(TrendingRun $run, array $entryIds): TrendingStoryModel
+    private static function buildStory(TrendingRun $run, array $entryIds): TrendingStoryModel
     {
-        $members = array_map($run->memberOf(...), $entryIds);
-        $times = array_map($run->effectiveTimeOf(...), $entryIds);
+        $members = array_map($run->readMember(...), $entryIds);
+        $times = array_map($run->readEffectiveTime(...), $entryIds);
 
         return new TrendingStoryModel($members, self::instant(min($times)), self::instant(max($times)));
     }

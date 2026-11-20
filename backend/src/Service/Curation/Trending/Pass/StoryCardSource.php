@@ -33,7 +33,7 @@ final readonly class StoryCardSource
      *
      * @return list<TrendingStoryCardModel> a story with no row the reader can see is left out
      */
-    public function cardsOf(array $ranked): array
+    public function buildCards(array $ranked): array
     {
         $cards = [];
         foreach ($ranked as $story) {

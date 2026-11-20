@@ -15,7 +15,7 @@ final class CentroidScores
      *
      * @return array<int, float> by member id
      */
-    public static function of(HeadlineWindow $headlines, array $memberIds): array
+    public static function computeScores(HeadlineWindow $headlines, array $memberIds): array
     {
         $scores = array_fill_keys($memberIds, 0.0);
         foreach ($memberIds as $entryId) {

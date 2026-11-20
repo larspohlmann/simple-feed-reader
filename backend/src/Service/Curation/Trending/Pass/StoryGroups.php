@@ -79,7 +79,7 @@ final class StoryGroups
 
     private function joinIfBroad(int $entryId, int $groupId): void
     {
-        $sample = $this->sampleOf($groupId);
+        $sample = $this->pickSample($groupId);
         if ($this->linkCount([$entryId], $sample) < self::half(\count($sample))) {
             return;
         }
@@ -92,8 +92,8 @@ final class StoryGroups
         if ($firstGroupId === $secondGroupId) {
             return;
         }
-        $firstSample = $this->sampleOf($firstGroupId);
-        $secondSample = $this->sampleOf($secondGroupId);
+        $firstSample = $this->pickSample($firstGroupId);
+        $secondSample = $this->pickSample($secondGroupId);
         $possiblePairs = \count($firstSample) * \count($secondSample);
         if ($this->linkCount($firstSample, $secondSample) < self::half($possiblePairs)) {
             return;
@@ -106,13 +106,13 @@ final class StoryGroups
     }
 
     /** @return list<int> */
-    private function sampleOf(int $groupId): array
+    private function pickSample(int $groupId): array
     {
         $members = $this->members[$groupId];
         usort(
             $members,
-            fn (int $left, int $right): int => [$this->run->effectiveTimeOf($right), $right]
-                <=> [$this->run->effectiveTimeOf($left), $left],
+            fn (int $left, int $right): int => [$this->run->readEffectiveTime($right), $right]
+                <=> [$this->run->readEffectiveTime($left), $left],
         );
 
         return \array_slice($members, 0, self::SAMPLE_SIZE);

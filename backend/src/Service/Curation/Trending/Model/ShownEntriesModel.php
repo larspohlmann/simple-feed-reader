@@ -32,7 +32,7 @@ final readonly class ShownEntriesModel
      * A listed entry's own link hash, null when it has none; a copy the list folded under a listed row, and the
      * snapshot does not list, takes that row's.
      */
-    public function linkHashOf(int $entryId, int $listedRowId): ?string
+    public function resolveLinkHash(int $entryId, int $listedRowId): ?string
     {
         return \array_key_exists($entryId, $this->linkHashes)
             ? $this->linkHashes[$entryId]

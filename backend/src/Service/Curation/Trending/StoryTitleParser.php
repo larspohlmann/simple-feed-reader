@@ -35,13 +35,13 @@ final readonly class StoryTitleParser
 
     private function parseTitle(mixed $title): ?string
     {
-        $collapsed = $this->parseCollapsed($title);
+        $collapsed = $this->collapseText($title);
         $cleaned = $collapsed === null ? '' : $this->withoutQuotesAndPunctuation($collapsed);
 
         return $cleaned === '' || mb_strlen($cleaned) > self::MAXIMUM_LENGTH ? null : $cleaned;
     }
 
-    private function parseCollapsed(mixed $text): ?string
+    private function collapseText(mixed $text): ?string
     {
         $collapsed = \is_string($text) ? Whitespace::collapse($text) : '';
 
@@ -57,14 +57,14 @@ final readonly class StoryTitleParser
 
     private function parseSynopsis(mixed $synopsis): ?string
     {
-        $collapsed = $this->parseCollapsed($synopsis);
+        $collapsed = $this->collapseText($synopsis);
 
         return $collapsed === null || mb_strlen($collapsed) <= self::MAXIMUM_SYNOPSIS_LENGTH
             ? $collapsed
-            : $this->parseSentencesThatFit($collapsed);
+            : $this->cutToLastSentence($collapsed);
     }
 
-    private function parseSentencesThatFit(string $synopsis): ?string
+    private function cutToLastSentence(string $synopsis): ?string
     {
         $head = mb_substr($synopsis, 0, self::MAXIMUM_SYNOPSIS_LENGTH + 1);
 

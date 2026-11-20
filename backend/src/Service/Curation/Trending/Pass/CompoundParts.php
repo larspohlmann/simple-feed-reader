@@ -74,7 +74,7 @@ final class CompoundParts
      *     in as a part only => the compounds it comes through in this entry, then in the holder, with their place
      *     weight; none where it repeats a compound both hold
      */
-    public function partLinksOf(int $stemId, int $entryId, array $holders): array
+    public function buildPartLinks(int $stemId, int $entryId, array $holders): array
     {
         if (!isset($this->partOnlyHoldersOf[$stemId])) {
             return [];
@@ -84,9 +84,9 @@ final class CompoundParts
         $links = [];
         $partHolders = $givenHere === [] ? array_intersect_key($holders, $partOnlyHolders) : $holders;
         foreach (array_keys($partHolders) as $holderId) {
-            $throughHere = $this->unsharedOf($givenHere, $holderId);
+            $throughHere = $this->filterUnshared($givenHere, $holderId);
             $throughThere = isset($partOnlyHolders[$holderId])
-                ? $this->unsharedOf($this->compoundsGiving($stemId, $holderId), $entryId)
+                ? $this->filterUnshared($this->compoundsGiving($stemId, $holderId), $entryId)
                 : [];
             $links[$holderId] = null === $throughHere || null === $throughThere ? [] : [$throughHere, $throughThere];
         }
@@ -116,7 +116,7 @@ final class CompoundParts
      *
      * @return ?array<int, float> the compounds the other entry does not hold; null when it holds every one
      */
-    private function unsharedOf(array $compounds, int $otherEntryId): ?array
+    private function filterUnshared(array $compounds, int $otherEntryId): ?array
     {
         if ($compounds === [] || !isset($this->compoundsOf[$otherEntryId])) {
             return $compounds;

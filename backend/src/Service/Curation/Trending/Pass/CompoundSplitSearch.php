@@ -35,7 +35,7 @@ final class CompoundSplitSearch
     {
         if (!array_key_exists($offset, $this->bestByOffset)) {
             $suffix = implode('', array_slice($this->letters, $offset));
-            $this->bestByOffset[$offset] = $this->nounPartOf($suffix) ?? $this->bestCompoundFrom($offset);
+            $this->bestByOffset[$offset] = $this->findNounPart($suffix) ?? $this->bestCompoundFrom($offset);
         }
 
         return $this->bestByOffset[$offset];
@@ -70,8 +70,8 @@ final class CompoundSplitSearch
     {
         $segment = implode('', array_slice($this->letters, $offset, $end - $offset));
         $best = null;
-        foreach ($this->linkingVariantsOf($segment) as $variant) {
-            $part = $this->nounPartOf($variant);
+        foreach ($this->buildLinkingVariants($segment) as $variant) {
+            $part = $this->findNounPart($variant);
             if (null !== $part && (null === $best || $part->isMoreFrequentThan($best))) {
                 $best = $part;
             }
@@ -81,7 +81,7 @@ final class CompoundSplitSearch
     }
 
     /** @return list<string> */
-    private function linkingVariantsOf(string $segment): array
+    private function buildLinkingVariants(string $segment): array
     {
         $unlinked = array_map(
             static fn (string $suffix): string => substr($segment, 0, -strlen($suffix)),
@@ -97,13 +97,13 @@ final class CompoundSplitSearch
         return $variants;
     }
 
-    private function nounPartOf(string $form): ?CompoundSplitModel
+    private function findNounPart(string $form): ?CompoundSplitModel
     {
         if (mb_strlen($form) < GermanCompoundSplitter::MIN_PART_LENGTH || 1 !== preg_match(self::VOWEL, $form)) {
             return null;
         }
 
-        $entry = $this->lexicon->entryOf($form);
+        $entry = $this->lexicon->findEntry($form);
 
         return true === $entry?->isNoun() ? CompoundSplitModel::single($form, $entry->frequencyClass) : null;
     }

@@ -21,15 +21,15 @@ final class ShownEntriesModelTest extends TestCase
     {
         $shown = new ShownEntriesModel([1 => [10 => 'a', 11 => null]]);
 
-        self::assertSame('a', $shown->linkHashOf(10, 10));
-        self::assertNull($shown->linkHashOf(11, 10));
+        self::assertSame('a', $shown->resolveLinkHash(10, 10));
+        self::assertNull($shown->resolveLinkHash(11, 10));
     }
 
     public function testAnUnlistedCopyTakesTheLinkHashOfTheRowItWasFoldedInto(): void
     {
         $shown = new ShownEntriesModel([1 => [10 => 'a']]);
 
-        self::assertSame('a', $shown->linkHashOf(99, 10));
+        self::assertSame('a', $shown->resolveLinkHash(99, 10));
     }
 
     public function testNoStoriesShowNothing(): void

@@ -56,7 +56,7 @@ final class ReaderWindowsTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertGreaterThan(TrendingWindow::Day->minSubscribedFeeds(), $minimum);
-        $reader = $this->readerWindows()->of($this->reader->requireId(), TrendingWindow::Day);
+        $reader = $this->readerWindows()->loadWindow($this->reader->requireId(), TrendingWindow::Day);
         self::assertSame($minimum, $reader->minimumOutlets);
     }
 

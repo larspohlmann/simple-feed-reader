@@ -38,7 +38,7 @@ final class StoryCardSourceTest extends DbTestCase
         $lastSeen = new \DateTimeImmutable('2031-05-14 10:00:00');
         $wider = new RankedStoryModel(6, 4, $lastSeen);
 
-        $cards = $source->cardsOf([new RankedStoryModel(5, 3, $lastSeen), $wider]);
+        $cards = $source->buildCards([new RankedStoryModel(5, 3, $lastSeen), $wider]);
 
         self::assertCount(1, $cards);
         self::assertSame($entry, $cards[0]->articles->lead->row->entry);
@@ -49,7 +49,7 @@ final class StoryCardSourceTest extends DbTestCase
 
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
-        self::assertSame([], (new StoryCardSource([], [], [], [], []))->cardsOf([
+        self::assertSame([], (new StoryCardSource([], [], [], [], []))->buildCards([
             new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00')),
         ]));
     }
@@ -73,7 +73,7 @@ final class StoryCardSourceTest extends DbTestCase
             [6 => new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.')],
         );
 
-        $cards = $source->cardsOf([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
+        $cards = $source->buildCards([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
 
         self::assertEquals(
             new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'),
