@@ -114,7 +114,7 @@ final class TrendingRunTest extends TestCase
             );
         }
 
-        self::assertSame([[1, 2]], $run->entriesSharingAUrlOrItem());
+        self::assertSame([[1, 2]], $run->collectEntriesSharingAUrlOrItem());
     }
 
     private function weightSharedWith(WindowEntryModel $later): float

@@ -14,7 +14,7 @@ final readonly class SharedUrlLinks implements StoryLinkSourceInterface
     public function links(TrendingRun $run): array
     {
         $links = [];
-        foreach ($run->entriesSharingAUrlOrItem() as $entryIds) {
+        foreach ($run->collectEntriesSharingAUrlOrItem() as $entryIds) {
             foreach (self::buildLinks($run, $entryIds) as $link) {
                 $links[$link->pairKey()] = $link;
             }

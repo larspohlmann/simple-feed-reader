@@ -275,8 +275,8 @@ final class EntryListRepository extends ServiceEntityRepository
 
     /**
      * Attach to each survivor the in-scope copies the collapse hid, so a card can
-     * name them. One extra query per page over the same scope, minus the collapse
-     * and the cursor.
+     * name them. One extra query per key and page over the same scope, minus the
+     * collapse and the cursor.
      *
      * @param list<EntryListRow>                          $survivors
      * @param callable(QueryBuilder, EntryAliases): void  $applyScope
@@ -285,46 +285,121 @@ final class EntryListRepository extends ServiceEntityRepository
      */
     private function attachDuplicates(array $survivors, callable $applyScope, int $userId): array
     {
-        $hashes = [];
-        $survivorIds = [];
-        foreach ($survivors as $row) {
-            $hash = $row->entry->getUrlHash();
-            if ($hash !== null) {
-                $hashes[$hash] = true;
-                $survivorIds[] = $row->entry->requireId();
-            }
-        }
-        if ($hashes === []) {
+        $hashes = self::collectKeys($survivors, static fn (Entry $entry): ?string => $entry->getUrlHash());
+        $itemIds = self::collectKeys(
+            $survivors,
+            static fn (Entry $entry): ?int => $entry->getCanonicalItem()?->requireId(),
+        );
+        if ($hashes === [] && $itemIds === []) {
             return $survivors;
         }
 
-        $qb = $this->projection->rowQueryBuilder($userId);
-        $applyScope($qb, EntryAliases::primary());
-        $qb->andWhere('e.location.urlHash IN (:dupHashes)')
-            ->andWhere('e.id NOT IN (:survivorIds)')
-            ->setParameter('dupHashes', array_keys($hashes))
-            ->setParameter('survivorIds', $survivorIds);
+        $survivorIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $survivors);
+        $buildCopiesQuery = function () use ($applyScope, $userId, $survivorIds): QueryBuilder {
+            $qb = $this->projection->rowQueryBuilder($userId);
+            $applyScope($qb, EntryAliases::primary());
 
-        $duplicatesQuery = $qb->getQuery();
-        EntryPlanHintWalker::apply($duplicatesQuery, EntryPlanHint::DuplicateLookup);
-
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $duplicatesQuery->getResult();
-        $byHash = [];
-        foreach ($rows as $raw) {
-            $sibling = $this->rowHydrator->hydrate($raw);
-            $byHash[(string) $sibling->entry->getUrlHash()][] = $sibling;
-        }
+            return $qb->andWhere('e.id NOT IN (:survivorIds)')->setParameter('survivorIds', $survivorIds);
+        };
+        $copiesByHash = $hashes === [] ? [] : $this->findCopiesByUrlHash($buildCopiesQuery(), $hashes);
+        $copiesByItem = $itemIds === [] ? [] : $this->findCopiesByItem($buildCopiesQuery(), $itemIds);
 
         return array_map(
-            static function (EntryListRow $row) use ($byHash): EntryListRow {
-                $hash = $row->entry->getUrlHash();
-
-                return $hash !== null && isset($byHash[$hash])
-                    ? $row->withDuplicates($byHash[$hash])
-                    : $row;
-            },
+            static fn (EntryListRow $row): EntryListRow => self::attachCopies($row, $copiesByHash, $copiesByItem),
             $survivors,
         );
+    }
+
+    /**
+     * @param list<string> $hashes
+     *
+     * @return array<string, list<EntryListRow>>
+     */
+    private function findCopiesByUrlHash(QueryBuilder $qb, array $hashes): array
+    {
+        $query = $qb->andWhere('e.location.urlHash IN (:dupHashes)')->setParameter('dupHashes', $hashes)->getQuery();
+        EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $query->getResult();
+        $copies = [];
+        foreach ($this->hydrateRows($rows) as $copy) {
+            $copies[(string) $copy->entry->getUrlHash()][] = $copy;
+        }
+
+        return $copies;
+    }
+
+    /**
+     * @param list<int> $itemIds
+     *
+     * @return array<int, list<EntryListRow>>
+     */
+    private function findCopiesByItem(QueryBuilder $qb, array $itemIds): array
+    {
+        $query = $qb->andWhere('e.canonicalItem IN (:dupItems)')->setParameter('dupItems', $itemIds)->getQuery();
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $query->getResult();
+        $copies = [];
+        foreach ($this->hydrateRows($rows) as $copy) {
+            $item = $copy->entry->getCanonicalItem();
+            if ($item !== null) {
+                $copies[$item->requireId()][] = $copy;
+            }
+        }
+
+        return $copies;
+    }
+
+    /**
+     * @param list<array<array-key, mixed>> $rows
+     *
+     * @return list<EntryListRow>
+     */
+    private function hydrateRows(array $rows): array
+    {
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+    }
+
+    /**
+     * @param array<string, list<EntryListRow>> $copiesByHash
+     * @param array<int, list<EntryListRow>>    $copiesByItem
+     */
+    private static function attachCopies(EntryListRow $row, array $copiesByHash, array $copiesByItem): EntryListRow
+    {
+        $copies = [];
+        $hash = $row->entry->getUrlHash();
+        $itemId = $row->entry->getCanonicalItem()?->requireId();
+        $found = [
+            ...($hash === null ? [] : $copiesByHash[$hash] ?? []),
+            ...($itemId === null ? [] : $copiesByItem[$itemId] ?? []),
+        ];
+        foreach ($found as $copy) {
+            $copies[$copy->entry->requireId()] ??= $copy;
+        }
+
+        return $copies === [] ? $row : $row->withDuplicates(array_values($copies));
+    }
+
+    /**
+     * @template TKey of int|string
+     *
+     * @param list<EntryListRow>          $rows
+     * @param callable(Entry): (TKey|null) $readKey
+     *
+     * @return list<TKey>
+     */
+    private static function collectKeys(array $rows, callable $readKey): array
+    {
+        $keys = [];
+        foreach ($rows as $row) {
+            $key = $readKey($row->entry);
+            if ($key !== null) {
+                $keys[$key] = $key;
+            }
+        }
+
+        return array_values($keys);
     }
 }

@@ -46,7 +46,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
     public function testCopiesOfOneItemShowOnce(): void
     {
-        [$lower, $higher] = $this->persistCopiesOfOnePost();
+        [$lower, $higher] = LemmyPostEntries::persistCopies($this->entityManager, $this->feedA, $this->feedB);
         $tag = new Tag($this->user, 'lemmy');
         $this->entityManager->persist($tag);
         $this->subscriptionA->addTag($tag);
@@ -65,14 +65,40 @@ final class DuplicateCollapseTest extends DbTestCase
         self::assertSame([$lower->getId()], self::collectIds(
             $this->repository()->listForUser(new EntryQuery($userId, view: EntryView::All, tagId: $tag->getId())),
         ));
-        self::assertSame([$lower->getId()], self::collectIds($this->savedSearchEntries()->listMembers(
+        self::assertSame([$lower->getId()], self::collectIds($this->requireSavedSearchEntries()->listMembers(
             new SavedSearchListQuery($userId, [$search->requireId()]),
         )));
     }
 
+    public function testSurvivorCarriesTheCopyOfItsItem(): void
+    {
+        [$lower, $higher] = LemmyPostEntries::persistCopies($this->entityManager, $this->feedA, $this->feedB);
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+
+        self::assertSame([$lower->getId()], self::collectIds($rows));
+        self::assertSame([$higher->getId()], self::collectIds($rows[0]->duplicates));
+    }
+
+    public function testACopySharingTheUrlAndTheItemIsCarriedOnce(): void
+    {
+        $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
+        $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
+        $item = LemmyPostEntries::linkItem($lower);
+        $higher->linkTo($item);
+        $this->entityManager->persist($item);
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+
+        self::assertSame([$higher->getId()], self::collectIds($rows[0]->duplicates));
+    }
+
     public function testFeedViewStillShowsItsCopy(): void
     {
-        [, $higher] = $this->persistCopiesOfOnePost();
+        [, $higher] = LemmyPostEntries::persistCopies($this->entityManager, $this->feedA, $this->feedB);
+        $this->entityManager->flush();
 
         $rows = $this->repository()->listForUser(new EntryQuery(
             $this->user->requireId(),
@@ -245,21 +271,6 @@ final class DuplicateCollapseTest extends DbTestCase
         self::assertSame([], $rows[0]->duplicates); // the read copy is out of unread scope
     }
 
-    /** @return array{Entry, Entry} the lower-id copy, then the other, both without a URL hash */
-    private function persistCopiesOfOnePost(): array
-    {
-        $lower = LemmyPostEntries::buildEntry($this->feedA, guid: 'local-copy', publishedAt: '2026-07-05T09:00:00Z');
-        $item = LemmyPostEntries::linkItem($lower);
-        $higher = LemmyPostEntries::buildEntry($this->feedB, guid: 'all-copy', publishedAt: '2026-07-05T10:00:00Z');
-        $higher->linkTo($item);
-        $this->entityManager->persist($item);
-        $this->entityManager->persist($lower);
-        $this->entityManager->persist($higher);
-        $this->entityManager->flush();
-
-        return [$lower, $higher];
-    }
-
     /**
      * @param list<EntryListRow> $rows
      *
@@ -270,7 +281,7 @@ final class DuplicateCollapseTest extends DbTestCase
         return array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $rows);
     }
 
-    private function savedSearchEntries(): SavedSearchEntryRepository
+    private function requireSavedSearchEntries(): SavedSearchEntryRepository
     {
         $entries = self::getContainer()->get(SavedSearchEntryRepository::class);
         self::assertInstanceOf(SavedSearchEntryRepository::class, $entries);

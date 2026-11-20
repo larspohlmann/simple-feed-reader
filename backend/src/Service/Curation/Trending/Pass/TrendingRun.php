@@ -110,7 +110,7 @@ final class TrendingRun
     }
 
     /** @return list<list<int>> the entries of every URL, and the copies of every item, more than one entry carries */
-    public function entriesSharingAUrlOrItem(): array
+    public function collectEntriesSharingAUrlOrItem(): array
     {
         return array_values(array_filter(
             [...array_values($this->entriesByUrlHash), ...array_values($this->entriesByCanonicalItem)],

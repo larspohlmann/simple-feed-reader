@@ -323,7 +323,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 'story.user_id = :user',
                 'hidden.story_id IS NULL',
                 TrendingPlacementSql::buildPlacedCondition($reader->window, 'story_member'),
-                self::noEarlierCopy($reader->window),
+                self::buildNoEarlierArticleCopy($reader->window),
+                self::buildNoEarlierItemCopy($reader->window),
                 ...self::notShownInAShorterWindow($reader),
             ]);
     }
@@ -362,11 +363,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' THEN story_member.feed_id END))';
     }
 
-    /**
-     * As in DuplicateCollapseDql, only the lowest-id copy of an article or an item in the story counts. A post counts
-     * by its account.
-     */
-    private static function noEarlierCopy(TrendingWindow $window): string
+    /** As in DuplicateCollapseDql, only the lowest-id copy of an article counts; a post counts by its account. */
+    private static function buildNoEarlierArticleCopy(TrendingWindow $window): string
     {
         return '(member_feed.network IS NOT NULL'
             . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
@@ -375,8 +373,19 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' WHERE earlier_member.story_id = story.id'
             . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
             . ' AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND (earlier_entry.url_hash = member_entry.url_hash'
-            . ' OR earlier_entry.canonical_item_id = member_entry.canonical_item_id)))';
+            . ' AND earlier_entry.url_hash = member_entry.url_hash))';
+    }
+
+    /** Only the lowest-id copy of an item counts, in whatever feed: its copies' authors and feeds differ. */
+    private static function buildNoEarlierItemCopy(TrendingWindow $window): string
+    {
+        return '(member_entry.canonical_item_id IS NULL'
+            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_copy'
+            . ' JOIN entry earlier_copy_entry ON earlier_copy_entry.id = earlier_copy.entry_id'
+            . ' WHERE earlier_copy.story_id = story.id'
+            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_copy')
+            . ' AND earlier_copy.entry_id < story_member.entry_id'
+            . ' AND earlier_copy_entry.canonical_item_id = member_entry.canonical_item_id))';
     }
 
     /**

@@ -70,7 +70,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         self::assertSame(
             [[$article->requireId(), $post->requireId()]],
-            $this->collect()->entriesSharingAUrlOrItem(),
+            $this->collect()->collectEntriesSharingAUrlOrItem(),
         );
     }
 
@@ -83,7 +83,10 @@ final class TrendingGroupingTest extends DbTestCase
             [(new UrlNormalizer())->hash('https://outlet.example/lighthouse'), 'https://elsewhere.example/copy'],
         );
 
-        self::assertSame([[$article->requireId(), $post->requireId()]], $this->collect()->entriesSharingAUrlOrItem());
+        self::assertSame(
+            [[$article->requireId(), $post->requireId()]],
+            $this->collect()->collectEntriesSharingAUrlOrItem(),
+        );
     }
 
     public function testAResolvedShortLinkSharesTheOutletsUrl(): void
@@ -97,7 +100,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         $run = $this->collect();
 
-        self::assertSame([[$article->requireId(), $post->requireId()]], $run->entriesSharingAUrlOrItem());
+        self::assertSame([[$article->requireId(), $post->requireId()]], $run->collectEntriesSharingAUrlOrItem());
         self::assertSame('outlet.example', $run->readMember($post->requireId())->articleSite);
     }
 

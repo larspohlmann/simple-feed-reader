@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
@@ -16,6 +17,7 @@ use App\Entity\Subscription;
 use App\Entity\TrendingSnapshot;
 use App\Entity\TrendingStory;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\FeedLanguage;
 use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
@@ -317,6 +319,43 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         );
 
         self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testTimelineCopiesOfOneItemWithAndWithoutAnAuthorAreOneSource(): void
+    {
+        [[$withAuthor, $site], [$withoutAuthor]] = $this->copiesOf(self::POST, 'shared.example', 'home', 'discover');
+        $withoutAuthor->setAuthor(new EntryAuthor());
+        $item = new CanonicalItem(CanonicalItemKind::Mastodon, self::POST);
+        $this->entityManager->persist($item);
+        $withAuthor->linkTo($item);
+        $withoutAuthor->linkTo($item);
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            [$withAuthor, $site],
+            [$withoutAuthor, $site],
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
+    }
+
+    public function testALemmyRssCopyAndItsNetworkCopyAreOneSource(): void
+    {
+        $networkFeed = $this->fixtures->feed('lemmy-all', SocialNetwork::Lemmy);
+        $this->fixtures->subscribe($this->reader, $networkFeed);
+        [$rssCopy, $networkCopy] = LemmyPostEntries::persistCopies(
+            $this->entityManager,
+            $this->articleFeed('lemmy-rss'),
+            $networkFeed,
+        );
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            [$rssCopy, 'shared.example'],
+            [$networkCopy, 'shared.example'],
+        ]);
+
+        self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
     }
 
     public function testAnEarlierCopyFromASocialFeedLeavesAnArticleFeedsCopyCounted(): void
@@ -663,36 +702,44 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([$story->requireId()], $due);
     }
 
-    public function testCopiesOfOneItemCountOnceTowardsATitlesMembers(): void
+    public function testATitlesMemberCountCountsCopiesOfOneItemOnce(): void
     {
-        $localCopy = LemmyPostEntries::buildEntry($this->socialFeed('local'), guid: 'local');
-        $item = LemmyPostEntries::linkItem($localCopy);
-        $allCopy = LemmyPostEntries::buildEntry($this->socialFeed('all'), guid: 'all');
-        $allCopy->linkTo($item);
-        $this->entityManager->persist($item);
-        $this->entityManager->persist($localCopy);
-        $this->entityManager->persist($allCopy);
-        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $localCopy, $allCopy);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', ...$this->persistLemmyCopies());
         $this->stories()->recordHeading(
             $story->requireId(),
             new StoryHeadingModel('Hafenstreik', null),
             new \DateTimeImmutable('2031-05-14 08:00:00'),
         );
-        $this->fixtures->join($story, '2031-05-14 10:30:00', $this->member($this->articleFeed('outlet')));
 
         $storedCount = $this->entityManager->getConnection()->fetchOne(
             'SELECT llm_title_member_count FROM trending_story WHERE id = ?',
             [$story->requireId()],
         );
+
+        self::assertIsNumeric($storedCount);
+        self::assertSame(1, (int) $storedCount);
+    }
+
+    public function testCopiesOfOneItemDoNotGrowATitledStoryIntoATitleDue(): void
+    {
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            ...[...$this->persistLemmyCopies(), $this->member($this->articleFeed('outlet'))],
+        );
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 2, llm_title_attempted_at = ?'
+            . ' WHERE id = ?',
+            ['Hafenstreik', '2031-05-14 08:00:00', $story->requireId()],
+        );
+
         $due = $this->stories()->findStoriesDueForTitle(
             $this->reader->requireId(),
             new \DateTimeImmutable('2031-05-14 11:00:00'),
             new \DateTimeImmutable('2031-05-07 00:00:00'),
         );
 
-        self::assertIsNumeric($storedCount);
-        self::assertSame(1, (int) $storedCount);
-        self::assertSame([$story->requireId()], $due);
+        self::assertSame([], $due);
     }
 
     /** @param list<array{Feed, ?string}> $feedsAndSites */
@@ -739,6 +786,16 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         return array_map(
             static fn (RankedStoryModel $story): array => [$story->storyId, $story->outletCount],
             $this->ranked(),
+        );
+    }
+
+    /** @return array{Entry, Entry} */
+    private function persistLemmyCopies(): array
+    {
+        return LemmyPostEntries::persistCopies(
+            $this->entityManager,
+            $this->socialFeed('local'),
+            $this->socialFeed('all'),
         );
     }
 

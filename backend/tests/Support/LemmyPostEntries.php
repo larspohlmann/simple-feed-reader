@@ -10,6 +10,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CanonicalItemKind;
 use App\Enum\CommentsLoad;
+use Doctrine\ORM\EntityManagerInterface;
 
 /** An entry for a Lemmy post, which the caller persists when its test needs a row. */
 final class LemmyPostEntries
@@ -31,6 +32,24 @@ final class LemmyPostEntries
         $entry->setDiscussion(Discussion::fromPageAndFeed($page, null, CommentsLoad::Auto));
 
         return $entry;
+    }
+
+    /**
+     * The post's copy in each feed, linked to one item and persisted; the caller flushes.
+     *
+     * @return array{Entry, Entry}
+     */
+    public static function persistCopies(EntityManagerInterface $entityManager, Feed $first, Feed $second): array
+    {
+        $firstCopy = self::buildEntry($first);
+        $item = self::linkItem($firstCopy);
+        $secondCopy = self::buildEntry($second);
+        $secondCopy->linkTo($item);
+        $entityManager->persist($item);
+        $entityManager->persist($firstCopy);
+        $entityManager->persist($secondCopy);
+
+        return [$firstCopy, $secondCopy];
     }
 
     /** The item a Lemmy post's copies share, linked to the entry; the caller persists it. */

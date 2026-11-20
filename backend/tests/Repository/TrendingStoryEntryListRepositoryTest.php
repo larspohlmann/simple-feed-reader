@@ -38,7 +38,7 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     {
         $reader = $this->fixtures->reader('story-entry-list-item-once@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
-        [$localCopy, $allCopy] = $this->persistCopiesOfOnePost($fixtures);
+        [$localCopy, $allCopy] = $this->persistLocalAndAllCopies($fixtures);
         $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $localCopy, $allCopy);
         $query = new TrendingStoryListQuery($reader->requireId(), $story->requireId());
 
@@ -53,7 +53,7 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     {
         $reader = $this->fixtures->reader('story-entry-list-joined-at-item@example.com');
         $fixtures = $this->fixtures->ownedBy($reader);
-        [$shown, $laterCopy] = $this->persistCopiesOfOnePost($fixtures);
+        [$shown, $laterCopy] = $this->persistLocalAndAllCopies($fixtures);
         $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $shown);
         $fixtures->join($story, '2031-05-14 10:00:00', $laterCopy);
 
@@ -194,18 +194,14 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         );
     }
 
-    /** @return array{Entry, Entry} a Lemmy post's copies in its Local and All feeds, the Local one first */
-    private function persistCopiesOfOnePost(TrendingFixtures $fixtures): array
+    /** @return array{Entry, Entry} */
+    private function persistLocalAndAllCopies(TrendingFixtures $fixtures): array
     {
-        $localCopy = LemmyPostEntries::buildEntry($fixtures->feed('local', SocialNetwork::Lemmy), guid: 'local');
-        $item = LemmyPostEntries::linkItem($localCopy);
-        $allCopy = LemmyPostEntries::buildEntry($fixtures->feed('all', SocialNetwork::Lemmy), guid: 'all');
-        $allCopy->linkTo($item);
-        $this->entityManager->persist($item);
-        $this->entityManager->persist($localCopy);
-        $this->entityManager->persist($allCopy);
-
-        return [$localCopy, $allCopy];
+        return LemmyPostEntries::persistCopies(
+            $this->entityManager,
+            $fixtures->feed('local', SocialNetwork::Lemmy),
+            $fixtures->feed('all', SocialNetwork::Lemmy),
+        );
     }
 
     private static function at(string $time): \DateTimeImmutable
