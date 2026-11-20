@@ -106,6 +106,7 @@ final readonly class EntryReadMarkRepository
             ->join(Entry::class, 'e', 'ON', 'e.canonicalItem = swept.canonicalItem')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->andWhere('swept.canonicalItem IS NOT NULL')
             ->andWhere('swept.feed IN (:feeds)')
             ->andWhere('swept.dates.effectiveDate <= :until')
             ->andWhere(UnreadDql::predicate())
