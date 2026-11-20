@@ -57,8 +57,7 @@ final readonly class DiscussionVotes
     {
         $network = $this->requireVotingNetwork($entry);
         $item = $this->requireItem($entry);
-        $account = $this->votes->findOneFor($user, $item)?->getSocialAccount()
-            ?? $this->accounts->requireAccount($user, $entry, $network);
+        $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
         $this->mirror($user, $item, $account, $result->myVote);
@@ -108,13 +107,27 @@ final readonly class DiscussionVotes
     {
         $network = $this->requireVotingNetwork($entry);
         $item = $this->requireItem($entry);
-        $account = $this->votes->findOneFor($user, $item)?->getSocialAccount()
-            ?? $this->accounts->requireAccount($user, $entry, $network);
+        $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
         $this->mirror($user, $item, $account, $myVote);
 
         return $myVote;
+    }
+
+    /** @throws NoSocialAccountForNetworkException */
+    private function requireVotingAccount(
+        User $user,
+        Entry $entry,
+        CanonicalItem $item,
+        SocialNetwork $network,
+    ): SocialAccount {
+        return $this->accounts->requireStoredOrActing(
+            $this->votes->findOneFor($user, $item)?->getSocialAccount(),
+            $user,
+            $entry,
+            $network,
+        );
     }
 
     /** @throws NotASocialPostException */

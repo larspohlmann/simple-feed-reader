@@ -508,14 +508,18 @@ final class SocialLikesTest extends DbTestCase
         $guard = new ActingAccountGuard($this->entityManager);
         $mastodon = $this->mastodon;
 
+        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+
         return new SocialLikes(
             $this->likeRepository(),
             new SocialPostFinder(
-                SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
+                $chooser,
                 $guard,
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
                 SocialRuleWiring::postAddresses(),
             ),
+            $chooser,
+            SocialRuleWiring::postAddresses(),
             new PostLiking($guard, new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon])),
             $this->entityManager,
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),

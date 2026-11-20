@@ -23,6 +23,8 @@ final readonly class SocialLikes
     public function __construct(
         private SocialLikeRepository $likes,
         private SocialPostFinder $posts,
+        private ActingAccountChooser $accounts,
+        private SocialPostAddresses $postAddresses,
         private PostLiking $liking,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
@@ -34,7 +36,7 @@ final readonly class SocialLikes
     /** @throws NotASocialPostException */
     public function like(User $user, Entry $entry): void
     {
-        $item = self::requireItem($entry);
+        $item = $this->postAddresses->requireItem($entry);
         if (null !== $this->likes->findOneFor($user, $item)) {
             return;
         }
@@ -48,7 +50,7 @@ final readonly class SocialLikes
     /** @throws NotASocialPostException */
     public function unlike(User $user, Entry $entry): void
     {
-        $like = $this->likes->findOneFor($user, self::requireItem($entry));
+        $like = $this->likes->findOneFor($user, $this->postAddresses->requireItem($entry));
         if (null === $like) {
             return;
         }
@@ -66,12 +68,17 @@ final readonly class SocialLikes
      */
     public function syncFromNetwork(User $user, Entry $entry): SocialPostModel
     {
-        $item = self::requireItem($entry);
+        $item = $this->postAddresses->requireItem($entry);
         $stored = $this->likes->findOneFor($user, $item);
         try {
-            $post = null === $stored
-                ? $this->posts->find($user, $entry)
-                : $this->posts->findThrough($stored->getSocialAccount(), $entry);
+            $address = $this->postAddresses->requirePost($entry);
+            $account = $this->accounts->requireStoredOrActing(
+                $stored?->getSocialAccount(),
+                $user,
+                $entry,
+                $address->network,
+            );
+            $post = $this->posts->findAs($account, $address);
         } catch (SocialPostNotFoundException $notFound) {
             $this->confirmedDeletion->removeIfConfirmed($entry);
 
@@ -80,13 +87,6 @@ final readonly class SocialLikes
         $this->mirror($stored, $user, $item, $post);
 
         return $post;
-    }
-
-    /** @throws NotASocialPostException */
-    private static function requireItem(Entry $entry): CanonicalItem
-    {
-        return $entry->getCanonicalItem()
-            ?? throw new NotASocialPostException('This entry is not a post this reader can act on.');
     }
 
     private function mirror(?SocialLike $stored, User $user, CanonicalItem $item, SocialPostModel $post): void
