@@ -10,6 +10,7 @@ use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -320,14 +321,7 @@ final class EntryListRepository extends ServiceEntityRepository
         $query = $qb->andWhere('e.location.urlHash IN (:dupHashes)')->setParameter('dupHashes', $hashes)->getQuery();
         EntryPlanHintWalker::apply($query, EntryPlanHint::DuplicateLookup);
 
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $query->getResult();
-        $copies = [];
-        foreach ($this->hydrateRows($rows) as $copy) {
-            $copies[(string) $copy->entry->getUrlHash()][] = $copy;
-        }
-
-        return $copies;
+        return $this->groupCopies($query, static fn (Entry $entry): ?string => $entry->getUrlHash());
     }
 
     /**
@@ -339,13 +333,26 @@ final class EntryListRepository extends ServiceEntityRepository
     {
         $query = $qb->andWhere('e.canonicalItem IN (:dupItems)')->setParameter('dupItems', $itemIds)->getQuery();
 
+        return $this->groupCopies($query, static fn (Entry $entry): ?int => $entry->getCanonicalItemId());
+    }
+
+    /**
+     * @template TKey of array-key
+     *
+     * @param Query<null, mixed> $query
+     * @param \Closure(Entry): ?TKey $keyOf
+     *
+     * @return array<TKey, list<EntryListRow>>
+     */
+    private function groupCopies(Query $query, \Closure $keyOf): array
+    {
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $query->getResult();
         $copies = [];
         foreach ($this->hydrateRows($rows) as $copy) {
-            $itemId = $copy->entry->getCanonicalItemId();
-            if ($itemId !== null) {
-                $copies[$itemId][] = $copy;
+            $key = $keyOf($copy->entry);
+            if ($key !== null) {
+                $copies[$key][] = $copy;
             }
         }
 
