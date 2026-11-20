@@ -94,6 +94,6 @@ final class EntryIngestors
 
     private static function buildLemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
     {
-        return new LemmyPostWriter($entityManager, $entityManager->getRepository(LemmyPost::class));
+        return new LemmyPostWriter($entityManager->getRepository(LemmyPost::class));
     }
 }

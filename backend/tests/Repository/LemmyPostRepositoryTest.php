@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\CanonicalItem;
 use App\Entity\LemmyPost;
+use App\Entity\PostCommunity;
 use App\Enum\CanonicalItemKind;
 use App\Repository\LemmyPostRepository;
 use App\Tests\DbTestCase;
@@ -38,6 +39,21 @@ final class LemmyPostRepositoryTest extends DbTestCase
     public function testNoIdsAskNothing(): void
     {
         self::assertSame([], $this->posts->findByCanonicalItemIds([]));
+    }
+
+    public function testStoringACommunityTwiceForOneItemKeepsOneRowWithTheLaterCommunity(): void
+    {
+        $item = $this->persistItem('raced');
+        $first = PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology');
+        $later = PostCommunity::fromIdentityAndUrl('news@lemmy.world', 'https://lemmy.world/c/news');
+
+        $this->posts->storeCommunity($item->requireId(), $first);
+        $this->posts->storeCommunity($item->requireId(), $later);
+        $this->entityManager->clear();
+
+        $rows = $this->posts->findAll();
+        self::assertCount(1, $rows);
+        self::assertEquals($later, $rows[0]->getCommunity());
     }
 
     public function testRemovingTheItemRemovesItsRow(): void
