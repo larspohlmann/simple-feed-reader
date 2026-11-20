@@ -47,10 +47,10 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         foreach ([$sweptCopy, $unreadCopy, $readCopy] as $copy) {
             $copy->linkTo($item);
         }
-        $this->entityManager->persist($this->hiddenState($readCopy));
+        $this->entityManager->persist($this->buildHiddenState($readCopy));
         $this->entityManager->flush();
 
-        $ids = $this->repository()->findUnreadCopyIdsForSweep(
+        $ids = $this->requireRepository()->findUnreadCopyIdsForSweep(
             $this->user->requireId(),
             [$this->swept->requireId()],
             new \DateTimeImmutable('2026-12-31T00:00:00Z'),
@@ -70,7 +70,7 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         $second->linkTo($item);
         $this->entityManager->flush();
 
-        $ids = $this->repository()->findCopyIdsForUser($this->user->requireId(), [$first->requireId()]);
+        $ids = $this->requireRepository()->findCopyIdsForUser($this->user->requireId(), [$first->requireId()]);
 
         self::assertSame([$second->requireId()], $ids);
     }
@@ -84,7 +84,7 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         return $entry;
     }
 
-    private function hiddenState(Entry $entry): EntryState
+    private function buildHiddenState(Entry $entry): EntryState
     {
         $state = new EntryState($this->user, $entry);
         $state->hide(new \DateTimeImmutable('2026-07-11T00:00:00Z'));
@@ -92,7 +92,7 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         return $state;
     }
 
-    private function repository(): EntryReadMarkRepository
+    private function requireRepository(): EntryReadMarkRepository
     {
         $repository = self::getContainer()->get(EntryReadMarkRepository::class);
         self::assertInstanceOf(EntryReadMarkRepository::class, $repository);

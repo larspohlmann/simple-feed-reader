@@ -720,6 +720,30 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame(1, (int) $storedCount);
     }
 
+    public function testStoriesDueForATitleComeInIdOrderWhateverTheirLastSeenOrder(): void
+    {
+        $first = $this->storyOf([[$this->articleFeed('first'), 'first.example']]);
+        $second = $this->storyOf([[$this->articleFeed('second'), 'second.example']]);
+        $this->entityManager->flush();
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement(
+            'UPDATE trending_story SET last_seen = ? WHERE id = ?',
+            ['2031-05-14 12:00:00', $first->requireId()],
+        );
+        $connection->executeStatement(
+            'UPDATE trending_story SET last_seen = ? WHERE id = ?',
+            ['2031-05-14 09:00:00', $second->requireId()],
+        );
+
+        $due = $this->stories()->findStoriesDueForTitle(
+            $this->reader->requireId(),
+            new \DateTimeImmutable('2031-05-14 11:00:00'),
+            new \DateTimeImmutable('2031-05-07 00:00:00'),
+        );
+
+        self::assertSame([$first->requireId(), $second->requireId()], $due);
+    }
+
     public function testCopiesOfOneItemDoNotGrowATitledStoryIntoATitleDue(): void
     {
         $story = $this->fixtures->story(
