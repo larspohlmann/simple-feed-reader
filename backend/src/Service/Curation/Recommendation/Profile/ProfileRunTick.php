@@ -46,7 +46,7 @@ final readonly class ProfileRunTick
                 return;
             }
 
-            $this->advanceRecordingProviderFailures($this->tickFor($profileRun, $connection, $driver));
+            $this->advanceRecordingProviderFailures($this->loadTick($profileRun, $connection, $driver));
         } catch (\Throwable $exception) {
             $this->failure->recordUnexpectedFailure($profileRun);
 
@@ -72,7 +72,7 @@ final readonly class ProfileRunTick
         }
     }
 
-    private function tickFor(ProfileRun $profileRun, AiProviderSettings $connection, TickDriver $driver): ProfileTick
+    private function loadTick(ProfileRun $profileRun, AiProviderSettings $connection, TickDriver $driver): ProfileTick
     {
         $user = $profileRun->getUser();
         $settings = $this->settingsResolver->forAccount($user)->forConnection($connection);

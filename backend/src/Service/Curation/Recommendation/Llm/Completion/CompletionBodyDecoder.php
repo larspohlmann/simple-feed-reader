@@ -23,13 +23,13 @@ final readonly class CompletionBodyDecoder
     public function envelope(string $body): array
     {
         $root = $this->decodeRoot($body);
-        $choice = $this->firstChoiceIn($root);
+        $choice = $this->readFirstChoice($root);
 
         return [
             'content' => $this->readContent($choice, 'message'),
             'reasoning' => $this->readReasoning($choice, 'message'),
             'finishReason' => $this->readFinishReason($choice),
-            'usage' => $this->usageIn($root),
+            'usage' => $this->parseUsage($root),
         ];
     }
 
@@ -53,13 +53,13 @@ final readonly class CompletionBodyDecoder
     public function streamEvent(string $payload): array
     {
         $root = $this->decodeRoot($payload);
-        $choice = $this->firstChoiceIn($root);
+        $choice = $this->readFirstChoice($root);
 
         return [
             'content' => $this->readContent($choice, 'delta'),
             'reasoning' => $this->readReasoning($choice, 'delta'),
             'finishReason' => $this->readFinishReason($choice),
-            'usage' => $this->usageIn($root),
+            'usage' => $this->parseUsage($root),
         ];
     }
 
@@ -83,7 +83,7 @@ final readonly class CompletionBodyDecoder
      *
      * @return array<mixed>|null
      */
-    private function firstChoiceIn(?array $root): ?array
+    private function readFirstChoice(?array $root): ?array
     {
         $choices = null === $root ? null : ($root['choices'] ?? null);
         $firstChoice = \is_array($choices) ? ($choices[0] ?? null) : null;
@@ -96,7 +96,7 @@ final readonly class CompletionBodyDecoder
      */
     private function firstChoice(string $json): ?array
     {
-        return $this->firstChoiceIn($this->decodeRoot($json));
+        return $this->readFirstChoice($this->decodeRoot($json));
     }
 
     /**
@@ -163,7 +163,7 @@ final readonly class CompletionBodyDecoder
     /**
      * @param array<mixed>|null $root
      */
-    private function usageIn(?array $root): ?ProviderCallUsageModel
+    private function parseUsage(?array $root): ?ProviderCallUsageModel
     {
         $usage = null === $root ? null : ($root['usage'] ?? null);
 

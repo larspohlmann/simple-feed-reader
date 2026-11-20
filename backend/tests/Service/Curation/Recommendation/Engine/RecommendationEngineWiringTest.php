@@ -32,7 +32,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
 
         self::assertInstanceOf(
             LlmRecommendationEngine::class,
-            $resolver->selectEngine($resolver->kindFor($connection)),
+            $resolver->selectEngine($resolver->readKind($connection)),
         );
     }
 
@@ -51,7 +51,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
 
         self::assertInstanceOf(
             ScoringRecommendationEngine::class,
-            $resolver->selectEngine($resolver->kindFor($connection)),
+            $resolver->selectEngine($resolver->readKind($connection)),
         );
     }
 

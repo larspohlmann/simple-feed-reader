@@ -49,7 +49,7 @@ final readonly class SuppressedReasoningFallback implements RejectedRequestFallb
             && Reasoning::Suppressed === Reasoning::preferredBy($connection)
             && \in_array(
                 RecommendationTuningField::SuppressReasoning,
-                $this->engines->capabilitiesFor($connection)->tuningFields,
+                $this->engines->buildCapabilities($connection)->tuningFields,
                 true,
             );
     }

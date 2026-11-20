@@ -51,7 +51,7 @@ final class ErrorBody
             ? new ProviderRejectedRequestException(
                 $status,
                 RefusalMessage::formatMessage($status, $reason),
-                ProviderErrorReason::identifiersIn($this->collected),
+                ProviderErrorReason::parseIdentifiers($this->collected),
             )
             : ProviderUnreachableException::answeredWithStatus($status, $reason);
     }

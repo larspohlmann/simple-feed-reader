@@ -96,7 +96,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         [$context, $outcomes] = $this->fireRequests($connection, $calls);
 
         $responses = $this->httpClient->stream(
-            $this->responsesIn($context),
+            $this->collectResponses($context),
             $connection->timeouts->firstByteSeconds,
         );
         foreach ($responses as $response => $chunk) {
@@ -164,7 +164,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      *
      * @return list<ResponseInterface>
      */
-    private function responsesIn(\SplObjectStorage $context): array
+    private function collectResponses(\SplObjectStorage $context): array
     {
         return iterator_to_array($context, false);
     }

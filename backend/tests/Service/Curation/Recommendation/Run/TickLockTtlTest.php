@@ -30,7 +30,7 @@ final class TickLockTtlTest extends DbTestCase
 
     public function testAnAccountWithoutAConnectionGetsTheStandardBound(): void
     {
-        self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+        self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->computeSeconds($this->owner));
     }
 
     public function testASlowActiveConnectionGetsTheSlowBound(): void
@@ -39,7 +39,7 @@ final class TickLockTtlTest extends DbTestCase
         $this->owner->getActiveAiProviderSettings()?->setSlowModel(true);
         $this->entityManager->flush();
 
-        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->computeSeconds($this->owner));
     }
 
     private function ttl(): TickLockTtl

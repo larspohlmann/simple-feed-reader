@@ -40,7 +40,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
     {
         $this->fixtures->storeProfile($this->owner, 'Likes rail and maps.');
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Ready, $profile->state);
         self::assertSame('Likes rail and maps.', $profile->text);
@@ -49,7 +49,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
 
     public function testWithoutAProfileItStartsAProfileRunForTheRecommendationAndSaysBuilding(): void
     {
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Building, $profile->state);
         self::assertSame(
@@ -63,7 +63,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
     {
         $earlier = $this->profileRunAt('2026-10-03 08:00:00');
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Building, $profile->state);
         self::assertSame($earlier->getId(), $this->profileRuns()->findLatestForUser($this->owner)?->getId());
@@ -74,7 +74,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         $this->profileRunAt('2026-10-03 08:00:00')->start('fingerprint', 'api.example.test', 'qwen3-14b');
         $this->entityManager->flush();
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Building, $profile->state);
     }
@@ -85,7 +85,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
             ->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:01:00'));
         $this->entityManager->flush();
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Failed, $profile->state);
         self::assertSame('The AI provider at x failed: y', $profile->error);
@@ -98,7 +98,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
             ->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:00:01'));
         $this->entityManager->flush();
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Failed, $profile->state);
     }
@@ -109,7 +109,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         $failed->fail('old failure', new \DateTimeImmutable('2026-10-03 08:01:00'));
         $this->entityManager->flush();
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunStatus::Pending, $this->profileRuns()->findLatestForUser($this->owner)?->getStatus());
         self::assertSame(RunProfileState::Building, $profile->state);
@@ -122,7 +122,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         $profileRun->complete(ProfileRunOutcome::NoHistory, new \DateTimeImmutable('2026-10-03 09:00:31'));
         $this->entityManager->flush();
 
-        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $profile = $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
 
         self::assertSame(RunProfileState::Ready, $profile->state);
         self::assertNull($profile->text);
@@ -135,7 +135,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         (new \ReflectionProperty(ProfileRun::class, 'status'))->setValue($profileRun, RunStatus::Cancelled);
 
         $this->expectExceptionObject(new \LogicException('A profile run is never cancelled.'));
-        $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
     }
 
     public function testAFailedProfileRunWithoutItsErrorBreaksAnInvariant(): void
@@ -144,7 +144,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         (new \ReflectionProperty(ProfileRun::class, 'status'))->setValue($profileRun, RunStatus::Failed);
 
         $this->expectExceptionObject(new \LogicException('A failed profile run carries its error.'));
-        $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+        $this->profiles()->prepareProfile($this->owner, $this->runCreatedAt());
     }
 
     private function profileRunAt(string $createdAt): ProfileRun

@@ -42,10 +42,10 @@ final readonly class LlmRecommendationEngine implements RecommendationEngineInte
 
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
-        return $this->providerPhaseFor($tick->run)->advance($tick);
+        return $this->selectProviderPhase($tick->run)->advance($tick);
     }
 
-    private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface
+    private function selectProviderPhase(RecommendationRun $run): ProviderPhaseInterface
     {
         return $run->getProgress()->isConsolidationPhase ? $this->consolidation : $this->batch;
     }

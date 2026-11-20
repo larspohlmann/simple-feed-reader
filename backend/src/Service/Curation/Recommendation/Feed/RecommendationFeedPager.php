@@ -22,7 +22,7 @@ final readonly class RecommendationFeedPager
     {
         $rows = $this->items->listForYou($query, self::parseCursor($query));
 
-        return new RecommendationFeedPageModel($rows, $this->nextCursorFor($rows, $query->limit));
+        return new RecommendationFeedPageModel($rows, $this->buildNextCursor($rows, $query->limit));
     }
 
     /** A garbled For You cursor restarts the feed instead of breaking it, unlike EntryCursor. */
@@ -45,7 +45,7 @@ final readonly class RecommendationFeedPager
      *
      * @param list<RecommendationFeedRow> $rows
      */
-    private function nextCursorFor(array $rows, int $limit): ?string
+    private function buildNextCursor(array $rows, int $limit): ?string
     {
         if ($rows === [] || \count($rows) < $limit) {
             return null;

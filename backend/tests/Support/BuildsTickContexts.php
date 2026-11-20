@@ -27,7 +27,7 @@ trait BuildsTickContexts
         return new TickContext(
             $run,
             $connection,
-            $engines->kindFor($connection),
+            $engines->readKind($connection),
             $resolver->forUser($user),
             TickDriver::Poll,
         );

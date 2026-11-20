@@ -25,12 +25,12 @@ final readonly class ProfileConnections
     ) {
     }
 
-    public function usableFor(User $user): ?AiProviderSettings
+    public function findUsableConnection(User $user): ?AiProviderSettings
     {
-        return $this->usableGiven($user, $this->recommendationSettings->findForUser($user));
+        return $this->findUsableConnectionGiven($user, $this->recommendationSettings->findForUser($user));
     }
 
-    public function usableGiven(User $user, ?RecommendationSettings $storedSettings): ?AiProviderSettings
+    public function findUsableConnectionGiven(User $user, ?RecommendationSettings $storedSettings): ?AiProviderSettings
     {
         return $this->connectionPicks->findUsableConnectionGiven(
             $user,
@@ -42,11 +42,11 @@ final readonly class ProfileConnections
     public function canBuildProfiles(AiProviderSettings $connection): bool
     {
         return AiReadiness::isReady($connection)
-            && RecommendationProfileSource::Own === $this->engines->capabilitiesFor($connection)->profileSource;
+            && RecommendationProfileSource::Own === $this->engines->buildCapabilities($connection)->profileSource;
     }
 
     /** @return list<AiProviderSettings> */
-    public function candidatesFor(User $user): array
+    public function findCandidates(User $user): array
     {
         return $this->connectionPicks->findCandidates($user, $this->canBuildProfiles(...));
     }

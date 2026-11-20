@@ -21,7 +21,7 @@ final class ProviderErrorReason
     /** Redacted before it is clipped, so a key that straddles the clip leaves no prefix behind. */
     public static function in(string $body, ProviderCredentialsModel $credentials): ?string
     {
-        $reason = self::reasonIn($body);
+        $reason = self::parseReason($body);
 
         return null === $reason
             ? null
@@ -29,7 +29,7 @@ final class ProviderErrorReason
     }
 
     /** Short identifiers, never part of a message, so clipped without the reason's redaction. */
-    public static function identifiersIn(string $body): ProviderErrorIdentifiersModel
+    public static function parseIdentifiers(string $body): ProviderErrorIdentifiersModel
     {
         $error = self::decodeRoot($body)['error'] ?? null;
         $fields = \is_array($error) ? $error : [];
@@ -40,7 +40,7 @@ final class ProviderErrorReason
         );
     }
 
-    private static function reasonIn(string $body): ?string
+    private static function parseReason(string $body): ?string
     {
         $root = self::decodeRoot($body);
         $error = $root['error'] ?? null;

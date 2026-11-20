@@ -14,7 +14,7 @@ final readonly class RunStartModel
     }
 
     /** Null before the run has a start (the none and busy reports). */
-    public function elapsedSecondsAt(\DateTimeImmutable $now): ?int
+    public function computeElapsedSeconds(\DateTimeImmutable $now): ?int
     {
         if (null === $this->startedAt) {
             return null;

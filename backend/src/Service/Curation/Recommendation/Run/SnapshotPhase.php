@@ -37,7 +37,7 @@ final readonly class SnapshotPhase
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
-        $candidates = $this->candidatesFor($tick);
+        $candidates = $this->loadCandidates($tick);
 
         if ([] === $candidates) {
             $run->snapshot($tick->engineKind, []);
@@ -47,7 +47,7 @@ final readonly class SnapshotPhase
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        $profile = $this->profiles->profileFor($run->getUser(), $run->getCreatedAt());
+        $profile = $this->profiles->prepareProfile($run->getUser(), $run->getCreatedAt());
 
         return match ($profile->state) {
             RunProfileState::Building => RecommendationRunReportModel::fromRun($run),
@@ -74,7 +74,7 @@ final readonly class SnapshotPhase
     }
 
     /** @return list<ArticleLineModel> */
-    private function candidatesFor(TickContext $tick): array
+    private function loadCandidates(TickContext $tick): array
     {
         $now = $this->clock->now();
 

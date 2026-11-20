@@ -39,7 +39,7 @@ final readonly class RecommendationRunAdvancer
     /** @phpstan-impure */
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReportModel
     {
-        $held = $this->tickLock->acquire($user, $this->lockTtl->secondsFor($user));
+        $held = $this->tickLock->acquire($user, $this->lockTtl->computeSeconds($user));
         if (null === $held) {
             return RecommendationRunReportModel::busy();
         }
@@ -73,7 +73,7 @@ final readonly class RecommendationRunAdvancer
         } catch (AiNotConfiguredException | AiKeyUnreadableException $exception) {
             // Such a run can never advance again, so it fails here for every driver, and the error still propagates
             // to the HTTP mapping and the worker's fault floor.
-            $this->failPermanently($run, self::failureMessageFor($exception));
+            $this->failPermanently($run, self::pickFailureMessage($exception));
 
             throw $exception;
         }
@@ -85,7 +85,7 @@ final readonly class RecommendationRunAdvancer
         $this->entityManager->flush();
     }
 
-    private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $exception): string
+    private static function pickFailureMessage(AiNotConfiguredException | AiKeyUnreadableException $exception): string
     {
         return $exception instanceof AiKeyUnreadableException
             ? self::KEY_UNREADABLE

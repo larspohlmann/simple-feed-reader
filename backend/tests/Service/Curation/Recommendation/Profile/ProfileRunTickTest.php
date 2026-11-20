@@ -738,7 +738,7 @@ final class ProfileRunTickTest extends DbTestCase
     {
         /** @var ProfileConnections $profileConnections */
         $profileConnections = self::getContainer()->get(ProfileConnections::class);
-        $this->tick()->advance($profileRun, $profileConnections->usableFor($profileRun->getUser()), $driver);
+        $this->tick()->advance($profileRun, $profileConnections->findUsableConnection($profileRun->getUser()), $driver);
     }
 
     private function tick(): ProfileRunTick

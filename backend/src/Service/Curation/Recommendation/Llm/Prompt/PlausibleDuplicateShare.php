@@ -14,10 +14,10 @@ final readonly class PlausibleDuplicateShare
 
     public function exceededBy(int $namedCount, int $shownCount): bool
     {
-        return $namedCount > self::maximumFor($shownCount);
+        return $namedCount > self::computeMaximum($shownCount);
     }
 
-    private static function maximumFor(int $shownCount): int
+    private static function computeMaximum(int $shownCount): int
     {
         return intdiv($shownCount * self::PERCENT, 100);
     }

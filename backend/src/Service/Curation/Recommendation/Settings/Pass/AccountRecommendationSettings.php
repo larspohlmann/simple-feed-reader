@@ -44,7 +44,7 @@ final readonly class AccountRecommendationSettings
                 contextWindow: $window,
                 contextWindowSource: $source,
                 batchSize: $values->batchSize ?? RecommendationBatchSize::Medium,
-                maximumBatchSize: self::batchCeilingFor($provider),
+                maximumBatchSize: self::resolveBatchCeiling($provider),
             ),
             debugEnabled: $values->debugEnabled ?? false,
             autoGenerateIntervalHours: $values?->autoGenerateIntervalHours,
@@ -68,7 +68,7 @@ final readonly class AccountRecommendationSettings
      * A property of the connection, not an account setting: what the endpoint can be trusted with. It lives on the
      * connection as configured, so it survives a model change; unset means the default.
      */
-    private static function batchCeilingFor(?AiProviderSettings $provider): int
+    private static function resolveBatchCeiling(?AiProviderSettings $provider): int
     {
         return $provider?->getRunTuning()->maxBatchSize()
             ?? RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE;

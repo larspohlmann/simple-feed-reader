@@ -39,7 +39,7 @@ final class ScriptedRecommendationEngine implements RecommendationEngineInterfac
         return new self([], $advanceFailure);
     }
 
-    /** Registered under every kind, so a test does not depend on which kind kindFor() picks. */
+    /** Registered under every kind, so a test does not depend on which kind readKind() picks. */
     public function resolver(): RecommendationEngineResolver
     {
         $engines = [];

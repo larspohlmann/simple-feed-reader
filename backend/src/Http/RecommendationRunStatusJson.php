@@ -30,7 +30,7 @@ final class RecommendationRunStatusJson
             'resumable' => $status->resumable,
             'streamedChars' => $report->streamedChars,
             'firstBatchStarted' => $report->start->firstBatchStarted,
-            'elapsedSeconds' => $report->start->elapsedSecondsAt($status->observedAt),
+            'elapsedSeconds' => $report->start->computeElapsedSeconds($status->observedAt),
             'etaSeconds' => $status->forecast?->etaSeconds,
             'finishedShare' => $status->forecast?->finishedShare,
             'forYou' => [

@@ -73,7 +73,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
     public function testAHeldLockSkipsTheTurn(): void
     {
         $profileRun = $this->pendingProfileRun();
-        $holder = self::lockFactory()->createLock(UserTickLock::nameFor($this->owner), 60.0);
+        $holder = self::lockFactory()->createLock(UserTickLock::buildName($this->owner), 60.0);
         self::assertTrue($holder->acquire());
 
         try {
@@ -193,7 +193,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
 
         self::assertSame(
             900.0 + TickLockTtl::MARGIN_SECONDS,
-            $lockFactory->lastTtlFor(UserTickLock::nameFor($this->owner)),
+            $lockFactory->lastTtlFor(UserTickLock::buildName($this->owner)),
         );
     }
 
@@ -240,7 +240,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
     {
         $this->entityManager->getConnection()->executeStatement('DELETE FROM lock_keys');
         $thief = (new LockFactory(new DoctrineDbalStore($this->entityManager->getConnection())))
-            ->createLock(UserTickLock::nameFor($this->owner), 60.0);
+            ->createLock(UserTickLock::buildName($this->owner), 60.0);
         self::assertTrue($thief->acquire());
 
         return $thief;

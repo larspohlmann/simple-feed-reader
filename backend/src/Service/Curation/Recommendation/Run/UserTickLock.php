@@ -21,7 +21,7 @@ final readonly class UserTickLock
     }
 
     /** The one place the lock's name is formed; RecommendationPollDriver logs this very name. */
-    public static function nameFor(User $user): string
+    public static function buildName(User $user): string
     {
         return self::LOCK_NAME_PREFIX . $user->requireId();
     }
@@ -29,7 +29,7 @@ final readonly class UserTickLock
     /** Null when another tick holds the lock: the healthy, frequent case, so it is not logged here. */
     public function acquire(User $user, float $ttlSeconds): ?HeldTickLock
     {
-        $lockName = self::nameFor($user);
+        $lockName = self::buildName($user);
         $lock = $this->lockFactory->createLock($lockName, $ttlSeconds);
 
         if (!$lock->acquire()) {

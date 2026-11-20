@@ -54,6 +54,6 @@ final readonly class DueProfileRunFinder
             return false;
         }
 
-        return null !== $this->profileConnections->usableGiven($user, $row);
+        return null !== $this->profileConnections->findUsableConnectionGiven($user, $row);
     }
 }

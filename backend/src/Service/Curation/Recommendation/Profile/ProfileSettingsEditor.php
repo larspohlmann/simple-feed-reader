@@ -36,13 +36,13 @@ final readonly class ProfileSettingsEditor
     {
         $this->writer->saveProfileSettings($user, new ProfileSettingsValues(
             $change->intervalHours,
-            $this->connectionFor($user, $change->connectionId),
+            $this->requireAllowedConnectionIfSet($user, $change->connectionId),
             $change->keptCap,
             $change->viewedCap,
         ));
     }
 
-    private function connectionFor(User $user, ?int $connectionId): ?AiProviderSettings
+    private function requireAllowedConnectionIfSet(User $user, ?int $connectionId): ?AiProviderSettings
     {
         if (null === $connectionId) {
             return null;

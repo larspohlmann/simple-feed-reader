@@ -20,7 +20,7 @@ final readonly class RecommendationCapabilitiesJson
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
     public function from(AiProviderSettings $connection): array
     {
-        return self::shape($this->engines->capabilitiesFor($connection));
+        return self::shape($this->engines->buildCapabilities($connection));
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */

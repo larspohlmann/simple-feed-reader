@@ -176,20 +176,20 @@ final readonly class BatchWaveRounds
      */
     private static function guardWaveTransport(array $calls, array $outcomes): void
     {
-        $waveFailure = self::firstFailureIn($outcomes);
+        $waveFailure = self::pickFailure($outcomes);
         if (null === $waveFailure) {
             return;
         }
 
         foreach ($outcomes as $index => $outcome) {
-            $calls[$index]->recordedCall->abortAfterTransportFailure(self::abortDetailFor($outcome, $waveFailure));
+            $calls[$index]->recordedCall->abortAfterTransportFailure(self::pickAbortDetail($outcome, $waveFailure));
         }
 
         throw $waveFailure;
     }
 
     /** A call with its own cause, a spoiled reply included, names it; only a bystander borrows the wave's. */
-    private static function abortDetailFor(BatchCallOutcomeInterface $outcome, \Throwable $waveFailure): string
+    private static function pickAbortDetail(BatchCallOutcomeInterface $outcome, \Throwable $waveFailure): string
     {
         return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
     }
@@ -199,7 +199,7 @@ final readonly class BatchWaveRounds
      *
      * @param list<BatchCallOutcomeInterface> $outcomes
      */
-    private static function firstFailureIn(array $outcomes): ?\Throwable
+    private static function pickFailure(array $outcomes): ?\Throwable
     {
         $first = null;
         foreach ($outcomes as $outcome) {
