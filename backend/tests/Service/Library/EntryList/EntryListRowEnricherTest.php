@@ -12,7 +12,6 @@ use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\EntryOrigin;
 use App\Entity\Feed;
-use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\PostCommunity;
@@ -497,10 +496,11 @@ final class EntryListRowEnricherTest extends DbTestCase
     {
         $entry = $this->lemmyPost('scored', 31);
         $entry->getCanonicalItem()?->recordScore(7);
-        $post = new LemmyPost($entry->getCanonicalItem() ?? self::fail('linked'));
-        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        LemmyPostEntries::storeCommunity(
+            $this->entityManager,
+            $entry->getCanonicalItem() ?? self::fail('linked'),
+            PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
 
         $lemmy = $this->enrich([$this->row($entry)])[0]->enrichment->lemmy;
 
@@ -656,10 +656,11 @@ final class EntryListRowEnricherTest extends DbTestCase
         $item->recordScore(7);
         $this->entityManager->persist($item);
         $this->entityManager->persist($entry);
-        $post = new LemmyPost($item);
-        $post->placeIn(PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'));
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        LemmyPostEntries::storeCommunity(
+            $this->entityManager,
+            $item,
+            PostCommunity::fromIdentityAndUrl('Technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
 
         return $this->enrich([$this->row($entry)])[0]->enrichment->lemmy;
     }

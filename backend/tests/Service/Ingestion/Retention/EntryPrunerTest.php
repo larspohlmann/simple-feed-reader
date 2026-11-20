@@ -10,9 +10,9 @@ use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -657,8 +657,11 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->persist($account);
         $this->entityManager->persist(new DiscussionVote($user, $item, $account, VoteScore::Up, $this->clock->now()));
         $this->entityManager->persist(new SocialLike($user, $item, $account, '42', $this->clock->now()));
-        $this->entityManager->persist(new LemmyPost($item));
-        $this->entityManager->flush();
+        LemmyPostEntries::storeCommunity(
+            $this->entityManager,
+            $item,
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
     }
 
     /** @return array<string, int> rows per table that hangs off a canonical item */

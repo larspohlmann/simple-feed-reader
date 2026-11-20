@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\CanonicalItem;
-use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
 use App\Enum\CanonicalItemKind;
 use App\Repository\LemmyPostRepository;
@@ -27,8 +26,7 @@ final class LemmyPostRepositoryTest extends DbTestCase
     {
         $withRow = $this->persistItem('with');
         $withoutRow = $this->persistItem('without');
-        $this->entityManager->persist(new LemmyPost($withRow));
-        $this->entityManager->flush();
+        $this->storeCommunity($withRow);
         $this->entityManager->clear();
 
         $found = $this->posts->findByCanonicalItemIds([$withRow->requireId(), $withoutRow->requireId()]);
@@ -59,13 +57,20 @@ final class LemmyPostRepositoryTest extends DbTestCase
     public function testRemovingTheItemRemovesItsRow(): void
     {
         $item = $this->persistItem('gone');
-        $this->entityManager->persist(new LemmyPost($item));
-        $this->entityManager->flush();
+        $this->storeCommunity($item);
 
         $this->entityManager->remove($item);
         $this->entityManager->flush();
 
         self::assertSame([], $this->posts->findAll());
+    }
+
+    private function storeCommunity(CanonicalItem $item): void
+    {
+        $this->posts->storeCommunity(
+            $item->requireId(),
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
     }
 
     private function persistItem(string $name): CanonicalItem

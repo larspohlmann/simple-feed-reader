@@ -8,7 +8,6 @@ use App\Entity\CanonicalItem;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
 use App\Entity\SocialLike;
 use App\Entity\User;
@@ -193,10 +192,11 @@ final class ConnectedAccountStatesTest extends DbTestCase
         $this->entityManager->persist($entry);
         $item = LemmyPostEntries::linkItem($entry);
         $this->entityManager->persist($item);
-        $post = new LemmyPost($item);
-        $post->placeIn(PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'));
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        LemmyPostEntries::storeCommunity(
+            $this->entityManager,
+            $item,
+            PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
+        );
 
         return $entry;
     }

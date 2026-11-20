@@ -36,12 +36,6 @@ final class LemmyPost
         $this->canonicalItem = $canonicalItem;
     }
 
-    public function placeIn(PostCommunity $community): void
-    {
-        $this->communityIdentity = $community->identity;
-        $this->communityUrl = $community->url;
-    }
-
     public function getCommunity(): ?PostCommunity
     {
         if ($this->communityIdentity === null) {

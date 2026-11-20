@@ -8,6 +8,8 @@ use App\Entity\CanonicalItem;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LemmyPost;
+use App\Entity\PostCommunity;
 use App\Enum\CanonicalItemKind;
 use App\Enum\CommentsLoad;
 use Doctrine\ORM\EntityManagerInterface;
@@ -59,5 +61,15 @@ final class LemmyPostEntries
         $entry->linkTo($item);
 
         return $item;
+    }
+
+    /** Flushes, then stores the community on the item's row through the repository. */
+    public static function storeCommunity(
+        EntityManagerInterface $entityManager,
+        CanonicalItem $item,
+        PostCommunity $community,
+    ): void {
+        $entityManager->flush();
+        $entityManager->getRepository(LemmyPost::class)->storeCommunity($item->requireId(), $community);
     }
 }
