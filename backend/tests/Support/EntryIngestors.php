@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryLemmyPost;
+use App\Repository\CanonicalItemRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Category\CategoryNormalizer;
+use App\Service\Ingestion\Ingest\CanonicalItemWriter;
 use App\Service\Ingestion\Ingest\EntryCategoryWriter;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\EntryIngestor;
@@ -63,6 +66,7 @@ final class EntryIngestors
             ),
             new EntryTranscriptWriter($entityManager),
             self::lemmyPostWriter($entityManager),
+            self::canonicalItemWriter($entityManager),
         );
     }
 
@@ -78,7 +82,16 @@ final class EntryIngestors
             $platformRules,
             new EntryImageWriter(),
             self::lemmyPostWriter($entityManager),
+            self::canonicalItemWriter($entityManager),
         );
+    }
+
+    private static function canonicalItemWriter(EntityManagerInterface $entityManager): CanonicalItemWriter
+    {
+        /** @var CanonicalItemRepository $canonicalItems */
+        $canonicalItems = $entityManager->getRepository(CanonicalItem::class);
+
+        return new CanonicalItemWriter($canonicalItems, SocialRuleWiring::canonicalKeys());
     }
 
     private static function lemmyPostWriter(EntityManagerInterface $entityManager): EntryLemmyPostWriter

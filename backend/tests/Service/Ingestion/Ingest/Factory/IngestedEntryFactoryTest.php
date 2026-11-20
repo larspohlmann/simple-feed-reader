@@ -285,7 +285,7 @@ final class IngestedEntryFactoryTest extends TestCase
             self::context(),
         );
 
-        self::assertSame(2, $entry->getCommentCount());
+        self::assertSame(2, $entry->discussionCounts()->getCommentCount());
     }
 
     public function testASocialTimelineEntryStoresItsGuessedLanguage(): void

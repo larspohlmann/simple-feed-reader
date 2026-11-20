@@ -73,7 +73,7 @@ final class SelfThreadEnricherTest extends DbTestCase
 
         $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
         self::assertCount(2, $posts[$entry->requireId()]);
-        self::assertSame(2, $entry->getSelfReplyCount());
+        self::assertSame(2, $entry->discussionCounts()->getSelfReplyCount());
         self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
         self::assertContains('inPublic ' . self::POST, $this->thread->calls);
     }
@@ -228,7 +228,7 @@ final class SelfThreadEnricherTest extends DbTestCase
 
         $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
         self::assertSame([], $posts);
-        self::assertSame(0, $entry->getSelfReplyCount());
+        self::assertSame(0, $entry->discussionCounts()->getSelfReplyCount());
         self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
     }

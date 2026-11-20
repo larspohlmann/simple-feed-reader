@@ -87,7 +87,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::POST]);
         self::assertNotNull($entry);
-        self::assertSame(1, $entry->getCommentCount());
+        self::assertSame(1, $entry->discussionCounts()->getCommentCount());
 
         return $entry;
     }
@@ -253,7 +253,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        self::assertSame(9, $entry->getCommentCount());
+        self::assertSame(9, $entry->discussionCounts()->getCommentCount());
     }
 
     public function testAnUnknownCommentCountKeepsTheStoredOne(): void
@@ -264,7 +264,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->refresher()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
         $this->entityManager->flush();
 
-        self::assertSame(1, $entry->getCommentCount());
+        self::assertSame(1, $entry->discussionCounts()->getCommentCount());
     }
 
     public function testARefreshUpdatesTheStoredScore(): void

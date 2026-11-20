@@ -137,7 +137,7 @@ final readonly class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map($this->linkCardJson->from(...), $row->enrichment->linkCards),
             'thread' => array_map($this->threadPostJson->from(...), $row->enrichment->threadPosts),
-            'threadLength' => 1 + $entry->getSelfReplyCount(),
+            'threadLength' => 1 + $entry->discussionCounts()->getSelfReplyCount(),
             'share' => $entry->getShareKind()?->value,
             'quote' => $this->quotedPostJson->fromOptional($entry->getQuotedPost()),
         ];
@@ -165,7 +165,7 @@ final readonly class EntryJson
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
             'score' => $row->enrichment->lemmy?->score,
-            'commentCount' => $row->entry->getCommentCount(),
+            'commentCount' => $row->entry->discussionCounts()->getCommentCount(),
         ];
     }
 

@@ -88,7 +88,7 @@ final readonly class TimelineSelfThreads
     private static function countReplies(array $roots, array $replyCounts): void
     {
         foreach (array_intersect_key($roots, $replyCounts) as $rootGuid => $root) {
-            $root->countSelfReplies($replyCounts[$rootGuid]);
+            $root->discussionCounts()->recordSelfReplyCount($replyCounts[$rootGuid]);
         }
     }
 

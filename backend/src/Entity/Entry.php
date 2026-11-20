@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_url_hash', columns: ['url_hash', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_verify', columns: ['image_verify_attempts', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_url_hash', columns: ['image_url_hash'])]
+#[ORM\Index(name: 'idx_entry_canonical_item', columns: ['canonical_item_id', 'id'])]
 final class Entry
 {
     use PersistedId;
@@ -53,6 +54,10 @@ final class Entry
 
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
+
+    #[ORM\ManyToOne(targetEntity: CanonicalItem::class)]
+    #[ORM\JoinColumn(name: 'canonical_item_id', nullable: true, onDelete: 'SET NULL')]
+    private ?CanonicalItem $canonicalItem = null;
 
     #[ORM\Embedded(class: EntrySharedContent::class, columnPrefix: false)]
     private EntrySharedContent $share;
@@ -267,14 +272,23 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
-    public function getCommentCount(): ?int
+    public function getCanonicalItem(): ?CanonicalItem
     {
-        return $this->discussion->readCommentCount();
+        return $this->canonicalItem;
     }
 
-    public function recordDiscussionCounts(DiscussionCounts $counts): void
+    public function linkTo(CanonicalItem $item): void
     {
-        $this->discussion->storeCommentCount($counts->commentCount);
+        $item->recordCommentCount($this->discussion->getCommentCount());
+        $item->recordSelfReplyCount($this->discussion->getSelfReplyCount());
+        $this->discussion->clearCounts();
+        $this->canonicalItem = $item;
+    }
+
+    /** The item's counts once the entry is linked to one, the entry's own before. */
+    public function discussionCounts(): DiscussionCountStoreInterface
+    {
+        return $this->canonicalItem ?? $this->discussion;
     }
 
     public function getShareKind(): ?ShareKind
@@ -299,16 +313,6 @@ final class Entry
     {
         $this->share->quote($quote);
         $this->quotedLink = $link;
-    }
-
-    public function getSelfReplyCount(): int
-    {
-        return $this->discussion->readSelfReplyCount();
-    }
-
-    public function countSelfReplies(int $selfReplyCount): void
-    {
-        $this->discussion->storeSelfReplyCount($selfReplyCount);
     }
 
     public function bodyStandsInForSummary(): bool

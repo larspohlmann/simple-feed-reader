@@ -256,7 +256,7 @@ final class EntryJsonTest extends TestCase
     public function testTheThreadLengthCountsTheRepliesNotFolded(): void
     {
         $entry = $this->entryTitled('Root');
-        $entry->countSelfReplies(6);
+        $entry->discussionCounts()->recordSelfReplyCount(6);
         $post = new ThreadPostModel('https://x/2', null, '<p>two</p>', [], null);
         $row = $this->row($entry, new EntryListRowEnrichment(threadPosts: [$post]));
 
@@ -462,7 +462,7 @@ final class EntryJsonTest extends TestCase
     public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
-        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(-3, 0));
+        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(-3, 0));
 
         $json = JsonMappers::entryJson()->listRow($this->row($entry));
 

@@ -154,6 +154,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
 
         /** @var list<Entry> $rows */
         $rows = $this->createQueryBuilder('e')
+            ->leftJoin('e.canonicalItem', 'ci')->addSelect('ci')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.guid.hash IN (:hashes)')
             ->setParameter('feed', $feed)

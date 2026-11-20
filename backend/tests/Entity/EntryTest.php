@@ -81,26 +81,26 @@ final class EntryTest extends TestCase
 
     public function testANewEntryHasNoCommentCount(): void
     {
-        self::assertNull($this->entry()->getCommentCount());
+        self::assertNull($this->entry()->discussionCounts()->getCommentCount());
     }
 
     public function testRecordsTheCommentCount(): void
     {
         $entry = $this->entry();
 
-        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(12, 4));
+        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
 
-        self::assertSame(4, $entry->getCommentCount());
+        self::assertSame(4, $entry->discussionCounts()->getCommentCount());
     }
 
     public function testAnUnknownRecordKeepsTheStoredCommentCount(): void
     {
         $entry = $this->entry();
-        $entry->recordDiscussionCounts(DiscussionCounts::fromScoreAndComments(12, 4));
+        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
 
-        $entry->recordDiscussionCounts(DiscussionCounts::unknown());
+        $entry->discussionCounts()->recordCounts(DiscussionCounts::unknown());
 
-        self::assertSame(4, $entry->getCommentCount());
+        self::assertSame(4, $entry->discussionCounts()->getCommentCount());
     }
 
     private function entry(?string $url = 'https://example.test/1'): Entry

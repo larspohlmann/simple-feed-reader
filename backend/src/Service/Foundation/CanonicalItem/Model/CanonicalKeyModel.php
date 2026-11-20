@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Foundation\CanonicalItem\Model;
 
+use App\Entity\CanonicalItem;
 use App\Enum\CanonicalItemKind;
 
 final readonly class CanonicalKeyModel
@@ -16,6 +17,6 @@ final readonly class CanonicalKeyModel
 
     public function keyHash(): string
     {
-        return hash('sha256', $this->key);
+        return CanonicalItem::hashKey($this->key);
     }
 }
