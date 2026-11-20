@@ -18,6 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_image_verify', columns: ['image_verify_attempts', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_url_hash', columns: ['image_url_hash'])]
 #[ORM\Index(name: 'idx_entry_canonical_item', columns: ['canonical_item_id', 'id'])]
+#[ORM\Index(name: 'idx_entry_item_feed_date', columns: ['canonical_item_id', 'feed_id', 'effective_date'])]
 final class Entry
 {
     use PersistedId;
@@ -69,6 +70,7 @@ final class Entry
     #[ORM\Embedded(class: EntryDates::class, columnPrefix: false)]
     private EntryDates $dates;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         Feed $feed,
         string $guid,
