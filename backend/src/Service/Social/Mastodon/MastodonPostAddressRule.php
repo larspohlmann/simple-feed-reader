@@ -38,7 +38,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
-        $status = null === MastodonStatusAddress::ofOrNull($url) ? null : $url;
+        $status = null === MastodonStatusAddress::parseAddress($url) ? null : $url;
 
         return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, $status);
     }
@@ -46,7 +46,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string
     {
         return MastodonAuthor::identityOfProfileUrl(
-            $entry->getAuthorUrl() ?? MastodonStatusAddress::ofOrNull($post->address)?->authorPrefix,
+            $entry->getAuthorUrl() ?? MastodonStatusAddress::parseAddress($post->address)?->authorPrefix,
         );
     }
 
@@ -62,7 +62,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function requireOwnReplyGuids(string $url, SocialAccount $account): array
     {
-        $statusUri = MastodonStatusAddress::ofOrNull($url)?->uri()
+        $statusUri = MastodonStatusAddress::parseAddress($url)?->uri()
             ?? throw new SocialPostRefusedException('A reply in the thread names no Mastodon status.');
 
         return [$statusUri, $url];
@@ -70,7 +70,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     private static function requireOwnStatusId(string $address, SocialAccount $account): string
     {
-        $status = MastodonStatusAddress::ofOrNull($address);
+        $status = MastodonStatusAddress::parseAddress($address);
         $ownHost = $account->getServiceHost();
         if (null === $status || null === $ownHost || 0 !== strcasecmp($status->host, $ownHost)) {
             throw new SocialPostRefusedException('The post is not on this account\'s own Mastodon server.');

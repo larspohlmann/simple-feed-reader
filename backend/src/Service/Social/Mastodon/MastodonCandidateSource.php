@@ -39,7 +39,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
-        $session = $this->sessionOf($account);
+        $session = $this->buildSession($account);
         $follows = $this->follows($session);
 
         return new NetworkCandidatesModel(
@@ -47,20 +47,25 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
             $this->lists($session),
             [],
             $follows->truncated,
-            tags: self::tagsOf($this->followedTags($session)),
+            tags: self::buildTagCollections($this->followedTags($session)),
         );
     }
 
     public function collections(SocialAccount $account): NetworkCollectionsModel
     {
-        $session = $this->sessionOf($account);
+        $session = $this->buildSession($account);
         $lists = $this->lists($session);
         $tags = $this->followedTags($session);
 
-        return new NetworkCollectionsModel($lists, [], truncated: $tags->truncated, tags: self::tagsOf($tags));
+        return new NetworkCollectionsModel(
+            $lists,
+            [],
+            truncated: $tags->truncated,
+            tags: self::buildTagCollections($tags),
+        );
     }
 
-    private function sessionOf(SocialAccount $account): MastodonSessionModel
+    private function buildSession(SocialAccount $account): MastodonSessionModel
     {
         return new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
     }
@@ -96,7 +101,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
         $items = [];
         $page = $firstPage;
         do {
-            $fresh = self::nodesOf($page);
+            $fresh = self::requireNodes($page);
             array_push($items, ...$fresh);
             $next = LinkHeader::next($page->header('link'));
             if (null !== $next && !LinkHeader::isOn($session->instanceUrl, $next)) {
@@ -111,16 +116,16 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     }
 
     /** @return list<SocialCollectionModel> */
-    private static function tagsOf(CollectedItemsModel $tags): array
+    private static function buildTagCollections(CollectedItemsModel $tags): array
     {
-        return array_values(array_filter(array_map(MastodonFollowedTag::collectionOf(...), $tags->items)));
+        return array_values(array_filter(array_map(MastodonFollowedTag::parseCollection(...), $tags->items)));
     }
 
     /** @return list<SocialCollectionModel> */
     private function lists(MastodonSessionModel $session): array
     {
         $lists = [];
-        foreach (self::nodesOf($this->mastodon->send($session->get($session->url(self::LISTS)))) as $node) {
+        foreach (self::requireNodes($this->mastodon->send($session->get($session->url(self::LISTS)))) as $node) {
             $id = $node->string('id');
             $title = $node->string('title');
             if (null !== $id && null !== $title) {
@@ -150,7 +155,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     }
 
     /** @return list<JsonNodeModel> */
-    private static function nodesOf(ApiResponseModel $answer): array
+    private static function requireNodes(ApiResponseModel $answer): array
     {
         return JsonNodeModel::parseNodes(json_decode($answer->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a list.');

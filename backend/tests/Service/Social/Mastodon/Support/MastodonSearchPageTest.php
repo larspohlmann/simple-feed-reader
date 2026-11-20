@@ -16,7 +16,7 @@ final class MastodonSearchPageTest extends TestCase
 {
     public function testEveryStatusButAReplyBecomesAnEntry(): void
     {
-        $page = MastodonSearchPage::of([self::answer([
+        $page = MastodonSearchPage::fromAnswers([self::answer([
             'accounts' => [],
             'hashtags' => [],
             'statuses' => [self::searchStatus('111', null), self::searchStatus('112', '100')],
@@ -31,7 +31,8 @@ final class MastodonSearchPageTest extends TestCase
 
     public function testThePageNamesTheNewestStatusItKept(): void
     {
-        $page = MastodonSearchPage::of([self::answer(['statuses' => [self::searchStatus('111', null)]])], 'rss');
+        $answers = [self::answer(['statuses' => [self::searchStatus('111', null)]])];
+        $page = MastodonSearchPage::fromAnswers($answers, 'rss');
 
         self::assertSame('111', $page->newestId);
     }
@@ -40,7 +41,7 @@ final class MastodonSearchPageTest extends TestCase
     {
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        MastodonSearchPage::of([self::answer(['accounts' => []])], 'rss');
+        MastodonSearchPage::fromAnswers([self::answer(['accounts' => []])], 'rss');
     }
 
     public function testAHashtagLinkInTheContentMatchesAsText(): void
@@ -49,7 +50,7 @@ final class MastodonSearchPageTest extends TestCase
         $status['content'] = '<p>Best <a href="https://mastodon.example/tags/rssreader" class="mention hashtag">'
             . '#<span>RSSReader</span></a> &amp; more</p>';
 
-        $page = MastodonSearchPage::of([self::answer(['statuses' => [$status]])], 'rssreader');
+        $page = MastodonSearchPage::fromAnswers([self::answer(['statuses' => [$status]])], 'rssreader');
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -65,7 +66,7 @@ final class MastodonSearchPageTest extends TestCase
             'description' => 'Screenshot of an RSS reader',
         ]];
 
-        $page = MastodonSearchPage::of([self::answer(['statuses' => [$status]])], '"rss reader"');
+        $page = MastodonSearchPage::fromAnswers([self::answer(['statuses' => [$status]])], '"rss reader"');
 
         self::assertSame([], $page->parsed->entries);
     }
@@ -76,7 +77,7 @@ final class MastodonSearchPageTest extends TestCase
         $status['content'] = '<p>Same here</p>';
         $status['quote'] = ['state' => 'accepted', 'quoted_status' => self::searchStatus('90', null)];
 
-        $page = MastodonSearchPage::of([self::answer(['statuses' => [$status]])], '"rss reader"');
+        $page = MastodonSearchPage::fromAnswers([self::answer(['statuses' => [$status]])], '"rss reader"');
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -87,7 +88,7 @@ final class MastodonSearchPageTest extends TestCase
         $boost['content'] = '';
         $boost['reblog'] = self::searchStatus('90', null);
 
-        $page = MastodonSearchPage::of([self::answer(['statuses' => [$boost]])], '"rss reader"');
+        $page = MastodonSearchPage::fromAnswers([self::answer(['statuses' => [$boost]])], '"rss reader"');
 
         self::assertCount(1, $page->parsed->entries);
     }
@@ -111,7 +112,7 @@ final class MastodonSearchPageTest extends TestCase
 
         $answer = self::answer(['statuses' => [self::searchStatus('111', null), $remote]]);
 
-        $page = MastodonSearchPage::of([$answer], $query);
+        $page = MastodonSearchPage::fromAnswers([$answer], $query);
 
         self::assertSame($kept, array_map(
             static fn (ParsedEntryModel $entry): string => basename((string) $entry->url),

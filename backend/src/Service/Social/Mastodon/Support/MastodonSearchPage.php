@@ -23,14 +23,14 @@ final class MastodonSearchPage
      *
      * @throws SocialNetworkUnreachableException
      */
-    public static function of(array $accepted, string $query): TimelinePageModel
+    public static function fromAnswers(array $accepted, string $query): TimelinePageModel
     {
         $matches = SocialSearchMatch::matcher($query);
 
-        return MastodonTimelinePage::of(array_values(array_filter(
-            self::distinctStatusesOf($accepted),
+        return MastodonTimelinePage::fromStatuses(array_values(array_filter(
+            self::collectDistinctStatuses($accepted),
             static fn (JsonNodeModel $status): bool => null === $status->string('in_reply_to_id')
-                && $matches(self::searchedPostOf(MastodonTimelinePage::originalOf($status))),
+                && $matches(self::buildSearchedPost(MastodonTimelinePage::resolveOriginal($status))),
         )));
     }
 
@@ -41,7 +41,7 @@ final class MastodonSearchPage
      *
      * @throws SocialNetworkUnreachableException
      */
-    private static function distinctStatusesOf(array $accepted): array
+    private static function collectDistinctStatuses(array $accepted): array
     {
         $statusesById = [];
         foreach ($accepted as $answer) {
@@ -61,18 +61,18 @@ final class MastodonSearchPage
         return $statuses;
     }
 
-    private static function searchedPostOf(JsonNodeModel $post): SearchedPostModel
+    private static function buildSearchedPost(JsonNodeModel $post): SearchedPostModel
     {
         $account = $post->node('account');
 
         return new SearchedPostModel(
             array_values(array_filter([$account->string('acct'), MastodonAuthor::handle($account)], \is_string(...))),
-            self::ownTextsOf($post),
+            self::buildSearchTexts($post),
         );
     }
 
     /** @return list<string> */
-    private static function ownTextsOf(JsonNodeModel $post): array
+    private static function buildSearchTexts(JsonNodeModel $post): array
     {
         return [
             PlainText::fromHtmlBlocks($post->string('content')) ?? '',

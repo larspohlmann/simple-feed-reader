@@ -26,19 +26,19 @@ use App\Service\Social\Social\Support\ShareAttribution;
 final class MastodonTimelinePage
 {
     /** @param list<JsonNodeModel> $statuses */
-    public static function of(array $statuses): TimelinePageModel
+    public static function fromStatuses(array $statuses): TimelinePageModel
     {
         $byId = self::ownStatusesById($statuses);
         $entries = [];
         $selfReplies = [];
         $postsByGuid = [];
         foreach ($statuses as $status) {
-            $entry = self::entryOf($status);
+            $entry = self::parseEntry($status);
             if (null === $entry) {
                 continue;
             }
-            $postsByGuid[$entry->guid] = self::originalOf($status);
-            $selfReply = self::selfReplyOf($status, $entry, $byId);
+            $postsByGuid[$entry->guid] = self::resolveOriginal($status);
+            $selfReply = self::detectSelfReply($status, $entry, $byId);
             if (null === $selfReply) {
                 $entries[] = $entry;
                 continue;
@@ -46,7 +46,11 @@ final class MastodonTimelinePage
             $selfReplies[] = $selfReply;
         }
 
-        return TimelinePageModel::fromEntries($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
+        return TimelinePageModel::fromEntries(
+            $entries,
+            self::buildKnownShares($postsByGuid),
+            self::pickNewestId($statuses),
+        )
             ->withSelfReplies($selfReplies);
     }
 
@@ -69,18 +73,18 @@ final class MastodonTimelinePage
     }
 
     /** @param array<string, JsonNodeModel> $byId */
-    private static function selfReplyOf(
+    private static function detectSelfReply(
         JsonNodeModel $status,
         ParsedEntryModel $entry,
         array $byId,
     ): ?TimelineSelfReplyModel {
-        $parent = self::ownParentOf($status, $byId);
+        $parent = self::findOwnParent($status, $byId);
         if (null === $parent) {
             return null;
         }
-        $root = self::rootOf($parent, $byId);
+        $root = self::findRoot($parent, $byId);
         $rootUri = $root?->string('uri');
-        $parentUrl = MastodonStatusUrl::of($parent);
+        $parentUrl = MastodonStatusUrl::resolveUrl($parent);
         if (null === $root || null === $rootUri || null === $parentUrl || null !== $root->string('in_reply_to_id')) {
             return null;
         }
@@ -89,10 +93,10 @@ final class MastodonTimelinePage
     }
 
     /** @param array<string, JsonNodeModel> $byId */
-    private static function rootOf(JsonNodeModel $status, array $byId): ?JsonNodeModel
+    private static function findRoot(JsonNodeModel $status, array $byId): ?JsonNodeModel
     {
         $visited = [];
-        while (null !== $parent = self::ownParentOf($status, $byId)) {
+        while (null !== $parent = self::findOwnParent($status, $byId)) {
             $id = $status->string('id') ?? '';
             if (isset($visited[$id])) {
                 return null;
@@ -109,7 +113,7 @@ final class MastodonTimelinePage
      *
      * @param array<string, JsonNodeModel> $byId
      */
-    private static function ownParentOf(JsonNodeModel $status, array $byId): ?JsonNodeModel
+    private static function findOwnParent(JsonNodeModel $status, array $byId): ?JsonNodeModel
     {
         $accountId = $status->node('account')->string('id');
         if (null === $accountId || $accountId !== $status->string('in_reply_to_account_id')) {
@@ -120,14 +124,15 @@ final class MastodonTimelinePage
     }
 
     /** @param array<string, JsonNodeModel> $postsByGuid */
-    private static function knownSharesOf(array $postsByGuid): KnownSharesModel
+    private static function buildKnownShares(array $postsByGuid): KnownSharesModel
     {
         $cards = array_filter(array_map(
-            static fn (JsonNodeModel $post): ?LinkCardContent => MastodonCard::of($post->node('card')),
+            static fn (JsonNodeModel $post): ?LinkCardContent => MastodonCard::fromNode($post->node('card')),
             $postsByGuid,
         ));
         $quotes = array_filter(array_map(
-            static fn (JsonNodeModel $post): ?QuotedPostContent => MastodonQuotedStatus::ofQuote($post->node('quote')),
+            static fn (JsonNodeModel $post): ?QuotedPostContent
+                => MastodonQuotedStatus::fromQuote($post->node('quote')),
             $postsByGuid,
         ));
 
@@ -139,15 +144,15 @@ final class MastodonTimelinePage
         return KnownSharesModel::fromMastodonShares($cards, $quotes, array_keys($replied));
     }
 
-    private static function entryOf(JsonNodeModel $status): ?ParsedEntryModel
+    private static function parseEntry(JsonNodeModel $status): ?ParsedEntryModel
     {
-        $post = self::originalOf($status);
+        $post = self::resolveOriginal($status);
         $uri = $post->string('uri');
-        $url = MastodonStatusUrl::of($post);
+        $url = MastodonStatusUrl::resolveUrl($post);
         if (null === $uri || null === $url) {
             return null;
         }
-        $body = self::bodyOf($post);
+        $body = self::buildBody($post);
         $account = $post->node('account');
 
         return (new ParsedEntryModel(
@@ -158,14 +163,14 @@ final class MastodonTimelinePage
             summary: null,
             contentHtml: self::withBoostAttribution($body, $status),
             publishedAt: DateParser::parse($status->string('created_at')),
-            media: self::mediaOf($post->nodes('media_attachments')),
+            media: self::buildMedia($post->nodes('media_attachments')),
             authorUrl: MastodonAuthor::profile($account),
             authorAvatarUrl: MastodonAuthor::avatar($account),
             statedLanguage: $post->string('language'),
         ))->withDiscussionCounts(DiscussionCounts::fromScoreAndComments(null, $post->int('replies_count')));
     }
 
-    public static function originalOf(JsonNodeModel $status): JsonNodeModel
+    public static function resolveOriginal(JsonNodeModel $status): JsonNodeModel
     {
         return self::isBoost($status) ? $status->node('reblog') : $status;
     }
@@ -175,7 +180,7 @@ final class MastodonTimelinePage
         return null !== $status->node('reblog')->string('uri');
     }
 
-    private static function bodyOf(JsonNodeModel $post): ?string
+    private static function buildBody(JsonNodeModel $post): ?string
     {
         $warning = $post->string('spoiler_text');
         $html = (null === $warning ? '' : sprintf('<p><strong>CW: %s</strong></p>', HtmlEscape::text($warning)))
@@ -199,18 +204,18 @@ final class MastodonTimelinePage
     }
 
     /** @param list<JsonNodeModel> $attachments */
-    private static function mediaOf(array $attachments): ParsedEntryMediaModel
+    private static function buildMedia(array $attachments): ParsedEntryMediaModel
     {
-        $media = MastodonAttachments::of($attachments);
+        $media = MastodonAttachments::parseMedia($attachments);
         if ([] === $media) {
             return new ParsedEntryMediaModel();
         }
 
-        return new ParsedEntryMediaModel(self::leadImageOf($media), new ParsedMediaBundleModel($media));
+        return new ParsedEntryMediaModel(self::pickLeadImage($media), new ParsedMediaBundleModel($media));
     }
 
     /** @param list<ParsedMediumModel> $media */
-    private static function leadImageOf(array $media): ?DeclaredImageModel
+    private static function pickLeadImage(array $media): ?DeclaredImageModel
     {
         foreach ($media as $medium) {
             if (VisualMediaKind::Image === $medium->kind) {
@@ -222,7 +227,7 @@ final class MastodonTimelinePage
     }
 
     /** @param list<JsonNodeModel> $statuses */
-    private static function newestIdOf(array $statuses): ?string
+    private static function pickNewestId(array $statuses): ?string
     {
         $newest = null;
         foreach ($statuses as $status) {

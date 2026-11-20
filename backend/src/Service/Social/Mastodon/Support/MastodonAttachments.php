@@ -19,18 +19,18 @@ final class MastodonAttachments
      *
      * @return list<ParsedMediumModel>
      */
-    public static function of(array $attachments): array
+    public static function parseMedia(array $attachments): array
     {
-        return array_values(array_filter(array_map(self::mediumOf(...), $attachments)));
+        return array_values(array_filter(array_map(self::parseMedium(...), $attachments)));
     }
 
     /** @return list<EntryMedium> */
-    public static function entryMediaOf(JsonNodeModel $status): array
+    public static function assembleEntryMedia(JsonNodeModel $status): array
     {
-        return EntryMediaAssembler::assembleVisualMedia(self::of($status->nodes('media_attachments')));
+        return EntryMediaAssembler::assembleVisualMedia(self::parseMedia($status->nodes('media_attachments')));
     }
 
-    private static function mediumOf(JsonNodeModel $attachment): ?ParsedMediumModel
+    private static function parseMedium(JsonNodeModel $attachment): ?ParsedMediumModel
     {
         $url = HttpsImageUrl::orNull($attachment->string('url'));
         $size = $attachment->node('meta')->node('original');

@@ -22,7 +22,7 @@ final readonly class MastodonPendingThread implements PendingThreadInterface
         $address = $this->postAddresses->findPost($entry);
 
         return SocialNetwork::Mastodon === $address?->network
-            && null !== MastodonStatusAddress::ofOrNull($address->address)
+            && null !== MastodonStatusAddress::parseAddress($address->address)
             && !SourceFormat::isSocial($entry->getFeed()->getSourceFormat());
     }
 }

@@ -31,7 +31,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     {
         $statuses = [];
         foreach (array_chunk(self::answeredIds($fresh), self::STATUSES_PER_CALL) as $ids) {
-            $statuses += $this->statusesOf($account, $ids);
+            $statuses += $this->findStatuses($account, $ids);
         }
 
         $contexts = [];
@@ -61,7 +61,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
      * @param list<string> $ids
      * @return array<string, JsonNodeModel> status by id
      */
-    private function statusesOf(SocialAccount $account, array $ids): array
+    private function findStatuses(SocialAccount $account, array $ids): array
     {
         $query = implode('&', array_map(static fn (string $id): string => 'id[]=' . rawurlencode($id), $ids));
         try {
@@ -92,7 +92,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             return null;
         }
         $answered = $statuses[$answeredId];
-        $context = self::withExcerptOf($row->subject->context, $answered);
+        $context = self::withAnsweredExcerpt($row->subject->context, $answered);
         if ($answered->string('in_reply_to_id') !== null) {
             $context = $context->withOnComment();
         }
@@ -100,8 +100,10 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
         return $context;
     }
 
-    private static function withExcerptOf(NotificationContext $context, JsonNodeModel $answered): NotificationContext
-    {
+    private static function withAnsweredExcerpt(
+        NotificationContext $context,
+        JsonNodeModel $answered,
+    ): NotificationContext {
         $excerpt = Excerpt::cutHtml($answered->text('content'));
         if ($excerpt === null) {
             return $context;

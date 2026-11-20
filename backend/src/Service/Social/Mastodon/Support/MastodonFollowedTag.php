@@ -9,7 +9,7 @@ use App\Service\Social\Social\Model\SocialCollectionModel;
 
 final class MastodonFollowedTag
 {
-    public static function collectionOf(JsonNodeModel $tag): ?SocialCollectionModel
+    public static function parseCollection(JsonNodeModel $tag): ?SocialCollectionModel
     {
         $tagName = $tag->string('name');
         if (null === $tagName || !MastodonFeedIds::isTagName($tagName)) {

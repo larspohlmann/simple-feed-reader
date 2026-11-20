@@ -17,18 +17,18 @@ final class MastodonStatusUrlTest extends TestCase
             'uri' => 'https://a.example/users/x/statuses/1',
         ]);
 
-        self::assertSame('https://a.example/@x/1', MastodonStatusUrl::of($status));
+        self::assertSame('https://a.example/@x/1', MastodonStatusUrl::resolveUrl($status));
     }
 
     public function testTheUriServesWhenThereIsNoUsableUrl(): void
     {
         $status = JsonNodeModel::fromValue(['url' => 'not a url', 'uri' => 'https://a.example/users/x/statuses/1']);
 
-        self::assertSame('https://a.example/users/x/statuses/1', MastodonStatusUrl::of($status));
+        self::assertSame('https://a.example/users/x/statuses/1', MastodonStatusUrl::resolveUrl($status));
     }
 
     public function testAStatusWithNeitherHasNoUrl(): void
     {
-        self::assertNull(MastodonStatusUrl::of(JsonNodeModel::fromValue(['uri' => 'tag:a.example,2026:1'])));
+        self::assertNull(MastodonStatusUrl::resolveUrl(JsonNodeModel::fromValue(['uri' => 'tag:a.example,2026:1'])));
     }
 }

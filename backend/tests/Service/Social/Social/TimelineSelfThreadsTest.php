@@ -22,7 +22,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
     public function testAMastodonRootFoldsItsSelfRepliesWithTheirContent(): void
     {
         $feed = $this->feed();
-        $page = MastodonTimelinePage::of([
+        $page = MastodonTimelinePage::fromStatuses([
             self::timelineStatus('102', '101'),
             self::timelineStatus('101', '100'),
             self::timelineStatus('100'),
@@ -37,7 +37,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
 
     public function testAPageWithoutSelfRepliesIsPlannedAsItIs(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus('100')]);
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus('100')]);
 
         $plan = $this->selfThreads()->plan($this->feed(), $page);
 
@@ -47,7 +47,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
 
     public function testOfTwoRepliesToTheSamePostTheOlderTakesThePosition(): void
     {
-        $page = MastodonTimelinePage::of([
+        $page = MastodonTimelinePage::fromStatuses([
             self::timelineStatus('102', '100'),
             self::timelineStatus('101', '100'),
             self::timelineStatus('100'),
@@ -64,7 +64,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
     public function testAChainDeeperThanFourRepliesDropsTheRestAndCountsThem(): void
     {
         $feed = $this->feed();
-        $page = MastodonTimelinePage::of([
+        $page = MastodonTimelinePage::fromStatuses([
             self::timelineStatus('106', '105'),
             self::timelineStatus('105', '104'),
             self::timelineStatus('104', '103'),
@@ -97,7 +97,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
 
         $plan = $this->selfThreads()->plan(
             $feed,
-            MastodonTimelinePage::of([self::timelineStatus('101', '100'), self::timelineStatus('100')]),
+            MastodonTimelinePage::fromStatuses([self::timelineStatus('101', '100'), self::timelineStatus('100')]),
         );
         $this->selfThreads()->fold($feed, $plan->threads, []);
 
@@ -109,7 +109,7 @@ final class TimelineSelfThreadsTest extends DbTestCase
     {
         $plan = $this->selfThreads()->plan(
             $this->feed(),
-            MastodonTimelinePage::of([self::timelineStatus('102', '101'), self::timelineStatus('100')]),
+            MastodonTimelinePage::fromStatuses([self::timelineStatus('102', '101'), self::timelineStatus('100')]),
         );
 
         self::assertSame([], $plan->threads->replyCounts);

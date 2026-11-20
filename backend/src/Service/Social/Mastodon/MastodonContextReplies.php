@@ -29,7 +29,7 @@ final readonly class MastodonContextReplies
     {
     }
 
-    public static function answerOf(string $postId, string $context): string
+    public static function buildEnvelope(string $postId, string $context): string
     {
         return sprintf(
             '{"postId":%s,"context":%s}',
@@ -43,7 +43,7 @@ final readonly class MastodonContextReplies
      *
      * @throws CommentsUnavailableException when the answer holds no post id or no descendants list
      */
-    public function of(string $postAddress, string $answer): array
+    public function parseReplies(string $postAddress, string $answer): array
     {
         $envelope = JsonNodeModel::fromValue(json_decode($answer, true));
         $postId = $envelope->string('postId')
@@ -52,11 +52,11 @@ final readonly class MastodonContextReplies
             ?? throw new CommentsUnavailableException('The Mastodon instance answered without the replies.');
         $thread = new MastodonReplyThread(
             $postId,
-            MastodonStatusAddress::ofOrNull($postAddress)?->authorPrefix,
+            MastodonStatusAddress::parseAddress($postAddress)?->authorPrefix,
             $descendants,
         );
 
-        return $this->nodesOf($thread->topLevel(), $thread);
+        return $this->buildNodes($thread->topLevel(), $thread);
     }
 
     /**
@@ -64,18 +64,18 @@ final readonly class MastodonContextReplies
      *
      * @return list<ReplyNode>
      */
-    private function nodesOf(array $statuses, MastodonReplyThread $thread): array
+    private function buildNodes(array $statuses, MastodonReplyThread $thread): array
     {
         return array_map(
             function (JsonNodeModel $status) use ($thread): ReplyNode {
                 $byPostAuthor = $thread->isByPostAuthor($status->node('account'));
 
                 return new ReplyNode(
-                    self::publishedAtOf($status),
+                    self::parsePublishedAt($status),
                     fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
-                        => $this->commentOf($status, $publishedAt, $byPostAuthor),
-                    $this->nodesOf($thread->answersTo($status), $thread),
-                    url: MastodonStatusUrl::of($status),
+                        => $this->buildComment($status, $publishedAt, $byPostAuthor),
+                    $this->buildNodes($thread->answersTo($status), $thread),
+                    url: MastodonStatusUrl::resolveUrl($status),
                     byEntryAuthor: $byPostAuthor,
                     counts: MastodonPostCounts::parseStatus($status),
                 );
@@ -84,7 +84,7 @@ final readonly class MastodonContextReplies
         );
     }
 
-    private function commentOf(
+    private function buildComment(
         JsonNodeModel $status,
         ?\DateTimeImmutable $publishedAt,
         bool $byPostAuthor,
@@ -92,27 +92,27 @@ final readonly class MastodonContextReplies
         $account = $status->node('account');
 
         return new EntryCommentModel(
-            self::authorOf($account),
-            MastodonStatusUrl::of($status),
+            self::buildAuthor($account),
+            MastodonStatusUrl::resolveUrl($status),
             $publishedAt,
-            $this->htmlOf($status),
+            $this->buildHtml($status),
             $byPostAuthor,
-            self::embedsOf($status),
+            self::buildEmbeds($status),
             post: MastodonCommentPost::parseStatus($status),
         );
     }
 
-    public function selfReplyOf(JsonNodeModel $status): EntryCommentModel
+    public function buildSelfReply(JsonNodeModel $status): EntryCommentModel
     {
-        return $this->commentOf($status, self::publishedAtOf($status), true);
+        return $this->buildComment($status, self::parsePublishedAt($status), true);
     }
 
-    private static function publishedAtOf(JsonNodeModel $status): ?\DateTimeImmutable
+    private static function parsePublishedAt(JsonNodeModel $status): ?\DateTimeImmutable
     {
         return DateParser::parse($status->string('created_at'));
     }
 
-    private static function authorOf(JsonNodeModel $account): CommentAuthorModel
+    private static function buildAuthor(JsonNodeModel $account): CommentAuthorModel
     {
         return new CommentAuthorModel(
             MastodonAuthor::name($account),
@@ -122,7 +122,7 @@ final readonly class MastodonContextReplies
         );
     }
 
-    private function htmlOf(JsonNodeModel $status): string
+    private function buildHtml(JsonNodeModel $status): string
     {
         $content = $status->string('content') ?? '';
         $warning = $status->string('spoiler_text');
@@ -133,12 +133,12 @@ final readonly class MastodonContextReplies
         return $this->sanitizer->sanitize($folded) ?? '';
     }
 
-    private static function embedsOf(JsonNodeModel $status): CommentEmbedsModel
+    private static function buildEmbeds(JsonNodeModel $status): CommentEmbedsModel
     {
         return new CommentEmbedsModel(
-            MastodonAttachments::entryMediaOf($status),
-            MastodonCard::of($status->node('card')),
-            MastodonQuotedStatus::ofQuote($status->node('quote')),
+            MastodonAttachments::assembleEntryMedia($status),
+            MastodonCard::fromNode($status->node('card')),
+            MastodonQuotedStatus::fromQuote($status->node('quote')),
         );
     }
 }

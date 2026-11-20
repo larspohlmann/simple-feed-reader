@@ -11,7 +11,7 @@ use App\Service\Outbound\Fetch\Support\HostKey;
 
 final class MastodonCard
 {
-    public static function of(JsonNodeModel $card): ?LinkCardContent
+    public static function fromNode(JsonNodeModel $card): ?LinkCardContent
     {
         $url = $card->string('url');
         $title = $card->string('title');

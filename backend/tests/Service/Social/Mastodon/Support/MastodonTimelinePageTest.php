@@ -23,7 +23,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAStatusBecomesAnEntryWithItsUriUrlAuthorAndUtcDate(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus()]);
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus()]);
         $entry = $page->parsed->entries[0];
 
         self::assertSame(self::URI, $entry->guid);
@@ -39,14 +39,14 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAStatusStatesItsLanguage(): void
     {
-        $entry = MastodonTimelinePage::of([self::timelineStatus(['language' => 'fr'])])->parsed->entries[0];
+        $entry = MastodonTimelinePage::fromStatuses([self::timelineStatus(['language' => 'fr'])])->parsed->entries[0];
 
         self::assertSame('fr', $entry->statedLanguage);
     }
 
     public function testAStatusWithoutALanguageStatesNone(): void
     {
-        $entry = MastodonTimelinePage::of([self::timelineStatus(['language' => null])])->parsed->entries[0];
+        $entry = MastodonTimelinePage::fromStatuses([self::timelineStatus(['language' => null])])->parsed->entries[0];
 
         self::assertNull($entry->statedLanguage);
     }
@@ -60,7 +60,7 @@ final class MastodonTimelinePageTest extends TestCase
             'reblog' => self::statusFields(['language' => 'es']),
         ]);
 
-        $entry = MastodonTimelinePage::of([$boost])->parsed->entries[0];
+        $entry = MastodonTimelinePage::fromStatuses([$boost])->parsed->entries[0];
 
         self::assertSame('es', $entry->statedLanguage);
     }
@@ -69,7 +69,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $status = self::timelineStatus(['spoiler_text' => 'Spoilers <3']);
 
-        $entry = MastodonTimelinePage::of([$status])->parsed->entries[0];
+        $entry = MastodonTimelinePage::fromStatuses([$status])->parsed->entries[0];
 
         self::assertSame('<p><strong>CW: Spoilers &lt;3</strong></p>' . self::CONTENT, $entry->contentHtml);
     }
@@ -85,7 +85,7 @@ final class MastodonTimelinePageTest extends TestCase
             'reblog' => self::statusFields([]),
         ]);
 
-        $page = MastodonTimelinePage::of([$boost]);
+        $page = MastodonTimelinePage::fromStatuses([$boost]);
         $entry = $page->parsed->entries[0];
 
         self::assertSame(self::URI, $entry->guid);
@@ -100,7 +100,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testImagesAndGifsBecomeMediaAndTheFirstImageLeads(): void
     {
-        $entry = MastodonTimelinePage::of([self::timelineStatus(['media_attachments' => [
+        $entry = MastodonTimelinePage::fromStatuses([self::timelineStatus(['media_attachments' => [
             [
                 'type' => 'gifv',
                 'url' => 'https://files.mastodon.example/b.mp4',
@@ -137,7 +137,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAPreviewCardIsKeptAsTheLinksCard(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus(['card' => [
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['card' => [
             'url' => 'https://example.com/story',
             'title' => 'The story',
             'description' => 'What happened.',
@@ -161,7 +161,7 @@ final class MastodonTimelinePageTest extends TestCase
     #[DataProvider('unusableCards')]
     public function testACardLinkCardsCannotStoreFallsBackToThePageFetch(array $card): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus(['card' => $card])]);
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['card' => $card])]);
 
         self::assertNull($page->knownShares->linkCardFor(self::URI));
     }
@@ -176,7 +176,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testTheNewestIdIsTheHighestIdWhateverTheOrder(): void
     {
-        $page = MastodonTimelinePage::of([
+        $page = MastodonTimelinePage::fromStatuses([
             self::timelineStatus(['id' => '99', 'uri' => 'https://mastodon.example/users/bob/statuses/99']),
             self::timelineStatus(['id' => '1000', 'uri' => 'https://mastodon.example/users/bob/statuses/1000']),
             self::timelineStatus(['id' => '998', 'uri' => 'https://mastodon.example/users/bob/statuses/998']),
@@ -189,7 +189,7 @@ final class MastodonTimelinePageTest extends TestCase
     #[DataProvider('idsOfEqualLength')]
     public function testIdsOfEqualLengthCompareDigitByDigit(array $ids): void
     {
-        $page = MastodonTimelinePage::of(array_map(
+        $page = MastodonTimelinePage::fromStatuses(array_map(
             static fn (string $id): JsonNodeModel => self::timelineStatus([
                 'id' => $id,
                 'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
@@ -211,26 +211,26 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'url' => 'javascript:alert(1)']]);
 
-        self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorUrl);
+        self::assertNull(MastodonTimelinePage::fromStatuses([$status])->parsed->entries[0]->authorUrl);
     }
 
     public function testAnEntryUrlThatIsNoWebPageFallsBackToTheUri(): void
     {
         $status = self::timelineStatus(['url' => 'javascript:alert(1)']);
 
-        self::assertSame(self::URI, MastodonTimelinePage::of([$status])->parsed->entries[0]->url);
+        self::assertSame(self::URI, MastodonTimelinePage::fromStatuses([$status])->parsed->entries[0]->url);
     }
 
     public function testAStatusWithNoWebPageAtAllIsSkipped(): void
     {
         $status = self::timelineStatus(['url' => 'javascript:alert(1)', 'uri' => 'tag:mastodon.example,2026:109']);
 
-        self::assertSame([], MastodonTimelinePage::of([$status])->parsed->entries);
+        self::assertSame([], MastodonTimelinePage::fromStatuses([$status])->parsed->entries);
     }
 
     public function testAnAttachmentWithoutAnHttpsUrlIsLeftOut(): void
     {
-        $entry = MastodonTimelinePage::of([self::timelineStatus(['media_attachments' => [
+        $entry = MastodonTimelinePage::fromStatuses([self::timelineStatus(['media_attachments' => [
             ['type' => 'image', 'url' => 'http://files.mastodon.example/a.jpg'],
         ]])])->parsed->entries[0];
 
@@ -239,7 +239,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAStatusWithoutAWebPageDoesNotEndThePage(): void
     {
-        $page = MastodonTimelinePage::of([
+        $page = MastodonTimelinePage::fromStatuses([
             self::timelineStatus(['uri' => 'tag:x', 'url' => null]),
             self::timelineStatus(),
         ]);
@@ -257,7 +257,7 @@ final class MastodonTimelinePageTest extends TestCase
 
         self::assertSame(
             'https://files.mastodon.example/avatars/bob.png',
-            MastodonTimelinePage::of([$status])->parsed->entries[0]->authorAvatarUrl,
+            MastodonTimelinePage::fromStatuses([$status])->parsed->entries[0]->authorAvatarUrl,
         );
     }
 
@@ -265,7 +265,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'avatar' => 'javascript:alert(1)']]);
 
-        self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorAvatarUrl);
+        self::assertNull(MastodonTimelinePage::fromStatuses([$status])->parsed->entries[0]->authorAvatarUrl);
     }
 
     /** @param array<string, string> $booster */
@@ -274,7 +274,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $boost = self::timelineStatus(['content' => '', 'account' => $booster, 'reblog' => self::statusFields([])]);
 
-        self::assertSame($expected, MastodonTimelinePage::of([$boost])->parsed->entries[0]->contentHtml);
+        self::assertSame($expected, MastodonTimelinePage::fromStatuses([$boost])->parsed->entries[0]->contentHtml);
     }
 
     /** @return iterable<string, array{array<string, string>, string}> */
@@ -297,12 +297,12 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAnEmptyPageNamesNoNewestId(): void
     {
-        self::assertNull(MastodonTimelinePage::of([])->newestId);
+        self::assertNull(MastodonTimelinePage::fromStatuses([])->newestId);
     }
 
     public function testAnAcceptedNativeQuoteIsKnownByTheStatusGuid(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus(['quote' => self::acceptedQuote()])]);
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['quote' => self::acceptedQuote()])]);
 
         self::assertSame('carol@third.example', $page->knownShares->quotedPostFor(self::URI)?->authorHandle);
     }
@@ -317,7 +317,7 @@ final class MastodonTimelinePageTest extends TestCase
             'reblog' => self::statusFields(['quote' => self::acceptedQuote()]),
         ]);
 
-        $page = MastodonTimelinePage::of([$boost]);
+        $page = MastodonTimelinePage::fromStatuses([$boost]);
 
         self::assertSame(
             'carol@third.example',
@@ -327,20 +327,22 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAStatusWithoutAQuoteKnowsNone(): void
     {
-        self::assertNull(MastodonTimelinePage::of([self::timelineStatus()])->knownShares->quotedPostFor(self::URI));
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus()]);
+
+        self::assertNull($page->knownShares->quotedPostFor(self::URI));
     }
 
     public function testAStatusTheInstanceCountsRepliesForIsKnownAsReplied(): void
     {
-        $page = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 2])]);
+        $page = MastodonTimelinePage::fromStatuses([self::timelineStatus(['replies_count' => 2])]);
 
         self::assertTrue($page->knownShares->hasRepliesFor(self::URI));
     }
 
     public function testAStatusWithoutRepliesIsNotKnownAsReplied(): void
     {
-        $unreplied = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 0])]);
-        $uncounted = MastodonTimelinePage::of([self::timelineStatus()]);
+        $unreplied = MastodonTimelinePage::fromStatuses([self::timelineStatus(['replies_count' => 0])]);
+        $uncounted = MastodonTimelinePage::fromStatuses([self::timelineStatus()]);
 
         self::assertFalse($unreplied->knownShares->hasRepliesFor(self::URI));
         self::assertFalse($uncounted->knownShares->hasRepliesFor(self::URI));
@@ -348,14 +350,14 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testABoostIsKnownAsRepliedByItsOriginalsCount(): void
     {
-        $page = MastodonTimelinePage::of([self::boostOfAStatusRepliedTo(3)]);
+        $page = MastodonTimelinePage::fromStatuses([self::boostOfAStatusRepliedTo(3)]);
 
         self::assertTrue($page->knownShares->hasRepliesFor(self::URI));
     }
 
     public function testAStatusCarriesItsReplyCountAsItsCommentCountAndNoScore(): void
     {
-        $counts = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 5])])
+        $counts = MastodonTimelinePage::fromStatuses([self::timelineStatus(['replies_count' => 5])])
             ->parsed->entries[0]->discussionCounts;
 
         self::assertSame(5, $counts->commentCount);
@@ -364,14 +366,14 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testAStatusWithoutAReplyCountHasNoCommentCount(): void
     {
-        $entry = MastodonTimelinePage::of([self::timelineStatus()])->parsed->entries[0];
+        $entry = MastodonTimelinePage::fromStatuses([self::timelineStatus()])->parsed->entries[0];
 
         self::assertNull($entry->discussionCounts->commentCount);
     }
 
     public function testABoostCarriesItsOriginalsReplyCount(): void
     {
-        $page = MastodonTimelinePage::of([self::boostOfAStatusRepliedTo(3)]);
+        $page = MastodonTimelinePage::fromStatuses([self::boostOfAStatusRepliedTo(3)]);
 
         self::assertSame(3, $page->parsed->entries[0]->discussionCounts->commentCount);
     }
@@ -386,7 +388,7 @@ final class MastodonTimelinePageTest extends TestCase
         $first = self::selfReply('101', '100');
         $second = self::selfReply('102', '101');
 
-        $page = MastodonTimelinePage::of([$second, $first, $root]);
+        $page = MastodonTimelinePage::fromStatuses([$second, $first, $root]);
 
         self::assertSame(['https://mastodon.example/users/bob/statuses/100'], array_map(
             static fn (ParsedEntryModel $entry): string => $entry->guid,
@@ -406,7 +408,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testASelfReplyWhoseParentIsNotOnThePageStaysAnEntry(): void
     {
-        $page = MastodonTimelinePage::of([self::selfReply('101', '99')]);
+        $page = MastodonTimelinePage::fromStatuses([self::selfReply('101', '99')]);
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);
@@ -422,12 +424,12 @@ final class MastodonTimelinePageTest extends TestCase
             'in_reply_to_account_id' => '8',
         ]);
 
-        self::assertSame([], MastodonTimelinePage::of([$reply, $root])->selfReplies);
+        self::assertSame([], MastodonTimelinePage::fromStatuses([$reply, $root])->selfReplies);
     }
 
     public function testAStatusRepliedToItselfStaysAnEntry(): void
     {
-        $page = MastodonTimelinePage::of([self::selfReply('101', '101')]);
+        $page = MastodonTimelinePage::fromStatuses([self::selfReply('101', '101')]);
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);
@@ -435,7 +437,7 @@ final class MastodonTimelinePageTest extends TestCase
 
     public function testStatusesRepliedToEachOtherStayEntries(): void
     {
-        $page = MastodonTimelinePage::of([self::selfReply('101', '102'), self::selfReply('102', '101')]);
+        $page = MastodonTimelinePage::fromStatuses([self::selfReply('101', '102'), self::selfReply('102', '101')]);
 
         self::assertCount(2, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);
@@ -445,7 +447,7 @@ final class MastodonTimelinePageTest extends TestCase
     {
         $root = self::timelineStatus(['id' => '100', 'in_reply_to_id' => '50', 'in_reply_to_account_id' => '8']);
 
-        $page = MastodonTimelinePage::of([self::selfReply('101', '100'), $root]);
+        $page = MastodonTimelinePage::fromStatuses([self::selfReply('101', '100'), $root]);
 
         self::assertCount(2, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);
@@ -461,7 +463,7 @@ final class MastodonTimelinePageTest extends TestCase
             'reblog' => self::selfReplyFields('101', '100'),
         ]);
 
-        $page = MastodonTimelinePage::of([$boost, self::timelineStatus(['id' => '100'])]);
+        $page = MastodonTimelinePage::fromStatuses([$boost, self::timelineStatus(['id' => '100'])]);
 
         self::assertCount(2, $page->parsed->entries);
         self::assertSame([], $page->selfReplies);
@@ -474,7 +476,7 @@ final class MastodonTimelinePageTest extends TestCase
             + self::selfReplyFields('101', '100'),
         );
 
-        $page = MastodonTimelinePage::of([$withCard, self::timelineStatus(['id' => '100'])]);
+        $page = MastodonTimelinePage::fromStatuses([$withCard, self::timelineStatus(['id' => '100'])]);
 
         self::assertCount(1, $page->selfReplies);
         self::assertInstanceOf(

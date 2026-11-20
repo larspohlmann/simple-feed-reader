@@ -36,7 +36,7 @@ final readonly class MastodonSearchSource implements SearchSourceInterface
             $account,
             $this->buildRequests($account, $query, null),
             static fn (FetchOutcomeModel $outcome): ApiResponseModel => MastodonApiClient::accepted(
-                MastodonApiClient::answerOf($outcome),
+                MastodonApiClient::requireAnswer($outcome),
             ),
         );
 
@@ -62,6 +62,6 @@ final readonly class MastodonSearchSource implements SearchSourceInterface
     /** @param list<ApiResponseModel> $accepted one per request, in order */
     public function buildPage(array $accepted, string $query): TimelinePageModel
     {
-        return MastodonSearchPage::of($accepted, $query);
+        return MastodonSearchPage::fromAnswers($accepted, $query);
     }
 }

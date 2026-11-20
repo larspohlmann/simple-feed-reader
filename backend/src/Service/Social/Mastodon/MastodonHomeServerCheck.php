@@ -22,7 +22,7 @@ final readonly class MastodonHomeServerCheck implements HomeServerCheckInterface
 
     public function confirmsDeleted(string $address): bool
     {
-        $status = MastodonStatusAddress::ofOrNull($address);
+        $status = MastodonStatusAddress::parseAddress($address);
         if (null === $status || !$status->isOnItsOwnServer()) {
             return false;
         }
