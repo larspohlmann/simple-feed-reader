@@ -122,7 +122,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
      *
      * @return list<Entry>
      */
-    public function forFeedAfterId(int $feedId, int $afterId, int $limit): array
+    public function findForFeedAfterId(int $feedId, int $afterId, int $limit): array
     {
         /** @var list<Entry> $entries */
         $entries = QuotedLinkJoin::onto($this->createQueryBuilder('e'), 'e')

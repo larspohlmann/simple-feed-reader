@@ -140,7 +140,7 @@ final class SearchFeedEditorTest extends DbTestCase
             self::assertNotNull($feed);
             self::assertSame(sprintf('social:bluesky:%d:search:rss reader', $account->requireId()), $feed->getUrl());
             self::assertSame('rss reader', $feed->getTitle());
-            $socialFeed = SocialFeeds::repository($this->entityManager)->forFeed($feed);
+            $socialFeed = SocialFeeds::repository($this->entityManager)->findOneForFeed($feed);
             self::assertSame('rss reader', $socialFeed?->getRemoteId());
             self::assertSame(['atom'], $this->remainingGuids($subscription));
         }
@@ -298,7 +298,7 @@ final class SearchFeedEditorTest extends DbTestCase
 
     private function socialFeedOf(Subscription $subscription): SocialFeed
     {
-        $socialFeed = SocialFeeds::repository($this->entityManager)->forFeed($subscription->getFeed());
+        $socialFeed = SocialFeeds::repository($this->entityManager)->findOneForFeed($subscription->getFeed());
         self::assertNotNull($socialFeed);
 
         return $socialFeed;
