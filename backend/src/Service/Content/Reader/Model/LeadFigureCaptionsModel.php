@@ -13,7 +13,7 @@ use Dom\HTMLDocument;
 /**
  * Every figure's (image src, caption) pair, read from the normalised page before readability drops a header
  * figure as chrome, so a restored lead gets its caption back. Fingerprints are computed lazily in
- * captionFor(), stopping at the first match.
+ * findCaption(), stopping at the first match.
  */
 final readonly class LeadFigureCaptionsModel
 {
@@ -27,7 +27,7 @@ final readonly class LeadFigureCaptionsModel
         return new self(self::captionedFigures($page));
     }
 
-    public function captionFor(?string $leadUrl): ?string
+    public function findCaption(?string $leadUrl): ?string
     {
         $leadUrl = AbsoluteHttpUrl::keepIfAbsolute($leadUrl);
         if ($leadUrl === null) {

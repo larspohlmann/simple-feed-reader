@@ -24,7 +24,7 @@ final readonly class KeyedOccurrences
         $offset = 0;
         while (($position = strpos($html, $id, $offset)) !== false) {
             $offset = $position + 1;
-            $occurrence = self::at($html, $id, $position);
+            $occurrence = self::findOccurrenceAt($html, $id, $position);
             if ($occurrence !== null) {
                 $found[] = $occurrence;
             }
@@ -33,7 +33,7 @@ final readonly class KeyedOccurrences
         return $found;
     }
 
-    public static function at(string $html, string $id, int $position): ?KeyedOccurrenceModel
+    public static function findOccurrenceAt(string $html, string $id, int $position): ?KeyedOccurrenceModel
     {
         $before = substr($html, max(0, $position - self::WINDOW), min(self::WINDOW, $position));
         if (preg_match(self::KEY_BEFORE_VALUE, $before, $key) !== 1) {
@@ -43,20 +43,20 @@ final readonly class KeyedOccurrences
 
         return new KeyedOccurrenceModel(
             $key[1],
-            self::lastKeyIn(substr($before, 0, -\strlen($key[0]))),
-            self::firstKeyIn($after),
+            self::extractLastKey(substr($before, 0, -\strlen($key[0]))),
+            self::extractFirstKey($after),
             $position,
         );
     }
 
-    private static function lastKeyIn(string $text): string
+    private static function extractLastKey(string $text): string
     {
         preg_match_all(self::ANY_KEY, $text, $matches);
 
         return array_last($matches[1]) ?? '';
     }
 
-    private static function firstKeyIn(string $text): string
+    private static function extractFirstKey(string $text): string
     {
         return preg_match(self::ANY_KEY, $text, $matches) === 1 ? $matches[1] : '';
     }

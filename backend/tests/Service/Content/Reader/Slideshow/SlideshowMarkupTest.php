@@ -26,7 +26,7 @@ final class SlideshowMarkupTest extends TestCase
         );
         self::assertNotNull($show);
 
-        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $figure = (new SlideshowMarkup())->buildFigure($document, $show);
         $document->body?->appendChild($figure);
         $html = $document->saveHtml();
 
@@ -48,7 +48,7 @@ final class SlideshowMarkupTest extends TestCase
         );
         self::assertNotNull($show);
 
-        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $figure = (new SlideshowMarkup())->buildFigure($document, $show);
         $document->body?->appendChild($figure);
 
         self::assertStringNotContainsString('<figcaption>', $document->saveHtml());
@@ -72,7 +72,7 @@ final class SlideshowMarkupTest extends TestCase
         );
         self::assertNotNull($show);
 
-        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $figure = (new SlideshowMarkup())->buildFigure($document, $show);
         $document->body?->appendChild($figure);
         $html = $document->saveHtml();
 
@@ -91,7 +91,7 @@ final class SlideshowMarkupTest extends TestCase
         );
         self::assertNotNull($show);
 
-        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $figure = (new SlideshowMarkup())->buildFigure($document, $show);
         $document->body?->appendChild($figure);
         $html = $document->saveHtml();
 
@@ -114,7 +114,7 @@ final class SlideshowMarkupTest extends TestCase
         );
         self::assertNotNull($show);
 
-        $document->body?->appendChild((new SlideshowMarkup())->figureFor($document, $show));
+        $document->body?->appendChild((new SlideshowMarkup())->buildFigure($document, $show));
         $html = $document->saveHtml();
 
         self::assertSame(1, substr_count($html, 'loading="eager"'));

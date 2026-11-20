@@ -88,7 +88,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             leadImage: new LeadImageCandidateModel(
                 $article->image,
                 $articlePage->pageImages,
-                $articlePage->leadCaptions->captionFor($article->image),
+                $articlePage->leadCaptions->findCaption($article->image),
             ),
             media: $this->bodyMedia->resolveForBody($articlePage->media, $articlePage->page->html),
             feedMedia: $hints->feedMedia,

@@ -23,7 +23,7 @@ final readonly class RecipeFactsCleaner implements BodyCleaningStepInterface
     public function cleanIn(BodyCleaningPass $pass): void
     {
         foreach ($this->recognizer->recognize($pass->document) as $card) {
-            $figure = $this->markup->figureFor($pass->document, $card->facts);
+            $figure = $this->markup->buildFigure($pass->document, $card->facts);
             $card->container->parentNode?->replaceChild($figure, $card->container);
         }
     }

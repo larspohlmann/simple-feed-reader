@@ -21,7 +21,7 @@ final readonly class TeaserPlayerMarkup
     {
     }
 
-    public function figureFor(HTMLDocument $document, TeaserPlayerModel $teaser): Element
+    public function buildFigure(HTMLDocument $document, TeaserPlayerModel $teaser): Element
     {
         $figure = $document->createElement('figure');
         $figure->setAttribute('class', 'reader-teaser');

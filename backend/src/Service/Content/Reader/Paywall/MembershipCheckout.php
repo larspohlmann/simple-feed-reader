@@ -20,7 +20,7 @@ final readonly class MembershipCheckout
     {
     }
 
-    public function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    public function hasMatchOutsideFurniture(HTMLDocument $document): bool
     {
         return $this->outsideFurniture->holdsMatchFor($document, self::checkoutLinkQuery());
     }

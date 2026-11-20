@@ -21,7 +21,7 @@ final class JsonMappers
 
     public static function readerToken(string $url): string
     {
-        return (new ReaderUrlSignature(self::SECRET))->tokenFor($url);
+        return (new ReaderUrlSignature(self::SECRET))->computeToken($url);
     }
 
     public static function linkCardJson(): LinkCardJson

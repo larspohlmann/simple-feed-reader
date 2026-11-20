@@ -25,7 +25,7 @@ final readonly class LinkCardJson
     /** @return LinkCardRow */
     public function from(LinkCardContent $card): array
     {
-        return [...self::toFields($card), 'readerToken' => $this->signature->tokenFor($card->url)];
+        return [...self::toFields($card), 'readerToken' => $this->signature->computeToken($card->url)];
     }
 
     /** @return LinkCardFields */

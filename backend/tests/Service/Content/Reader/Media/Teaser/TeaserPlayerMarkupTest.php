@@ -24,7 +24,7 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     private function html(TeaserPlayerModel $teaser): string
     {
-        $figure = $this->markup->figureFor($this->document, $teaser);
+        $figure = $this->markup->buildFigure($this->document, $teaser);
 
         return (string) $this->document->saveHtml($figure);
     }

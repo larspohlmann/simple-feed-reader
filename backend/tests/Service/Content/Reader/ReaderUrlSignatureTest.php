@@ -15,7 +15,7 @@ final class ReaderUrlSignatureTest extends TestCase
 
     public function testATokenIsUnpaddedBase64UrlOfAFullMac(): void
     {
-        $token = (new ReaderUrlSignature('secret'))->tokenFor(self::URL);
+        $token = (new ReaderUrlSignature('secret'))->computeToken(self::URL);
 
         self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]{43}$/', $token);
     }
@@ -24,7 +24,7 @@ final class ReaderUrlSignatureTest extends TestCase
     {
         $signature = new ReaderUrlSignature('secret');
 
-        $signature->verify(self::URL, $signature->tokenFor(self::URL));
+        $signature->verify(self::URL, $signature->computeToken(self::URL));
 
         $this->expectNotToPerformAssertions();
     }
@@ -34,19 +34,22 @@ final class ReaderUrlSignatureTest extends TestCase
         $signature = new ReaderUrlSignature('secret');
 
         $this->expectException(ReaderUrlTokenMismatchException::class);
-        $signature->verify('https://news.example/story?id=2', $signature->tokenFor(self::URL));
+        $signature->verify('https://news.example/story?id=2', $signature->computeToken(self::URL));
     }
 
     public function testAnotherSecretsTokenDoesNotVerify(): void
     {
         $this->expectException(ReaderUrlTokenMismatchException::class);
-        (new ReaderUrlSignature('secret'))->verify(self::URL, (new ReaderUrlSignature('other'))->tokenFor(self::URL));
+        (new ReaderUrlSignature('secret'))->verify(
+            self::URL,
+            (new ReaderUrlSignature('other'))->computeToken(self::URL),
+        );
     }
 
     public function testATokenIsNotTheBareMacOfTheSecret(): void
     {
         $bare = Base64UrlSafe::encodeUnpadded(hash_hmac('sha256', self::URL, 'secret', true));
 
-        self::assertNotSame($bare, (new ReaderUrlSignature('secret'))->tokenFor(self::URL));
+        self::assertNotSame($bare, (new ReaderUrlSignature('secret'))->computeToken(self::URL));
     }
 }

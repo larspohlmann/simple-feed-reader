@@ -34,7 +34,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             if ($this->furniture->holds($element)) {
                 continue;
             }
-            $candidate = $this->candidateFor($element, $page->blocks->before($element));
+            $candidate = $this->buildCandidate($element, $page->blocks->before($element));
             if ($candidate !== null) {
                 $found[] = $candidate;
             }
@@ -43,7 +43,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         return $found;
     }
 
-    private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidateModel
+    private function buildCandidate(Element $element, ?string $precedingText): ?MediaCandidateModel
     {
         $resolved = $this->resolveSource($element);
         if ($resolved === null) {

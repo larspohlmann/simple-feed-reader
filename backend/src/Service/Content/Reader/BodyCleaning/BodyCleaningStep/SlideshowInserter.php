@@ -64,7 +64,7 @@ final readonly class SlideshowInserter implements BodyCleaningStepInterface
             return;
         }
 
-        $figure = $this->markup->figureFor($body, $slideshow);
+        $figure = $this->markup->buildFigure($body, $slideshow);
         $anchor = $slideshow->precedingText === null ? null : $textBlocks->withText($slideshow->precedingText);
         if ($anchor === null) {
             $root->appendChild($figure);

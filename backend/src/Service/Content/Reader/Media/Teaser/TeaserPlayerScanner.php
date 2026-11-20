@@ -50,7 +50,7 @@ final readonly class TeaserPlayerScanner
                 continue;
             }
             $seen[spl_object_id($player)] = true;
-            $poster = $this->playerPoster->near($player);
+            $poster = $this->playerPoster->findNearbyPoster($player);
             if ($poster !== null) {
                 [$caption, $link] = $this->captionAndLink($player);
                 $teasers[$file->url] ??= new TeaserPlayerModel(

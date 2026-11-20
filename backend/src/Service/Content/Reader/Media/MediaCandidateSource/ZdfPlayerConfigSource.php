@@ -38,7 +38,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
         preg_match_all(self::PLAYER_CONFIG, $page->html, $matches, \PREG_OFFSET_CAPTURE);
         $found = [];
         foreach ($matches[1] as [$id, $position]) {
-            $candidate = $this->candidateFor($host, $id, $position, $page->html);
+            $candidate = $this->buildCandidate($host, $id, $position, $page->html);
             if ($candidate !== null) {
                 $found[$candidate->url] ??= $candidate;
             }
@@ -47,7 +47,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
         return array_values($found);
     }
 
-    private function candidateFor(string $host, string $id, int $position, string $pageHtml): ?MediaCandidateModel
+    private function buildCandidate(string $host, string $id, int $position, string $pageHtml): ?MediaCandidateModel
     {
         $resolved = $this->mediaUrlKind->resolve(sprintf(self::STREAM_URL, $host, $id));
         if ($resolved?->kind !== MediaKind::Stream) {

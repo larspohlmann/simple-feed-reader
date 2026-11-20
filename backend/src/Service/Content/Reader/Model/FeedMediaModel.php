@@ -49,7 +49,7 @@ final readonly class FeedMediaModel
     }
 
     /** The feed medium a scraped URL names, matched by image identity or bare URL, or null when the feed did not enumerate it. */
-    public function declaredMediumFor(string $url): ?EntryMedium
+    public function findDeclaredMedium(string $url): ?EntryMedium
     {
         $identity = ImageIdentityModel::fromUrl($url);
         $bare = self::bareUrl($url);
@@ -63,7 +63,7 @@ final readonly class FeedMediaModel
     }
 
     /** The feed attachment a scraped URL names, matched by bare URL, or null. */
-    public function declaredAttachmentFor(string $url): ?EntryAttachment
+    public function findDeclaredAttachment(string $url): ?EntryAttachment
     {
         $bare = self::bareUrl($url);
         foreach ($this->attachments as $attachment) {

@@ -21,10 +21,10 @@ final readonly class SubstackPosterLink implements BodyCleaningStepInterface
 
     public function cleanIn(BodyCleaningPass $pass): void
     {
-        $this->linkIn($pass->document);
+        $this->linkPosters($pass->document);
     }
 
-    private function linkIn(HTMLDocument $body): void
+    private function linkPosters(HTMLDocument $body): void
     {
         foreach (iterator_to_array($body->getElementsByTagName('img')) as $image) {
             $this->linkOne($body, $image);

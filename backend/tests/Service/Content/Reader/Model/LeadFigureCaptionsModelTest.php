@@ -24,7 +24,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
 
         $captions = $this->captionsOf($html);
 
-        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testMatchesADifferentSizeRenditionOfTheSameAsset(): void
@@ -39,7 +39,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
 
         self::assertSame(
             'Bild: Berti Kolbow-Lehradt',
-            $captions->captionFor('https://cdn.test/mountain-vista-scene.jpg'),
+            $captions->findCaption('https://cdn.test/mountain-vista-scene.jpg'),
         );
     }
 
@@ -50,7 +50,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
 
         $captions = $this->captionsOf($html);
 
-        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testCollapsesANoBreakSpaceLikeAnyOtherSpace(): void
@@ -60,7 +60,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
 
         $captions = $this->captionsOf($html);
 
-        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testReturnsNullForAnUnrelatedUrl(): void
@@ -70,7 +70,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
 
         $captions = $this->captionsOf($html);
 
-        self::assertNull($captions->captionFor('https://cdn.test/unrelated-shot.jpg'));
+        self::assertNull($captions->findCaption('https://cdn.test/unrelated-shot.jpg'));
     }
 
     public function testReturnsNullForANullUrl(): void
@@ -78,7 +78,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'
             . '<figcaption>Caption text</figcaption></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor(null));
+        self::assertNull($this->captionsOf($html)->findCaption(null));
     }
 
     public function testReturnsNullForAnEmptyUrl(): void
@@ -86,7 +86,7 @@ final class LeadFigureCaptionsModelTest extends TestCase
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'
             . '<figcaption>Caption text</figcaption></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor(''));
+        self::assertNull($this->captionsOf($html)->findCaption(''));
     }
 
     public function testReturnsNullForANonHttpUrl(): void
@@ -94,14 +94,14 @@ final class LeadFigureCaptionsModelTest extends TestCase
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'
             . '<figcaption>Caption text</figcaption></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor('javascript:alert(1)'));
+        self::assertNull($this->captionsOf($html)->findCaption('javascript:alert(1)'));
     }
 
     public function testReturnsNullWhenNoFigureCarriesACaption(): void
     {
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg"></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertNull($this->captionsOf($html)->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testSkipsAFigureWhoseCaptionCollapsesToEmpty(): void
@@ -109,14 +109,14 @@ final class LeadFigureCaptionsModelTest extends TestCase
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'
             . '<figcaption>   </figcaption></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertNull($this->captionsOf($html)->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testIgnoresAFigureWithoutAnImage(): void
     {
         $html = '<body><figure><figcaption>Orphan caption</figcaption></figure></body>';
 
-        self::assertNull($this->captionsOf($html)->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertNull($this->captionsOf($html)->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testReturnsTheFirstMatchingFigureInDocumentOrder(): void
@@ -126,6 +126,6 @@ final class LeadFigureCaptionsModelTest extends TestCase
             . '<figure><img src="https://cdn.test/hero-photo.jpg"><figcaption>Second</figcaption></figure>'
             . '</body>';
 
-        self::assertSame('First', $this->captionsOf($html)->captionFor('https://cdn.test/hero-photo.jpg'));
+        self::assertSame('First', $this->captionsOf($html)->findCaption('https://cdn.test/hero-photo.jpg'));
     }
 }

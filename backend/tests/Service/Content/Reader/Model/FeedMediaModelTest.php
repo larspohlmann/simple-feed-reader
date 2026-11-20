@@ -60,7 +60,7 @@ final class FeedMediaModelTest extends TestCase
             [],
         ));
 
-        $medium = $feedMedia->declaredMediumFor('https://cdn.test/w:800/harbour-crane.jpg');
+        $medium = $feedMedia->findDeclaredMedium('https://cdn.test/w:800/harbour-crane.jpg');
 
         self::assertNotNull($medium);
         self::assertSame(1600, $medium->width);
@@ -74,7 +74,7 @@ final class FeedMediaModelTest extends TestCase
             [],
         ));
 
-        self::assertNull($feedMedia->declaredMediumFor('https://img.test/city-skyline.jpg'));
+        self::assertNull($feedMedia->findDeclaredMedium('https://img.test/city-skyline.jpg'));
     }
 
     public function testMatchesAVideoMediumByBareUrlIgnoringQuery(): void
@@ -84,7 +84,7 @@ final class FeedMediaModelTest extends TestCase
             [],
         ));
 
-        $medium = $feedMedia->declaredMediumFor('https://cdn.test/clip.mp4?token=abc123');
+        $medium = $feedMedia->findDeclaredMedium('https://cdn.test/clip.mp4?token=abc123');
 
         self::assertNotNull($medium);
         self::assertSame('video', $medium->kind);
@@ -98,7 +98,7 @@ final class FeedMediaModelTest extends TestCase
             [new EntryAttachment('https://cdn.test/ep1.mp3', 'audio/mpeg', 3723, 4200000, 'Episode one')],
         ));
 
-        $attachment = $feedMedia->declaredAttachmentFor('https://cdn.test/ep1.mp3?utm=feed');
+        $attachment = $feedMedia->findDeclaredAttachment('https://cdn.test/ep1.mp3?utm=feed');
 
         self::assertNotNull($attachment);
         self::assertSame('audio/mpeg', $attachment->mimeType);
@@ -109,7 +109,7 @@ final class FeedMediaModelTest extends TestCase
         $feedMedia = FeedMediaModel::none();
 
         self::assertNull($feedMedia->posterFallback());
-        self::assertNull($feedMedia->declaredMediumFor('https://cdn.test/x.mp4'));
-        self::assertNull($feedMedia->declaredAttachmentFor('https://cdn.test/x.mp3'));
+        self::assertNull($feedMedia->findDeclaredMedium('https://cdn.test/x.mp4'));
+        self::assertNull($feedMedia->findDeclaredAttachment('https://cdn.test/x.mp3'));
     }
 }

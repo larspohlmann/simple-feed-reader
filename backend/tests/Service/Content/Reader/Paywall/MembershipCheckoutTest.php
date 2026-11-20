@@ -54,6 +54,6 @@ final class MembershipCheckoutTest extends TestCase
     {
         $document = $this->document('<html><body>' . $body . '</body></html>');
 
-        return (new MembershipCheckout(new OutsideFurniture(new PageFurniture())))->foundOutsideFurnitureIn($document);
+        return (new MembershipCheckout(new OutsideFurniture(new PageFurniture())))->hasMatchOutsideFurniture($document);
     }
 }

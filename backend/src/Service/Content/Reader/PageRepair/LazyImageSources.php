@@ -59,7 +59,7 @@ final readonly class LazyImageSources implements PageRepairInterface
             return true;
         }
 
-        $candidate = $this->candidateFor($image);
+        $candidate = $this->findCandidate($image);
         if ($candidate === null) {
             return false;
         }
@@ -142,7 +142,7 @@ final readonly class LazyImageSources implements PageRepairInterface
         $picture->parentNode->replaceChild($image, $picture);
     }
 
-    private function candidateFor(Element $image): ?string
+    private function findCandidate(Element $image): ?string
     {
         foreach (self::URL_ATTRIBUTES as $attribute) {
             $candidate = trim($image->getAttribute($attribute) ?? '');
@@ -158,14 +158,14 @@ final readonly class LazyImageSources implements PageRepairInterface
             }
         }
 
-        return $this->candidateFromEnclosingPicture($image);
+        return $this->findCandidateInPicture($image);
     }
 
     /**
      * A src-less <img> in a <picture> takes its first usable <source> URL: removing the <img> the browser renders
      * would drop the picture and the figure built around it (#498).
      */
-    private function candidateFromEnclosingPicture(Element $image): ?string
+    private function findCandidateInPicture(Element $image): ?string
     {
         $picture = $this->enclosingPicture($image);
 

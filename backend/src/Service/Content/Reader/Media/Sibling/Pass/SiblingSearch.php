@@ -36,8 +36,8 @@ final readonly class SiblingSearch
 
         $candidates = [];
         foreach (KeyedOccurrences::findOccurrences($this->pageHtml, $id) as $occurrence) {
-            foreach ($this->siblingsIn($occurrence, $id) as $sibling) {
-                $candidate = $this->candidateFor($seed, $id, $sibling);
+            foreach ($this->findOccurrenceSiblings($occurrence, $id) as $sibling) {
+                $candidate = $this->buildCandidate($seed, $id, $sibling);
                 if ($candidate !== null) {
                     $candidates[] = $candidate;
                 }
@@ -52,7 +52,7 @@ final readonly class SiblingSearch
      *
      * @return list<SiblingModel>
      */
-    private function siblingsIn(KeyedOccurrenceModel $seedOccurrence, string $seedId): array
+    private function findOccurrenceSiblings(KeyedOccurrenceModel $seedOccurrence, string $seedId): array
     {
         $suffix = preg_match(self::NUMBERED_SUFFIX, $seedId) === 1 ? '-\d+' : '';
         $key = preg_quote($seedOccurrence->key, '/');
@@ -61,7 +61,7 @@ final readonly class SiblingSearch
 
         $siblings = [];
         foreach ($matches[1] as [$id, $position]) {
-            $occurrence = $id === $seedId ? null : KeyedOccurrences::at($this->pageHtml, $id, $position);
+            $occurrence = $id === $seedId ? null : KeyedOccurrences::findOccurrenceAt($this->pageHtml, $id, $position);
             if ($occurrence !== null && $occurrence->sharesContextWith($seedOccurrence)) {
                 $siblings[$id] ??= new SiblingModel($id, $position);
             }
@@ -71,7 +71,7 @@ final readonly class SiblingSearch
         return \count($siblings) > self::MAX_SIBLINGS ? [] : array_values($siblings);
     }
 
-    private function candidateFor(
+    private function buildCandidate(
         MediaCandidateModel $seed,
         string $seedId,
         SiblingModel $sibling,

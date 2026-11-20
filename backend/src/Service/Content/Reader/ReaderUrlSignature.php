@@ -20,7 +20,7 @@ final readonly class ReaderUrlSignature
         $this->key = hash_hkdf('sha256', $secret, 0, self::KEY_PURPOSE);
     }
 
-    public function tokenFor(string $url): string
+    public function computeToken(string $url): string
     {
         return Base64UrlSafe::encodeUnpadded(hash_hmac('sha256', $url, $this->key, true));
     }
@@ -28,7 +28,7 @@ final readonly class ReaderUrlSignature
     /** @throws ReaderUrlTokenMismatchException */
     public function verify(string $url, string $token): void
     {
-        if (!hash_equals($this->tokenFor($url), $token)) {
+        if (!hash_equals($this->computeToken($url), $token)) {
             throw new ReaderUrlTokenMismatchException('The reader token does not match its URL.');
         }
     }
