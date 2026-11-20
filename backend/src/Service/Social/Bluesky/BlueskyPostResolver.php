@@ -61,7 +61,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
      */
     private function byDid(string $address): string
     {
-        $authority = AtPostUri::authorityOf($address);
+        $authority = AtPostUri::parseAuthority($address);
         if (null === $authority || BlueskyActorKey::isDid($authority)) {
             return $address;
         }
@@ -93,7 +93,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
             BlueskyAuthor::name($author),
             null === $handle ? null : '@' . $handle,
             $post->node('record')->text('text') ?? '',
-            BlueskyExternalCard::ofEmbed($post->node('embed')),
+            BlueskyExternalCard::fromEmbed($post->node('embed')),
         );
     }
 

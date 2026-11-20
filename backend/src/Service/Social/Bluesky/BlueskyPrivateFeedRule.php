@@ -82,7 +82,7 @@ final readonly class BlueskyPrivateFeedRule implements PrivateFeedRuleInterface
         $handle = null === $post->authorUrl ? null : BlueskyProfileFeed::parseProfileActor($post->authorUrl);
 
         return array_values(array_filter(
-            [$handle, AtPostUri::authorityOf($post->guid)],
+            [$handle, AtPostUri::parseAuthority($post->guid)],
             static fn (?string $name): bool => null !== $name,
         ));
     }

@@ -35,14 +35,14 @@ final readonly class BlueskyPostAddressRule implements PostAddressRuleInterface
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
-        $post = AtPostUri::matches($url) ? $url : AtPostUri::ofWebUrl($url);
+        $post = AtPostUri::matches($url) ? $url : AtPostUri::fromWebUrl($url);
 
         return SocialPostAddressModel::fromNullable(SocialNetwork::Bluesky, $post);
     }
 
     public function findAuthorIdentity(Entry $entry, SocialPostAddressModel $post): ?string
     {
-        return AtPostUri::authorityOf($post->address);
+        return AtPostUri::parseAuthority($post->address);
     }
 
     public function requireOwnPostId(SocialPostAddressModel $post, SocialAccount $account): string
@@ -52,7 +52,7 @@ final readonly class BlueskyPostAddressRule implements PostAddressRuleInterface
 
     public function requireOwnReplyId(string $url, SocialAccount $account): string
     {
-        $post = AtPostUri::ofWebUrl($url)
+        $post = AtPostUri::fromWebUrl($url)
             ?? throw new SocialPostRefusedException('A reply in the thread names no Bluesky post.');
 
         return AtPostUri::withAuthority($post, $account->getIdentity());

@@ -70,8 +70,8 @@ final class BlueskyEmbedMedia
             return null;
         }
         parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
-        $width = self::dimensionOf($query['ww'] ?? null);
-        $height = self::dimensionOf($query['hh'] ?? null);
+        $width = self::parseDimension($query['ww'] ?? null);
+        $height = self::parseDimension($query['hh'] ?? null);
         if ($width === null || $height === null) {
             return null;
         }
@@ -104,7 +104,7 @@ final class BlueskyEmbedMedia
         return \is_string($path) && str_ends_with(strtolower($path), '.gif');
     }
 
-    private static function dimensionOf(mixed $value): ?int
+    private static function parseDimension(mixed $value): ?int
     {
         return \is_string($value) ? DeclaredImages::positiveDimension($value) : null;
     }

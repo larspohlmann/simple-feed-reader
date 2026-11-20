@@ -19,7 +19,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testTheRealQuoteOfAVideoKeepsItsTextLineBreaksAndPlayableVideo(): void
     {
-        $quote = QuotedViewRecord::of(Bluesky::post('quote-video')->node('embed')->node('record'));
+        $quote = QuotedViewRecord::fromRecord(Bluesky::post('quote-video')->node('embed')->node('record'));
 
         self::assertNotNull($quote);
         self::assertStringStartsWith('https://bsky.app/profile/', $quote->url);
@@ -33,7 +33,7 @@ final class QuotedViewRecordTest extends TestCase
     {
         $text = str_repeat('x', 280) . "\n\n" . str_repeat('y', 19);
 
-        $quote = QuotedViewRecord::of(self::viewRecord(['text' => $text]));
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(['text' => $text]));
 
         self::assertSame(
             ['https://bsky.app/profile/' . self::AUTHOR . '/post/3kq', 'Quoted Person', 'quoted.bsky.social',
@@ -45,7 +45,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testTheIndexTimeIsTheFallbackWhenThePostHasNoCreationTime(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(['createdAt' => null]));
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(['createdAt' => null]));
 
         self::assertSame('2026-10-13 21:07:01', $quote?->postedAt?->format('Y-m-d H:i:s'));
     }
@@ -54,13 +54,13 @@ final class QuotedViewRecordTest extends TestCase
     {
         self::assertSame(
             'quoted.bsky.social',
-            QuotedViewRecord::of(self::viewRecord(author: ['handle' => 'quoted.bsky.social']))?->authorName,
+            QuotedViewRecord::fromRecord(self::viewRecord(author: ['handle' => 'quoted.bsky.social']))?->authorName,
         );
     }
 
     public function testImagesKeepTheirFullSizeAndRatio(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.images#view',
             'images' => [
                 [
@@ -80,7 +80,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedRecordWithMediaGivesItsMediaAndItsOwnQuoteAsTheNestedLine(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.recordWithMedia#view',
             'media' => [
                 '$type' => 'app.bsky.embed.images#view',
@@ -98,7 +98,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedRecordGivesNoMediaAndTheNestedLine(): void
     {
-        $quote = QuotedViewRecord::of(
+        $quote = QuotedViewRecord::fromRecord(
             self::viewRecord(embed: ['$type' => 'app.bsky.embed.record#view', 'record' => self::nested()]),
         );
 
@@ -108,7 +108,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testTheRealQuoteOfALinkPostCarriesItsCard(): void
     {
-        $quote = QuotedViewRecord::of(Bluesky::post('record')->node('embed')->node('record'));
+        $quote = QuotedViewRecord::fromRecord(Bluesky::post('record')->node('embed')->node('record'));
 
         self::assertEquals(
             new LinkCardContent(
@@ -125,7 +125,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedLinkCardIsItsCardAndNoMedia(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
             'external' => [
                 'uri' => 'https://www.example.com/story',
@@ -151,7 +151,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedRecordWithMediaCarriesTheCardOfItsMedia(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.recordWithMedia#view',
             'media' => [
                 '$type' => 'app.bsky.embed.external#view',
@@ -166,7 +166,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedGifIsNoCard(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
             'external' => ['uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316', 'title' => 'Clap'],
         ]));
@@ -176,11 +176,11 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedPostWithImagesOrAnUntitledLinkHasNoCard(): void
     {
-        $images = QuotedViewRecord::of(self::viewRecord(embed: [
+        $images = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.images#view',
             'images' => [['fullsize' => 'https://cdn.bsky.app/full/1.jpg']],
         ]));
-        $untitled = QuotedViewRecord::of(self::viewRecord(embed: [
+        $untitled = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
             'external' => ['uri' => 'https://example.com/a'],
         ]));
@@ -191,7 +191,7 @@ final class QuotedViewRecordTest extends TestCase
 
     public function testAQuotedGifIsItsAnimatedImage(): void
     {
-        $quote = QuotedViewRecord::of(self::viewRecord(embed: [
+        $quote = QuotedViewRecord::fromRecord(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
             'external' => [
                 'uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316',
@@ -233,7 +233,7 @@ final class QuotedViewRecordTest extends TestCase
     #[DataProvider('unavailable')]
     public function testAnUnavailableQuoteIsNone(array $record): void
     {
-        self::assertNull(QuotedViewRecord::of(JsonNodeModel::fromValue($record)));
+        self::assertNull(QuotedViewRecord::fromRecord(JsonNodeModel::fromValue($record)));
     }
 
     /**

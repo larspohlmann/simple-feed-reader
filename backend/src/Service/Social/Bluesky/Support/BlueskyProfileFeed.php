@@ -60,7 +60,7 @@ final class BlueskyProfileFeed
 
     private static function actorIn(string $segment): string
     {
-        return BlueskyActorKey::of(rawurldecode($segment));
+        return BlueskyActorKey::normalizeActor(rawurldecode($segment));
     }
 
     private function __construct()

@@ -61,15 +61,16 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     private static function detectOwnAnswered(SocialAccount $account, FetchedNotificationModel $row): ?string
     {
         $answered = $row->references->answeredId;
+        $isOwn = $answered !== null && AtPostUri::parseAuthority($answered) === $account->getIdentity();
 
-        return $answered !== null && AtPostUri::authorityOf($answered) === $account->getIdentity() ? $answered : null;
+        return $isOwn ? $answered : null;
     }
 
     private static function detectForeignThreadRoot(SocialAccount $account, FetchedNotificationModel $row): ?string
     {
         $root = $row->references->threadRootId;
 
-        return $root !== null && AtPostUri::authorityOf($root) !== $account->getIdentity() ? $root : null;
+        return $root !== null && AtPostUri::parseAuthority($root) !== $account->getIdentity() ? $root : null;
     }
 
     /** @param array<string, JsonNodeModel> $posts */

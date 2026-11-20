@@ -190,7 +190,7 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             AtPostUri::webUrl($postUri) ?? BlueskyWeb::profileUrl($account->getIdentity()),
         );
 
-        if (!$record->has('reply') || AtPostUri::authorityOf($postUri) !== $account->getIdentity()) {
+        if (!$record->has('reply') || AtPostUri::parseAuthority($postUri) !== $account->getIdentity()) {
             return $subject;
         }
 

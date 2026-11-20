@@ -59,7 +59,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 
         $outcome = $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
         if ($embed->quote === null) {
-            $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
+            $entry->setShareKind(self::classifyShareKind($embed, $outcome, $assembled->media));
         } else {
             $this->entryLinks->quote($entry, $embed->quote);
         }
@@ -69,7 +69,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 
     private function fillFromText(Entry $entry, JsonNodeModel $post): FillOutcome
     {
-        $shared = SharedLinks::fromBodyHtml(self::textBodyOf($entry, $post));
+        $shared = SharedLinks::fromBodyHtml(self::buildTextBody($entry, $post));
         $pages = array_filter($shared->urls, static fn (string $url): bool => !AtPostUri::isWebUrl($url));
         if ($pages === []) {
             return FillOutcome::Unfilled;
@@ -83,7 +83,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     }
 
     /** An RSS body shows a link shortened; the post's own facets know where it goes. */
-    private static function textBodyOf(Entry $entry, JsonNodeModel $post): string
+    private static function buildTextBody(Entry $entry, JsonNodeModel $post): string
     {
         $body = $entry->getText()->getContentHtml() ?? '';
         $record = $post->node('record');
@@ -95,7 +95,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     }
 
     /** @param list<EntryMedium> $media */
-    private static function shareKindOf(RenderedEmbedModel $embed, FillOutcome $outcome, array $media): ?ShareKind
+    private static function classifyShareKind(RenderedEmbedModel $embed, FillOutcome $outcome, array $media): ?ShareKind
     {
         if ($embed->linkCards !== [] || $outcome === FillOutcome::AwaitingLinkCards) {
             return ShareKind::Link;

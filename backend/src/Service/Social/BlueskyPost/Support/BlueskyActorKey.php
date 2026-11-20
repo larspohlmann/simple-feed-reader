@@ -14,7 +14,7 @@ final class BlueskyActorKey
     }
 
     /** A DID as it is, a handle lower-cased: handles are case-insensitive, DIDs are not. */
-    public static function of(string $actor): string
+    public static function normalizeActor(string $actor): string
     {
         return self::isDid($actor) ? $actor : strtolower($actor);
     }

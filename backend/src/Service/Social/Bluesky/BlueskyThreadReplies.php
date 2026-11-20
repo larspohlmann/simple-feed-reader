@@ -42,7 +42,7 @@ final readonly class BlueskyThreadReplies
             throw new CommentsUnavailableException('Bluesky answered without the post\'s thread.');
         }
 
-        return $this->buildNodes($thread->nodes('replies'), AtPostUri::authorityOf($postAddress));
+        return $this->buildNodes($thread->nodes('replies'), AtPostUri::parseAuthority($postAddress));
     }
 
     /**

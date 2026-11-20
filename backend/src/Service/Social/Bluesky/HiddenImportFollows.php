@@ -47,7 +47,7 @@ final readonly class HiddenImportFollows
         $actorByIdentity = [];
         foreach ($feeds as $feed) {
             if (BlueskyActor::isValid($feed->identity)) {
-                $actorByIdentity[$feed->identity] = BlueskyActorKey::of($feed->identity);
+                $actorByIdentity[$feed->identity] = BlueskyActorKey::normalizeActor($feed->identity);
             }
         }
 

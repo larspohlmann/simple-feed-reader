@@ -21,7 +21,7 @@ final class BlueskyCredentials
         string $handle,
         #[\SensitiveParameter] string $appPassword,
     ): SocialCredentialsModel {
-        return self::buildCredentialsAt(BlueskyActorKey::of(ltrim(trim($handle), '@')), $appPassword);
+        return self::buildCredentialsAt(BlueskyActorKey::normalizeActor(ltrim(trim($handle), '@')), $appPassword);
     }
 
     /** @throws NotAnAppPasswordException */
