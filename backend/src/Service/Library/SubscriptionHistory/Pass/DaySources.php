@@ -64,7 +64,7 @@ final readonly class DaySources
     public function resolveDayCount(
         TrackedSubscriptionModel $subscription,
         string $day,
-        DayCountsModel $live
+        DayCountsModel $live,
     ): DayCountModel {
         if ($this->stored->has($subscription->subscriptionId, $day)) {
             return $this->stored->findDayCount($subscription->subscriptionId, $day);
