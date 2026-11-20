@@ -10,7 +10,6 @@ use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Repository\SharingSettingsRepository;
 use App\Repository\SocialAccountRepository;
 use App\Service\Content\Comments\CommentsCache;
@@ -33,7 +32,6 @@ use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\PostWriting;
 use App\Service\Social\Social\ResponseTargetFinder;
 use App\Service\Social\Social\SharedPageCards;
@@ -282,7 +280,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAReplyDropsTheCachedCountsAndTheCachedThread(): void
     {
         $entry = $this->post();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, null));
         $this->comments->load($this->owner, $entry);
 
         $target = new ResponseTargetModel($entry);
@@ -290,7 +288,7 @@ final class SocialResponsesTest extends DbTestCase
         $this->responses()->respond($this->owner, $target, ResponseKind::Reply, new PostDraftModel('Hi'));
         $this->comments->load($this->owner, $entry);
 
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
         self::assertCount(2, $this->thread->fetches);
     }
 
@@ -312,7 +310,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAQuoteQuotesTheEntrysPostAsTheActingAccountAndDropsItsCachedCounts(): void
     {
         $entry = $this->post();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, 2));
 
         $target = new ResponseTargetModel($entry);
         $draft = new PostDraftModel('Read');
@@ -324,7 +322,7 @@ final class SocialResponsesTest extends DbTestCase
             new PublishedPostModel(FakeMastodonNetwork::REPLY_URI, FakeMastodonNetwork::REPLY_URI),
             $published,
         );
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
     }
 
     public function testAQuoteTheNetworkAcceptedStillSucceedsWhenRecordingTheShareFails(): void
@@ -345,7 +343,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAQuoteOfAReplyQuotesThatReplyAndDropsTheCachedCountsAndThread(): void
     {
         $entry = $this->post();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, 2));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, 2));
         $this->comments->load($this->owner, $entry);
 
         $this->responses()->respond(
@@ -357,7 +355,7 @@ final class SocialResponsesTest extends DbTestCase
         $this->comments->load($this->owner, $entry);
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'quote 110 Read'], $this->mastodon->calls);
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
         self::assertCount(2, $this->thread->fetches);
     }
 
@@ -382,14 +380,14 @@ final class SocialResponsesTest extends DbTestCase
     {
         $entry = $this->post();
         $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'Alice@Mastodon.Example'));
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 1, null));
         $this->comments->load($this->owner, $entry);
 
         $this->responses()->delete($this->owner, $entry, self::REPLY_URI);
         $this->comments->load($this->owner, $entry);
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'delete 110'], $this->mastodon->calls);
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
         self::assertCount(2, $this->thread->fetches);
     }
 
@@ -429,7 +427,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAReplyNoAccountFindsAnyMoreCountsAsDeleted(): void
     {
         $entry = $this->post();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 1, null));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 1, null));
         $this->mastodon->onResolve(static function (): void {
             throw new SocialPostNotFoundException('Gone.');
         });
@@ -437,7 +435,7 @@ final class SocialResponsesTest extends DbTestCase
         $this->responses()->delete($this->owner, $entry, self::REPLY_URI);
 
         self::assertSame(['resolve ' . self::REPLY_URI], $this->mastodon->calls);
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
     }
 
     public function testAnAccountThatCannotReachTheReplyOutranksOneThatDidNotWriteIt(): void
@@ -485,10 +483,6 @@ final class SocialResponsesTest extends DbTestCase
         return $entry;
     }
 
-    private static function address(): SocialPostAddressModel
-    {
-        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
-    }
 
     private function responses(?EntryShareRecorder $shareRecorder = null): SocialResponses
     {

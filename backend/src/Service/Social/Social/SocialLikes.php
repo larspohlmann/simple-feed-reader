@@ -42,7 +42,7 @@ final readonly class SocialLikes
         $result = $this->liking->like($post);
 
         $this->store($user, $item, $post->account, $result->likeId);
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
     }
 
     /** @throws NotASocialPostException */
@@ -55,7 +55,7 @@ final readonly class SocialLikes
         $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
         $this->drop($like);
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
     }
 
     /**

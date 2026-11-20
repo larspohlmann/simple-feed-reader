@@ -16,7 +16,6 @@ use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Social\DeletedPostTombstones;
 use App\Service\Social\Social\LocalPostRemoval;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
@@ -59,10 +58,7 @@ final class LocalPostRemovalTest extends DbTestCase
         $this->entityManager->persist(new EntryState($user, $post));
         $this->entityManager->flush();
         $ids = [$post->requireId(), $copy->requireId(), $savedCopy->requireId(), $other->requireId()];
-        $this->countsCache->remember(
-            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
-            new SocialCountsModel(1, 0, 0, null),
-        );
+        $this->countsCache->remember($post, new SocialCountsModel(1, 0, 0, null));
 
         $this->removal()->remove($post, []);
 
@@ -79,9 +75,7 @@ final class LocalPostRemovalTest extends DbTestCase
         self::assertCount(1, $this->tombstones->findBuriedHashes($home->requireId()));
         self::assertSame([], $this->tombstones->findBuriedHashes($saved->requireId()));
         self::assertSame([[$ids[0], $ids[1]]], $this->index->forgets);
-        self::assertNull(
-            $this->countsCache->find(new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL)),
-        );
+        self::assertNull($this->countsCache->find($post));
     }
 
     public function testTwoCopiesInOneFeedAreBothBuriedThere(): void

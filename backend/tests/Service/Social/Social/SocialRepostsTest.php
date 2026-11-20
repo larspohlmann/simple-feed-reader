@@ -9,7 +9,6 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Repository\SharingSettingsRepository;
 use App\Repository\SocialAccountRepository;
 use App\Service\Content\Comments\CommentsCache;
@@ -21,7 +20,6 @@ use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\SocialCountsModel;
-use App\Service\Social\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Social\PostReposting;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Service\Social\Social\SocialPostFinder;
@@ -122,29 +120,29 @@ final class SocialRepostsTest extends DbTestCase
     public function testARepostDropsThePostsCachedCounts(): void
     {
         $entry = $this->post();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, null));
 
         $this->reposts()->repost($this->owner, $entry);
 
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
     }
 
     public function testAnUnrepostDropsThePostsCachedCounts(): void
     {
         $entry = $this->post();
         $this->mastodon->knowsTheRepost();
-        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 1, 0, null));
+        $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, null));
 
         $this->reposts()->unrepost($this->owner, $entry);
 
-        self::assertNull($this->countsCache->find(self::address()));
+        self::assertNull($this->countsCache->find($entry));
     }
 
     public function testAFailedRepostKeepsTheCachedCounts(): void
     {
         $entry = $this->post();
         $counts = new SocialCountsModel(4, 1, 0, null);
-        $this->countsCache->remember(self::address(), $counts);
+        $this->countsCache->remember($entry, $counts);
         $this->mastodon->failWith(new SocialNetworkUnreachableException('down'));
 
         $this->assertRefused(
@@ -153,7 +151,7 @@ final class SocialRepostsTest extends DbTestCase
             'An unreachable network must reach the caller.',
         );
 
-        self::assertEquals($counts, $this->countsCache->find(self::address()));
+        self::assertEquals($counts, $this->countsCache->find($entry));
     }
 
     public function testAReplyRepostResolvesTheReplyAndRepostsIt(): void
@@ -217,10 +215,6 @@ final class SocialRepostsTest extends DbTestCase
         return $entry;
     }
 
-    private static function address(): SocialPostAddressModel
-    {
-        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
-    }
 
     private function reposts(?EntryShareRecorder $shareRecorder = null): SocialReposts
     {

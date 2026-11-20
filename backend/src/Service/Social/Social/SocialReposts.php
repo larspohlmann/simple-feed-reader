@@ -45,7 +45,7 @@ final readonly class SocialReposts
     public function repost(User $user, Entry $entry): void
     {
         $this->repostIfNot($this->posts->find($user, $entry));
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
         $this->shares->record($user, $entry);
     }
 
@@ -63,7 +63,7 @@ final readonly class SocialReposts
     public function unrepost(User $user, Entry $entry): void
     {
         $this->undoIfReposted($this->posts->find($user, $entry));
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
     }
 
     /**

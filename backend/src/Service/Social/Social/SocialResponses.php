@@ -159,7 +159,7 @@ final readonly class SocialResponses
 
     private function forgetWhatChanged(User $user, Entry $entry): void
     {
-        $this->countsCache->forgetEntry($entry);
+        $this->countsCache->forget($entry);
         $this->comments->forget($user, $entry);
     }
 }
