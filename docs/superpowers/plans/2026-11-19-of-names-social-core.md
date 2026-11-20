@@ -26,7 +26,6 @@
 - **A name says what the method really does** (Lars, 2026-11-19: "always look at what the method really does and chose the name based on that"). Every row below was named from the method's full body and its callers, not from its return type or its old name. A dictionary verb is used where its meaning matches; where no row of the dictionary fits, the plain verb for what happens (`clip`, `split`, `strip`, `collect`, `detect`, `pick`, `hash`).
 - `of()` on a named constructor or a conversion becomes `from<Source>()` or `to<Target>()`.
 - `parse…` interprets a decoded reply or a string into a value that may be absent; `read…` is a plain access with a default; `collect…` gathers from a list; `pick…` chooses one value; `select…` picks an adapter for a key; `compute…` works a number out.
-- **Kept:** `PrivateFeeds::subscribeInPlaceOf()`. "In place of" is the phrase, and `subscribe…` says what it does.
 - `SocialRepliesSource::audienceOf()` implements `CommentsSourceInterface` and was renamed `buildAudience()` with it in the Http and Content batch; it has no row here.
 - An interface method is renamed with every implementation and double: `TimelineSourceInterface::pageOf()`, `PostCountsSourceInterface::countsOf()`, `ReplyThreadSourceInterface::selfReplyOf()`, `NotificationContextSourceInterface::contextsOf()`. Their implementations live in `Social/Bluesky`, `Social/Mastodon` and `Social/Lemmy` and are renamed here, not in the network batches.
 
@@ -62,7 +61,7 @@ The last column is what the method does, which is what the reviewer checks the n
 | `PrivateFeedSyncApplier.php` | `modelsOf` (private) | `buildPrivateFeeds` | a private feed for each collection of a kind |
 | `PrivateFeedSyncApplier.php` | `titlesOf` (private) | `collectTitles` | the display title of each subscription by id |
 | `PrivateFeeds.php` | `subscriptionOf` | `findSubscription` | the subscription to a private feed, or null |
-| `PrivateFeeds.php` | `subscribeInPlaceOf` | kept | subscribes, the new subscription taking over the previous one's settings |
+| `PrivateFeeds.php` | `subscribeInPlaceOf` | `subscribeKeepingSettings` | subscribes, the new subscription taking over another one's settings; removes nothing |
 | `PrivateFeeds.php` | `removeAllOf` | `unsubscribeAllFeeds` | unsubscribes every feed of an account and returns how many |
 | `ReplyThreadOrder.php` | `pageOf` | `buildPage` | the replies ordered by interest and walked into a comments page |
 | `ReplyThreadOrder.php` | `interestOf` (private) | `computeInterest` | a reply's weighted likes, reposts, quotes and replies |
@@ -70,14 +69,14 @@ The last column is what the method does, which is what the reviewer checks the n
 | `SearchFeedEditor.php` | `searchFeedOf` (private) | `requireSearchFeed` | the subscription's search feed; throws when it is none |
 | `SearchFeedEditor.php` | `ruleOf` (private) | `selectRule` | the private feed rule of the feed's network |
 | `SelfReplyChain.php` | `of` | `buildChain` | the author's own reply chain, oldest reply first at each level |
-| `SelfThreadEnricher.php` | `foldThreadOf` (private) | `foldThread` | reads a row's thread and folds the author's replies into the entry; false when another worker took the row |
+| `SelfThreadEnricher.php` | `foldThreadOf` (private) | `foldThread` | reads a row's thread and folds the author's replies into the entry; false when the network throttles and the row goes back to the queue, true otherwise, also when another worker took the lease |
 | `SelfThreadEnricher.php` | `rootCardUrlsOf` (private) | `loadRootCardUrls` | the URLs of the entry's stored link cards |
-| `SelfThreadEnricher.php` | `chainOf` (private) | `fetchChain` | the self-reply chain of a thread read in public; empty when it is gone, throws when throttled |
+| `SelfThreadEnricher.php` | `chainOf` (private) | `fetchChainOrEmpty` | reads the thread in public and returns the author's own reply chain; an empty chain when the thread is gone or cannot be read; throws when throttled |
 | `SharedPageCards.php` | `cardOf` | `resolveCard` | the page's own card, else a card naming its host |
 | `SharedPageCards.php` | `hostCardOf` (private) | `buildHostCard` | a card that names only the URL's host |
 | `SocialAccountEditor.php` | `accountsOf` | `findAccounts` | the user's social accounts |
 | `SocialAccountEditor.php` | `siblingsOf` (private) | `findSiblings` | the user's other accounts on the same network |
-| `SocialCounts.php` | `of` | `fetchCounts` | a post's counts from the cache, else from the network; throws when the post is none or gone |
+| `SocialCounts.php` | `of` | `fetchCounts` | a post's counts: from the cache, else from the network, cached; a post the network confirms gone is removed; throws when the entry is no post or the post is gone |
 | `SocialCounts.php` | `actingAccountCountsOf` (private) | `fetchCountsAsActingAccount` | the counts read through the user's account after the public read failed |
 | `SocialCountsCache.php` | `keyOf` (private) | `buildKey` | the cache key of a post's counts |
 | `SocialImporter.php` | `assertCollectionsOf` (private) | `assertCollectionsAllowed` | throws when the network allows one of the collections not |
@@ -92,10 +91,10 @@ The last column is what the method does, which is what the reviewer checks the n
 | `TimelineSources.php` | `of` | `selectSource` | the timeline source of the account's network |
 | `Model/CollectionCandidateModel.php` | `of` | `fromPrivateFeed` | a candidate for a private feed, subscribed when the account already has it |
 | `Model/FollowAvatarsModel.php` | `of` | `fromFollows` | the avatars of the follows that have one, by identity |
-| `Model/FollowAvatarsModel.php` | `avatarOf` | `findAvatar` | an identity's avatar URL, or null |
+| `Model/FollowAvatarsModel.php` | `avatarOf` | `readAvatar` | an identity's avatar URL, or null |
 | `Model/PrivateFeedModel.php` | `of` | `fromKind` | the private feed of a kind, remote id and name |
 | `Model/PrivateFeedModel.php` | `keyOf` | `buildKey` | `kind:remoteId` |
-| `Model/PrivateFeedModel.php` | `timelineNameOf` (private) | `formatTimelineName` | a timeline kind's display name |
+| `Model/PrivateFeedModel.php` | `timelineNameOf` (private) | `requireTimelineName` | a timeline kind's display name; throws for a kind that is no timeline |
 | `Model/TimelinePageModel.php` | `of` | `fromEntries` | a page from parsed entries, known shares and the newest id |
 | `Pass/FollowMatching.php` | `keysOf` (private) | `collectKeys` | the identity, handle and feed identity a follow answers to |
 | `Pass/SearchQueryParser.php` | `wordOf` (private) | `parseWord` | a word token as an author filter, an unchecked filter or a term |
@@ -103,15 +102,15 @@ The last column is what the method does, which is what the reviewer checks the n
 | `Pass/SearchQueryParser.php` | `allOf` (private) | `combineAll` | several factors as one all-of expression, one as itself, none as null |
 | `Pass/SearchQueryParser.php` | `anyOf` (private) | `combineAny` | several alternatives as one any-of expression, one as itself, none as null |
 | `Pass/ThreadWalk.php` | `sizeOf` (private) | `countNodes` | a reply node and everything below it |
-| `Pass/TimelineAccounts.php` | `heldOutcomeOf` | `findHeldOutcome` | why an account's feeds stay unasked this refresh, or null |
-| `Pass/TimelineRound.php` | `ticketOf` (private) | `buildSettlement` | a feed's request ticket, or the outcome it settles at without one |
-| `Pass/TimelineRound.php` | `requestOf` (private) | `buildRequestSettlement` | the settlement that sends a read's current request |
+| `Pass/TimelineAccounts.php` | `heldOutcomeOf` | `buildHeldOutcome` | the outcome an account's feeds settle at while it needs a reconnect or is throttled; null when nothing holds them |
+| `Pass/TimelineRound.php` | `ticketOf` (private) | `startRead` | starts a feed's read, kept on the round, and returns its first request, or the outcome it settles at without one |
+| `Pass/TimelineRound.php` | `requestOf` (private) | `requestNext` | marks a feed that runs on a renewed session and returns the settlement for the read's current request |
 | `Pass/TimelineRound.php` | `socialFeedOf` (private) | `requireSocialFeed` | the social feed of a feed id; throws when the private feed lost it |
 | `PostCountsSource/PostCountsSourceInterface.php` and `Bluesky/BlueskyAppViewCountsSource.php`, `Mastodon/MastodonOriginCountsSource.php` | `countsOf` | `fetchCounts` | asks the network for a post's public counts; throws when it cannot be counted (3 methods) |
 | `ReplyThreadSource/ReplyThreadSourceInterface.php` and `Bluesky/BlueskyReplyThreadSource.php`, `Mastodon/MastodonReplyThreadSource.php` | `selfReplyOf` | `buildSelfReply` | the author's own reply from a timeline's post view, as a thread fold stores it (3 methods) |
 | `Support/SearchQueryTokens.php` | `of` | `tokenizeQuery` | a query as its tokens, kind and text |
-| `Support/SearchQueryTokens.php` | `wordsOf` | `extractWords` | the lower-cased letter and digit runs of a text |
-| `Support/SocialFeedClassifier.php` | `privateAddressOf` | `findPrivateAddress` | the private address of a social feed, or null |
+| `Support/SearchQueryTokens.php` | `wordsOf` | `splitWords` | the lower-cased letter and digit runs of a text |
+| `Support/SocialFeedClassifier.php` | `privateAddressOf` | `parsePrivateAddress` | the private address of a social feed, or null |
 | `Support/SocialFeedUrl.php` | `of` | `buildUrl` | the synthetic URL of an account's private feed |
 | `Support/SocialFeedUrl.php` | `addressOf` | `parseAddress` | network, account, kind and remote id of a private feed URL, or null |
 | `Support/SocialFeedUrl.php` | `segmentOf` (private) | `readSegment` | the URL segment stored for a feed kind |
@@ -122,22 +121,24 @@ The last column is what the method does, which is what the reviewer checks the n
 
 | File | Old | New | What it does |
 |---|---|---|---|
-| `Share/EntryShareClassifier.php` | `shareKindOf` (private) | `classifyShareKind` | whether an entry shares media, a link, a quote or nothing |
+| `Share/EntryShareClassifier.php` | `shareKindOf` (private) | `classifyShareKind` | whether an entry shares media, a link or nothing |
 | `Share/Support/OwnProse.php` | `of` | `fromBody` | a post body's own prose, links and metadata lines dropped |
 | `Share/Support/ShareTargets.php` | `planOf` | `buildPlan` | the entry's share targets without a card and the posted form of each |
 | `Share/Support/SharedLinks.php` | `of` | `fromBodyHtml` | the links a post body shares, bare URLs linked |
-| `Share/Support/TitledShareTarget.php` | `of` | `findTarget` | the URL a titled entry shares, or null |
+| `Share/Support/TitledShareTarget.php` | `of` | `detectTarget` | the URL a titled entry shares, decided from its own fields: none for a derived title; the entry's URL when it leaves the feed's site while the entry itself is at home |
 | `Completion/EntryCompletion.php` | `ofKind` (private) | `filterByKind` | the queued rows of one kind |
+| `Completion/EntryCompletion.php` | `queuedOfKind` (outside the pattern) | `loadClaimableByKind` | the claimable enrichments of the entries, of one kind |
 | `Completion/ShareEnrichmentQueue.php` | `postedQuoteOf` (private) | `findPostedQuote` | the quoted post a link share was posted with, or null |
 | `Completion/ShareEnrichmentQueue.php` | `postedCardOf` (private) | `findPostedCard` | the link card a link share was posted with, or null |
+| `Completion/ShareEnrichmentQueue.php` | `awaitedOfCreated` (outside the pattern) | `detectAwaitedKind` | what a created entry still waits for: its embed, its thread, its link cards, or nothing |
 | `Completion/Model/KnownSharesModel.php` | `ofBlueskyPosts` | `fromBlueskyPosts` | the known shares of a Bluesky timeline's post views |
 | `Completion/Model/KnownSharesModel.php` | `ofMastodonShares` | `fromMastodonShares` | the known shares of Mastodon cards and quotes |
 | `Completion/Support/PostedLinkCard.php` | `of` | `resolveCard` | the posted card when it belongs to one of the entry's targets, or null |
-| `Notification/NotificationStore.php` | `storedOf` (private) | `findStored` | the stored notifications of the retained remote ids |
+| `Notification/NotificationStore.php` | `storedOf` (private) | `loadStored` | the stored notifications of the retained remote ids |
 | `Notification/NotificationStore.php` | `rowOf` (private) | `buildRow` | a notification row from a fetched notification |
-| `Notification/NotificationContextSource/NotificationContextSourceInterface.php` and its three implementations in `Bluesky`, `Mastodon`, `Lemmy` | `contextsOf` | `fetchContexts` | asks the network for the context of fresh notifications; only a rejected credential throws (4 methods) |
-| `Notification/Support/Excerpt.php` | `of` | `fromText` | a text trimmed and cut to the excerpt length, or null when empty |
-| `Notification/Support/Excerpt.php` | `ofHtml` | `fromHtml` | the same from HTML |
+| `Notification/NotificationContextSource/NotificationContextSourceInterface.php` and its three implementations in `Bluesky`, `Mastodon`, `Lemmy` | `contextsOf` | `findContexts` | asks the network for the context of fresh notifications; only a rejected credential throws (4 methods) |
+| `Notification/Support/Excerpt.php` | `of` | `cutText` | a text trimmed and cut to the excerpt length, or null when empty |
+| `Notification/Support/Excerpt.php` | `ofHtml` | `cutHtml` | the same from HTML |
 
 ## Review Focus
 
@@ -151,7 +152,7 @@ The last column is what the method does, which is what the reviewer checks the n
 
 ### Task 1: The four interfaces
 
-- [ ] **Step 1:** Rename `pageOf` → `buildPage`, `countsOf` → `fetchCounts`, `selfReplyOf` → `buildSelfReply` and `contextsOf` → `fetchContexts` on the interfaces, every implementation, every double and every caller.
+- [ ] **Step 1:** Rename `pageOf` → `buildPage`, `countsOf` → `fetchCounts`, `selfReplyOf` → `buildSelfReply` and `contextsOf` → `findContexts` on the interfaces, every implementation, every double and every caller.
 - [ ] **Step 2:** Run `grep -rnE 'function (pageOf|countsOf|selfReplyOf|contextsOf)\(' backend/src backend/tests`. Expected: only the private namesakes named under Review Focus.
 - [ ] **Step 3:** `composer cs:fix && composer check && composer md && php bin/phpunit`. Expected: green, the same test count as develop.
 - [ ] **Step 4:** Commit `refactor(#2360): the social source interfaces say what they do`.
@@ -159,7 +160,7 @@ The last column is what the method does, which is what the reviewer checks the n
 ### Task 2: Social/Social
 
 - [ ] **Step 1:** Rename the remaining Social/Social rows and every caller in `backend/src`, `backend/tests` and `backend/migrations`.
-- [ ] **Step 2:** Run `grep -rnE 'function\s+&?(of[A-Z]\w*|of|\w+Of)\s*\(' backend/src/Service/Social/Social`. Expected: one line, `PrivateFeeds::subscribeInPlaceOf`.
+- [ ] **Step 2:** Run `grep -rnE 'function\s+&?(of[A-Z]\w*|of|\w+Of)\s*\(' backend/src/Service/Social/Social`. Expected: no output.
 - [ ] **Step 3:** Gates as in Task 1 Step 3.
 - [ ] **Step 4:** Commit `refactor(#2360): Social core methods say what they do`.
 
