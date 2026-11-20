@@ -64,10 +64,6 @@ final class CanonicalItemWriterTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $itemIds = array_map(static fn (Entry $entry): ?int => $entry->getCanonicalItem()?->requireId(), $entries);
-        self::assertCount(5, array_unique($itemIds));
-        self::assertNotContains(null, $itemIds);
-        self::assertSame(5, $this->countItemRows());
         self::assertCount(
             3,
             array_merge(
@@ -75,6 +71,11 @@ final class CanonicalItemWriterTest extends DbTestCase
                 $recorder->queriesMatching('into canonical_item'),
             ),
         );
+
+        $itemIds = array_map(static fn (Entry $entry): ?int => $entry->getCanonicalItem()?->requireId(), $entries);
+        self::assertCount(5, array_unique($itemIds));
+        self::assertNotContains(null, $itemIds);
+        self::assertSame(5, $this->countItemRows());
     }
 
     public function testAnItemInsertedThisRequestGetsItsCountsFlushed(): void
