@@ -106,8 +106,13 @@ unclear, oversized, or duplicated code is not done.
   | `from…`, `to…`, `with…` | Named constructor, conversion, wither | unchanged |
   | plain noun | A fixed fact that takes no input (`sourceFormat()`) | Always the value |
 
-  `get…` is for plain property reads on entities. Existing `…Of` and `of` names are
-  renamed as #2360 reaches them; write no new one.
+  `get…` is for plain property reads on entities. Choose the verb from what the whole
+  body does and how callers use the result, never from the return type. When no row
+  fits, use the plain verb the tree already uses for that act (`read…`, `pick…`,
+  `collect…`, `resolve…`, `ensure…`), and name the same act the same way everywhere.
+  Write no `of…`, `…Of` or `…Of…` name (#2360); `is…`/`has…` questions such as
+  `isRenditionOf()` are fine. The names with `Of` in the middle that remain are
+  renamed in #2394.
 - **Functions do one thing**, at a single level of abstraction, and stay short.
   Extract until each method reads as a sentence about *what*, not *how*.
 - **Few parameters.** Three is a lot; more means a DTO or value object is missing.
