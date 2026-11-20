@@ -17,7 +17,7 @@ final class BlueskyAuthor
 
     public static function avatar(JsonNodeModel $actor): ?string
     {
-        return AbsoluteHttpUrl::orNull($actor->string('avatar'));
+        return AbsoluteHttpUrl::keepIfAbsolute($actor->string('avatar'));
     }
 
     public static function profile(JsonNodeModel $actor): ?string

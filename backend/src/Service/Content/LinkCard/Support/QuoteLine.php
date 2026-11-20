@@ -40,7 +40,7 @@ final class QuoteLine
     /** The quoted link without its tracking parameters, as the share plans compare it. */
     public static function trackingFreeTargetIn(string $html): ?string
     {
-        return TrackingFreeUrl::orNull(self::targetIn($html));
+        return TrackingFreeUrl::stripTrackingIfSet(self::targetIn($html));
     }
 
     /** The link the body's first "RE:" paragraph quotes; null when it quotes nothing. */

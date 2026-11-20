@@ -31,7 +31,7 @@ final readonly class FeedDirectoryScopeModel
      * @param list<string> $countries
      * @param list<string> $languages
      */
-    public static function orNone(array $countries, array $languages): self
+    public static function fromListsOrEmpty(array $countries, array $languages): self
     {
         if ($countries === [] || $languages === []) {
             return new self([], []);

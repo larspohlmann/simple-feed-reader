@@ -11,7 +11,7 @@ final class AbsoluteHttpUrl
         return preg_match('#^https?://#i', $url) === 1;
     }
 
-    public static function orNull(?string $url): ?string
+    public static function keepIfAbsolute(?string $url): ?string
     {
         return $url !== null && self::matches($url) ? $url : null;
     }
@@ -21,9 +21,9 @@ final class AbsoluteHttpUrl
         return null !== $url && self::matches($url) && 0 === stripos($url, 'https://') ? $url : null;
     }
 
-    public static function orNullWithin(?string $url, int $maxLength): ?string
+    public static function keepIfAbsoluteWithin(?string $url, int $maxLength): ?string
     {
-        $absolute = self::orNull($url);
+        $absolute = self::keepIfAbsolute($url);
 
         return null !== $absolute && mb_strlen($absolute) <= $maxLength ? $absolute : null;
     }

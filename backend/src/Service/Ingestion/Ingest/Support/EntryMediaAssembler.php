@@ -59,7 +59,7 @@ final class EntryMediaAssembler
         }
 
         foreach ($media as $medium) {
-            $url = HttpsImageUrl::orNull($medium->url);
+            $url = HttpsImageUrl::parseUrl($medium->url);
             if ($url === null || isset($seen[$url])) {
                 continue;
             }
@@ -69,7 +69,7 @@ final class EntryMediaAssembler
                 $medium->kind->value,
                 $medium->width,
                 $medium->height,
-                HttpsImageUrl::orNull($medium->previewImageUrl),
+                HttpsImageUrl::parseUrl($medium->previewImageUrl),
                 $medium->alt,
                 $medium->isAnimated,
             );
@@ -83,7 +83,7 @@ final class EntryMediaAssembler
         if ($lead === null) {
             return null;
         }
-        $url = HttpsImageUrl::orNullUpgrading($lead->url);
+        $url = HttpsImageUrl::parseUrlUpgradingHttp($lead->url);
         if ($url === null) {
             return null;
         }
@@ -100,7 +100,7 @@ final class EntryMediaAssembler
     {
         $kept = [];
         foreach ($attachments as $attachment) {
-            $url = HttpsImageUrl::orNull($attachment->url);
+            $url = HttpsImageUrl::parseUrl($attachment->url);
             if ($url === null) {
                 continue;
             }

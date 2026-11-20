@@ -112,7 +112,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
                     '@' . $handle,
                     $node->string('displayName'),
                     BlueskyProfileFeed::buildUrl($did),
-                    AbsoluteHttpUrl::orNull($node->string('avatar')),
+                    AbsoluteHttpUrl::keepIfAbsolute($node->string('avatar')),
                 );
             }
         }

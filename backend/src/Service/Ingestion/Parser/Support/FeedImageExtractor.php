@@ -17,7 +17,7 @@ final class FeedImageExtractor
     public static function fromRss2Channel(CoreElement $channel): ?string
     {
         foreach ($channel->children('image') as $image) {
-            $url = HttpsImageUrl::orNull($channel->at($image)->text('url'));
+            $url = HttpsImageUrl::parseUrl($channel->at($image)->text('url'));
             if ($url !== null) {
                 return $url;
             }
@@ -35,18 +35,18 @@ final class FeedImageExtractor
         // Direct children only: a document-wide search finds the channel's url-less <image rdf:resource> first.
         $image = $root->child('image');
 
-        return $image === null ? null : HttpsImageUrl::orNull($root->at($image)->text('url'));
+        return $image === null ? null : HttpsImageUrl::parseUrl($root->at($image)->text('url'));
     }
 
     /** Atom: <feed><logo>, else the podcast artwork. */
     public static function fromAtomFeed(CoreElement $feed): ?string
     {
-        return HttpsImageUrl::orNull($feed->text('logo')) ?? self::podcastArtwork($feed->element);
+        return HttpsImageUrl::parseUrl($feed->text('logo')) ?? self::podcastArtwork($feed->element);
     }
 
     private static function podcastArtwork(\DOMElement $parent): ?string
     {
-        return HttpsImageUrl::orNull(PodcastArtwork::findArtwork($parent)?->url);
+        return HttpsImageUrl::parseUrl(PodcastArtwork::findArtwork($parent)?->url);
     }
 
     private function __construct()

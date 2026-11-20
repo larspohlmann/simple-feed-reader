@@ -218,7 +218,9 @@ final readonly class EntryJson
         if (null !== $feed->getNetwork()) {
             return [
                 'name' => $row->subscription->title,
-                'url' => AbsoluteHttpUrl::orNull(FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl())),
+                'url' => AbsoluteHttpUrl::keepIfAbsolute(
+                    FeedWebsite::resolveWebsite($feed->getUrl(), $feed->getSiteUrl()),
+                ),
                 'imageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
             ];
         }

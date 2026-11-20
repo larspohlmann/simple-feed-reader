@@ -146,7 +146,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
             if (!str_contains(strtolower(trim($link->getAttribute('rel'))), 'icon')) {
                 continue;
             }
-            $resolved = HttpsImageUrl::orNull($pageUrls->httpUrl($link->getAttribute('href')));
+            $resolved = HttpsImageUrl::parseUrl($pageUrls->httpUrl($link->getAttribute('href')));
             if (null === $resolved) {
                 continue;
             }

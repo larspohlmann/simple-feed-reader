@@ -27,7 +27,7 @@ final class BlueskyExternalCard
 
     public static function fromExternal(JsonNodeModel $external): ?LinkCardContent
     {
-        $url = AbsoluteHttpUrl::orNull($external->string('uri'));
+        $url = AbsoluteHttpUrl::keepIfAbsolute($external->string('uri'));
         $title = $external->string('title');
         if ($url === null || $title === null) {
             return null;

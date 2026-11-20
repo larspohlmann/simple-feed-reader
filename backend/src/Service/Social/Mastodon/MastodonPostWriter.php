@@ -63,10 +63,11 @@ final readonly class MastodonPostWriter implements PostWriterInterface
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
         $status = JsonNodeModel::fromValue($answer->json());
-        $address = AbsoluteHttpUrl::orNull($status->string('uri')) ?? AbsoluteHttpUrl::orNull($status->string('url'))
+        $address = AbsoluteHttpUrl::keepIfAbsolute($status->string('uri'))
+            ?? AbsoluteHttpUrl::keepIfAbsolute($status->string('url'))
             ?? throw new SocialNetworkUnreachableException('Mastodon took the post but named no address for it.');
 
-        return new PublishedPostModel($address, AbsoluteHttpUrl::orNull($status->string('url')));
+        return new PublishedPostModel($address, AbsoluteHttpUrl::keepIfAbsolute($status->string('url')));
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion

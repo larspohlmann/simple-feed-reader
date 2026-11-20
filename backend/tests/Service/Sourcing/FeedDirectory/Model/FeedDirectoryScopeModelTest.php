@@ -12,8 +12,8 @@ final class FeedDirectoryScopeModelTest extends TestCase
 {
     public function testAHalfScopeIsNoScope(): void
     {
-        $withoutLanguages = FeedDirectoryScopeModel::orNone(['DE'], []);
-        $withoutCountries = FeedDirectoryScopeModel::orNone([], ['de']);
+        $withoutLanguages = FeedDirectoryScopeModel::fromListsOrEmpty(['DE'], []);
+        $withoutCountries = FeedDirectoryScopeModel::fromListsOrEmpty([], ['de']);
 
         self::assertSame([[], []], [$withoutLanguages->countries, $withoutLanguages->languages]);
         self::assertSame([[], []], [$withoutCountries->countries, $withoutCountries->languages]);
@@ -21,7 +21,7 @@ final class FeedDirectoryScopeModelTest extends TestCase
 
     public function testAFullScopeIsKept(): void
     {
-        $scope = FeedDirectoryScopeModel::orNone(['DE', 'DE'], ['de']);
+        $scope = FeedDirectoryScopeModel::fromListsOrEmpty(['DE', 'DE'], ['de']);
 
         self::assertSame([['DE'], ['de']], [$scope->countries, $scope->languages]);
     }

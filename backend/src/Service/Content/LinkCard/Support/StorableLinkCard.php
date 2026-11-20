@@ -29,7 +29,7 @@ final class StorableLinkCard
             TrackingFreeUrl::stripTracking($card->url),
             mb_substr($card->title, 0, LinkCardContent::TITLE_MAX),
             self::description($card->description),
-            self::fits((string) $card->imageUrl) ? HttpsImageUrl::orNull($card->imageUrl) : null,
+            self::fits((string) $card->imageUrl) ? HttpsImageUrl::parseUrl($card->imageUrl) : null,
             mb_substr($card->siteName, 0, LinkCardContent::SITE_NAME_MAX),
         );
     }

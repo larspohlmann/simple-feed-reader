@@ -42,7 +42,7 @@ final readonly class IngestedEntryFactory
         $entry = new Entry(
             $feed,
             $parsed->guid,
-            self::cut(TrackingFreeUrl::orNull($parsed->url), self::URL_MAX),
+            self::cut(TrackingFreeUrl::stripTrackingIfSet($parsed->url), self::URL_MAX),
             $parsed->headline->text,
             $context->fetchedAt,
             EntryEffectiveDate::for($parsed->publishedAt, $context),
@@ -51,8 +51,8 @@ final readonly class IngestedEntryFactory
         $entry->setHeadline($parsed->headline);
         $entry->setAuthor(new EntryAuthor(
             self::cut($parsed->author, self::AUTHOR_MAX),
-            AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
-            AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
+            AbsoluteHttpUrl::keepIfAbsoluteWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
+            AbsoluteHttpUrl::keepIfAbsoluteWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
         ));
         $entry->recordText($this->completeText($entry->getText(), $feed, $parsed));
         $entry->setPublishedAt($parsed->publishedAt);
@@ -94,7 +94,7 @@ final readonly class IngestedEntryFactory
         $chapters = ($parsed->media->mediaBundle ?? new ParsedMediaBundleModel())->chapters;
         $entry->declareChapters(
             $chapters->chapters,
-            AbsoluteHttpUrl::orNullWithin($chapters->url, EntryChapters::URL_MAX_LENGTH),
+            AbsoluteHttpUrl::keepIfAbsoluteWithin($chapters->url, EntryChapters::URL_MAX_LENGTH),
         );
     }
 }

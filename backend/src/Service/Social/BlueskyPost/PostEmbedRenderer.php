@@ -109,7 +109,7 @@ final readonly class PostEmbedRenderer
                 $card->imageUrl === null ? null : new DeclaredImageModel($card->imageUrl),
             );
         }
-        $url = AbsoluteHttpUrl::orNull($external->string('uri'));
+        $url = AbsoluteHttpUrl::keepIfAbsolute($external->string('uri'));
 
         return $url === null || $external->string('title') !== null ? null : RenderedEmbedModel::uncarded($url);
     }

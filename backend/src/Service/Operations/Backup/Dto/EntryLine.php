@@ -87,7 +87,7 @@ final readonly class EntryLine
             feedUrl: LineField::string($line, 'feedUrl'),
             guid: LineField::string($line, 'guid'),
             guidHash: LineField::string($line, 'guidHash'),
-            url: TrackingFreeUrl::orNull(LineField::stringOrNull($line, 'url')),
+            url: TrackingFreeUrl::stripTrackingIfSet(LineField::stringOrNull($line, 'url')),
             title: LineField::string($line, 'title'),
             author: LineField::stringOrNull($line, 'author'),
             summary: LineField::stringOrNull($line, 'summary'),
@@ -265,7 +265,7 @@ final readonly class EntryLine
     /** @param array<string, mixed> $line */
     private static function parseHttpUrl(array $line, string $key): ?string
     {
-        return AbsoluteHttpUrl::orNullWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
+        return AbsoluteHttpUrl::keepIfAbsoluteWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
     }
 
     /** @param array<string, mixed> $line */
@@ -273,7 +273,7 @@ final readonly class EntryLine
     {
         $url = LineField::stringOrNull($line, 'chaptersUrl');
 
-        return AbsoluteHttpUrl::orNullWithin($url, EntryChapters::URL_MAX_LENGTH);
+        return AbsoluteHttpUrl::keepIfAbsoluteWithin($url, EntryChapters::URL_MAX_LENGTH);
     }
 
     /** @param array<string, mixed> $line */

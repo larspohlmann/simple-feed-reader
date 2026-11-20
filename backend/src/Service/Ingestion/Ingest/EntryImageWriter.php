@@ -20,7 +20,7 @@ final readonly class EntryImageWriter
     /** Whether the image had a URL worth storing; one without leaves the entry as it was. */
     public function write(Entry $entry, DeclaredImageModel $image): bool
     {
-        $url = HttpsImageUrl::orNullUpgrading($image->url);
+        $url = HttpsImageUrl::parseUrlUpgradingHttp($image->url);
         if ($url === null) {
             return false;
         }
@@ -74,7 +74,7 @@ final readonly class EntryImageWriter
     {
         $secure = [];
         foreach ($declared as $rendition) {
-            $url = HttpsImageUrl::orNullUpgrading($rendition->url);
+            $url = HttpsImageUrl::parseUrlUpgradingHttp($rendition->url);
             if ($url !== null && self::fitsASrcsetCandidate($url)) {
                 $secure[] = new ImageRendition($url, $rendition->width);
             }

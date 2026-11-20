@@ -23,7 +23,7 @@ final class LemmySiteIcon
         $record = self::record(self::SITE_RECORD, $html);
         $icon = $record['icon'] ?? null;
 
-        return HttpsImageUrl::orNull(\is_string($icon) ? $icon : null);
+        return HttpsImageUrl::parseUrl(\is_string($icon) ? $icon : null);
     }
 
     /**

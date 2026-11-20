@@ -32,7 +32,7 @@ final class MastodonAttachments
 
     private static function parseMedium(JsonNodeModel $attachment): ?ParsedMediumModel
     {
-        $url = HttpsImageUrl::orNull($attachment->string('url'));
+        $url = HttpsImageUrl::parseUrl($attachment->string('url'));
         $size = $attachment->node('meta')->node('original');
         $type = $attachment->string('type') ?? '';
 
@@ -50,7 +50,7 @@ final class MastodonAttachments
                 VisualMediaKind::Video,
                 $size->int('width'),
                 $size->int('height'),
-                HttpsImageUrl::orNull($attachment->string('preview_url')),
+                HttpsImageUrl::parseUrl($attachment->string('preview_url')),
                 $attachment->string('description'),
                 isAnimated: 'gifv' === $type,
             ),

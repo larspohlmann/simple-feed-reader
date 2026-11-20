@@ -22,7 +22,7 @@ final readonly class ReaderLeadImage
     public function restore(HTMLDocument $document, LeadImageCandidateModel $lead): ?Element
     {
         $body = $document->body;
-        $leadUrl = AbsoluteHttpUrl::orNull($lead->url);
+        $leadUrl = AbsoluteHttpUrl::keepIfAbsolute($lead->url);
         if ($body === null || $leadUrl === null) {
             return null;
         }

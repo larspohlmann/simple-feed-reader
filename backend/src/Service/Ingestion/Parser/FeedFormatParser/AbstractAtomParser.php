@@ -97,7 +97,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         $id = $atomEntry->text('id');
         // Some WordPress Atom feeds carry the permalink only in <id>; only an absolute http(s) id may stand in,
         // since a urn:/tag: id is not fetchable.
-        $link = self::alternateLink($atomEntry) ?? AbsoluteHttpUrl::orNull($id);
+        $link = self::alternateLink($atomEntry) ?? AbsoluteHttpUrl::keepIfAbsolute($id);
         if ($title === null && $link === null) {
             return null;
         }
@@ -122,7 +122,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($atomEntry),
             discussion: AtomDiscussion::from($atomEntry),
-            authorUrl: AbsoluteHttpUrl::orNull(self::authorChildText($atomEntry, 'uri')),
+            authorUrl: AbsoluteHttpUrl::keepIfAbsolute(self::authorChildText($atomEntry, 'uri')),
         );
     }
 

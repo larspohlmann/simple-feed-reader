@@ -42,7 +42,7 @@ final class BlueskyRichText
     {
         foreach ($facets as $facet) {
             $feature = $facet->first('features');
-            if (self::LINK === $feature->type() && null !== AbsoluteHttpUrl::orNull($feature->string('uri'))) {
+            if (self::LINK === $feature->type() && null !== AbsoluteHttpUrl::keepIfAbsolute($feature->string('uri'))) {
                 return true;
             }
         }
@@ -99,7 +99,7 @@ final class BlueskyRichText
     private static function resolveHref(JsonNodeModel $feature): ?string
     {
         return match ($feature->type()) {
-            self::LINK => AbsoluteHttpUrl::orNull($feature->string('uri')),
+            self::LINK => AbsoluteHttpUrl::keepIfAbsolute($feature->string('uri')),
             self::MENTION => self::buildProfileUrl($feature->string('did')),
             self::TAG => self::buildHashtagUrl($feature->string('tag')),
             default => null,

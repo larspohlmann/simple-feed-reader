@@ -29,7 +29,7 @@ final readonly class LeadFigureCaptionsModel
 
     public function captionFor(?string $leadUrl): ?string
     {
-        $leadUrl = AbsoluteHttpUrl::orNull($leadUrl);
+        $leadUrl = AbsoluteHttpUrl::keepIfAbsolute($leadUrl);
         if ($leadUrl === null) {
             return null;
         }

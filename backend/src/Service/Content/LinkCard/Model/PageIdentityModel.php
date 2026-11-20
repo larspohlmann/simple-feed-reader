@@ -22,6 +22,6 @@ final readonly class PageIdentityModel
             && (TrackingFreeUrl::stripTracking($this->finalUrl) === TrackingFreeUrl::stripTracking($other->finalUrl)
                 || ($this->canonicalUrl !== null
                     && TrackingFreeUrl::stripTracking($this->canonicalUrl)
-                        === TrackingFreeUrl::orNull($other->canonicalUrl)));
+                        === TrackingFreeUrl::stripTrackingIfSet($other->canonicalUrl)));
     }
 }
