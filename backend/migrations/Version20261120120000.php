@@ -54,14 +54,14 @@ final class Version20261120120000 extends AbstractMigration
     {
         $this->abortUnlessSupported();
         $this->skipIf(self::isPristine($schema), 'Copies do not share canonical items.');
+        $this->abortUnlessUpgraded($schema);
 
         if ($this->isMySql()) {
-            $this->downMySql($schema);
+            $this->downMySql();
 
             return;
         }
 
-        $this->abortUnlessUpgraded($schema);
         $this->downSqlite();
     }
 
@@ -185,7 +185,7 @@ final class Version20261120120000 extends AbstractMigration
     private function abortUnlessUpgraded(Schema $schema): void
     {
         $this->abortIf(!self::isUpgraded($schema), \sprintf(
-            'The schema is half migrated (present: %s); SQLite runs this migration in one transaction, so restore a backup.',
+            'The schema is half migrated (present: %s); run up to complete it before reverting.',
             self::formatPresentParts($schema),
         ));
     }
@@ -251,6 +251,7 @@ final class Version20261120120000 extends AbstractMigration
             return;
         }
         // Without the checks MySQL adds the key in place instead of copying the table; the column holds only NULLs here.
+        // Should the ALTER fail, the checks stay off for the rest of that connection, which the failed run then ends.
         $this->addSql('SET foreign_key_checks = 0');
         $this->addSql('ALTER TABLE entry ADD CONSTRAINT FK_2B219D704128692 FOREIGN KEY (canonical_item_id)'
             . ' REFERENCES canonical_item (id) ON DELETE SET NULL');
@@ -275,7 +276,7 @@ final class Version20261120120000 extends AbstractMigration
 
     private function rekeyVotesOnMySql(Schema $schema): void
     {
-        $this->addItemColumnOnMySql($schema, 'discussion_vote');
+        $this->moveReactionsOntoItemsOnMySql($schema, 'discussion_vote');
         $this->addSql('ALTER TABLE discussion_vote DROP FOREIGN KEY FK_7F7E2952BA364942,'
             . ' DROP INDEX idx_discussion_vote_entry, DROP INDEX uniq_discussion_vote_user_entry, DROP entry_id,'
             . ' MODIFY canonical_item_id INT NOT NULL, ADD INDEX idx_discussion_vote_canonical_item (canonical_item_id),'
@@ -285,7 +286,7 @@ final class Version20261120120000 extends AbstractMigration
 
     private function rekeyLikesOnMySql(Schema $schema): void
     {
-        $this->addItemColumnOnMySql($schema, 'social_like');
+        $this->moveReactionsOntoItemsOnMySql($schema, 'social_like');
         $this->addSql('ALTER TABLE social_like DROP FOREIGN KEY fk_social_like_entry,'
             . ' DROP INDEX idx_social_like_entry, DROP INDEX uniq_social_like_user_entry, DROP entry_id,'
             . ' MODIFY canonical_item_id INT NOT NULL, ADD INDEX idx_social_like_canonical_item (canonical_item_id),'
@@ -293,11 +294,8 @@ final class Version20261120120000 extends AbstractMigration
             . ' ADD CONSTRAINT FK_E37293D74128692 FOREIGN KEY (canonical_item_id) REFERENCES canonical_item (id) ON DELETE CASCADE');
     }
 
-    /**
-     * Fills, prunes and merges right before the ALTER that makes the column NOT NULL and unique, so a row the old
-     * release wrote meanwhile cannot fail it: rows without an item go, and one user keeps only their latest row per item.
-     */
-    private function addItemColumnOnMySql(Schema $schema, string $table): void
+    /** Runs right before the ALTER that makes the key NOT NULL and unique, so rows the old release wrote meanwhile cannot fail it. */
+    private function moveReactionsOntoItemsOnMySql(Schema $schema, string $table): void
     {
         if (!$schema->getTable($table)->hasColumn('canonical_item_id')) {
             $this->addSql("ALTER TABLE $table ADD canonical_item_id INT DEFAULT NULL");
@@ -507,38 +505,27 @@ final class Version20261120120000 extends AbstractMigration
             . ' AND newer.entry_id > post.entry_id)');
     }
 
-    private function downMySql(Schema $schema): void
+    private function downMySql(): void
     {
-        if (!$schema->hasTable('entry_lemmy_post')) {
-            $this->addSql('CREATE TABLE entry_lemmy_post (id INT AUTO_INCREMENT NOT NULL, score INT DEFAULT NULL,'
-                . ' community_identity VARCHAR(255) DEFAULT NULL, community_url VARCHAR(2048) DEFAULT NULL,'
-                . ' entry_id INT NOT NULL, UNIQUE INDEX UNIQ_EA202E9CBA364942 (entry_id), PRIMARY KEY (id),'
-                . ' CONSTRAINT FK_EA202E9CBA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE)'
-                . ' DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        }
-        if ($schema->hasTable('lemmy_post') && $schema->getTable('entry')->hasColumn('canonical_item_id')) {
-            $this->addSql('UPDATE entry e INNER JOIN canonical_item item ON item.id = e.canonical_item_id'
-                . ' SET e.comment_count = item.comment_count, e.self_reply_count = item.self_reply_count');
-            $this->addLemmyCopies();
-        }
-        if ($schema->getTable('discussion_vote')->hasColumn('canonical_item_id')) {
-            $this->restoreVotesOnMySql($schema);
-        }
-        if ($schema->getTable('social_like')->hasColumn('canonical_item_id')) {
-            $this->restoreLikesOnMySql($schema);
-        }
-        $this->addSql('DROP TABLE IF EXISTS lemmy_post');
-        if ($schema->getTable('entry')->hasColumn('canonical_item_id')) {
-            $this->addSql('ALTER TABLE entry DROP FOREIGN KEY FK_2B219D704128692, DROP INDEX IDX_2B219D704128692,'
-                . ' DROP INDEX idx_entry_canonical_item, DROP canonical_item_id');
-        }
-        $this->addSql('DROP TABLE IF EXISTS canonical_item');
-        $this->addSql('DROP TABLE IF EXISTS ' . self::BACKFILL);
+        $this->addSql('CREATE TABLE entry_lemmy_post (id INT AUTO_INCREMENT NOT NULL, score INT DEFAULT NULL,'
+            . ' community_identity VARCHAR(255) DEFAULT NULL, community_url VARCHAR(2048) DEFAULT NULL,'
+            . ' entry_id INT NOT NULL, UNIQUE INDEX UNIQ_EA202E9CBA364942 (entry_id), PRIMARY KEY (id),'
+            . ' CONSTRAINT FK_EA202E9CBA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE)'
+            . ' DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('UPDATE entry e INNER JOIN canonical_item item ON item.id = e.canonical_item_id'
+            . ' SET e.comment_count = item.comment_count, e.self_reply_count = item.self_reply_count');
+        $this->addLemmyCopies();
+        $this->restoreVotesOnMySql();
+        $this->restoreLikesOnMySql();
+        $this->addSql('DROP TABLE lemmy_post');
+        $this->addSql('ALTER TABLE entry DROP FOREIGN KEY FK_2B219D704128692, DROP INDEX IDX_2B219D704128692,'
+            . ' DROP INDEX idx_entry_canonical_item, DROP canonical_item_id');
+        $this->addSql('DROP TABLE canonical_item');
     }
 
-    private function restoreVotesOnMySql(Schema $schema): void
+    private function restoreVotesOnMySql(): void
     {
-        $this->addEntryColumnOnMySql($schema, 'discussion_vote');
+        $this->moveReactionsOntoEntriesOnMySql('discussion_vote');
         $this->addSql('ALTER TABLE discussion_vote DROP FOREIGN KEY FK_7F7E29524128692,'
             . ' DROP INDEX idx_discussion_vote_canonical_item, DROP INDEX uniq_discussion_vote_user_canonical_item,'
             . ' DROP canonical_item_id, MODIFY entry_id INT NOT NULL, ADD INDEX idx_discussion_vote_entry (entry_id),'
@@ -546,9 +533,9 @@ final class Version20261120120000 extends AbstractMigration
             . ' ADD CONSTRAINT FK_7F7E2952BA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE');
     }
 
-    private function restoreLikesOnMySql(Schema $schema): void
+    private function restoreLikesOnMySql(): void
     {
-        $this->addEntryColumnOnMySql($schema, 'social_like');
+        $this->moveReactionsOntoEntriesOnMySql('social_like');
         $this->addSql('ALTER TABLE social_like DROP FOREIGN KEY FK_E37293D74128692,'
             . ' DROP INDEX idx_social_like_canonical_item, DROP INDEX uniq_social_like_user_canonical_item,'
             . ' DROP canonical_item_id, MODIFY entry_id INT NOT NULL, ADD INDEX idx_social_like_entry (entry_id),'
@@ -556,12 +543,9 @@ final class Version20261120120000 extends AbstractMigration
             . ' ADD CONSTRAINT fk_social_like_entry FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE');
     }
 
-    /** Each row goes back onto its item's first copy; a row whose item has no copy left goes. */
-    private function addEntryColumnOnMySql(Schema $schema, string $table): void
+    private function moveReactionsOntoEntriesOnMySql(string $table): void
     {
-        if (!$schema->getTable($table)->hasColumn('entry_id')) {
-            $this->addSql("ALTER TABLE $table ADD entry_id INT DEFAULT NULL");
-        }
+        $this->addSql("ALTER TABLE $table ADD entry_id INT DEFAULT NULL");
         $this->addSql("UPDATE $table reaction SET reaction.entry_id ="
             . ' (SELECT MIN(e.id) FROM entry e WHERE e.canonical_item_id = reaction.canonical_item_id)');
         $this->addSql("DELETE FROM $table WHERE entry_id IS NULL");

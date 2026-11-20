@@ -127,6 +127,21 @@ final class Version20261120120000Test extends TestCase
         $this->migrateUp();
     }
 
+    public function testDownOverAHalfMigratedSchemaIsRefusedAndChangesNothing(): void
+    {
+        $this->connection->executeStatement('CREATE TABLE canonical_item (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)');
+        $before = $this->readCopiesState();
+
+        try {
+            $this->migrateDown();
+            self::fail('down ran over a half-migrated schema');
+        } catch (AbortMigration $abort) {
+            self::assertStringContainsString('(present: canonical_item)', $abort->getMessage());
+        }
+
+        self::assertSame($before, $this->readCopiesState());
+    }
+
     public function testDownOverAPristineSchemaIsSkipped(): void
     {
         $this->expectException(SkipMigration::class);
@@ -194,6 +209,17 @@ final class Version20261120120000Test extends TestCase
             'INSERT INTO social_like (user_id, entry_id, remote_id, liked_at, social_account_id) VALUES'
             . " (7, 1617700, 'like-a', '2026-11-19 10:00:00', 31), (7, 1617701, 'like-b', '2026-11-19 10:30:00', 32)",
         );
+    }
+
+    /** @return list<list<list<mixed>>> */
+    private function readCopiesState(): array
+    {
+        return [
+            $this->connection->fetchAllNumeric('SELECT * FROM entry ORDER BY id'),
+            $this->connection->fetchAllNumeric('SELECT * FROM entry_lemmy_post ORDER BY id'),
+            $this->connection->fetchAllNumeric('SELECT * FROM discussion_vote ORDER BY id'),
+            $this->connection->fetchAllNumeric('SELECT * FROM social_like ORDER BY id'),
+        ];
     }
 
     private function findItemId(string $kind): mixed
