@@ -551,7 +551,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-delete@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -568,7 +568,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'own-post-article@example.test');
         $this->mastodonAccountOf($user);
 
-        $client->request('GET', sprintf('/api/entries/%d', $this->ownPostFor($user)));
+        $client->request('GET', sprintf('/api/entries/%d', $this->persistOwnPost($user)));
         self::assertTrue($this->socialOf($client)['isOwn']);
         $client->request('GET', sprintf('/api/entries/%d', $this->mastodonPostFor($user)));
         self::assertFalse($this->socialOf($client)['isOwn']);
@@ -581,7 +581,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-gone@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -613,7 +613,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         ]);
         $user = $this->signIn($client, 'own-post-down@example.test');
         $this->mastodonAccountOf($user);
-        $entryId = $this->ownPostFor($user);
+        $entryId = $this->persistOwnPost($user);
 
         $client->request('DELETE', sprintf('/api/entries/%d/post', $entryId));
 
@@ -622,7 +622,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertNotNull($this->entityManager()->find(Entry::class, $entryId));
     }
 
-    private function ownPostFor(User $user): int
+    private function persistOwnPost(User $user): int
     {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
 
