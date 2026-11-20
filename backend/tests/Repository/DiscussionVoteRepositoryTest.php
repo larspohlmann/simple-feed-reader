@@ -41,9 +41,9 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonOf($stranger),
         );
-        $this->vote($this->owner, $this->account, $item, VoteScore::Up);
-        $this->vote($stranger, $strangerAccount, $item, VoteScore::Down);
-        $this->vote($this->owner, $this->account, $this->persistItem('unasked'), VoteScore::Down);
+        $this->persistVote($this->owner, $this->account, $item, VoteScore::Up);
+        $this->persistVote($stranger, $strangerAccount, $item, VoteScore::Down);
+        $this->persistVote($this->owner, $this->account, $this->persistItem('unasked'), VoteScore::Down);
 
         $scores = $this->repository()->findScores($this->owner->requireId(), [$item->requireId()]);
 
@@ -59,13 +59,13 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     {
         $voted = $this->persistItem('voted');
         $stranger = $this->user('discussion-votes-finder@example.test');
-        $this->vote(
+        $this->persistVote(
             $stranger,
             SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($stranger)),
             $voted,
             VoteScore::Up,
         );
-        $vote = $this->vote($this->owner, $this->account, $voted, VoteScore::Down);
+        $vote = $this->persistVote($this->owner, $this->account, $voted, VoteScore::Down);
 
         self::assertSame($vote, $this->repository()->findOneFor($this->owner, $voted));
         self::assertNull($this->repository()->findOneFor($this->owner, $this->persistItem('unvoted')));
@@ -74,7 +74,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     public function testRecastingPersistsTheNewScore(): void
     {
         $item = $this->persistItem('recast');
-        $vote = $this->vote($this->owner, $this->account, $item, VoteScore::Up);
+        $vote = $this->persistVote($this->owner, $this->account, $item, VoteScore::Up);
 
         $vote->recast(VoteScore::Down, new \DateTimeImmutable('2026-11-14 11:00:00'));
         $this->entityManager->flush();
@@ -89,12 +89,12 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     {
         $this->expectException(NoVoteToStoreException::class);
 
-        $this->vote($this->owner, $this->account, $this->persistItem('none'), VoteScore::None);
+        $this->persistVote($this->owner, $this->account, $this->persistItem('none'), VoteScore::None);
     }
 
     public function testRecastingToNoneIsRefused(): void
     {
-        $vote = $this->vote($this->owner, $this->account, $this->persistItem('recast-none'), VoteScore::Up);
+        $vote = $this->persistVote($this->owner, $this->account, $this->persistItem('recast-none'), VoteScore::Up);
 
         $this->expectException(NoVoteToStoreException::class);
 
@@ -104,11 +104,11 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     public function testOneVotePerUserAndItem(): void
     {
         $item = $this->persistItem('twice');
-        $this->vote($this->owner, $this->account, $item, VoteScore::Up);
+        $this->persistVote($this->owner, $this->account, $item, VoteScore::Up);
 
         $this->expectException(UniqueConstraintViolationException::class);
 
-        $this->vote($this->owner, $this->account, $item, VoteScore::Down);
+        $this->persistVote($this->owner, $this->account, $item, VoteScore::Down);
     }
 
     public function testStoringAFirstVoteInsertsIt(): void
@@ -128,7 +128,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     public function testStoringOverAVoteACompetingRequestInsertedRecastsIt(): void
     {
         $item = $this->persistItem('raced');
-        $this->vote($this->owner, $this->account, $item, VoteScore::Up);
+        $this->persistVote($this->owner, $this->account, $item, VoteScore::Up);
         $this->entityManager->clear();
         $owner = $this->entityManager->find(User::class, $this->owner->requireId());
         $account = $this->entityManager->find(SocialAccount::class, $this->account->requireId());
@@ -150,7 +150,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
     public function testStoringOverAVoteACompetingRequestInsertedKeepsItsAccount(): void
     {
         $item = $this->persistItem('raced-account');
-        $this->vote($this->owner, $this->account, $item, VoteScore::Up);
+        $this->persistVote($this->owner, $this->account, $item, VoteScore::Up);
         $other = SocialFeeds::persistedAccount(
             $this->entityManager,
             SocialAccounts::mastodonAs($this->owner, 'alice2@mastodon.example'),
@@ -167,7 +167,7 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
 
     public function testDeletingTheAccountDropsItsVotes(): void
     {
-        $this->vote($this->owner, $this->account, $this->persistItem('by-account'), VoteScore::Up);
+        $this->persistVote($this->owner, $this->account, $this->persistItem('by-account'), VoteScore::Up);
         $this->entityManager->clear();
 
         $account = $this->entityManager->find(SocialAccount::class, $this->account->requireId());
@@ -188,8 +188,12 @@ final class DiscussionVoteRepositoryTest extends DbTestCase
         return $item;
     }
 
-    private function vote(User $user, SocialAccount $account, CanonicalItem $item, VoteScore $score): DiscussionVote
-    {
+    private function persistVote(
+        User $user,
+        SocialAccount $account,
+        CanonicalItem $item,
+        VoteScore $score,
+    ): DiscussionVote {
         $vote = new DiscussionVote($user, $item, $account, $score, new \DateTimeImmutable('2026-11-14 10:05:00'));
         $this->entityManager->persist($vote);
         $this->entityManager->flush();

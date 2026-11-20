@@ -30,14 +30,14 @@ final class LemmyPostRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $found = $this->posts->byCanonicalItemIds([$withRow->requireId(), $withoutRow->requireId()]);
+        $found = $this->posts->findByCanonicalItemIds([$withRow->requireId(), $withoutRow->requireId()]);
 
         self::assertSame([$withRow->requireId()], array_keys($found));
     }
 
     public function testNoIdsAskNothing(): void
     {
-        self::assertSame([], $this->posts->byCanonicalItemIds([]));
+        self::assertSame([], $this->posts->findByCanonicalItemIds([]));
     }
 
     public function testRemovingTheItemRemovesItsRow(): void

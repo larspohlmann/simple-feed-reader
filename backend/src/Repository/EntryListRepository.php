@@ -213,7 +213,7 @@ final class EntryListRepository extends ServiceEntityRepository
      *
      * @return list<EntryListRow>
      */
-    public function siblingRowsForUser(int $userId, Entry $entry): array
+    public function findSiblingRowsForUser(int $userId, Entry $entry): array
     {
         $item = $entry->getCanonicalItem();
         $urlHash = $entry->getUrlHash();

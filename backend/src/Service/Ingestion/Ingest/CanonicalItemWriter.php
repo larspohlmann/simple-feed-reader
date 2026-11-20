@@ -21,7 +21,7 @@ final readonly class CanonicalItemWriter
     {
         foreach ($this->linker->linkClaimed(array_column($pairs, 0)) as $position) {
             [$entry, $parsed] = $pairs[$position];
-            $entry->discussionCounts()->recordCounts($parsed->discussionCounts);
+            $entry->selectDiscussionCounts()->recordCounts($parsed->discussionCounts);
         }
     }
 }

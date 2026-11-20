@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon;
 
-use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Enum\CanonicalItemKind;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Mastodon\MastodonCanonicalKeyRule;
 use App\Service\Social\Mastodon\MastodonPostAddressRule;
+use App\Tests\Support\CanonicalKeyRuleEntries;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -21,10 +20,16 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
     {
         $rule = new MastodonCanonicalKeyRule();
 
-        $timeline = $rule->findKey($this->entry(self::KEY, null, SocialNetwork::Mastodon));
-        $rssByGuid = $rule->findKey($this->entry('https://mastodon.social/@alice/123', null, SocialNetwork::Mastodon));
+        $timeline = $rule->findKey(CanonicalKeyRuleEntries::buildEntry(self::KEY, null, SocialNetwork::Mastodon));
+        $rssByGuid = $rule->findKey(
+            CanonicalKeyRuleEntries::buildEntry('https://mastodon.social/@alice/123', null, SocialNetwork::Mastodon),
+        );
         $rssByUrl = $rule->findKey(
-            $this->entry('tag:mastodon.social,2026:123', 'https://mastodon.social/@alice/123', SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry(
+                'tag:mastodon.social,2026:123',
+                'https://mastodon.social/@alice/123',
+                SocialNetwork::Mastodon,
+            ),
         );
 
         self::assertSame(CanonicalItemKind::Mastodon, $timeline?->kind);
@@ -36,7 +41,7 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
     public function testTheGuidWinsOverTheUrl(): void
     {
         $key = new MastodonCanonicalKeyRule()->findKey(
-            $this->entry(self::KEY, 'https://mastodon.social/@bob/999', SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry(self::KEY, 'https://mastodon.social/@bob/999', SocialNetwork::Mastodon),
         );
 
         self::assertSame(self::KEY, $key?->key);
@@ -45,7 +50,11 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
     public function testAnAbsoluteGuidWinsOverAnAbsoluteUrlWhenNeitherIsAStatus(): void
     {
         $key = new MastodonCanonicalKeyRule()->findKey(
-            $this->entry('https://example.org/plain/1', 'https://example.org/plain/2', SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry(
+                'https://example.org/plain/1',
+                'https://example.org/plain/2',
+                SocialNetwork::Mastodon,
+            ),
         );
 
         self::assertSame('https://example.org/plain/1', $key?->key);
@@ -53,7 +62,9 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
 
     public function testSavedCopyGuidKeysAsItsOriginal(): void
     {
-        $key = new MastodonCanonicalKeyRule()->findKey($this->entry(self::KEY . '#42', null, SocialNetwork::Mastodon));
+        $key = new MastodonCanonicalKeyRule()->findKey(
+            CanonicalKeyRuleEntries::buildEntry(self::KEY . '#42', null, SocialNetwork::Mastodon),
+        );
 
         self::assertSame(self::KEY, $key?->key);
     }
@@ -61,7 +72,9 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
     #[DataProvider('otherFediverseAddresses')]
     public function testAStatusOfAnotherFediverseServerKeysAsItsAddress(string $address): void
     {
-        $key = new MastodonCanonicalKeyRule()->findKey($this->entry($address, null, SocialNetwork::Mastodon));
+        $key = new MastodonCanonicalKeyRule()->findKey(
+            CanonicalKeyRuleEntries::buildEntry($address, null, SocialNetwork::Mastodon),
+        );
 
         self::assertSame($address, $key?->key);
     }
@@ -76,12 +89,16 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
     public function testRuleAnswersExactlyWhenThePostAddressRuleFindsAPost(): void
     {
         $fixtures = [
-            $this->entry(self::KEY, null, SocialNetwork::Mastodon),
-            $this->entry('https://mastodon.social/@alice/123', null, SocialNetwork::Mastodon),
-            $this->entry('tag:x,2026:1', 'https://mastodon.social/@alice/123', SocialNetwork::Mastodon),
-            $this->entry('https://misskey.example/notes/9abc', null, SocialNetwork::Mastodon),
-            $this->entry('tag:x,2026:1', null, SocialNetwork::Mastodon),
-            $this->entry('urn:uuid:1', 'not a url', SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry(self::KEY, null, SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry('https://mastodon.social/@alice/123', null, SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry(
+                'tag:x,2026:1',
+                'https://mastodon.social/@alice/123',
+                SocialNetwork::Mastodon,
+            ),
+            CanonicalKeyRuleEntries::buildEntry('https://misskey.example/notes/9abc', null, SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry('tag:x,2026:1', null, SocialNetwork::Mastodon),
+            CanonicalKeyRuleEntries::buildEntry('urn:uuid:1', 'not a url', SocialNetwork::Mastodon),
         ];
 
         foreach ($fixtures as $entry) {
@@ -94,20 +111,17 @@ final class MastodonCanonicalKeyRuleTest extends TestCase
 
     public function testEntryOfAnotherNetworkHasNoKey(): void
     {
-        self::assertNull(new MastodonCanonicalKeyRule()->findKey($this->entry(self::KEY, null, SocialNetwork::Lemmy)));
+        self::assertNull(
+            new MastodonCanonicalKeyRule()->findKey(
+                CanonicalKeyRuleEntries::buildEntry(self::KEY, null, SocialNetwork::Lemmy),
+            ),
+        );
     }
 
     public function testArticleFeedHasNoKey(): void
     {
-        self::assertNull(new MastodonCanonicalKeyRule()->findKey($this->entry(self::KEY, null, null)));
-    }
-
-    private function entry(string $guid, ?string $url, ?SocialNetwork $network): Entry
-    {
-        $feed = new Feed('https://example.com/feed');
-        $feed->classifyAs($network);
-        $now = new \DateTimeImmutable('2026-01-01');
-
-        return new Entry($feed, $guid, $url, 'Title', $now, $now);
+        self::assertNull(
+            new MastodonCanonicalKeyRule()->findKey(CanonicalKeyRuleEntries::buildEntry(self::KEY, null, null)),
+        );
     }
 }

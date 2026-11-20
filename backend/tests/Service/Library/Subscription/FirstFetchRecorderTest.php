@@ -208,13 +208,13 @@ final class FirstFetchRecorderTest extends DbTestCase
         $this->entityManager->clear();
         $copy = $this->findByGuid($all, 'all-copy');
         self::assertNotNull($copy);
-        $copyState = $this->entryStates()->findOneForUserEntry($reader->requireId(), $copy->requireId());
+        $copyState = $this->requireEntryStates()->findOneForUserEntry($reader->requireId(), $copy->requireId());
         self::assertNotNull($copyState);
         self::assertTrue($copyState->isHidden());
         self::assertFalse($copyState->isViewed());
     }
 
-    private function entryStates(): EntryStateRepository
+    private function requireEntryStates(): EntryStateRepository
     {
         /** @var EntryStateRepository $states */
         $states = $this->entityManager->getRepository(EntryState::class);

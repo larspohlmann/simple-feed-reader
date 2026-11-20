@@ -285,8 +285,7 @@ final class Entry
         $this->canonicalItem = $item;
     }
 
-    /** The item's counts once the entry is linked to one, the entry's own before. */
-    public function discussionCounts(): DiscussionCountStoreInterface
+    public function selectDiscussionCounts(): DiscussionCountStoreInterface
     {
         return $this->canonicalItem ?? $this->discussion;
     }

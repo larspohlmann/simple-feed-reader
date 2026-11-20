@@ -20,17 +20,17 @@ final class CanonicalKeysTest extends TestCase
         $second = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'second');
 
         $keys = new CanonicalKeys([
-            $this->ruleAnswering(null),
-            $this->ruleAnswering($first),
-            $this->ruleAnswering($second),
+            $this->buildRuleAnswering(null),
+            $this->buildRuleAnswering($first),
+            $this->buildRuleAnswering($second),
         ]);
 
-        self::assertSame($first, $keys->findKey($this->entry()));
+        self::assertSame($first, $keys->findKey($this->buildEntry()));
     }
 
     public function testNoRuleAnswersGivesNull(): void
     {
-        self::assertNull(new CanonicalKeys([$this->ruleAnswering(null)])->findKey($this->entry()));
+        self::assertNull(new CanonicalKeys([$this->buildRuleAnswering(null)])->findKey($this->buildEntry()));
     }
 
     public function testKeyHashIsTheSha256OfTheKey(): void
@@ -41,7 +41,7 @@ final class CanonicalKeysTest extends TestCase
         self::assertSame(64, \strlen($key->keyHash()));
     }
 
-    private function ruleAnswering(?CanonicalKeyModel $key): CanonicalKeyRuleInterface
+    private function buildRuleAnswering(?CanonicalKeyModel $key): CanonicalKeyRuleInterface
     {
         return new readonly class ($key) implements CanonicalKeyRuleInterface {
             public function __construct(private ?CanonicalKeyModel $key)
@@ -55,7 +55,7 @@ final class CanonicalKeysTest extends TestCase
         };
     }
 
-    private function entry(): Entry
+    private function buildEntry(): Entry
     {
         $now = new \DateTimeImmutable('2026-01-01');
 

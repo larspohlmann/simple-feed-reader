@@ -46,7 +46,7 @@ final readonly class ConnectedAccountStates
         $accountsByNetwork = $this->loadAccountsByNetwork($postAddresses, $lemmyItemIds, $userId);
         $socialStates = $this->buildSocialStates($entries, $postAddresses, $accountsByNetwork, $userId);
         $votes = $this->loadVotes($lemmyItemIds, $accountsByNetwork, $userId);
-        $lemmyPosts = $this->lemmyPosts->byCanonicalItemIds(self::collectItemIds(array_filter(
+        $lemmyPosts = $this->lemmyPosts->findByCanonicalItemIds(self::collectItemIds(array_filter(
             $entries,
             static fn (Entry $entry): bool => CanonicalItemKind::Lemmy === $entry->getCanonicalItem()?->getKind(),
         )));

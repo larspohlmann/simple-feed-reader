@@ -189,7 +189,7 @@ final class RecommendationFeedTest extends DbTestCase
         $recorder->reset();
 
         self::assertCount(1, $rows);
-        self::assertSame(5, $rows[0]->row->entry->discussionCounts()->getCommentCount());
+        self::assertSame(5, $rows[0]->row->entry->selectDiscussionCounts()->getCommentCount());
         self::assertSame([], $recorder->queries());
     }
 

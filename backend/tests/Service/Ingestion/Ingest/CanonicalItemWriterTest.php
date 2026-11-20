@@ -25,65 +25,86 @@ final class CanonicalItemWriterTest extends DbTestCase
 
     public function testTwoCopiesInOneFlushShareOneItem(): void
     {
-        $first = $this->feed('https://example.com/a.xml');
-        $second = $this->feed('https://example.com/b.xml');
+        $first = $this->buildFeed('https://example.com/a.xml');
+        $second = $this->buildFeed('https://example.com/b.xml');
 
-        [$copyA] = $this->ingestor()->ingest($first, self::feedOf(self::post(3, 2)), self::context());
-        [$copyB] = $this->ingestor()->ingest($second, self::feedOf(self::post(3, 2)), self::context());
+        [$copyA] = $this->requireIngestor()->ingest(
+            $first,
+            self::buildParsedFeed(self::buildPost(3, 2)),
+            self::buildContext(),
+        );
+        [$copyB] = $this->requireIngestor()->ingest(
+            $second,
+            self::buildParsedFeed(self::buildPost(3, 2)),
+            self::buildContext(),
+        );
         $this->entityManager->flush();
 
         self::assertNotNull($copyA->getCanonicalItem());
         self::assertSame($copyA->getCanonicalItem()->requireId(), $copyB->getCanonicalItem()?->requireId());
-        self::assertSame(1, $this->itemRowCount());
+        self::assertSame(1, $this->countItemRows());
     }
 
     public function testAnItemInsertedThisRequestGetsItsCountsFlushed(): void
     {
-        $feed = $this->feed('https://example.com/a.xml');
-        $this->ingestor()->ingest($feed, self::feedOf(self::post(3, 2)), self::context());
+        $feed = $this->buildFeed('https://example.com/a.xml');
+        $this->requireIngestor()->ingest($feed, self::buildParsedFeed(self::buildPost(3, 2)), self::buildContext());
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $item = $this->onlyItem();
+        $item = $this->requireOnlyItem();
         self::assertSame(3, $item->getScore());
         self::assertSame(2, $item->getCommentCount());
     }
 
     public function testRefreshRecordsNewestCounts(): void
     {
-        $first = $this->feed('https://example.com/a.xml');
-        $second = $this->feed('https://example.com/b.xml');
-        [$copyA] = $this->ingestor()->ingest($first, self::feedOf(self::post(3, 2)), self::context());
-        $this->ingestor()->ingest($second, self::feedOf(self::post(3, 2)), self::context());
+        $first = $this->buildFeed('https://example.com/a.xml');
+        $second = $this->buildFeed('https://example.com/b.xml');
+        [$copyA] = $this->requireIngestor()->ingest(
+            $first,
+            self::buildParsedFeed(self::buildPost(3, 2)),
+            self::buildContext(),
+        );
+        $this->requireIngestor()->ingest($second, self::buildParsedFeed(self::buildPost(3, 2)), self::buildContext());
         $this->entityManager->flush();
         $copyAId = $copyA->requireId();
         $this->entityManager->clear();
 
-        $this->refresher()->refreshStoredEntries($this->reloaded($second), self::feedOf(self::post(5, 4)));
+        $this->requireRefresher()->refreshStoredEntries(
+            $this->reloadFeed($second),
+            self::buildParsedFeed(self::buildPost(5, 4)),
+        );
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        self::assertSame(5, $this->onlyItem()->getScore());
-        self::assertSame(4, $this->entityManager->find(Entry::class, $copyAId)?->discussionCounts()->getCommentCount());
+        self::assertSame(5, $this->requireOnlyItem()->getScore());
+        self::assertSame(
+            4,
+            $this->entityManager->find(Entry::class, $copyAId)?->selectDiscussionCounts()->getCommentCount(),
+        );
     }
 
     public function testRefreshLinksAStoredEntryThatHasNoItemYet(): void
     {
-        $feed = $this->feed('https://example.com/a.xml');
+        $feed = $this->buildFeed('https://example.com/a.xml');
         $now = new \DateTimeImmutable('2026-11-20T12:00:00Z');
         $stored = new Entry($feed, self::POST, null, 'Post', $now, $now);
         $stored->setDiscussion(Discussion::platformThread(self::POST));
-        $stored->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 9));
-        $stored->discussionCounts()->recordSelfReplyCount(2);
+        $stored->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 9));
+        $stored->selectDiscussionCounts()->recordSelfReplyCount(2);
         $this->entityManager->persist($stored);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $this->refresher()->refreshStoredEntries($this->reloaded($feed), self::feedOf(self::post(5, null)));
+        $this->requireRefresher()->refreshStoredEntries(
+            $this->reloadFeed($feed),
+            self::buildParsedFeed(self::buildPost(5, null)),
+        );
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $item = $this->onlyItem();
+        $item = $this->requireOnlyItem();
         self::assertSame(5, $item->getScore());
         self::assertSame(9, $item->getCommentCount());
         self::assertSame(2, $item->getSelfReplyCount());
@@ -91,18 +112,18 @@ final class CanonicalItemWriterTest extends DbTestCase
 
     public function testRefreshingLinkedEntriesReadsNoItemOnItsOwn(): void
     {
-        $feed = $this->feed('https://example.com/a.xml');
-        $twoPosts = self::feedOf(self::post(1, 1), self::post(2, 2, self::OTHER_POST));
-        $this->ingestor()->ingest($feed, $twoPosts, self::context());
+        $feed = $this->buildFeed('https://example.com/a.xml');
+        $twoPosts = self::buildParsedFeed(self::buildPost(1, 1), self::buildPost(2, 2, self::OTHER_POST));
+        $this->requireIngestor()->ingest($feed, $twoPosts, self::buildContext());
         $this->entityManager->flush();
         $this->entityManager->clear();
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        $this->refresher()->refreshStoredEntries(
-            $this->reloaded($feed),
-            self::feedOf(self::post(5, 5), self::post(6, 6, self::OTHER_POST)),
+        $this->requireRefresher()->refreshStoredEntries(
+            $this->reloadFeed($feed),
+            self::buildParsedFeed(self::buildPost(5, 5), self::buildPost(6, 6, self::OTHER_POST)),
         );
 
         self::assertSame([], $recorder->queriesMatching('from canonical_item'));
@@ -110,20 +131,20 @@ final class CanonicalItemWriterTest extends DbTestCase
 
     public function testAnEntryNoRuleClaimsGetsNoItem(): void
     {
-        [$article] = $this->ingestor()->ingest(
-            $this->feed('https://example.com/feed.xml'),
-            self::feedOf(
+        [$article] = $this->requireIngestor()->ingest(
+            $this->buildFeed('https://example.com/feed.xml'),
+            self::buildParsedFeed(
                 new ParsedEntryModel('a1', 'https://example.com/a1', Headline::fromFeed('A'), null, null, null, null),
             ),
-            self::context(),
+            self::buildContext(),
         );
         $this->entityManager->flush();
 
         self::assertNull($article->getCanonicalItem());
-        self::assertSame(0, $this->itemRowCount());
+        self::assertSame(0, $this->countItemRows());
     }
 
-    private function feed(string $url): Feed
+    private function buildFeed(string $url): Feed
     {
         $feed = new Feed($url);
         $this->entityManager->persist($feed);
@@ -132,7 +153,7 @@ final class CanonicalItemWriterTest extends DbTestCase
         return $feed;
     }
 
-    private function reloaded(Feed $feed): Feed
+    private function reloadFeed(Feed $feed): Feed
     {
         $reloaded = $this->entityManager->find(Feed::class, $feed->requireId());
         self::assertInstanceOf(Feed::class, $reloaded);
@@ -140,24 +161,24 @@ final class CanonicalItemWriterTest extends DbTestCase
         return $reloaded;
     }
 
-    private static function post(?int $score, ?int $commentCount, string $page = self::POST): ParsedEntryModel
+    private static function buildPost(?int $score, ?int $commentCount, string $page = self::POST): ParsedEntryModel
     {
         return new ParsedEntryModel($page, $page, Headline::fromFeed('Post'), null, null, null, null)
             ->asDiscussionThread(Discussion::platformThread($page))
             ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments($score, $commentCount));
     }
 
-    private static function feedOf(ParsedEntryModel ...$entries): ParsedFeedModel
+    private static function buildParsedFeed(ParsedEntryModel ...$entries): ParsedFeedModel
     {
         return new ParsedFeedModel('T', null, null, null, array_values($entries));
     }
 
-    private static function context(): FeedIngestContext
+    private static function buildContext(): FeedIngestContext
     {
         return new FeedIngestContext(new \DateTimeImmutable('2026-11-20T12:00:00Z'), null);
     }
 
-    private function onlyItem(): CanonicalItem
+    private function requireOnlyItem(): CanonicalItem
     {
         $items = $this->entityManager->getRepository(CanonicalItem::class)->findAll();
         self::assertCount(1, $items);
@@ -165,7 +186,7 @@ final class CanonicalItemWriterTest extends DbTestCase
         return $items[0];
     }
 
-    private function itemRowCount(): int
+    private function countItemRows(): int
     {
         $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM canonical_item');
         self::assertIsNumeric($count);
@@ -173,7 +194,7 @@ final class CanonicalItemWriterTest extends DbTestCase
         return (int) $count;
     }
 
-    private function ingestor(): EntryIngestor
+    private function requireIngestor(): EntryIngestor
     {
         $ingestor = self::getContainer()->get(EntryIngestor::class);
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
@@ -181,7 +202,7 @@ final class CanonicalItemWriterTest extends DbTestCase
         return $ingestor;
     }
 
-    private function refresher(): StoredEntryRefresher
+    private function requireRefresher(): StoredEntryRefresher
     {
         $refresher = self::getContainer()->get(StoredEntryRefresher::class);
         self::assertInstanceOf(StoredEntryRefresher::class, $refresher);

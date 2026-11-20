@@ -50,17 +50,17 @@ final class SelfThreadFolderTest extends DbTestCase
 
         $this->folder()->fold($entry, new SelfReplyChainModel([self::reply('<p>one</p>', null)], 6));
 
-        self::assertSame(6, $entry->discussionCounts()->getSelfReplyCount());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     public function testAShorterReadKeepsTheLongerCount(): void
     {
         $entry = $this->entry();
-        $entry->discussionCounts()->recordSelfReplyCount(6);
+        $entry->selectDiscussionCounts()->recordSelfReplyCount(6);
 
         $this->folder()->fold($entry, self::chain(self::reply('<p>one</p>', null)));
 
-        self::assertSame(6, $entry->discussionCounts()->getSelfReplyCount());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     public function testFoldAtAppendsAtTheGivenPosition(): void

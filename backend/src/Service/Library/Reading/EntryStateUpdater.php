@@ -82,7 +82,7 @@ final readonly class EntryStateUpdater
         if ($change->isHidden === null && $change->isViewed === null) {
             return;
         }
-        foreach ($this->rows->siblingRowsForUser($user->requireId(), $row->entry) as $siblingRow) {
+        foreach ($this->rows->findSiblingRowsForUser($user->requireId(), $row->entry) as $siblingRow) {
             $this->mirrorOnto($this->states->resolve($user, $siblingRow), $change);
         }
     }

@@ -28,7 +28,7 @@ final readonly class LemmyPostWriter
         if ($placing === []) {
             return;
         }
-        $stored = $this->lemmyPosts->byCanonicalItemIds(array_keys($placing));
+        $stored = $this->lemmyPosts->findByCanonicalItemIds(array_keys($placing));
         foreach ($placing as $itemId => [$item, $community]) {
             $stored[$itemId] ??= $this->createPost($item);
             $stored[$itemId]->placeIn($community);

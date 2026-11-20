@@ -17,8 +17,8 @@ final class EntryCanonicalItemTest extends DbTestCase
     public function testLinkHandsCountsToTheItem(): void
     {
         $entry = $this->persistEntry();
-        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 7));
-        $entry->discussionCounts()->recordSelfReplyCount(3);
+        $entry->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 7));
+        $entry->selectDiscussionCounts()->recordSelfReplyCount(3);
         $item = $this->persistItem();
 
         $entry->linkTo($item);
@@ -41,14 +41,14 @@ final class EntryCanonicalItemTest extends DbTestCase
         $item = $this->persistItem();
         $entry->linkTo($item);
 
-        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
-        $entry->discussionCounts()->recordSelfReplyCount(2);
+        $entry->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
+        $entry->selectDiscussionCounts()->recordSelfReplyCount(2);
 
         self::assertSame(12, $item->getScore());
         self::assertSame(4, $item->getCommentCount());
-        self::assertSame(4, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(4, $entry->selectDiscussionCounts()->getCommentCount());
         self::assertSame(2, $item->getSelfReplyCount());
-        self::assertSame(2, $entry->discussionCounts()->getSelfReplyCount());
+        self::assertSame(2, $entry->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     public function testALinkedEntryReadsCountsAnotherCopyRecorded(): void
@@ -59,9 +59,9 @@ final class EntryCanonicalItemTest extends DbTestCase
         $copyA->linkTo($item);
         $copyB->linkTo($item);
 
-        $copyB->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 5));
+        $copyB->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 5));
 
-        self::assertSame(5, $copyA->discussionCounts()->getCommentCount());
+        self::assertSame(5, $copyA->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testTheLinkSurvivesAReload(): void
@@ -81,12 +81,12 @@ final class EntryCanonicalItemTest extends DbTestCase
     {
         $entry = $this->persistEntry();
 
-        $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
-        $entry->discussionCounts()->recordSelfReplyCount(2);
+        $entry->selectDiscussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
+        $entry->selectDiscussionCounts()->recordSelfReplyCount(2);
 
         self::assertNull($entry->getCanonicalItem());
-        self::assertSame(4, $entry->discussionCounts()->getCommentCount());
-        self::assertSame(2, $entry->discussionCounts()->getSelfReplyCount());
+        self::assertSame(4, $entry->selectDiscussionCounts()->getCommentCount());
+        self::assertSame(2, $entry->selectDiscussionCounts()->getSelfReplyCount());
     }
 
     private function persistEntry(string $guid = 'g'): Entry

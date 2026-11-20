@@ -99,7 +99,7 @@ final class CopyReadStateInheritorTest extends DbTestCase
             contentHtml: '<p>body</p>',
             publishedAt: new \DateTimeImmutable('2026-11-14T00:00:00Z'),
         );
-        $this->pageStore()->store(
+        $this->requirePageStore()->store(
             $this->all,
             IncomingFeedModel::parsed(new ParsedFeedModel('All', null, null, null, [
                 $parsed->asDiscussionThread(Discussion::platformThread(LemmyPostEntries::PAGE)),
@@ -143,7 +143,7 @@ final class CopyReadStateInheritorTest extends DbTestCase
             ->findOneForUserEntry($reader->requireId(), $entry->requireId());
     }
 
-    private function pageStore(): IncomingPageStore
+    private function requirePageStore(): IncomingPageStore
     {
         $pageStore = self::getContainer()->get(IncomingPageStore::class);
         self::assertInstanceOf(IncomingPageStore::class, $pageStore);

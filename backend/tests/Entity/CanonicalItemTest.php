@@ -13,7 +13,7 @@ final class CanonicalItemTest extends TestCase
 {
     public function testNullScoreKeepsTheStoredOne(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
         $item->recordScore(4);
 
         $item->recordScore(null);
@@ -23,7 +23,7 @@ final class CanonicalItemTest extends TestCase
 
     public function testANewScoreReplacesTheStoredOne(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
         $item->recordScore(4);
 
         $item->recordScore(1);
@@ -33,7 +33,7 @@ final class CanonicalItemTest extends TestCase
 
     public function testNullCommentCountKeepsTheStoredOne(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
         $item->recordCommentCount(6);
 
         $item->recordCommentCount(null);
@@ -43,7 +43,7 @@ final class CanonicalItemTest extends TestCase
 
     public function testANewCommentCountReplacesTheStoredOne(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
         $item->recordCommentCount(6);
 
         $item->recordCommentCount(2);
@@ -53,7 +53,7 @@ final class CanonicalItemTest extends TestCase
 
     public function testSelfReplyCountOnlyGrows(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
         $item->recordSelfReplyCount(5);
 
         $item->recordSelfReplyCount(3);
@@ -65,7 +65,7 @@ final class CanonicalItemTest extends TestCase
 
     public function testANewItemKnowsNoCounts(): void
     {
-        $item = self::item();
+        $item = self::buildItem();
 
         self::assertNull($item->getScore());
         self::assertNull($item->getCommentCount());
@@ -79,7 +79,7 @@ final class CanonicalItemTest extends TestCase
         self::assertSame(hash('sha256', $key), CanonicalItem::hashKey($key));
     }
 
-    private static function item(): CanonicalItem
+    private static function buildItem(): CanonicalItem
     {
         return CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
     }

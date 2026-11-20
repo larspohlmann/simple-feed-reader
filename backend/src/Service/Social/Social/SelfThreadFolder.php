@@ -26,7 +26,7 @@ final readonly class SelfThreadFolder
         foreach ($chain->replies as $index => $reply) {
             $this->foldAt($entry, $index + 1, $reply);
         }
-        $entry->discussionCounts()->recordSelfReplyCount($chain->replyCount);
+        $entry->selectDiscussionCounts()->recordSelfReplyCount($chain->replyCount);
     }
 
     public function foldAt(Entry $entry, int $position, EntryCommentModel $reply): void

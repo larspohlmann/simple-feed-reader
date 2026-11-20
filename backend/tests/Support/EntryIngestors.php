@@ -64,8 +64,8 @@ final class EntryIngestors
                 new FeedLanguageResolver(new LanguageGuess(new LanguageDetectionFactory()->create())),
             ),
             new EntryTranscriptWriter($entityManager),
-            self::lemmyPostWriter($entityManager),
-            self::canonicalItemWriter($entityManager, $clock),
+            self::buildLemmyPostWriter($entityManager),
+            self::buildCanonicalItemWriter($entityManager, $clock),
         );
     }
 
@@ -80,19 +80,19 @@ final class EntryIngestors
             $entryRepository,
             $platformRules,
             new EntryImageWriter(),
-            self::lemmyPostWriter($entityManager),
-            self::canonicalItemWriter($entityManager, new NativeClock()),
+            self::buildLemmyPostWriter($entityManager),
+            self::buildCanonicalItemWriter($entityManager, new NativeClock()),
         );
     }
 
-    private static function canonicalItemWriter(
+    private static function buildCanonicalItemWriter(
         EntityManagerInterface $entityManager,
         ClockInterface $clock,
     ): CanonicalItemWriter {
         return new CanonicalItemWriter(CanonicalItems::buildLinker($entityManager, $clock));
     }
 
-    private static function lemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
+    private static function buildLemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter
     {
         return new LemmyPostWriter($entityManager, $entityManager->getRepository(LemmyPost::class));
     }

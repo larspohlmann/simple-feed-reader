@@ -35,7 +35,7 @@ final class SocialLikeRepositoryTest extends DbTestCase
     {
         $liked = $this->persistItem('liked');
         $unliked = $this->persistItem('unliked');
-        $like = $this->like($this->owner, $this->account, $liked);
+        $like = $this->persistLike($this->owner, $this->account, $liked);
 
         self::assertSame($like, $this->repository()->findOneFor($this->owner, $liked));
         self::assertNull($this->repository()->findOneFor($this->owner, $unliked));
@@ -48,11 +48,11 @@ final class SocialLikeRepositoryTest extends DbTestCase
         $second = $this->persistItem('second');
         $unasked = $this->persistItem('unasked');
         $strangersOnly = $this->persistItem('strangers-only');
-        $this->like($this->owner, $this->account, $first);
-        $this->like($this->owner, $this->account, $second);
-        $this->like($this->owner, $this->account, $unasked);
+        $this->persistLike($this->owner, $this->account, $first);
+        $this->persistLike($this->owner, $this->account, $second);
+        $this->persistLike($this->owner, $this->account, $unasked);
         $stranger = $this->user('likes-ids-stranger@example.test');
-        $this->like(
+        $this->persistLike(
             $stranger,
             SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($stranger)),
             $strangersOnly,
@@ -71,19 +71,19 @@ final class SocialLikeRepositoryTest extends DbTestCase
     public function testASecondLikeOfTheSameItemIsRefusedByTheDatabase(): void
     {
         $item = $this->persistItem('twice');
-        $this->like($this->owner, $this->account, $item);
+        $this->persistLike($this->owner, $this->account, $item);
 
         $this->expectException(UniqueConstraintViolationException::class);
 
-        $this->like($this->owner, $this->account, $item);
+        $this->persistLike($this->owner, $this->account, $item);
     }
 
     public function testRemovingTheItemDropsItsLikeOnly(): void
     {
         $byItem = $this->persistItem('by-item');
         $kept = $this->persistItem('kept');
-        $this->like($this->owner, $this->account, $byItem);
-        $this->like($this->owner, $this->account, $kept);
+        $this->persistLike($this->owner, $this->account, $byItem);
+        $this->persistLike($this->owner, $this->account, $kept);
 
         $this->entityManager->remove($byItem);
         $this->entityManager->flush();
@@ -94,7 +94,7 @@ final class SocialLikeRepositoryTest extends DbTestCase
 
     public function testRemovingTheAccountDropsItsLikes(): void
     {
-        $this->like($this->owner, $this->account, $this->persistItem('by-account'));
+        $this->persistLike($this->owner, $this->account, $this->persistItem('by-account'));
         $this->entityManager->clear();
 
         $account = $this->entityManager->find(SocialAccount::class, $this->account->requireId());
@@ -108,7 +108,7 @@ final class SocialLikeRepositoryTest extends DbTestCase
 
     public function testRemovingTheUserDropsTheirLikes(): void
     {
-        $this->like($this->owner, $this->account, $this->persistItem('by-user'));
+        $this->persistLike($this->owner, $this->account, $this->persistItem('by-user'));
         $this->entityManager->clear();
 
         $owner = $this->entityManager->find(User::class, $this->owner->requireId());
@@ -130,7 +130,7 @@ final class SocialLikeRepositoryTest extends DbTestCase
         return $item;
     }
 
-    private function like(User $user, SocialAccount $account, CanonicalItem $item): SocialLike
+    private function persistLike(User $user, SocialAccount $account, CanonicalItem $item): SocialLike
     {
         $like = new SocialLike($user, $item, $account, '110', new \DateTimeImmutable('2026-10-13 10:05:00'));
         $this->entityManager->persist($like);

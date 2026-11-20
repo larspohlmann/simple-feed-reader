@@ -21,7 +21,7 @@ final class LemmyPostRepository extends ServiceEntityRepository
      *
      * @return array<int, LemmyPost> keyed by canonical item id
      */
-    public function byCanonicalItemIds(array $canonicalItemIds): array
+    public function findByCanonicalItemIds(array $canonicalItemIds): array
     {
         if ($canonicalItemIds === []) {
             return [];

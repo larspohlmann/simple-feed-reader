@@ -87,12 +87,12 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::POST]);
         self::assertNotNull($entry);
-        self::assertSame(1, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(1, $entry->selectDiscussionCounts()->getCommentCount());
 
         return $entry;
     }
 
-    private function lemmyPostRow(Entry $entry): ?LemmyPost
+    private function findLemmyPostRow(Entry $entry): ?LemmyPost
     {
         return $this->entityManager->getRepository(LemmyPost::class)->findOneBy([
             'canonicalItem' => $entry->getCanonicalItem(),
@@ -255,7 +255,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        self::assertSame(9, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(9, $entry->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testAnUnknownCommentCountKeepsTheStoredOne(): void
@@ -266,7 +266,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->refresher()->refreshStoredEntries($feed, self::lemmyPost('a header Lemmy no longer writes'));
         $this->entityManager->flush();
 
-        self::assertSame(1, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(1, $entry->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testARefreshUpdatesTheStoredScore(): void
@@ -292,7 +292,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
     {
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
-        $row = $this->lemmyPostRow($entry);
+        $row = $this->findLemmyPostRow($entry);
         self::assertNotNull($row);
         $this->entityManager->remove($row);
         $this->entityManager->flush();
@@ -303,7 +303,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $created = $this->lemmyPostRow($entry);
+        $created = $this->findLemmyPostRow($entry);
         self::assertSame(4, $created?->getCanonicalItem()->getScore());
         self::assertSame('politics@lemmy.world', $created->getCommunity()?->identity);
     }
@@ -312,7 +312,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
     {
         $feed = $this->feed();
         $entry = $this->storedPost($feed);
-        $row = $this->lemmyPostRow($entry);
+        $row = $this->findLemmyPostRow($entry);
         self::assertNotNull($row);
         $this->entityManager->remove($row);
         $this->entityManager->flush();

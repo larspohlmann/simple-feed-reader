@@ -220,7 +220,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     {
         [$user, $target, $sibling] = $this->seedGroup();
 
-        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $target);
+        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $target);
 
         self::assertCount(1, $siblingRows);
         self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
@@ -241,7 +241,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         ));
         $this->entityManager->flush();
 
-        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $target);
+        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $target);
 
         self::assertCount(1, $siblingRows);
         self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
@@ -255,7 +255,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         $this->entityManager->persist($lone);
         $this->entityManager->flush();
 
-        self::assertSame([], $this->rows()->siblingRowsForUser($user->requireId(), $lone));
+        self::assertSame([], $this->rows()->findSiblingRowsForUser($user->requireId(), $lone));
     }
 
     public function testToggleReadMarksTheCopy(): void
@@ -263,7 +263,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         $user = $this->persistReader();
         $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
 
-        $this->toggle($user, $copies->localCopy, $this->change(isHidden: true));
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: true));
 
         self::assertTrue($this->stateOf($user, $copies->allCopy)->isHidden());
     }
@@ -272,9 +272,9 @@ final class EntryStateUpdaterTest extends DbTestCase
     {
         $user = $this->persistReader();
         $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
-        $this->toggle($user, $copies->localCopy, $this->change(isHidden: true));
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: true));
 
-        $this->toggle($user, $copies->localCopy, $this->change(isHidden: false));
+        $this->applyChange($user, $copies->localCopy, $this->change(isHidden: false));
 
         self::assertFalse($this->stateOf($user, $copies->localCopy)->isHidden());
         self::assertNotNull($this->persistedStateOf($user, $copies->allCopy));
@@ -284,10 +284,10 @@ final class EntryStateUpdaterTest extends DbTestCase
     public function testArticleCopiesKeepUrlHashMirror(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-        $this->toggle($user, $target, $this->change(isHidden: true));
+        $this->applyChange($user, $target, $this->change(isHidden: true));
         self::assertTrue($this->stateOf($user, $sibling)->isHidden());
 
-        $this->toggle($user, $target, $this->change(isHidden: false));
+        $this->applyChange($user, $target, $this->change(isHidden: false));
 
         self::assertFalse($this->stateOf($user, $sibling)->isHidden());
     }
@@ -322,7 +322,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         $this->entityManager->persist($unlinkedArticle);
         $this->entityManager->flush();
 
-        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $linkedArticle);
+        $siblingRows = $this->rows()->findSiblingRowsForUser($user->requireId(), $linkedArticle);
 
         $siblingIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $siblingRows);
         sort($siblingIds);
@@ -338,7 +338,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         return $user;
     }
 
-    private function toggle(User $user, Entry $entry, EntryStateChangeModel $change): void
+    private function applyChange(User $user, Entry $entry, EntryStateChangeModel $change): void
     {
         $this->updater()->apply($user, $this->rows()->getRowForUser($user->requireId(), $entry->requireId()), $change);
     }

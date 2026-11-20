@@ -323,7 +323,7 @@ final class EntryListTest extends DbTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
         $counts = array_map(
-            static fn (EntryListRow $row): ?int => $row->entry->discussionCounts()->getCommentCount(),
+            static fn (EntryListRow $row): ?int => $row->entry->selectDiscussionCounts()->getCommentCount(),
             $listed['rows'],
         );
 

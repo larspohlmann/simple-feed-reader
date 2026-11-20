@@ -22,7 +22,7 @@ final class CanonicalItems
 
     public static function linkAsIngested(EntityManagerInterface $entityManager, Entry $entry): void
     {
-        $key = SocialRuleWiring::canonicalKeys()->findKey($entry);
+        $key = SocialRuleWiring::buildCanonicalKeys()->findKey($entry);
         if (null === $key) {
             return;
         }
@@ -43,7 +43,7 @@ final class CanonicalItems
     ): CanonicalItemLinker {
         return new CanonicalItemLinker(
             self::readRepository($entityManager),
-            SocialRuleWiring::canonicalKeys(),
+            SocialRuleWiring::buildCanonicalKeys(),
             new NaiveUtcClock($clock),
         );
     }

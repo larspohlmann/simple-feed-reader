@@ -41,7 +41,7 @@ final class LemmyPostWriterTest extends DbTestCase
 
     public function testANewLemmyPostGetsARowWithItsCommunity(): void
     {
-        $this->ingest(
+        $this->ingestEntry(
             self::buildParsedPost()
                 ->inCommunity(
                     PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
@@ -58,7 +58,7 @@ final class LemmyPostWriterTest extends DbTestCase
 
     public function testAnEntryWithoutACommunityGetsNoRow(): void
     {
-        $this->ingest(self::buildParsedPost());
+        $this->ingestEntry(self::buildParsedPost());
 
         self::assertSame([], $this->readRows());
     }
@@ -66,7 +66,7 @@ final class LemmyPostWriterTest extends DbTestCase
     public function testACommunityOverTheColumnLengthIsNotStored(): void
     {
         $identity = str_repeat('a', LemmyPost::IDENTITY_MAX_LENGTH + 1);
-        $this->ingest(
+        $this->ingestEntry(
             self::buildParsedPost()
                 ->inCommunity(PostCommunity::fromIdentityAndUrl($identity, 'https://x.test/c/a')),
         );
@@ -78,7 +78,7 @@ final class LemmyPostWriterTest extends DbTestCase
     {
         $identity = str_repeat('a', LemmyPost::IDENTITY_MAX_LENGTH);
         $url = 'https://x.test/c/' . str_repeat('a', LemmyPost::URL_MAX_LENGTH - 17);
-        $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
+        $this->ingestEntry(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
         $rows = $this->readRows();
         self::assertCount(1, $rows);
@@ -89,7 +89,7 @@ final class LemmyPostWriterTest extends DbTestCase
     public function testAUrlOneOverTheColumnLengthIsNotStored(): void
     {
         $url = 'https://x.test/c/' . str_repeat('a', LemmyPost::URL_MAX_LENGTH - 16);
-        $this->ingest(
+        $this->ingestEntry(
             self::buildParsedPost()
                 ->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)),
         );
@@ -101,7 +101,7 @@ final class LemmyPostWriterTest extends DbTestCase
     {
         $identity = str_repeat('é', LemmyPost::IDENTITY_MAX_LENGTH);
         $url = 'https://x.test/c/' . str_repeat('é', LemmyPost::URL_MAX_LENGTH - 17);
-        $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
+        $this->ingestEntry(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl($identity, $url)));
 
         $rows = $this->readRows();
         self::assertCount(1, $rows);
@@ -112,7 +112,7 @@ final class LemmyPostWriterTest extends DbTestCase
     public function testAnOverlongCommunityAloneLeavesNoRow(): void
     {
         $url = 'https://x.test/c/' . str_repeat('a', LemmyPost::URL_MAX_LENGTH);
-        $this->ingest(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)));
+        $this->ingestEntry(self::buildParsedPost()->inCommunity(PostCommunity::fromIdentityAndUrl('a@x.test', $url)));
 
         self::assertSame([], $this->readRows());
     }
@@ -141,8 +141,8 @@ final class LemmyPostWriterTest extends DbTestCase
         $this->entityManager->persist($otherFeed);
         $this->entityManager->flush();
 
-        $this->ingest(self::buildParsedPost()->inCommunity($community));
-        $this->ingest(self::buildParsedPost()->inCommunity($community), $otherFeed);
+        $this->ingestEntry(self::buildParsedPost()->inCommunity($community));
+        $this->ingestEntry(self::buildParsedPost()->inCommunity($community), $otherFeed);
 
         $entries = $this->entityManager->getRepository(Entry::class)->findAll();
         self::assertCount(2, $entries);
@@ -171,7 +171,7 @@ final class LemmyPostWriterTest extends DbTestCase
 
     public function testRefreshingAStoredPostMovesItsCommunityInPlace(): void
     {
-        $this->ingest(self::buildParsedPost()->inCommunity(
+        $this->ingestEntry(self::buildParsedPost()->inCommunity(
             PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'),
         ));
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $this->feed]);
@@ -233,7 +233,7 @@ final class LemmyPostWriterTest extends DbTestCase
         return $this->entityManager->getRepository(LemmyPost::class)->findAll();
     }
 
-    private function ingest(ParsedEntryModel $entry, ?Feed $feed = null): void
+    private function ingestEntry(ParsedEntryModel $entry, ?Feed $feed = null): void
     {
         $this->ingestor->ingest(
             $this->entityManager->find(Feed::class, ($feed ?? $this->feed)->requireId()) ?? self::fail('feed'),

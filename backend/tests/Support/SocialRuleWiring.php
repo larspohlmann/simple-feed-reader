@@ -35,7 +35,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 /** The per-network rule pickers over their real adapters, as the container wires them. */
 final class SocialRuleWiring
 {
-    public static function canonicalKeys(): CanonicalKeys
+    public static function buildCanonicalKeys(): CanonicalKeys
     {
         return new CanonicalKeys([
             new BlueskyCanonicalKeyRule(),

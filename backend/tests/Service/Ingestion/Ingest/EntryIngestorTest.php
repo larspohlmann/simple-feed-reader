@@ -299,7 +299,7 @@ final class EntryIngestorTest extends DbTestCase
         );
 
         self::assertNull($entry->getCanonicalItem());
-        self::assertSame(6, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testALemmyThreadIsLinkedToItsItemWithItsCounts(): void
@@ -311,7 +311,7 @@ final class EntryIngestorTest extends DbTestCase
         );
 
         self::assertSame(11, $entry->getCanonicalItem()?->getScore());
-        self::assertSame(6, $entry->discussionCounts()->getCommentCount());
+        self::assertSame(6, $entry->selectDiscussionCounts()->getCommentCount());
     }
 
     public function testAppliesPlatformRulesBeforePersisting(): void

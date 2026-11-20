@@ -26,18 +26,18 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://lemmy.world/post/7');
 
-        $first = $this->items->ensure($key, self::createdAt());
-        $second = $this->items->ensure($key, self::createdAt());
+        $first = $this->items->ensure($key, self::buildCreatedAt());
+        $second = $this->items->ensure($key, self::buildCreatedAt());
 
         self::assertSame($first, $second);
-        self::assertSame(1, $this->rowCount());
+        self::assertSame(1, $this->countRows());
     }
 
     public function testEnsureStoresTheKeyAndItsHash(): void
     {
         $key = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://mastodon.social/users/a/statuses/1');
 
-        $id = $this->items->ensure($key, self::createdAt());
+        $id = $this->items->ensure($key, self::buildCreatedAt());
 
         self::assertSame(
             [
@@ -59,7 +59,7 @@ final class CanonicalItemRepositoryTest extends DbTestCase
         $mastodon = $this->ensureItem(CanonicalItemKind::Mastodon, 'https://x.test/post/1');
 
         self::assertNotSame($lemmy, $mastodon);
-        self::assertSame(2, $this->rowCount());
+        self::assertSame(2, $this->countRows());
     }
 
     public function testFindByIdsKeysTheItemsByIdAndSkipsUnknownIds(): void
@@ -80,15 +80,15 @@ final class CanonicalItemRepositoryTest extends DbTestCase
 
     private function ensureItem(CanonicalItemKind $kind, string $canonicalKey): int
     {
-        return $this->items->ensure(new CanonicalKeyModel($kind, $canonicalKey), self::createdAt());
+        return $this->items->ensure(new CanonicalKeyModel($kind, $canonicalKey), self::buildCreatedAt());
     }
 
-    private static function createdAt(): \DateTimeImmutable
+    private static function buildCreatedAt(): \DateTimeImmutable
     {
         return new \DateTimeImmutable('2026-11-20 08:30:00');
     }
 
-    private function rowCount(): int
+    private function countRows(): int
     {
         $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM canonical_item');
         self::assertIsNumeric($count);
