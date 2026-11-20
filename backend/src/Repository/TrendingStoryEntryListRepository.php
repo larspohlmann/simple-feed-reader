@@ -123,7 +123,10 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
                 'ON',
                 'joinedReader.feed = joinedEntry.feed AND joinedReader.user = :user',
             )
-            ->andWhere('joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash')
+            ->andWhere(
+                'joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash'
+                . ' OR joinedEntry.canonicalItem = e.canonicalItem',
+            )
             ->andWhere('e.id IN (:entryIds)')
             ->groupBy('e.id')
             ->setParameter('entryIds', $entryIds)

@@ -26,6 +26,11 @@ final readonly class EntryAliases
         return new self('e2', 'es2', 'esh2', 's2', 'nf2');
     }
 
+    public static function itemCollapse(): self
+    {
+        return new self('e3', 'es3', 'esh3', 's3', 'nf3');
+    }
+
     public function subscriptionKey(): string
     {
         return $this->subscription . '.id';

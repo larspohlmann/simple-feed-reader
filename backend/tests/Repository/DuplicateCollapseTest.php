@@ -8,20 +8,29 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
+use App\Repository\SavedSearchEntryRepository;
+use App\Repository\SavedSearchListQuery;
 use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 
 final class DuplicateCollapseTest extends DbTestCase
 {
     private User $user;
     private Feed $feedA;
     private Feed $feedB;
+    private Subscription $subscriptionA;
+    private Subscription $subscriptionB;
 
     protected function setUp(): void
     {
@@ -30,9 +39,48 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->entityManager->persist($this->user);
         $this->feedA = $this->feed('https://a.example/feed.xml', 'Feed A');
         $this->feedB = $this->feed('https://b.example/feed.xml', 'Feed B');
-        $this->subscribe($this->user, $this->feedA);
-        $this->subscribe($this->user, $this->feedB);
+        $this->subscriptionA = $this->subscribe($this->user, $this->feedA);
+        $this->subscriptionB = $this->subscribe($this->user, $this->feedB);
         $this->entityManager->flush();
+    }
+
+    public function testCopiesOfOneItemShowOnce(): void
+    {
+        [$lower, $higher] = $this->persistCopiesOfOnePost();
+        $tag = new Tag($this->user, 'lemmy');
+        $this->entityManager->persist($tag);
+        $this->subscriptionA->addTag($tag);
+        $this->subscriptionB->addTag($tag);
+        $search = new SavedSearch($this->user, 'post', false);
+        $this->entityManager->persist($search);
+        foreach ([$lower, $higher] as $copy) {
+            $this->entityManager->persist(new SavedSearchEntry($search, $copy, new \DateTimeImmutable('2026-07-06')));
+        }
+        $this->entityManager->flush();
+        $userId = $this->user->requireId();
+
+        self::assertSame([$lower->getId()], self::collectIds(
+            $this->repository()->listForUser(new EntryQuery($userId, view: EntryView::All)),
+        ));
+        self::assertSame([$lower->getId()], self::collectIds(
+            $this->repository()->listForUser(new EntryQuery($userId, view: EntryView::All, tagId: $tag->getId())),
+        ));
+        self::assertSame([$lower->getId()], self::collectIds($this->savedSearchEntries()->listMembers(
+            new SavedSearchListQuery($userId, [$search->requireId()]),
+        )));
+    }
+
+    public function testFeedViewStillShowsItsCopy(): void
+    {
+        [, $higher] = $this->persistCopiesOfOnePost();
+
+        $rows = $this->repository()->listForUser(new EntryQuery(
+            $this->user->requireId(),
+            view: EntryView::All,
+            subscriptionId: $this->subscriptionB->getId(),
+        ));
+
+        self::assertSame([$higher->getId()], self::collectIds($rows));
     }
 
     public function testCrossFeedDuplicateCollapsesToTheLowerId(): void
@@ -195,6 +243,39 @@ final class DuplicateCollapseTest extends DbTestCase
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
         self::assertSame([], $rows[0]->duplicates); // the read copy is out of unread scope
+    }
+
+    /** @return array{Entry, Entry} the lower-id copy, then the other, both without a URL hash */
+    private function persistCopiesOfOnePost(): array
+    {
+        $lower = LemmyPostEntries::buildEntry($this->feedA, guid: 'local-copy', publishedAt: '2026-07-05T09:00:00Z');
+        $item = LemmyPostEntries::linkItem($lower);
+        $higher = LemmyPostEntries::buildEntry($this->feedB, guid: 'all-copy', publishedAt: '2026-07-05T10:00:00Z');
+        $higher->linkTo($item);
+        $this->entityManager->persist($item);
+        $this->entityManager->persist($lower);
+        $this->entityManager->persist($higher);
+        $this->entityManager->flush();
+
+        return [$lower, $higher];
+    }
+
+    /**
+     * @param list<EntryListRow> $rows
+     *
+     * @return list<int|null>
+     */
+    private static function collectIds(array $rows): array
+    {
+        return array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $rows);
+    }
+
+    private function savedSearchEntries(): SavedSearchEntryRepository
+    {
+        $entries = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $entries);
+
+        return $entries;
     }
 
     private function repository(): EntryListRepository

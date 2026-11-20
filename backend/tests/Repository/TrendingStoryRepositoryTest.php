@@ -29,6 +29,7 @@ use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Service\Foundation\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\SharedLinks;
 use App\Tests\Support\TrendingFixtures;
 
@@ -296,6 +297,24 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         ];
         $story = $this->fixtures->story(TrendingWindow::Week, '2031-05-14 10:00:00', $weekOnly, ...$inBoth);
         $this->fixtures->place(TrendingWindow::Day, $story, ...$inBoth);
+
+        self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
+    }
+
+    public function testCopiesOfOneItemInTwoArticleFeedsAreOneSource(): void
+    {
+        $first = $this->fixtures->article($this->articleFeed('alpha'), 'Post', '2031-05-14 08:00:00', self::POST);
+        $item = LemmyPostEntries::linkItem($first);
+        $this->entityManager->persist($item);
+        $second = $this->fixtures->article($this->articleFeed('beta'), 'Post', '2031-05-14 09:00:00', self::OTHER_POST);
+        $second->linkTo($item);
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $first,
+            $second,
+            $this->member($this->articleFeed('gamma')),
+        );
 
         self::assertSame([[$story->requireId(), 2]], $this->rankedIn(TrendingWindow::Day, []));
     }
@@ -641,6 +660,38 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2031-05-07 00:00:00'),
         );
 
+        self::assertSame([$story->requireId()], $due);
+    }
+
+    public function testCopiesOfOneItemCountOnceTowardsATitlesMembers(): void
+    {
+        $localCopy = LemmyPostEntries::buildEntry($this->socialFeed('local'), guid: 'local');
+        $item = LemmyPostEntries::linkItem($localCopy);
+        $allCopy = LemmyPostEntries::buildEntry($this->socialFeed('all'), guid: 'all');
+        $allCopy->linkTo($item);
+        $this->entityManager->persist($item);
+        $this->entityManager->persist($localCopy);
+        $this->entityManager->persist($allCopy);
+        $story = $this->fixtures->story(TrendingWindow::Day, '2031-05-14 10:00:00', $localCopy, $allCopy);
+        $this->stories()->recordHeading(
+            $story->requireId(),
+            new StoryHeadingModel('Hafenstreik', null),
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+        );
+        $this->fixtures->join($story, '2031-05-14 10:30:00', $this->member($this->articleFeed('outlet')));
+
+        $storedCount = $this->entityManager->getConnection()->fetchOne(
+            'SELECT llm_title_member_count FROM trending_story WHERE id = ?',
+            [$story->requireId()],
+        );
+        $due = $this->stories()->findStoriesDueForTitle(
+            $this->reader->requireId(),
+            new \DateTimeImmutable('2031-05-14 11:00:00'),
+            new \DateTimeImmutable('2031-05-07 00:00:00'),
+        );
+
+        self::assertIsNumeric($storedCount);
+        self::assertSame(1, (int) $storedCount);
         self::assertSame([$story->requireId()], $due);
     }
 
