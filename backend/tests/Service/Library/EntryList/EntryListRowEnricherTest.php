@@ -227,7 +227,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)]), $this->row($lemmy)]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(9, $recorder->queries(), $queries);
+        self::assertCount(8, $recorder->queries(), $queries);
         $tables = [
             'entry_category',
             'saved_search_entry',
@@ -235,7 +235,6 @@ final class EntryListRowEnricherTest extends DbTestCase
             'FROM thread_post',
             'share_enrichment',
             'saved_entry_origin',
-            'FROM canonical_item',
             'lemmy_post',
         ];
         foreach ($tables as $table) {

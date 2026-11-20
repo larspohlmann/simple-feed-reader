@@ -48,13 +48,13 @@ final class ConnectedAccountStatesTest extends DbTestCase
         $item = $first->getCanonicalItem();
         self::assertNotNull($item);
         $item->recordScore(12);
-        $otherFeed = $this->feedOf('https://example.org/other.xml');
+        $otherFeed = $this->persistFeed('https://example.org/other.xml');
         $second = LemmyPostEntries::buildEntry($otherFeed, LemmyPostEntries::PAGE, 'copy-b');
         $second->linkTo($item);
         $this->entityManager->persist($second);
         $this->entityManager->flush();
 
-        $states = $this->statesOf([$first, $second]);
+        $states = $this->buildStates([$first, $second]);
 
         foreach ([$first, $second] as $entry) {
             $lemmy = $states->lemmy[$entry->requireId()] ?? null;
@@ -66,7 +66,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
 
     public function testAnItemOfAnotherKindShowsNoLemmyScore(): void
     {
-        $entry = LemmyPostEntries::buildEntry($this->feedOf('https://example.com/feed.xml'));
+        $entry = LemmyPostEntries::buildEntry($this->persistFeed('https://example.com/feed.xml'));
         $item = new CanonicalItem(CanonicalItemKind::Bluesky, 'at://did:plc:x/app.bsky.feed.post/1');
         $item->recordScore(5);
         $entry->linkTo($item);
@@ -74,13 +74,13 @@ final class ConnectedAccountStatesTest extends DbTestCase
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 
-        self::assertArrayNotHasKey($entry->requireId(), $this->statesOf([$entry])->lemmy);
+        self::assertArrayNotHasKey($entry->requireId(), $this->buildStates([$entry])->lemmy);
     }
 
     /**
      * @param list<Entry> $entries
      */
-    private function statesOf(array $entries): ConnectedAccountStatesModel
+    private function buildStates(array $entries): ConnectedAccountStatesModel
     {
         $states = self::getContainer()->get(ConnectedAccountStates::class);
         self::assertInstanceOf(ConnectedAccountStates::class, $states);
@@ -92,7 +92,7 @@ final class ConnectedAccountStatesTest extends DbTestCase
         return $states->buildStates($byId, $this->user('states@example.com')->requireId());
     }
 
-    private function feedOf(string $url): Feed
+    private function persistFeed(string $url): Feed
     {
         $feed = new Feed($url);
         $this->entityManager->persist($feed);

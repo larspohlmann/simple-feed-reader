@@ -14,12 +14,12 @@ final class LemmyPostTest extends TestCase
 {
     public function testANewPostHasNoCommunity(): void
     {
-        self::assertNull(new LemmyPost($this->item())->getCommunity());
+        self::assertNull(new LemmyPost($this->buildItem())->getCommunity());
     }
 
     public function testAPostInACommunityNamesIt(): void
     {
-        $post = new LemmyPost($this->item());
+        $post = new LemmyPost($this->buildItem());
 
         $post->placeIn(PostCommunity::fromIdentityAndUrl('technology@lemmy.world', 'https://lemmy.world/c/technology'));
 
@@ -31,12 +31,12 @@ final class LemmyPostTest extends TestCase
 
     public function testThePostKeepsItsItem(): void
     {
-        $item = $this->item();
+        $item = $this->buildItem();
 
         self::assertSame($item, new LemmyPost($item)->getCanonicalItem());
     }
 
-    private function item(): CanonicalItem
+    private function buildItem(): CanonicalItem
     {
         return new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.example/post/42');
     }

@@ -23,8 +23,8 @@ final class LemmyPostRepositoryTest extends DbTestCase
 
     public function testRowsComeKeyedByItemIdAndItemsWithoutOneAreAbsent(): void
     {
-        $withRow = $this->persistedItem('with');
-        $withoutRow = $this->persistedItem('without');
+        $withRow = $this->persistItem('with');
+        $withoutRow = $this->persistItem('without');
         $this->entityManager->persist(new LemmyPost($withRow));
         $this->entityManager->flush();
         $this->entityManager->clear();
@@ -41,7 +41,7 @@ final class LemmyPostRepositoryTest extends DbTestCase
 
     public function testRemovingTheItemRemovesItsRow(): void
     {
-        $item = $this->persistedItem('gone');
+        $item = $this->persistItem('gone');
         $this->entityManager->persist(new LemmyPost($item));
         $this->entityManager->flush();
 
@@ -51,7 +51,7 @@ final class LemmyPostRepositoryTest extends DbTestCase
         self::assertSame([], $this->posts->findAll());
     }
 
-    private function persistedItem(string $name): CanonicalItem
+    private function persistItem(string $name): CanonicalItem
     {
         $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'https://lemmy.test/post/' . $name);
         $this->entityManager->persist($item);

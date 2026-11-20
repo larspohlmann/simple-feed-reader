@@ -213,7 +213,7 @@ writes none of them.
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 | `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
 | `CanonicalItem` | The one row every feed's copy of a social post shares, with the post's score and counts. Ingest finds or creates it again for each copy a feed lists. |
-| `LemmyPost` | A Lemmy post's score and community label, derived from its instance and re-read while its feed lists the post. A restored older post shows no community. |
+| `LemmyPost` | A Lemmy post's community label, derived from its instance and re-read while its feed lists the post. A restored older post shows no community. |
 | `TrendingSnapshot` | When a Trending window was last grouped and what the grouping cost. The next rebuild writes it again. |
 | `TrendingStory` | A Trending story and when its members joined. The next rebuild groups the restored entries again. |
 | `TrendingStoryEntry` | Which entries belong to a Trending story. The next rebuild groups the restored entries again. |
