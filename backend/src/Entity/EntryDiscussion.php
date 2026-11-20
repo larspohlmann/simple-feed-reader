@@ -47,7 +47,6 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
         );
     }
 
-    /** An entry without an item keeps no score: only social posts, which have an item, carry one. */
     public function recordCounts(DiscussionCounts $counts): void
     {
         $this->commentCount = $counts->commentCount ?? $this->commentCount;

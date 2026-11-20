@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-/** Where a post's discussion counts live; a null count keeps the stored one. */
+/** Where a discussion's counts live; a null count keeps the stored one. */
 interface DiscussionCountStoreInterface
 {
     public function recordCounts(DiscussionCounts $counts): void;
