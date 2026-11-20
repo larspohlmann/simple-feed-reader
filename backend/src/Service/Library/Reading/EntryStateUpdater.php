@@ -14,8 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Mirrors isHidden/isViewed onto every other subscribed copy of the same article, so a collapse-hidden duplicate
- * cannot resurface as unread; isFavorite/isKept/isShared stay per copy.
+ * Mirrors isHidden/isViewed onto every other subscribed copy of the same item or article, so a collapse-hidden
+ * duplicate cannot resurface as unread; isFavorite/isKept/isShared stay per copy.
  */
 final readonly class EntryStateUpdater
 {
@@ -82,13 +82,7 @@ final readonly class EntryStateUpdater
         if ($change->isHidden === null && $change->isViewed === null) {
             return;
         }
-        $hash = $row->entry->getUrlHash();
-        if ($hash === null) {
-            return;
-        }
-
-        $siblings = $this->rows->siblingRowsForUser($user->requireId(), $hash, $row->entry->requireId());
-        foreach ($siblings as $siblingRow) {
+        foreach ($this->rows->siblingRowsForUser($user->requireId(), $row->entry) as $siblingRow) {
             $this->mirrorOnto($this->states->resolve($user, $siblingRow), $change);
         }
     }

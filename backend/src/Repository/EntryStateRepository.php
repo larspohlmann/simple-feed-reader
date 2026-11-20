@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Service\Operations\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -64,6 +65,47 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
                 Types::BOOLEAN,
                 Types::BOOLEAN,
                 Types::DATETIME_IMMUTABLE,
+            ],
+        );
+    }
+
+    /**
+     * One set-based insert: each subscriber of an entry's feed who read another copy of its canonical item, by a
+     * hidden state or a watermark, gets a hidden (not viewed) state on the entry.
+     *
+     * @param list<int> $entryIds
+     */
+    public function ensureReadWhereAnotherCopyIsRead(array $entryIds, \DateTimeImmutable $hiddenAt): void
+    {
+        if ($entryIds === []) {
+            return;
+        }
+
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->executeStatement(
+            sprintf(
+                'INSERT %s INTO entry_state'
+                . ' (user_id, entry_id, is_hidden, hidden_at, is_favorite, is_kept, is_viewed, viewed_at)'
+                . ' SELECT DISTINCT reader.user_id, arrived.id, :read, :hiddenAt, :unset, :unset, :unset, NULL'
+                . ' FROM entry arrived'
+                . ' JOIN subscription reader ON reader.feed_id = arrived.feed_id'
+                . ' WHERE arrived.id IN (:ids) AND EXISTS ('
+                . ' SELECT 1 FROM entry read_copy'
+                . ' LEFT JOIN entry_state read_state'
+                . ' ON read_state.entry_id = read_copy.id AND read_state.user_id = reader.user_id'
+                . ' LEFT JOIN subscription read_through'
+                . ' ON read_through.feed_id = read_copy.feed_id AND read_through.user_id = reader.user_id'
+                . ' WHERE read_copy.canonical_item_id = arrived.canonical_item_id AND read_copy.id <> arrived.id'
+                . ' AND (read_state.is_hidden = :read OR (read_state.is_hidden IS NULL'
+                . ' AND read_copy.effective_date <= read_through.marked_read_until)))',
+                DatabasePlatform::insertIgnoreClause($connection),
+            ),
+            ['read' => true, 'hiddenAt' => $hiddenAt, 'unset' => false, 'ids' => $entryIds],
+            [
+                'read' => Types::BOOLEAN,
+                'hiddenAt' => Types::DATETIME_IMMUTABLE,
+                'unset' => Types::BOOLEAN,
+                'ids' => ArrayParameterType::INTEGER,
             ],
         );
     }

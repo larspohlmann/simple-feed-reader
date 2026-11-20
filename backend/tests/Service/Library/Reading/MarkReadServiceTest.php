@@ -17,9 +17,11 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
+use App\Repository\UnreadCountRepository;
 use App\Service\Library\Reading\MarkReadService;
 use App\Service\Library\Reading\Model\ReadScopeModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\NetworkFeedSubscriptions;
 
 final class MarkReadServiceTest extends DbTestCase
@@ -402,6 +404,91 @@ final class MarkReadServiceTest extends DbTestCase
             ],
             $this->watermarksOf([$offTagged, $belowTagged, $onTagged, $plain]),
         );
+    }
+
+    public function testFeedSweepMarksCopyInOtherFeed(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $unrelated = $this->persistUnrelatedEntry($copies->all->getFeed());
+        $unreadInAll = $this->countUnread($user)[$copies->all->requireId()];
+
+        $this->service()->mark(
+            $user,
+            ReadScopeModel::feed($copies->local->requireId()),
+            new \DateTimeImmutable('2026-11-15T00:00:00Z'),
+        );
+
+        self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
+        self::assertSame($unreadInAll - 1, $this->countUnread($user)[$copies->all->requireId()]);
+        self::assertNull($this->findState($user, $unrelated), 'An unrelated entry in All stays unread.');
+    }
+
+    public function testTagSweepLeavesNoCopyUnread(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $tag = new Tag($user, 'local');
+        $this->entityManager->persist($tag);
+        $copies->local->addTag($tag);
+        $this->entityManager->flush();
+
+        $this->service()->mark(
+            $user,
+            ReadScopeModel::tag($tag->requireId()),
+            new \DateTimeImmutable('2026-11-15T00:00:00Z'),
+        );
+
+        self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
+    }
+
+    public function testAllSweepLeavesNoCopyUnreadInAFeedOutsideAllItems(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $copies->all->changeInclusions(new InclusionChange(allItems: false));
+        $this->entityManager->flush();
+
+        $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+
+        self::assertTrue($this->findState($user, $copies->allCopy)?->isHidden());
+    }
+
+    private function persistReader(): User
+    {
+        $user = new User('copies@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function persistUnrelatedEntry(Feed $feed): Entry
+    {
+        $published = new \DateTimeImmutable('2026-11-14T00:00:00Z');
+        $entry = new Entry($feed, 'unrelated', null, 'Unrelated', $published, $published);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    /** @return array<int, int> */
+    private function countUnread(User $user): array
+    {
+        $counts = self::getContainer()->get(UnreadCountRepository::class);
+        self::assertInstanceOf(UnreadCountRepository::class, $counts);
+
+        return $counts->perSubscription($user->requireId());
+    }
+
+    /** Clears first: the marks are bulk DQL, which the identity map never sees. */
+    private function findState(User $user, Entry $entry): ?EntryState
+    {
+        $this->entityManager->clear();
+
+        return $this->entityManager->getRepository(EntryState::class)
+            ->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
 
     /** @param list<Tag> $tags */

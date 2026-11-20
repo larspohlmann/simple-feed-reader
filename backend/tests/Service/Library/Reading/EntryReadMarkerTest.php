@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Library\Reading\EntryReadMarker;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
 
@@ -133,6 +134,81 @@ final class EntryReadMarkerTest extends DbTestCase
         );
 
         self::assertSame('2026-07-15T00:00:00+00:00', $this->watermark());
+    }
+
+    public function testScrollPastMarksTheCopy(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+
+        $this->marker()->markEntriesRead($this->reader->requireId(), [$copies->localCopy->requireId()]);
+
+        self::assertTrue($this->stateOf($copies->allCopy)?->isHidden());
+    }
+
+    public function testMarkingACopyAndItsCopyTogetherMarksBothOnce(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+
+        $this->marker()->markEntriesRead(
+            $this->reader->requireId(),
+            [$copies->localCopy->requireId(), $copies->allCopy->requireId()],
+        );
+
+        self::assertTrue($this->stateOf($copies->localCopy)?->isHidden());
+        self::assertTrue($this->stateOf($copies->allCopy)?->isHidden());
+    }
+
+    public function testCopyInUnsubscribedFeedGetsNoState(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+        $this->entityManager->remove($copies->all);
+        $this->entityManager->flush();
+
+        $this->marker()->markEntriesRead($this->reader->requireId(), [$copies->localCopy->requireId()]);
+
+        self::assertNull($this->stateOf($copies->allCopy));
+    }
+
+    public function testASweepMarksTheCopyInAnotherFeed(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+
+        $this->marker()->markSubscriptionsReadUntil(
+            $this->reader->requireId(),
+            [$copies->local],
+            new \DateTimeImmutable('2026-11-15T00:00:00Z'),
+        );
+
+        self::assertTrue($this->stateOf($copies->allCopy)?->isHidden());
+        self::assertNull($this->stateOf($copies->localCopy), 'The watermark covers the swept copy.');
+    }
+
+    public function testASweepEndingBeforeThePostLeavesItsCopyAlone(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+
+        $this->marker()->markSubscriptionsReadUntil(
+            $this->reader->requireId(),
+            [$copies->local],
+            new \DateTimeImmutable('2026-11-13T00:00:00Z'),
+        );
+
+        self::assertNull($this->stateOf($copies->allCopy));
+    }
+
+    public function testASweepLeavesACopyAlreadyReadByItsOwnWatermarkWithoutAState(): void
+    {
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $this->reader);
+        $copies->all->setMarkedReadUntil(new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+        $this->entityManager->flush();
+
+        $this->marker()->markSubscriptionsReadUntil(
+            $this->reader->requireId(),
+            [$copies->local],
+            new \DateTimeImmutable('2026-11-15T00:00:00Z'),
+        );
+
+        self::assertNull($this->stateOf($copies->allCopy));
     }
 
     private function marker(): EntryReadMarker

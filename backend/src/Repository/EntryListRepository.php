@@ -207,22 +207,30 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every OTHER copy of the same article this caller subscribes to, as list
-     * rows — the group a read/viewed mirror must reach. Not collapsed: the
-     * mirror needs each copy, hidden or shown.
+     * Every OTHER copy of the entry this caller subscribes to, as list rows: the entries of its canonical item when
+     * it has one, else those at its address — the group a read/viewed mirror must reach. Not collapsed: the mirror
+     * needs each copy, hidden or shown.
      *
      * @return list<EntryListRow>
      */
-    public function siblingRowsForUser(int $userId, string $urlHash, int $excludeEntryId): array
+    public function siblingRowsForUser(int $userId, Entry $entry): array
     {
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $this->projection->rowQueryBuilder($userId)
-            ->andWhere('e.location.urlHash = :hash')
+        $item = $entry->getCanonicalItem();
+        $urlHash = $entry->getUrlHash();
+        if (null === $item && null === $urlHash) {
+            return [];
+        }
+
+        $qb = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.id <> :self')
-            ->setParameter('hash', $urlHash)
-            ->setParameter('self', $excludeEntryId)
-            ->getQuery()
-            ->getResult();
+            ->setParameter('self', $entry->requireId());
+        if (null !== $item) {
+            $qb->andWhere('e.canonicalItem = :item')->setParameter('item', $item->requireId());
+        } else {
+            $qb->andWhere('e.location.urlHash = :hash')->setParameter('hash', $urlHash);
+        }
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $qb->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }

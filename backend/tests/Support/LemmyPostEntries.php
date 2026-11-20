@@ -20,9 +20,13 @@ final class LemmyPostEntries
     {
     }
 
-    public static function buildEntry(Feed $feed, string $page = self::PAGE, ?string $guid = null): Entry
-    {
-        $published = new \DateTimeImmutable('2026-11-14T00:00:00Z');
+    public static function buildEntry(
+        Feed $feed,
+        string $page = self::PAGE,
+        ?string $guid = null,
+        string $publishedAt = '2026-11-14T00:00:00Z',
+    ): Entry {
+        $published = new \DateTimeImmutable($publishedAt);
         $entry = new Entry($feed, $guid ?? $page, null, 'A post title', $published, $published);
         $entry->setDiscussion(Discussion::fromPageAndFeed($page, null, CommentsLoad::Auto));
 

@@ -47,15 +47,42 @@ final readonly class EntryReadMarker
         $this->entityManager->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
             $this->readMarks->hideUnreadInFeedsUntil(new ReadMarking($userId, $this->clock->now()), $feedIds, $until);
         });
+        $this->markIdsRead($userId, $this->readMarks->findUnreadCopyIdsOutsideFeeds($userId, $feedIds, $until));
     }
 
     /**
-     * Batched, so a broad list never loads every id at once. The ids must be distinct and exist: a missing state
-     * row is persisted by reference, so a pruned or repeated id fails the insert.
+     * Every copy of each entry the caller follows is marked too. The ids must exist: a missing state row is
+     * persisted by reference, so a pruned id fails the insert.
      *
      * @param list<int> $entryIds
      */
     public function markEntriesRead(int $userId, array $entryIds): void
+    {
+        $this->markIdsRead($userId, $this->collectIdsWithCopies($userId, $entryIds));
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<int> distinct
+     */
+    private function collectIdsWithCopies(int $userId, array $entryIds): array
+    {
+        $copyIds = [];
+        foreach (array_chunk($entryIds, self::BATCH) as $chunk) {
+            $copyIds[] = $this->readMarks->findCopyIdsForUser($userId, $chunk);
+        }
+
+        return array_values(array_unique(array_merge($entryIds, ...$copyIds)));
+    }
+
+    /**
+     * Batched, so a broad list never loads every id at once. The ids must be distinct: a repeated id persists two
+     * rows for one key.
+     *
+     * @param list<int> $entryIds
+     */
+    private function markIdsRead(int $userId, array $entryIds): void
     {
         if ($entryIds === []) {
             return;

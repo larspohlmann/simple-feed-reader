@@ -11,6 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Library\Reading\SearchMarkReadService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\NetworkFeedSubscriptions;
 
 final class SearchMarkReadServiceTest extends DbTestCase
 {
@@ -174,5 +176,23 @@ final class SearchMarkReadServiceTest extends DbTestCase
         $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
 
         self::assertNull($this->stateOf($entry));
+    }
+
+    public function testMarkingAMatchLeavesNoCopyUnread(): void
+    {
+        $subscriptions = new NetworkFeedSubscriptions($this->entityManager);
+        $local = $subscriptions->subscribe($this->user, LemmyPostCopies::LOCAL_FEED);
+        $all = $subscriptions->subscribe($this->user, LemmyPostCopies::ALL_FEED);
+        LemmyPostCopies::persistCopy($this->entityManager, $local->getFeed(), 'local-copy');
+        $lateCopy = LemmyPostCopies::persistCopy(
+            $this->entityManager,
+            $all->getFeed(),
+            'all-copy',
+            '2026-11-20T00:00:00Z',
+        );
+
+        $this->service()->mark($this->user, 'post', new \DateTimeImmutable('2026-11-15T00:00:00Z'));
+
+        self::assertTrue($this->stateOf($lateCopy)?->isHidden());
     }
 }

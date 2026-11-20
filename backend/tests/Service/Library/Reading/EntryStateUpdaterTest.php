@@ -11,9 +11,11 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Service\Library\Reading\EntryStateUpdater;
 use App\Service\Library\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\StoredUserSettings;
 
 final class EntryStateUpdaterTest extends DbTestCase
@@ -218,13 +220,94 @@ final class EntryStateUpdaterTest extends DbTestCase
     {
         [$user, $target, $sibling] = $this->seedGroup();
 
-        $siblingRows = $this->rows()->siblingRowsForUser(
-            $user->requireId(),
-            'shared-url-hash',
-            $target->requireId(),
-        );
+        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $target);
 
         self::assertCount(1, $siblingRows);
         self::assertSame($sibling->requireId(), $siblingRows[0]->entry->requireId());
+    }
+
+    public function testToggleReadMarksTheCopy(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+
+        $this->toggle($user, $copies->localCopy, $this->change(isHidden: true));
+
+        self::assertTrue($this->stateOf($user, $copies->allCopy)->isHidden());
+    }
+
+    public function testToggleUnreadUnmarksTheCopy(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $this->toggle($user, $copies->localCopy, $this->change(isHidden: true));
+
+        $this->toggle($user, $copies->localCopy, $this->change(isHidden: false));
+
+        self::assertFalse($this->stateOf($user, $copies->localCopy)->isHidden());
+        self::assertNotNull($this->persistedStateOf($user, $copies->allCopy));
+        self::assertFalse($this->stateOf($user, $copies->allCopy)->isHidden());
+    }
+
+    public function testArticleCopiesKeepUrlHashMirror(): void
+    {
+        [$user, $target, $sibling] = $this->seedGroup();
+        $this->toggle($user, $target, $this->change(isHidden: true));
+        self::assertTrue($this->stateOf($user, $sibling)->isHidden());
+
+        $this->toggle($user, $target, $this->change(isHidden: false));
+
+        self::assertFalse($this->stateOf($user, $sibling)->isHidden());
+    }
+
+    public function testALinkedCopyMirrorsOnlyItsItemNotItsAddress(): void
+    {
+        $user = $this->persistReader();
+        $copies = LemmyPostCopies::persistPair($this->entityManager, $user);
+        $published = new \DateTimeImmutable('2026-11-14T00:00:00Z');
+        $linkedArticle = new Entry(
+            $copies->local->getFeed(),
+            'linked-article',
+            'https://news.example.com/linked',
+            'Linked',
+            $published,
+            $published,
+            'linked-url-hash',
+        );
+        $item = $copies->localCopy->getCanonicalItem();
+        self::assertNotNull($item);
+        $linkedArticle->linkTo($item);
+        $unlinkedArticle = new Entry(
+            $copies->all->getFeed(),
+            'unlinked-article',
+            'https://news.example.com/linked',
+            'Unlinked',
+            $published,
+            $published,
+            'linked-url-hash',
+        );
+        $this->entityManager->persist($linkedArticle);
+        $this->entityManager->persist($unlinkedArticle);
+        $this->entityManager->flush();
+
+        $siblingRows = $this->rows()->siblingRowsForUser($user->requireId(), $linkedArticle);
+
+        $siblingIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $siblingRows);
+        sort($siblingIds);
+        self::assertSame([$copies->localCopy->requireId(), $copies->allCopy->requireId()], $siblingIds);
+    }
+
+    private function persistReader(): User
+    {
+        $user = new User('copies@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function toggle(User $user, Entry $entry, EntryStateChangeModel $change): void
+    {
+        $this->updater()->apply($user, $this->rows()->getRowForUser($user->requireId(), $entry->requireId()), $change);
     }
 }

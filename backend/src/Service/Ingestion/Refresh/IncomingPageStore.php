@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Service\Ingestion\Feed\FeedScheduler;
+use App\Service\Ingestion\Ingest\CopyReadStateInheritor;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
@@ -34,6 +35,7 @@ final readonly class IncomingPageStore
         private ShareEnrichmentQueue $enrichmentQueue,
         private TimelineSelfThreads $selfThreads,
         private DeletedPostTombstones $tombstones,
+        private CopyReadStateInheritor $copyReadStates,
     ) {
     }
 
@@ -58,8 +60,9 @@ final readonly class IncomingPageStore
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->settle($feed, $stored, $createdEntries);
         $this->entityManager->flush();
-        // Only the flush assigns ids, so indexing has to follow it.
+        // Only the flush assigns ids, so indexing and inheriting have to follow it.
         $this->indexer->index($createdEntries);
+        $this->copyReadStates->inherit($createdEntries);
         $this->shareEnrichment->enrich($feed);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));
