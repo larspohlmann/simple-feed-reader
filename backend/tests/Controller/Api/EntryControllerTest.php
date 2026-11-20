@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Discussion;
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -1418,6 +1419,49 @@ final class EntryControllerTest extends ApiTestCase
             self::assertResponseIsSuccessful();
             self::assertSame($isHidden, $this->findState($user, $copies->allCopy)?->isHidden());
         }
+    }
+
+    public function testBothCopiesOfOnePostNameTheSameItemAndShareItsFacts(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-item-id@example.com');
+        $entityManager = $this->entityManager();
+        $copies = LemmyPostCopies::persistPair($entityManager, $user);
+        $item = $copies->localCopy->getCanonicalItem();
+        self::assertNotNull($item);
+        $item->recordCounts(DiscussionCounts::fromScoreAndComments(12, 5));
+        $entityManager->flush();
+
+        $entries = array_map(static function (Entry $copy) use ($client, $headers): array {
+            $client->request('GET', "/api/entries/{$copy->requireId()}", server: $headers);
+            $decoded = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            self::assertIsArray($decoded['entry']);
+
+            return $decoded['entry'];
+        }, [$copies->localCopy, $copies->allCopy]);
+
+        self::assertSame($item->requireId(), $entries[0]['canonicalItemId']);
+        foreach (['canonicalItemId', 'score', 'commentCount', 'myVote'] as $field) {
+            self::assertSame($entries[0][$field], $entries[1][$field], $field);
+        }
+        self::assertSame(5, $entries[0]['commentCount']);
+    }
+
+    public function testAnArticleHasNoItemId(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-no-item-id@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 1);
+        $article = $this->entryWithGuid($subscription, 'g1');
+
+        $client->request('GET', "/api/entries/{$article->getId()}", server: $headers);
+        $decoded = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded['entry']);
+        self::assertArrayHasKey('canonicalItemId', $decoded['entry']);
+        self::assertNull($decoded['entry']['canonicalItemId']);
     }
 
     private function findState(User $user, Entry $entry): ?EntryState
