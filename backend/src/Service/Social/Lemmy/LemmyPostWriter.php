@@ -40,7 +40,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
         self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
         $answer = $this->lemmy->post($target->account, '/api/v3/comment', self::buildCommentPayload($target, $draft));
 
-        return self::publishedAt($answer, 'comment_view', 'comment');
+        return self::requirePublishedPost($answer, 'comment_view', 'comment');
     }
 
     public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
@@ -52,7 +52,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface
     {
         $answer = $this->lemmy->post($account, '/api/v3/post', self::buildLinkPostPayload($url, $draft));
 
-        return self::publishedAt($answer, 'post_view', 'post');
+        return self::requirePublishedPost($answer, 'post_view', 'post');
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
@@ -97,8 +97,11 @@ final readonly class LemmyPostWriter implements PostWriterInterface
         }
     }
 
-    private static function publishedAt(ApiResponseModel $answer, string $view, string $object): PublishedPostModel
-    {
+    private static function requirePublishedPost(
+        ApiResponseModel $answer,
+        string $view,
+        string $object,
+    ): PublishedPostModel {
         $address = AbsoluteHttpUrl::keepIfHttps(
             JsonNodeModel::fromValue($answer->json())->node($view)->node($object)->string('ap_id'),
         ) ?? throw new SocialNetworkUnreachableException(

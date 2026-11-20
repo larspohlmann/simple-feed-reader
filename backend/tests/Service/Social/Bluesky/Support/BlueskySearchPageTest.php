@@ -39,7 +39,7 @@ final class BlueskySearchPageTest extends TestCase
         );
 
         self::assertSame('https://bsky.app/profile/did:plc:amy/post/1', $page->parsed->entries[0]->url);
-        self::assertSame($uri, $page->knownShares->blueskyPostFor($uri)?->string('uri'));
+        self::assertSame($uri, $page->knownShares->findBlueskyPost($uri)?->string('uri'));
     }
 
     public function testAnAnswerWithoutPostsIsAnUnreachableBluesky(): void

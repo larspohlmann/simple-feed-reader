@@ -26,7 +26,7 @@ final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterfa
     {
         $statusUrl = MastodonStatusAddress::parseAddress($address)?->apiUrl()
             ?? throw new QuotedPostUnavailableException('The address names no status on a Mastodon instance.');
-        $status = JsonNodeModel::fromValue($this->answerFor($statusUrl));
+        $status = JsonNodeModel::fromValue($this->fetchAnswer($statusUrl));
         if (!\in_array($address, [$status->string('uri'), $status->string('url')], true)) {
             throw new QuotedPostUnavailableException('The instance answered with another status.');
         }
@@ -36,7 +36,7 @@ final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterfa
     }
 
     /** @return array<mixed> */
-    private function answerFor(string $statusUrl): array
+    private function fetchAnswer(string $statusUrl): array
     {
         try {
             return MastodonApiClient::accepted($this->mastodon->answer(ApiRequestModel::get($statusUrl)))->json();
