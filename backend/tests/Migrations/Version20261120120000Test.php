@@ -6,6 +6,8 @@ namespace App\Tests\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\Migrations\Exception\AbortMigration;
+use Doctrine\Migrations\Exception\SkipMigration;
 use DoctrineMigrations\Version20261120120000;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -22,6 +24,8 @@ final class Version20261120120000Test extends TestCase
         // Migration classes are deliberately excluded from Composer's autoloader (doctrine_migrations.yaml).
         require_once \dirname(__DIR__, 2) . '/migrations/Version20261120120000.php';
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
+        // As the app's connection: a DROP TABLE entry would cascade into the votes and likes this test counts.
+        $this->connection->executeStatement('PRAGMA foreign_keys = ON');
         foreach (self::buildPreMigrationSchema() as $statement) {
             $this->connection->executeStatement($statement);
         }
@@ -105,6 +109,30 @@ final class Version20261120120000Test extends TestCase
         self::assertSame(0, $this->connection->fetchOne('SELECT COUNT(*) FROM discussion_vote WHERE user_id = 9'));
     }
 
+    public function testARunOverAnUpgradedSchemaIsSkipped(): void
+    {
+        $this->migrateUp();
+
+        $this->expectException(SkipMigration::class);
+        $this->migrateUp();
+    }
+
+    public function testAHalfMigratedSchemaIsRefusedNamingWhatItHolds(): void
+    {
+        $this->connection->executeStatement('CREATE TABLE canonical_item (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)');
+        $this->connection->executeStatement('ALTER TABLE entry ADD COLUMN canonical_item_id INTEGER DEFAULT NULL');
+
+        $this->expectException(AbortMigration::class);
+        $this->expectExceptionMessage('present: canonical_item, entry.canonical_item_id');
+        $this->migrateUp();
+    }
+
+    public function testDownOverAPristineSchemaIsSkipped(): void
+    {
+        $this->expectException(SkipMigration::class);
+        $this->migrateDown();
+    }
+
     public function testDownRestoresTheCopiesState(): void
     {
         $this->migrateUp();
@@ -132,6 +160,8 @@ final class Version20261120120000Test extends TestCase
 
     private function seedCopies(): void
     {
+        $this->connection->executeStatement('INSERT INTO app_user (id) VALUES (7), (8), (9)');
+        $this->connection->executeStatement('INSERT INTO social_account (id) VALUES (20), (21), (22), (23), (31), (32)');
         $feeds = [[1, 'https://lemmy.world/feeds/c/technology.xml', 'lemmy'], [2, 'https://lemmy.world/api/v3/post/list', 'lemmy'],
             [3, 'https://mastodon.social/api/v1/timelines/home', 'mastodon'], [4, 'https://mastodon.social/@lars.rss', 'mastodon'],
             [5, 'https://blog.example.com/feed.xml', null]];
@@ -193,22 +223,33 @@ final class Version20261120120000Test extends TestCase
     private static function buildPreMigrationSchema(): array
     {
         return [
+            'CREATE TABLE app_user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)',
+            'CREATE TABLE social_account (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)',
             'CREATE TABLE feed (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, url VARCHAR(2048) NOT NULL, network VARCHAR(16) DEFAULT NULL)',
             'CREATE TABLE entry (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, feed_id INTEGER NOT NULL, guid CLOB NOT NULL,'
             . ' url VARCHAR(2048) DEFAULT NULL, discussion_url VARCHAR(2048) DEFAULT NULL, comments_feed_url VARCHAR(2048) DEFAULT NULL,'
-            . " comments_load VARCHAR(8) DEFAULT NULL, comment_count INTEGER DEFAULT NULL, self_reply_count SMALLINT DEFAULT 0 NOT NULL)",
+            . ' comments_load VARCHAR(8) DEFAULT NULL, comment_count INTEGER DEFAULT NULL, self_reply_count SMALLINT DEFAULT 0 NOT NULL,'
+            . ' CONSTRAINT FK_2B219D7051A5BC03 FOREIGN KEY (feed_id) REFERENCES feed (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE)',
             'CREATE TABLE entry_lemmy_post (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, score INTEGER DEFAULT NULL,'
             . ' community_identity VARCHAR(255) DEFAULT NULL, community_url VARCHAR(2048) DEFAULT NULL, entry_id INTEGER NOT NULL,'
             . ' CONSTRAINT FK_EA202E9CBA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE)',
             'CREATE UNIQUE INDEX UNIQ_EA202E9CBA364942 ON entry_lemmy_post (entry_id)',
             'CREATE TABLE discussion_vote (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, score SMALLINT NOT NULL, voted_at DATETIME NOT NULL,'
-            . ' user_id INTEGER NOT NULL, entry_id INTEGER NOT NULL, social_account_id INTEGER NOT NULL)',
+            . ' user_id INTEGER NOT NULL, entry_id INTEGER NOT NULL, social_account_id INTEGER NOT NULL,'
+            . ' CONSTRAINT FK_7F7E2952A76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,'
+            . ' CONSTRAINT FK_7F7E2952BA364942 FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,'
+            . ' CONSTRAINT FK_7F7E29525538ED78 FOREIGN KEY (social_account_id) REFERENCES social_account (id) ON DELETE CASCADE'
+            . ' NOT DEFERRABLE INITIALLY IMMEDIATE)',
             'CREATE INDEX IDX_7F7E2952A76ED395 ON discussion_vote (user_id)',
             'CREATE INDEX idx_discussion_vote_entry ON discussion_vote (entry_id)',
             'CREATE INDEX idx_discussion_vote_account ON discussion_vote (social_account_id)',
             'CREATE UNIQUE INDEX uniq_discussion_vote_user_entry ON discussion_vote (user_id, entry_id)',
             'CREATE TABLE social_like (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, remote_id VARCHAR(512) NOT NULL, liked_at DATETIME NOT NULL,'
-            . ' user_id INTEGER NOT NULL, entry_id INTEGER NOT NULL, social_account_id INTEGER NOT NULL)',
+            . ' user_id INTEGER NOT NULL, entry_id INTEGER NOT NULL, social_account_id INTEGER NOT NULL,'
+            . ' CONSTRAINT fk_social_like_user FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,'
+            . ' CONSTRAINT fk_social_like_entry FOREIGN KEY (entry_id) REFERENCES entry (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE,'
+            . ' CONSTRAINT fk_social_like_account FOREIGN KEY (social_account_id) REFERENCES social_account (id) ON DELETE CASCADE'
+            . ' NOT DEFERRABLE INITIALLY IMMEDIATE)',
             'CREATE INDEX idx_social_like_user ON social_like (user_id)',
             'CREATE INDEX idx_social_like_entry ON social_like (entry_id)',
             'CREATE INDEX idx_social_like_account ON social_like (social_account_id)',
