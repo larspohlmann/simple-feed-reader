@@ -27,7 +27,7 @@ final class GuardedChapterFileSourceTest extends TestCase
             ['http_code' => Response::HTTP_OK],
         ))));
 
-        self::assertCount(2, $source->chaptersAt('https://cdn.test/ch.json'));
+        self::assertCount(2, $source->fetchChapters('https://cdn.test/ch.json'));
     }
 
     #[DataProvider('answersWithoutChapters')]
@@ -38,7 +38,7 @@ final class GuardedChapterFileSourceTest extends TestCase
             'response_headers' => ['Location' => 'https://elsewhere.test/ch.json'],
         ]))));
 
-        self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
+        self::assertSame([], $source->fetchChapters('https://cdn.test/ch.json'));
     }
 
     /** @return iterable<string, array{int}> */
@@ -57,7 +57,7 @@ final class GuardedChapterFileSourceTest extends TestCase
         )));
 
         $this->expectException(ChapterFileUnreachableException::class);
-        $source->chaptersAt('https://cdn.test/ch.json');
+        $source->fetchChapters('https://cdn.test/ch.json');
     }
 
     /** @return iterable<string, array{int}> */
@@ -78,7 +78,7 @@ final class GuardedChapterFileSourceTest extends TestCase
             return new MockResponse('{"chapters":[]}');
         });
 
-        (new GuardedChapterFileSource($this->client($http)))->chaptersAt('https://cdn.test/ch.json');
+        (new GuardedChapterFileSource($this->client($http)))->fetchChapters('https://cdn.test/ch.json');
 
         self::assertSame(3.0, $seenOptions['timeout']);
         self::assertSame(3.0, $seenOptions['max_duration']);
@@ -91,7 +91,7 @@ final class GuardedChapterFileSourceTest extends TestCase
             new MockResponse(self::chaptersPaddedTo(ResponseSizeLimit::ChapterFile->bytes())),
         )));
 
-        self::assertCount(2, $source->chaptersAt('https://cdn.test/ch.json'));
+        self::assertCount(2, $source->fetchChapters('https://cdn.test/ch.json'));
     }
 
     public function testAFileBeyondTheChapterSizeLimitHasNoChapters(): void
@@ -100,7 +100,7 @@ final class GuardedChapterFileSourceTest extends TestCase
             new MockResponse(self::chaptersPaddedTo(ResponseSizeLimit::ChapterFile->bytes() + 1)),
         )));
 
-        self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
+        self::assertSame([], $source->fetchChapters('https://cdn.test/ch.json'));
     }
 
     private static function chaptersPaddedTo(int $bytes): string
@@ -112,7 +112,7 @@ final class GuardedChapterFileSourceTest extends TestCase
     {
         $source = new GuardedChapterFileSource($this->client(new MockHttpClient()));
 
-        self::assertSame([], $source->chaptersAt('http://127.0.0.1/ch.json'));
+        self::assertSame([], $source->fetchChapters('http://127.0.0.1/ch.json'));
     }
 
     public function testANetworkFailureIsUnreachable(): void
@@ -122,7 +122,7 @@ final class GuardedChapterFileSourceTest extends TestCase
         )));
 
         $this->expectException(ChapterFileUnreachableException::class);
-        $source->chaptersAt('https://cdn.test/ch.json');
+        $source->fetchChapters('https://cdn.test/ch.json');
     }
 
     private function client(MockHttpClient $http): GuardedApiClient

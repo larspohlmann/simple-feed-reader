@@ -33,7 +33,7 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
 
         return new EmbedDescriptionModel(
             \is_string($title) && $title !== '' ? $title : null,
-            self::secondsIn($video['lengthSeconds'] ?? null),
+            self::parseSeconds($video['lengthSeconds'] ?? null),
             \is_string($description) ? $description : '',
             null,
         );
@@ -42,9 +42,9 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
     /** @return array<mixed> */
     private function fetchVideo(EmbedAddressModel $embed): array
     {
-        $request = self::playerRequestFor($embed);
-        $video = self::videoDetailsIn($this->request->fetchAnswer($request, $embed))
-            ?? self::videoDetailsIn($this->askedDirectly($request, $embed));
+        $request = self::buildPlayerRequest($embed);
+        $video = self::readVideoDetails($this->request->fetchAnswer($request, $embed))
+            ?? self::readVideoDetails($this->askedDirectly($request, $embed));
         if ($video === null) {
             throw EmbedDescriptionUnreachableException::withoutTheVideo($embed);
         }
@@ -62,13 +62,13 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
         }
         $this->logger->info('YouTube walled the proxied player request for {videoId}; asked again directly.', [
             'videoId' => $embed->id,
-            'walledAgain' => self::videoDetailsIn($player) === null,
+            'walledAgain' => self::readVideoDetails($player) === null,
         ]);
 
         return $player;
     }
 
-    private static function playerRequestFor(EmbedAddressModel $embed): ApiRequestModel
+    private static function buildPlayerRequest(EmbedAddressModel $embed): ApiRequestModel
     {
         return ApiRequestModel::postJson(self::PLAYER, [
             'videoId' => $embed->id,
@@ -80,14 +80,14 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
      * @param array<mixed> $player
      * @return array<mixed>|null
      */
-    private static function videoDetailsIn(array $player): ?array
+    private static function readVideoDetails(array $player): ?array
     {
         $video = $player['videoDetails'] ?? null;
 
         return \is_array($video) ? $video : null;
     }
 
-    private static function secondsIn(mixed $lengthSeconds): ?int
+    private static function parseSeconds(mixed $lengthSeconds): ?int
     {
         $digits = \is_int($lengthSeconds) ? (string) $lengthSeconds : $lengthSeconds;
         if (!\is_string($digits) || !ctype_digit($digits)) {

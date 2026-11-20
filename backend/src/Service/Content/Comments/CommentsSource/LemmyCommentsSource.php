@@ -40,7 +40,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
     public function buildAudience(User $user, Entry $entry): CommentsAudienceModel
     {
         $pageUrl = self::requirePost($entry)->pageUrl();
-        $account = $this->threadReader->readerFor($user);
+        $account = $this->threadReader->findReader($user);
 
         return null === $account
             ? new CommentsAudienceModel($pageUrl)
@@ -53,7 +53,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
         $account = $request->audience->actingAccount;
         if (null !== $account) {
             try {
-                return CommentsAnswerModel::settled($this->threadReader->threadAs($account, $post));
+                return CommentsAnswerModel::settled($this->threadReader->fetchThread($account, $post));
             } catch (CommentsUnavailableException | CommentsThrottledException) {
             }
         }

@@ -28,7 +28,7 @@ final readonly class ChapterFiller
         }
 
         try {
-            $chapters = $this->files->chaptersAt($url);
+            $chapters = $this->files->fetchChapters($url);
         } catch (ChapterFileUnreachableException $exception) {
             $this->logger->info(
                 'Chapters file unreachable; next open retries.',

@@ -129,7 +129,7 @@ final class TranscriptFillerTest extends TestCase
             {
             }
 
-            public function bodyAt(string $url, float $budgetSeconds): string
+            public function fetchBody(string $url, float $budgetSeconds): string
             {
                 /** @var string $body */
                 $body = ($this->body)($url, $budgetSeconds);

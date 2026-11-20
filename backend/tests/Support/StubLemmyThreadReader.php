@@ -20,12 +20,12 @@ final class StubLemmyThreadReader implements LemmyThreadReaderInterface
     ) {
     }
 
-    public function readerFor(User $user): ?SocialAccount
+    public function findReader(User $user): ?SocialAccount
     {
         return $this->account;
     }
 
-    public function threadAs(SocialAccount $account, LemmyPostModel $post): string
+    public function fetchThread(SocialAccount $account, LemmyPostModel $post): string
     {
         $this->postsRead[] = $post;
 
