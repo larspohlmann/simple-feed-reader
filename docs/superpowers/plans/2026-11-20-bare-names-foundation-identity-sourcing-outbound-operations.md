@@ -70,6 +70,7 @@ Paths are under `backend/src/Service/`. The last column is what the reviewer che
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `countryCodesIn` | `collectCountryCodes` | Gathers the string `code` of each country entry of the index |
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `languageCodesIn` | `collectLanguageCodes` | Gathers the string keys of the index's languages |
 | `Sourcing/FeedDirectory/FeedDirectoryFiles.php` | `entriesAt` | `readEntries` | The array under a key of the index, `[]` when absent or no array |
+| `Sourcing/FeedDirectory/Model/FeedDirectoryScopeModel.php` | `orNone` | `fromListsOrEmpty` | Named constructor: the scope of the given countries and languages, or the empty scope when either list is empty, where the constructor would throw |
 
 ### Outbound
 
@@ -147,7 +148,7 @@ Ruled after review. The three classes share the old name `orNull`; rename throug
 
 ### Task 3b: Pass-through URL helpers
 
-- [ ] **Step 1:** Rename the five rows of "Foundation: pass-through URL helpers" and every caller, through the type; update the `{@see orNull}` in `HttpsImageUrl`'s docblock.
+- [ ] **Step 1:** Rename the five rows of "Foundation: pass-through URL helpers" and the Sourcing row `FeedDirectoryScopeModel::orNone` (ruled after review), with every caller, through the type; update the `{@see orNull}` in `HttpsImageUrl`'s docblock.
 - [ ] **Step 2:** Run `grep -rnE 'function\s+(orNull|orNullWithin|orNullUpgrading)\s*\(' backend/src/Service/Foundation`. Expected: no output.
 - [ ] **Step 3:** Run the same four commands. Expected: all green.
 - [ ] **Step 4:** Commit `refactor(#2400): URL helpers start with their verb`.
