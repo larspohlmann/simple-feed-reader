@@ -215,17 +215,17 @@ final class EntryListRepository extends ServiceEntityRepository
      */
     public function findSiblingRowsForUser(int $userId, Entry $entry): array
     {
-        $item = $entry->getCanonicalItem();
+        $itemId = $entry->getCanonicalItemId();
         $urlHash = $entry->getUrlHash();
-        if (null === $item && null === $urlHash) {
+        if (null === $itemId && null === $urlHash) {
             return [];
         }
 
         $qb = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.id <> :self')
             ->setParameter('self', $entry->requireId());
-        if (null !== $item) {
-            $qb->andWhere('e.canonicalItem = :item')->setParameter('item', $item->requireId());
+        if (null !== $itemId) {
+            $qb->andWhere('e.canonicalItem = :item')->setParameter('item', $itemId);
         } else {
             $qb->andWhere('e.location.urlHash = :hash')->setParameter('hash', $urlHash);
         }
@@ -288,7 +288,7 @@ final class EntryListRepository extends ServiceEntityRepository
         $hashes = self::collectKeys($survivors, static fn (Entry $entry): ?string => $entry->getUrlHash());
         $itemIds = self::collectKeys(
             $survivors,
-            static fn (Entry $entry): ?int => $entry->getCanonicalItem()?->requireId(),
+            static fn (Entry $entry): ?int => $entry->getCanonicalItemId(),
         );
         if ($hashes === [] && $itemIds === []) {
             return $survivors;
@@ -343,9 +343,9 @@ final class EntryListRepository extends ServiceEntityRepository
         $rows = $query->getResult();
         $copies = [];
         foreach ($this->hydrateRows($rows) as $copy) {
-            $item = $copy->entry->getCanonicalItem();
-            if ($item !== null) {
-                $copies[$item->requireId()][] = $copy;
+            $itemId = $copy->entry->getCanonicalItemId();
+            if ($itemId !== null) {
+                $copies[$itemId][] = $copy;
             }
         }
 
@@ -370,7 +370,7 @@ final class EntryListRepository extends ServiceEntityRepository
     {
         $copies = [];
         $hash = $row->entry->getUrlHash();
-        $itemId = $row->entry->getCanonicalItem()?->requireId();
+        $itemId = $row->entry->getCanonicalItemId();
         $found = [
             ...($hash === null ? [] : $copiesByHash[$hash] ?? []),
             ...($itemId === null ? [] : $copiesByItem[$itemId] ?? []),

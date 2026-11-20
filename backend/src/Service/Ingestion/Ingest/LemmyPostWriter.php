@@ -50,10 +50,10 @@ final readonly class LemmyPostWriter
     {
         $communities = [];
         foreach ($pairs as [$entry, $parsed]) {
-            $item = $entry->getCanonicalItem();
+            $itemId = $entry->getCanonicalItemId();
             $community = self::keepIfStorable($parsed->community);
-            if ($item !== null && $community !== null) {
-                $communities[$item->requireId()] = $community;
+            if ($itemId !== null && $community !== null) {
+                $communities[$itemId] = $community;
             }
         }
 

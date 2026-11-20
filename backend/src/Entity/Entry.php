@@ -277,6 +277,11 @@ final class Entry
         return $this->canonicalItem;
     }
 
+    public function getCanonicalItemId(): ?int
+    {
+        return $this->canonicalItem?->requireId();
+    }
+
     public function linkTo(CanonicalItem $item): void
     {
         $item->recordCommentCount($this->discussion->getCommentCount());

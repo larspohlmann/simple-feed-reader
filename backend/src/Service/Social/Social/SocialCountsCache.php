@@ -51,7 +51,7 @@ final readonly class SocialCountsCache
 
     private function findKey(Entry $entry): ?string
     {
-        $itemId = $entry->getCanonicalItem()?->getId();
+        $itemId = $entry->getCanonicalItemId();
         if (null !== $itemId) {
             return 'social_counts.item.' . $itemId;
         }

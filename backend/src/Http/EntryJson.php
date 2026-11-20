@@ -86,7 +86,7 @@ final readonly class EntryJson
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return $this->completed($row) + [
-            'canonicalItemId' => $entry->getCanonicalItem()?->requireId(),
+            'canonicalItemId' => $entry->getCanonicalItemId(),
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
         ] + self::buildDiscussionRow($row) + [

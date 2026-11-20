@@ -26,7 +26,7 @@ final readonly class CopyReadStateInheritor
     {
         $linkedIds = [];
         foreach ($created as $entry) {
-            if (null !== $entry->getCanonicalItem()) {
+            if (null !== $entry->getCanonicalItemId()) {
                 $linkedIds[] = $entry->requireId();
             }
         }
