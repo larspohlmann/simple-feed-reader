@@ -18,28 +18,28 @@ final class TrendingLastBuildsModelTest extends TestCase
             [],
         );
 
-        self::assertEquals(self::utc('2031-05-14 10:10:00'), $builds->nextBuildDueAt());
+        self::assertEquals(self::utc('2031-05-14 10:10:00'), $builds->computeNextBuildDueAt());
     }
 
     public function testNoNextBuildTimeWhileAWindowWasNeverBuilt(): void
     {
         $builds = new TrendingLastBuildsModel(['day' => self::utc('2031-05-14 10:00:00')], [], []);
 
-        self::assertNull($builds->nextBuildDueAt());
+        self::assertNull($builds->computeNextBuildDueAt());
     }
 
     public function testAWindowIsDueItsIntervalAfterItsBuild(): void
     {
         $builds = new TrendingLastBuildsModel(['day' => self::utc('2031-05-14 10:00:00')], [], []);
 
-        self::assertEquals(self::utc('2031-05-14 10:10:00'), $builds->dueAt(TrendingWindow::Day));
+        self::assertEquals(self::utc('2031-05-14 10:10:00'), $builds->computeDueAt(TrendingWindow::Day));
     }
 
     public function testAWindowNeverBuiltHasNoDueTime(): void
     {
         $builds = new TrendingLastBuildsModel(['day' => self::utc('2031-05-14 10:00:00')], [], []);
 
-        self::assertNull($builds->dueAt(TrendingWindow::Week));
+        self::assertNull($builds->computeDueAt(TrendingWindow::Week));
     }
 
     private static function utc(string $time): \DateTimeImmutable

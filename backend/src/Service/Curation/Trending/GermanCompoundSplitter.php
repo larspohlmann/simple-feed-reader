@@ -41,7 +41,7 @@ final readonly class GermanCompoundSplitter
 
     private function findBestSplit(string $word, int $maxParts): ?CompoundSplitModel
     {
-        return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->bestSplit();
+        return (new CompoundSplitSearch($this->lexicon, $word, $maxParts))->findBestSplit();
     }
 
     private function staysWhole(GermanLexiconEntryModel $whole, CompoundSplitModel $split): bool

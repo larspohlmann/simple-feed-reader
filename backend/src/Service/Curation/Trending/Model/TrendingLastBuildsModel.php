@@ -21,7 +21,7 @@ final readonly class TrendingLastBuildsModel
     ) {
     }
 
-    public function builtAt(TrendingWindow $window): ?\DateTimeImmutable
+    public function findBuiltAt(TrendingWindow $window): ?\DateTimeImmutable
     {
         return $this->builtAtByWindow[$window->value] ?? null;
     }
@@ -33,16 +33,16 @@ final readonly class TrendingLastBuildsModel
     }
 
     /** Null while the window was never built: it is due now. */
-    public function dueAt(TrendingWindow $window): ?\DateTimeImmutable
+    public function computeDueAt(TrendingWindow $window): ?\DateTimeImmutable
     {
-        return $this->builtAt($window)?->modify(\sprintf('+%d seconds', $window->rebuildIntervalSeconds()));
+        return $this->findBuiltAt($window)?->modify(\sprintf('+%d seconds', $window->rebuildIntervalSeconds()));
     }
 
-    public function nextBuildDueAt(): ?\DateTimeImmutable
+    public function computeNextBuildDueAt(): ?\DateTimeImmutable
     {
         $dueTimes = [];
         foreach (TrendingWindow::cases() as $window) {
-            $dueAt = $this->dueAt($window);
+            $dueAt = $this->computeDueAt($window);
             if ($dueAt === null) {
                 return null;
             }

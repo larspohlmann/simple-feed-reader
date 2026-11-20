@@ -40,7 +40,7 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
         $lastBuilds = $this->snapshots()->lastBuilds($this->userId());
 
-        self::assertNull($lastBuilds->builtAt(TrendingWindow::Week));
+        self::assertNull($lastBuilds->findBuiltAt(TrendingWindow::Week));
         self::assertSame(12, $lastBuilds->activeFeedCount(TrendingWindow::Day));
         self::assertSame(0, $lastBuilds->activeFeedCount(TrendingWindow::Week), 'never built');
     }
@@ -51,10 +51,10 @@ final class TrendingSnapshotRepositoryTest extends DbTestCase
 
         $lastBuilds = $this->snapshots()->lastBuilds($this->userId());
 
-        self::assertNull($lastBuilds->builtAt(TrendingWindow::Day));
+        self::assertNull($lastBuilds->findBuiltAt(TrendingWindow::Day));
         self::assertSame(
             '2031-05-14T12:00:00+00:00',
-            $lastBuilds->builtAt(TrendingWindow::Week)?->format(\DateTimeInterface::ATOM),
+            $lastBuilds->findBuiltAt(TrendingWindow::Week)?->format(\DateTimeInterface::ATOM),
         );
     }
 

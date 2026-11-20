@@ -119,7 +119,7 @@ final readonly class TrendingRebuild
 
     private function isDue(int $userId, TrendingLastBuildsModel $lastBuilds, TrendingWindow $window): bool
     {
-        $builtAt = $lastBuilds->builtAt($window);
+        $builtAt = $lastBuilds->findBuiltAt($window);
         if ($builtAt === null) {
             return true;
         }

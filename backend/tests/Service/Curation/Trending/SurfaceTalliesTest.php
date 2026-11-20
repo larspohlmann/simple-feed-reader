@@ -38,6 +38,6 @@ final class SurfaceTalliesTest extends DbTestCase
 
         self::assertSame(1, $tallies->subscriptions->unreadTotals->allItems);
         self::assertEquals($reader->countTallies($user), $tallies->subscriptions);
-        self::assertEquals($stories->unopenedFor($user, TrendingWindow::Day), $tallies->trending);
+        self::assertEquals($stories->tallyUnopened($user, TrendingWindow::Day), $tallies->trending);
     }
 }

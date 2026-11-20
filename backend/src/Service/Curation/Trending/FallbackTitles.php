@@ -99,7 +99,7 @@ final readonly class FallbackTitles
         ))));
         $titles = [];
         foreach ($pools as $index => $pool) {
-            $candidates = $this->candidatesIn($run, $pool, $headlines);
+            $candidates = $this->buildCandidates($run, $pool, $headlines);
             if ($candidates !== []) {
                 $chosen = $this->choice->choose($candidates, $pool->currentEntryId);
                 $titles[$index] = new FallbackTitleModel($chosen->entryId, $chosen->headline->text);
@@ -114,7 +114,7 @@ final readonly class FallbackTitles
      *
      * @return list<TitleCandidateModel>
      */
-    private function candidatesIn(TrendingRun $run, HeadlinePoolModel $pool, array $headlines): array
+    private function buildCandidates(TrendingRun $run, HeadlinePoolModel $pool, array $headlines): array
     {
         $cleaned = [];
         foreach ($pool->members as $member) {

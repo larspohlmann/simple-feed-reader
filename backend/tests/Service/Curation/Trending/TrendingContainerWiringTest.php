@@ -50,10 +50,10 @@ final class TrendingContainerWiringTest extends DbTestCase
     {
         $builder = self::getContainer()->get(TrendingSnapshotBuilder::class);
         self::assertInstanceOf(TrendingSnapshotBuilder::class, $builder);
-        $policyFor = new \ReflectionMethod($builder, 'policyFor');
+        $selectPolicy = new \ReflectionMethod($builder, 'selectPolicy');
 
-        self::assertInstanceOf(DayStoryBuildPolicy::class, $policyFor->invoke($builder, TrendingWindow::Day));
-        self::assertInstanceOf(WeekStoryBuildPolicy::class, $policyFor->invoke($builder, TrendingWindow::Week));
+        self::assertInstanceOf(DayStoryBuildPolicy::class, $selectPolicy->invoke($builder, TrendingWindow::Day));
+        self::assertInstanceOf(WeekStoryBuildPolicy::class, $selectPolicy->invoke($builder, TrendingWindow::Week));
     }
 
     public function testTheContainersGermanLexiconIsTheBundledOne(): void

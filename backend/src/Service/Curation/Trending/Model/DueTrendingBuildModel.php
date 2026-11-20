@@ -18,6 +18,6 @@ final readonly class DueTrendingBuildModel
     /** Never-built pairs come before any built one. */
     public function lastBuiltTimestamp(): int
     {
-        return $this->lastBuilds->builtAt($this->window)?->getTimestamp() ?? PHP_INT_MIN;
+        return $this->lastBuilds->findBuiltAt($this->window)?->getTimestamp() ?? PHP_INT_MIN;
     }
 }
