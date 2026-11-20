@@ -15,7 +15,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 {
     public function testLinkHandsCountsToTheItem(): void
     {
-        $entry = $this->persistedEntry();
+        $entry = $this->persistEntry();
         $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(null, 7));
         $entry->discussionCounts()->recordSelfReplyCount(3);
         $item = $this->persistItem();
@@ -36,7 +36,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 
     public function testALinkedEntryReadsAndWritesItsCountsOnTheItem(): void
     {
-        $entry = $this->persistedEntry();
+        $entry = $this->persistEntry();
         $item = $this->persistItem();
         $entry->linkTo($item);
 
@@ -53,8 +53,8 @@ final class EntryCanonicalItemTest extends DbTestCase
     public function testALinkedEntryReadsCountsAnotherCopyRecorded(): void
     {
         $item = $this->persistItem();
-        $copyA = $this->persistedEntry('a');
-        $copyB = $this->persistedEntry('b');
+        $copyA = $this->persistEntry('a');
+        $copyB = $this->persistEntry('b');
         $copyA->linkTo($item);
         $copyB->linkTo($item);
 
@@ -65,7 +65,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 
     public function testTheLinkSurvivesAReload(): void
     {
-        $entry = $this->persistedEntry();
+        $entry = $this->persistEntry();
         $item = $this->persistItem();
         $entry->linkTo($item);
         $this->entityManager->flush();
@@ -78,7 +78,7 @@ final class EntryCanonicalItemTest extends DbTestCase
 
     public function testAnUnlinkedEntryKeepsItsOwnCounts(): void
     {
-        $entry = $this->persistedEntry();
+        $entry = $this->persistEntry();
 
         $entry->discussionCounts()->recordCounts(DiscussionCounts::fromScoreAndComments(12, 4));
         $entry->discussionCounts()->recordSelfReplyCount(2);
@@ -88,7 +88,7 @@ final class EntryCanonicalItemTest extends DbTestCase
         self::assertSame(2, $entry->discussionCounts()->getSelfReplyCount());
     }
 
-    private function persistedEntry(string $guid = 'g'): Entry
+    private function persistEntry(string $guid = 'g'): Entry
     {
         $feed = new Feed('https://example.com/' . $guid . '.xml');
         $now = new \DateTimeImmutable('2026-11-20T12:00:00Z');
