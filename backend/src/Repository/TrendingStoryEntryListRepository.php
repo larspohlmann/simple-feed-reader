@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StorySourcesModel;
 use App\Service\Curation\Trending\Model\TrendingStoryTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ParameterType;
@@ -92,6 +93,21 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         $row = $qb->getQuery()->getSingleResult();
 
         return new TrendingStoryTallyModel((int) $row['memberCount'], (int) $row['unreadCount']);
+    }
+
+    /** The story's sources and shares over all its members, as its page lists them, counted as Trending counts a window's. */
+    public function countSourcesAndShares(TrendingStoryListQuery $query): StorySourcesModel
+    {
+        /** @var array{outlet_count: int|string, share_count: int|string} $row */
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            'SELECT ' . TrendingSourcesSql::sources() . ' AS outlet_count, '
+            . TrendingSourcesSql::SHARES . ' AS share_count' . TrendingSourcesSql::MEMBERS
+            . ' WHERE ' . implode(' AND ', ['story.id = ?', ...TrendingSourcesSql::noEarlierCopies(null)]),
+            [$query->storyId],
+            [ParameterType::INTEGER],
+        );
+
+        return new StorySourcesModel((int) $row['outlet_count'], (int) $row['share_count']);
     }
 
     /** @return list<int> the story's members the reader has not read, no newer than $until */
