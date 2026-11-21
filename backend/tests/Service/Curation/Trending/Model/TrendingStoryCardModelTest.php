@@ -15,6 +15,8 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
+use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -118,12 +120,41 @@ final class TrendingStoryCardModelTest extends DbTestCase
         self::assertSame(1, $card->articles->shareCount());
     }
 
+    public function testFaceFallsBackToTheLeadTitleWithoutAHeading(): void
+    {
+        $article = $this->outletRow('outlet', '2031-05-14 08:00:00', self::ARTICLE);
+
+        $face = self::cardOf([$article])->face();
+
+        self::assertSame('Article', $face->heading->title);
+        self::assertNull($face->heading->synopsis);
+    }
+
+    public function testFaceCarriesHeadingSourcesFollowAndLifespan(): void
+    {
+        $article = $this->outletRow('outlet', '2031-05-14 08:00:00', self::ARTICLE);
+        $post = $this->linkShare('ann', '2031-05-14 10:00:00', null, self::ARTICLE);
+        $lifespan = self::lifespan();
+        $ranked = (new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00'), $lifespan))
+            ->headed(new StoryHeadingModel('Hafenstreik', 'Die Arbeit ruht.'));
+
+        $face = TrendingStoryCardModel::fromRows([$post, $article], $ranked, false, true)->face();
+
+        self::assertSame(7, $face->storyId);
+        self::assertSame('Hafenstreik', $face->heading->title);
+        self::assertSame('Die Arbeit ruht.', $face->heading->synopsis);
+        self::assertSame(3, $face->sources->outletCount);
+        self::assertSame(1, $face->sources->shareCount);
+        self::assertTrue($face->followed);
+        self::assertSame($lifespan, $face->lifespan);
+    }
+
     /** @param non-empty-list<ShownRowModel> $rows */
     private static function cardOf(array $rows): TrendingStoryCardModel
     {
         return TrendingStoryCardModel::fromRows(
             $rows,
-            new RankedStoryModel(1, \count($rows), new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(1, \count($rows), new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
             false,
             false,
         );
@@ -213,6 +244,14 @@ final class TrendingStoryCardModelTest extends DbTestCase
         return array_map(
             static fn (StoryArticleModel $article): EntryListRow => $article->row,
             $card->articles->others,
+        );
+    }
+
+    private static function lifespan(): StoryLifespanModel
+    {
+        return new StoryLifespanModel(
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+            new \DateTimeImmutable('2031-05-14 10:00:00'),
         );
     }
 }

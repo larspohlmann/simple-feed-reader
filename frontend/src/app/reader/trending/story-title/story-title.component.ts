@@ -1,21 +1,31 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { StoryHeadlineComponent } from '../story-headline/story-headline.component';
 import { StoryActionsComponent } from '../story-actions/story-actions.component';
+import { StoryDatesComponent } from '../story-dates/story-dates.component';
 import { StorySourceCountComponent } from '../story-source-count/story-source-count.component';
 import { storyListLink, storySynopsisId, storyTitleId } from '../story';
-import { TrendingStoryDto } from '../trending.models';
+import { StoryCard } from '../trending.models';
 
-/** A Trending story's event headline, counts and actions, a card the story's own card tucks over, linking to the story's list (#2329). */
+/** A story's event headline, counts, dates and actions: one card on the Trending list, the magazine and the story page, linking to the story's list unless it is on that page (#2329, #2447). */
 @Component({
   selector: 'app-story-title',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, StoryHeadlineComponent, StorySourceCountComponent, StoryActionsComponent],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    StoryHeadlineComponent,
+    StorySourceCountComponent,
+    StoryDatesComponent,
+    StoryActionsComponent,
+  ],
   templateUrl: './story-title.component.html',
   styleUrl: './story-title.component.scss',
 })
 export class StoryTitleComponent {
-  readonly story = input.required<TrendingStoryDto>();
+  readonly story = input.required<StoryCard>();
+  readonly linked = input(true);
   protected readonly storyLink = computed(() => storyListLink(this.story().id));
   protected readonly titleId = computed(() => storyTitleId(this.story().id));
   protected readonly synopsisId = computed(() =>

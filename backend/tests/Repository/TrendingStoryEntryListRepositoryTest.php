@@ -16,6 +16,7 @@ use App\Enum\TrendingWindow;
 use App\Repository\EntryListRow;
 use App\Repository\TrendingStoryEntryListRepository;
 use App\Repository\TrendingStoryListQuery;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
@@ -203,6 +204,45 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         $other = $this->fixtures->reader('story-entry-list-title-other@example.com');
 
         self::assertNull($this->headingOf($other, $story));
+    }
+
+    public function testRequireLifespanReadsTheStoredFirstAndLastJoin(): void
+    {
+        $reader = $this->fixtures->reader('story-lifespan-owner@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $story = $this->storyIn($fixtures, $fixtures->feed('owned'));
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET first_joined_at = ?, last_joined_at = ? WHERE id = ?',
+            ['2031-05-14 08:00:00', '2031-05-14 11:00:00', $story->requireId()],
+        );
+
+        $lifespan = $this->entries->requireLifespan(
+            new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
+        );
+
+        self::assertEquals(new \DateTimeImmutable('2031-05-14 08:00:00'), $lifespan->createdAt);
+        self::assertEquals(new \DateTimeImmutable('2031-05-14 11:00:00'), $lifespan->lastAddedAt);
+    }
+
+    public function testRequireLifespanThrowsForAMissingStory(): void
+    {
+        $reader = $this->fixtures->reader('story-lifespan-missing@example.com');
+
+        $this->expectException(TrendingStoryNotFoundException::class);
+
+        $this->entries->requireLifespan(new TrendingStoryListQuery($reader->requireId(), 999999));
+    }
+
+    public function testRequireLifespanThrowsForAnotherUsersStory(): void
+    {
+        $reader = $this->fixtures->reader('story-lifespan-owner2@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $story = $this->storyIn($fixtures, $fixtures->feed('owned'));
+        $other = $this->fixtures->reader('story-lifespan-other@example.com');
+
+        $this->expectException(TrendingStoryNotFoundException::class);
+
+        $this->entries->requireLifespan(new TrendingStoryListQuery($other->requireId(), $story->requireId()));
     }
 
     public function testAStorysSourcesAndSharesCountEveryMemberPlacedOrNot(): void

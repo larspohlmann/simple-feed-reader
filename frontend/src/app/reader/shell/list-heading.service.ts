@@ -146,7 +146,7 @@ export class ListHeading {
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
     'trending-story': (selection) =>
-      this.openStory.titleOf(selection.id) ??
+      this.openStory.cardOf(selection.id)?.title ??
       this.followedStories.byId(selection.id)?.headline ??
       this.i18n.translate('reader.storyFallback'),
     all: () => this.i18n.translate('reader.allItems'),

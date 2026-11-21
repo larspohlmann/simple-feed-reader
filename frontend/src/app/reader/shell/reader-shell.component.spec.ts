@@ -77,6 +77,7 @@ import {
   anEntry,
   aStory,
   aStoryArticle,
+  aStoryCard,
 } from '../../../testing/entry-testing';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
@@ -5215,6 +5216,7 @@ describe('ReaderShellComponent', () => {
           entries: [],
           nextCursor: null,
           title: 'Harbour strike',
+          story: aStoryCard({ id: 42, title: 'Harbour strike', outletCount: 3 }),
           memberCount: 31,
           unreadCount: 12,
           lastOpenedAt: null,

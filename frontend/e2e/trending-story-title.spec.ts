@@ -37,6 +37,8 @@ function trendingWith(followed: boolean): TrendingResponseDto {
       outletCount: 1,
       viewed: false,
       shareCount: 0,
+      createdAt: '2026-11-17T08:00:00Z',
+      lastAddedAt: '2026-11-18T07:00:00Z',
       leadEntryId: leadOf(id).id,
       articles: [{ ...leadOf(id), shares: [] }],
     })),
@@ -58,8 +60,16 @@ function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = 
   return {
     entries: [leadOf(id)],
     nextCursor: null,
-    title: titleOf(id),
-    synopsis: synopsisOf(id),
+    story: {
+      id,
+      title: titleOf(id),
+      synopsis: synopsisOf(id),
+      outletCount: 2,
+      shareCount: 0,
+      followed,
+      createdAt: '2026-11-17T08:00:00Z',
+      lastAddedAt: '2026-11-18T07:00:00Z',
+    },
     memberCount: 1,
     unreadCount: 1,
     outletCount: 2,
@@ -233,8 +243,9 @@ for (const [device, viewport] of [
 
       await expect(layer(page).locator('p.synopsis')).toHaveText(SYNOPSIS);
       await closeStory(page);
+      await expect(layer(page)).toHaveCount(0);
       const card = page.locator('app-story-title', { hasText: TITLE });
-      await expect(card.locator('h3.title + p.synopsis')).toHaveText(SYNOPSIS);
+      await expect(card.locator('h3.title ~ p.synopsis')).toHaveText(SYNOPSIS);
     });
 
     test('a story without one shows none, on its card or in its list', async ({ page }) => {

@@ -16,7 +16,11 @@ function mount(title: string, id = 12, synopsis: string | null = null): HTMLElem
   return mountStory(aStory({ id, title, synopsis }));
 }
 
-function mountStory(story: TrendingStoryDto, kind: SelectionKind = 'trending'): HTMLElement {
+function mountStory(
+  story: TrendingStoryDto,
+  kind: SelectionKind = 'trending',
+  linked = true,
+): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StoryTitleComponent, provideTranslocoTesting()],
     providers: [
@@ -26,6 +30,7 @@ function mountStory(story: TrendingStoryDto, kind: SelectionKind = 'trending'): 
   });
   const fixture = TestBed.createComponent(StoryTitleComponent);
   fixture.componentRef.setInput('story', story);
+  fixture.componentRef.setInput('linked', linked);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -109,10 +114,10 @@ describe("the card's counts and actions (#2435)", () => {
     expect(counts.textContent).not.toContain('share');
   });
 
-  it('names the counts between the title and the synopsis', () => {
+  it('names the dates between the title and the synopsis', () => {
     const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
 
-    expect(element.querySelector('h3.title + app-story-source-count + p.synopsis')).not.toBeNull();
+    expect(element.querySelector('h3.title + app-story-dates + p.synopsis')).not.toBeNull();
   });
 
   it('offers the actions at the bottom of the card, after the synopsis', () => {
@@ -134,4 +139,20 @@ describe("the card's counts and actions (#2435)", () => {
     expect(element.querySelector('.story-actions')).toBeNull();
     expect(element.querySelector('app-story-source-count')).not.toBeNull();
   });
+});
+
+it('renders the counts at the foot, before the actions', () => {
+  const element = mountStory(aStory());
+
+  expect(
+    element.querySelector('.story-foot > app-story-source-count + app-story-actions'),
+  ).not.toBeNull();
+});
+
+it('with linked false renders no link, yet the title and the actions', () => {
+  const element = mountStory(aStory({ title: 'Any event' }), 'trending', false);
+
+  expect(element.querySelector('a')).toBeNull();
+  expect(element.querySelector('h3.title')?.textContent?.trim()).toBe('Any event');
+  expect(element.querySelectorAll('.story-foot .story-actions button')).toHaveLength(2);
 });

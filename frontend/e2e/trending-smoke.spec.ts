@@ -33,6 +33,8 @@ const story = (
   outletCount,
   viewed,
   shareCount: 0,
+  createdAt: '2026-11-03T08:00:00Z',
+  lastAddedAt: '2026-11-04T07:00:00Z',
   leadEntryId,
   articles: [
     { ...entryWire({ id: leadEntryId, title, source: 'Fixture lead' }), shares: [] },
@@ -128,7 +130,7 @@ for (const layout of ['magazine', 'list'] as const) {
 
     const story = slotOf(page, 9001);
     await expect(story.getByText('Trending fixture day story')).toBeVisible();
-    await expect(story.locator('.sources')).toHaveText('7 sources');
+    await expect(story.locator('.words')).toHaveText('7 sources');
     if (layout === 'magazine') {
       const toggle = story.locator('app-more-sources .toggle');
       await expect(toggle).toHaveText(/6 more/);

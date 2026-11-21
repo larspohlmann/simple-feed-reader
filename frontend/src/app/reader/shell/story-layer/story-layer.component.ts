@@ -23,9 +23,7 @@ import { ReadingLayout } from '../../reading-layout.service';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { ListContext } from '../../state/list-context';
 import { OpenStory } from '../../state/open-story';
-import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
-import { StoryHeadlineComponent } from '../../trending/story-headline/story-headline.component';
-import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
+import { StoryTitleComponent } from '../../trending/story-title/story-title.component';
 import { TrendingFollowAction } from '../../trending/trending-follow-action';
 import { ListCover } from '../list-cover';
 import { ListHeading } from '../list-heading.service';
@@ -49,9 +47,7 @@ const NO_PULL_BACK = signal<ScrollHost | undefined>(undefined);
     IconComponent,
     IconButtonDirective,
     NgTemplateOutlet,
-    StoryActionsComponent,
-    StoryHeadlineComponent,
-    StorySourceCountComponent,
+    StoryTitleComponent,
     TranslocoPipe,
   ],
   templateUrl: './story-layer.component.html',
@@ -91,19 +87,9 @@ export class StoryLayerComponent {
   protected readonly markRead = inject(MarkReadActions);
   protected readonly gestures = inject(ArticleGestures);
   private readonly openStory = inject(OpenStory);
-  protected readonly title = computed(() => this.openStory.titleOf(this.context.selection().id));
-  protected readonly synopsis = computed(() =>
-    this.openStory.synopsisOf(this.context.selection().id),
-  );
-  protected readonly sources = computed(() =>
-    this.openStory.sourcesOf(this.context.selection().id),
-  );
-  protected readonly storyRef = computed(() => {
-    const id = this.context.selection().id;
-    return { id, followed: this.openStory.followedOnServer(id) };
-  });
+  protected readonly card = computed(() => this.openStory.cardOf(this.context.selection().id));
   private readonly headlineTemplate = viewChild.required<TemplateRef<unknown>>('headlineTemplate');
-  protected readonly topBlock = computed(() => (this.title() ? this.headlineTemplate() : null));
+  protected readonly topBlock = computed(() => (this.card() ? this.headlineTemplate() : null));
   readonly list = viewChild(EntryListComponent);
 
   constructor() {

@@ -7,6 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\TrendingWindow;
+use App\Http\StoryCardJson;
 use App\Http\TrendingJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
@@ -15,6 +16,7 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\StoryArticlesModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\Support\JsonMappers;
@@ -29,12 +31,12 @@ final class TrendingJsonTest extends TestCase
                 new StoryArticleModel($this->row(501), [$this->row(601), $this->row(602)]),
                 [new StoryArticleModel($this->row(502), []), new StoryArticleModel($this->row(503), [$this->row(603)])],
             ),
-            new RankedStoryModel(12, 4, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(12, 4, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
             false,
             true,
         );
 
-        $page = (new TrendingJson(JsonMappers::entryJson()))
+        $page = (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
         $story = $page['stories'][0];
 
@@ -43,6 +45,8 @@ final class TrendingJsonTest extends TestCase
         self::assertFalse($story['viewed']);
         self::assertSame(3, $story['shareCount']);
         self::assertTrue($story['followed']);
+        self::assertSame('2031-05-14T08:00:00+00:00', $story['createdAt']);
+        self::assertSame('2031-05-14T10:00:00+00:00', $story['lastAddedAt']);
         self::assertSame(501, $story['leadEntryId']);
         $articles = $story['articles'];
         self::assertIsList($articles);
@@ -55,7 +59,7 @@ final class TrendingJsonTest extends TestCase
 
     public function testAStoryCarriesItsTitle(): void
     {
-        $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')))
+        $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()))
             ->headed(new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'));
         $story = $this->storyOf($ranked);
 
@@ -65,7 +69,7 @@ final class TrendingJsonTest extends TestCase
 
     public function testAStoryWithoutStoredTitlesShowsItsLeadHeadline(): void
     {
-        $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'));
+        $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan());
 
         $story = $this->storyOf($ranked);
 
@@ -77,13 +81,13 @@ final class TrendingJsonTest extends TestCase
     {
         $card = new TrendingStoryCardModel(
             new StoryArticlesModel(new StoryArticleModel($this->row(501), [$this->row(601)]), []),
-            new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
             false,
             false,
         );
         $entryRow = array_keys(JsonMappers::entryJson()->listRow($this->row(700)));
 
-        $page = (new TrendingJson(JsonMappers::entryJson()))
+        $page = (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
 
         $articles = $page['stories'][0]['articles'];
@@ -107,7 +111,7 @@ final class TrendingJsonTest extends TestCase
             false,
         );
 
-        return (new TrendingJson(JsonMappers::entryJson()))
+        return (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]))['stories'][0];
     }
 
@@ -128,6 +132,14 @@ final class TrendingJsonTest extends TestCase
             new EntryListRowSubscription(1, 'Source'),
             new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
             null,
+        );
+    }
+
+    private static function lifespan(): StoryLifespanModel
+    {
+        return new StoryLifespanModel(
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+            new \DateTimeImmutable('2031-05-14 10:00:00'),
         );
     }
 }

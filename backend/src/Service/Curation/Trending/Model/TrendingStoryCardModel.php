@@ -22,6 +22,17 @@ final readonly class TrendingStoryCardModel
     ) {
     }
 
+    public function face(): StoryFaceModel
+    {
+        return new StoryFaceModel(
+            $this->story->storyId,
+            $this->story->heading ?? new StoryHeadingModel($this->articles->lead->row->entry->getTitle(), null),
+            new StorySourcesModel($this->story->outletCount, $this->articles->shareCount()),
+            $this->followed,
+            $this->story->lifespan,
+        );
+    }
+
     /** @param non-empty-list<ShownRowModel> $rows the story's outlet and story-card post rows the reader can see */
     public static function fromRows(array $rows, RankedStoryModel $story, bool $viewed, bool $followed): self
     {

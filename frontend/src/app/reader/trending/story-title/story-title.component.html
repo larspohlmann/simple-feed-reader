@@ -1,12 +1,25 @@
-<a
-  class="story-link"
-  [routerLink]="storyLink()"
-  queryParamsHandling="preserve"
-  [attr.aria-labelledby]="titleId()"
-  [attr.aria-describedby]="synopsisId()"
->
+<ng-template #headline>
   <app-story-headline [storyId]="story().id" [title]="story().title" [synopsis]="story().synopsis">
-    <app-story-source-count storyMeta [story]="story()" />
+    <app-story-dates storyMeta [story]="story()" />
   </app-story-headline>
-</a>
-<div class="story-foot"><app-story-actions [story]="story()" /></div>
+</ng-template>
+
+@if (linked()) {
+  <a
+    class="story-link"
+    [routerLink]="storyLink()"
+    queryParamsHandling="preserve"
+    [attr.aria-labelledby]="titleId()"
+    [attr.aria-describedby]="synopsisId()"
+  >
+    <ng-container [ngTemplateOutlet]="headline" />
+  </a>
+} @else {
+  <div class="story-link">
+    <ng-container [ngTemplateOutlet]="headline" />
+  </div>
+}
+<div class="story-foot">
+  <app-story-source-count [story]="story()" />
+  <app-story-actions [story]="story()" />
+</div>

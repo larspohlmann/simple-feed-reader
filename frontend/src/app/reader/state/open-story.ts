@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { accountSignal } from '../../core/auth/session-identity';
 import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
-import { StorySources } from '../trending/trending.models';
+import { StoryCard } from '../trending/trending.models';
 
 /** How many rows a story's list holds, and how many of them are unread. */
 export interface StoryTally {
@@ -13,15 +13,13 @@ export interface StoryTally {
 
 interface LandedStory {
   readonly id: number;
-  readonly title: string | null;
-  readonly synopsis: string | null;
+  readonly card: StoryCard | null;
   readonly followed: boolean;
   readonly tally: StoryTally;
-  readonly sources: StorySources;
 }
 
-/** What the last story page its host's list landed said of its story (#2329): its title, synopsis, tally,
- *  sources and shares, and whether the reader follows it. */
+/** What the last story page its host's list landed said of its story (#2329): its card, tally,
+ *  and whether the reader follows it. */
 @Injectable()
 export class OpenStory {
   private readonly landedStory = accountSignal<LandedStory | null>(null);
@@ -32,20 +30,12 @@ export class OpenStory {
       .subscribe((list) => this.landed(list));
   }
 
-  titleOf(id: number): string | null {
-    return this.storyOf(id)?.title ?? null;
-  }
-
-  synopsisOf(id: number): string | null {
-    return this.storyOf(id)?.synopsis ?? null;
+  cardOf(id: number): StoryCard | null {
+    return this.storyOf(id)?.card ?? null;
   }
 
   tallyOf(id: number): StoryTally | null {
     return this.storyOf(id)?.tally ?? null;
-  }
-
-  sourcesOf(id: number): StorySources | null {
-    return this.storyOf(id)?.sources ?? null;
   }
 
   followedOnServer(id: number): boolean {
@@ -64,11 +54,9 @@ export class OpenStory {
     }
     this.landedStory.set({
       id: query.storyId,
-      title: page.title ?? null,
-      synopsis: page.synopsis ?? null,
+      card: page.story ?? null,
       followed: typeof page.lastOpenedAt === 'string',
       tally: { memberCount: page.memberCount ?? 0, unreadCount: page.unreadCount ?? 0 },
-      sources: { outletCount: page.outletCount ?? 0, shareCount: page.shareCount ?? 0 },
     });
   }
 }

@@ -10,6 +10,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ShownRowModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Pass\StoryCardSource;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TrendingFixtures;
@@ -36,9 +37,9 @@ final class StoryCardSourceTest extends DbTestCase
         );
 
         $lastSeen = new \DateTimeImmutable('2031-05-14 10:00:00');
-        $wider = new RankedStoryModel(6, 4, $lastSeen);
+        $wider = new RankedStoryModel(6, 4, $lastSeen, self::lifespan());
 
-        $cards = $source->buildCards([new RankedStoryModel(5, 3, $lastSeen), $wider]);
+        $cards = $source->buildCards([new RankedStoryModel(5, 3, $lastSeen, self::lifespan()), $wider]);
 
         self::assertCount(1, $cards);
         self::assertSame($entry, $cards[0]->articles->lead->row->entry);
@@ -50,7 +51,7 @@ final class StoryCardSourceTest extends DbTestCase
     public function testAStoryWithoutAnyEntryIdsGetsNoCard(): void
     {
         self::assertSame([], (new StoryCardSource([], [], [], [], []))->buildCards([
-            new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(7, 3, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
         ]));
     }
 
@@ -73,11 +74,21 @@ final class StoryCardSourceTest extends DbTestCase
             [6 => new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.')],
         );
 
-        $cards = $source->buildCards([new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'))]);
+        $cards = $source->buildCards([
+            new RankedStoryModel(6, 4, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
+        ]);
 
         self::assertEquals(
             new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'),
             $cards[0]->story->heading,
+        );
+    }
+
+    private static function lifespan(): StoryLifespanModel
+    {
+        return new StoryLifespanModel(
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+            new \DateTimeImmutable('2031-05-14 10:00:00'),
         );
     }
 }

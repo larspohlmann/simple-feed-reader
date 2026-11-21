@@ -12,26 +12,25 @@
   color: var(--text-muted);
 }
 
-.sources,
-.compact,
-.separator {
+.words,
+.number,
+.separator,
+app-icon {
   flex: none;
   white-space: nowrap;
 }
 
-.compact {
+.number {
   display: none;
-  align-items: center;
-  gap: var(--space-1);
 }
 
 @container (width < #{bp.$container-story-counts-narrow}) {
-  .sources {
+  .words {
     position: absolute;
     clip-path: inset(50%);
   }
 
-  .compact {
-    display: inline-flex;
+  .number {
+    display: inline;
   }
 }

@@ -10,7 +10,7 @@ use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 
 final readonly class TrendingJson
 {
-    public function __construct(private EntryJson $entryJson)
+    public function __construct(private EntryJson $entryJson, private StoryCardJson $storyCardJson)
     {
     }
 
@@ -32,9 +32,11 @@ final readonly class TrendingJson
      *     title: string,
      *     synopsis: string|null,
      *     outletCount: int,
-     *     viewed: bool,
      *     shareCount: int,
      *     followed: bool,
+     *     createdAt: string,
+     *     lastAddedAt: string,
+     *     viewed: bool,
      *     leadEntryId: int,
      *     articles: list<array<string, mixed>>,
      * }
@@ -44,13 +46,8 @@ final readonly class TrendingJson
         $articles = $card->articles;
 
         return [
-            'id' => $card->story->storyId,
-            'title' => $card->story->heading->title ?? $articles->lead->row->entry->getTitle(),
-            'synopsis' => $card->story->heading?->synopsis,
-            'outletCount' => $card->story->outletCount,
+            ...$this->storyCardJson->from($card->face()),
             'viewed' => $card->viewed,
-            'shareCount' => $articles->shareCount(),
-            'followed' => $card->followed,
             'leadEntryId' => $articles->lead->row->entry->requireId(),
             'articles' => array_map($this->article(...), [$articles->lead, ...$articles->others]),
         ];

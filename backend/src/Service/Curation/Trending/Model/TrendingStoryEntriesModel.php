@@ -6,7 +6,7 @@ namespace App\Service\Curation\Trending\Model;
 
 use App\Repository\EntryListRow;
 
-/** A page of a story's entries, its title and synopsis, its tally, its sources and shares, the reader's last visit if they follow it, and when each row joined. */
+/** A page of a story's entries, its title and synopsis, its tally, its sources and shares, the reader's last visit if they follow it, when each row joined, and its lifespan. */
 final readonly class TrendingStoryEntriesModel
 {
     /**
@@ -14,13 +14,30 @@ final readonly class TrendingStoryEntriesModel
      * @param array<int, \DateTimeImmutable> $joinedAtByEntry one for every row
      */
     public function __construct(
+        public int $storyId,
         public array $rows,
         public ?StoryHeadingModel $heading,
         public TrendingStoryTallyModel $tally,
         public StorySourcesModel $sources,
         public ?\DateTimeImmutable $lastOpenedAt,
         public array $joinedAtByEntry,
+        public StoryLifespanModel $lifespan,
     ) {
+    }
+
+    public function face(): ?StoryFaceModel
+    {
+        if ($this->heading === null) {
+            return null;
+        }
+
+        return new StoryFaceModel(
+            $this->storyId,
+            $this->heading,
+            $this->sources,
+            $this->lastOpenedAt !== null,
+            $this->lifespan,
+        );
     }
 
     /** @return list<int> the rows that joined since the last visit, in page order; none for a story not followed */

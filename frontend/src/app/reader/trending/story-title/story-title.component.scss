@@ -4,6 +4,7 @@
    title's square bottom, so the two read as stacked cards. The airy magazine draws no card. */
 :host {
   --story-title-tuck: var(--space-3);
+  --story-text-gap: var(--space-2);
 
   @include story-card.card;
 
@@ -20,7 +21,7 @@
   border-end-end-radius: 0;
 }
 
-/* Stretched over the card by its `::after`, so the foot's buttons sit beside the link,
+/* A linked card is stretched over by its `::after`, so the foot's buttons sit beside the link,
    never inside it: a button never nests in an anchor. */
 .story-link {
   @include story-card.card-padding;
@@ -30,13 +31,13 @@
   border-radius: inherit;
   color: inherit;
   text-decoration: none;
+}
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-  }
+a.story-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 .story-link:focus-visible {

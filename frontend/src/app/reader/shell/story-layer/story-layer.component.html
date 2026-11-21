@@ -15,20 +15,8 @@
 </ng-template>
 
 <ng-template #headlineTemplate>
-  @if (title(); as title) {
-    <div class="story-card">
-      <app-story-headline
-        class="story-headline"
-        [storyId]="storyRef().id"
-        [title]="title"
-        [synopsis]="synopsis()"
-      >
-        @if (sources(); as sources) {
-          <app-story-source-count storyMeta [story]="sources" />
-        }
-      </app-story-headline>
-      <div class="story-foot"><app-story-actions [story]="storyRef()" /></div>
-    </div>
+  @if (card(); as card) {
+    <app-story-title [story]="card" [linked]="false" />
   }
 </ng-template>
 
