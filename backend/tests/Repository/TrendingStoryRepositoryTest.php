@@ -358,6 +358,25 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame([[$story->requireId(), 3]], $this->shownStoriesAndSources());
     }
 
+    public function testACrossPostGroupIsOneSource(): void
+    {
+        $alone = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('alpha')), 'alpha.example'],
+            [$this->member($this->articleFeed('beta')), 'beta.example'],
+            ...$this->persistCrossPostsIn('h1', 'solo'),
+        ]);
+        $grouped = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$this->member($this->articleFeed('gamma')), 'gamma.example'],
+            [$this->member($this->articleFeed('delta')), 'delta.example'],
+            ...$this->persistCrossPostsIn('h2', 'games', 'retrogaming', 'technology'),
+        ]);
+
+        self::assertSame(
+            [[$grouped->requireId(), 3], [$alone->requireId(), 3]],
+            $this->shownStoriesAndSources(),
+        );
+    }
+
     public function testAnEarlierCopyFromASocialFeedLeavesAnArticleFeedsCopyCounted(): void
     {
         $url = 'https://news.example.com/storm';
@@ -720,6 +739,32 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         self::assertSame(1, (int) $storedCount);
     }
 
+    public function testATitlesMemberCountCountsACrossPostGroupOnce(): void
+    {
+        $story = $this->fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            ...[
+                ...array_column($this->persistCrossPostsIn('h1', 'games', 'retrogaming', 'technology'), 0),
+                $this->member($this->articleFeed('alpha')),
+                $this->member($this->articleFeed('beta')),
+            ],
+        );
+        $this->stories()->recordHeading(
+            $story->requireId(),
+            new StoryHeadingModel('Before Rainbow Six', null),
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+        );
+
+        $storedCount = $this->entityManager->getConnection()->fetchOne(
+            'SELECT llm_title_member_count FROM trending_story WHERE id = ?',
+            [$story->requireId()],
+        );
+
+        self::assertIsNumeric($storedCount);
+        self::assertSame(3, (int) $storedCount);
+    }
+
     public function testStoriesDueForATitleComeInIdOrderWhateverTheirLastSeenOrder(): void
     {
         $first = $this->storyOf([[$this->articleFeed('first'), 'first.example']]);
@@ -790,6 +835,28 @@ final class TrendingStoryRepositoryTest extends DbTestCase
                 return [$copy, $site];
             },
             $timelines,
+        ));
+    }
+
+    /**
+     * One Lemmy post by one author in each named community's RSS feed, each its own item, all of one cross-post group.
+     *
+     * @return list<array{Entry, string}>
+     */
+    private function persistCrossPostsIn(string $crossPostHash, string ...$communities): array
+    {
+        return array_values(array_map(
+            function (string $community) use ($crossPostHash): array {
+                $page = 'https://lemmy.example/post/' . $crossPostHash . '-' . $community;
+                $post = $this->fixtures->article($this->articleFeed($community), 'Post', '2031-05-14 09:00:00', $page);
+                $post->setAuthor(new EntryAuthor('Poster', 'https://lemmy.example/u/poster'));
+                $item = LemmyPostEntries::linkItem($post, $page);
+                $item->recordCrossPostHash($crossPostHash);
+                $this->entityManager->persist($item);
+
+                return [$post, 'shared.example'];
+            },
+            $communities,
         ));
     }
 

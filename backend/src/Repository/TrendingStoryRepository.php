@@ -297,11 +297,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
-    /** Copies of one canonical item count once; negated, an entry id never equals an item id. */
+    /** A cross-post group, else the copies of one item, else an entry counts once; SQLite's CONCAT never yields NULL. */
     private static function buildMemberCount(string $storyId): string
     {
-        return '(SELECT COUNT(DISTINCT COALESCE(member_entry.canonical_item_id, -member.entry_id))'
+        return '(SELECT COUNT(DISTINCT COALESCE(member_item.cross_post_hash,'
+            . " CASE WHEN member_entry.canonical_item_id IS NULL THEN CONCAT('e', member.entry_id)"
+            . " ELSE CONCAT('i', member_entry.canonical_item_id) END))"
             . ' FROM trending_story_entry member JOIN entry member_entry ON member_entry.id = member.entry_id'
+            . ' LEFT JOIN canonical_item member_item ON member_item.id = member_entry.canonical_item_id'
             . ' WHERE member.story_id = ' . $storyId . ')';
     }
 
@@ -318,6 +321,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
             . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
             . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
+            . ' LEFT JOIN canonical_item member_item ON member_item.id = member_entry.canonical_item_id'
             . ' LEFT JOIN trending_story_hide hidden ON hidden.story_id = story.id AND hidden.user_id = :user'
             . ' WHERE ' . implode(' AND ', [
                 'story.user_id = :user',
@@ -325,6 +329,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 TrendingPlacementSql::buildPlacedCondition($reader->window, 'story_member'),
                 self::buildNoEarlierArticleCopy($reader->window),
                 self::buildNoEarlierItemCopy($reader->window),
+                self::buildNoEarlierCrossPost($reader->window),
                 ...self::notShownInAShorterWindow($reader),
             ]);
     }
@@ -382,6 +387,17 @@ final class TrendingStoryRepository extends ServiceEntityRepository
             'member_entry.canonical_item_id IS NULL',
             '',
             'earlier_entry.canonical_item_id = member_entry.canonical_item_id',
+        );
+    }
+
+    /** Only the lowest-id member of a cross-post group counts: its posts sit in different feeds, one per community. */
+    private static function buildNoEarlierCrossPost(TrendingWindow $window): string
+    {
+        return self::buildNoEarlierCopy(
+            $window,
+            'member_item.cross_post_hash IS NULL',
+            ' JOIN canonical_item earlier_item ON earlier_item.id = earlier_entry.canonical_item_id',
+            'earlier_item.cross_post_hash = member_item.cross_post_hash',
         );
     }
 

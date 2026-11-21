@@ -70,7 +70,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         self::assertSame(
             [[$article->requireId(), $post->requireId()]],
-            $this->collect()->collectEntriesSharingAUrlOrItem(),
+            $this->collect()->collectEntriesSharingAKey(),
         );
     }
 
@@ -85,7 +85,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         self::assertSame(
             [[$article->requireId(), $post->requireId()]],
-            $this->collect()->collectEntriesSharingAUrlOrItem(),
+            $this->collect()->collectEntriesSharingAKey(),
         );
     }
 
@@ -100,7 +100,7 @@ final class TrendingGroupingTest extends DbTestCase
 
         $run = $this->collect();
 
-        self::assertSame([[$article->requireId(), $post->requireId()]], $run->collectEntriesSharingAUrlOrItem());
+        self::assertSame([[$article->requireId(), $post->requireId()]], $run->collectEntriesSharingAKey());
         self::assertSame('outlet.example', $run->readMember($post->requireId())->articleSite);
     }
 

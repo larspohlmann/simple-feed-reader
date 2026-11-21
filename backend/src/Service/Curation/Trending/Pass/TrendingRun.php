@@ -28,6 +28,9 @@ final class TrendingRun
     /** @var array<int, list<int>> */
     private array $entriesByCanonicalItem = [];
 
+    /** @var array<string, list<int>> */
+    private array $entriesByCrossPostHash = [];
+
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
 
@@ -48,6 +51,9 @@ final class TrendingRun
         }
         if ($entry->canonicalItemId !== null) {
             $this->entriesByCanonicalItem[$entry->canonicalItemId][] = $entry->id;
+        }
+        if ($entry->crossPostHash !== null) {
+            $this->entriesByCrossPostHash[$entry->crossPostHash][] = $entry->id;
         }
         $articleSite = $entry->links->articleSite();
         $this->members[$entry->id] = new StoryMemberModel(
@@ -109,11 +115,15 @@ final class TrendingRun
         return !$this->sameFeed($oneEntryId, $otherEntryId) && $this->withinGap($oneEntryId, $otherEntryId);
     }
 
-    /** @return list<list<int>> the entries of every URL, and the copies of every item, more than one entry carries */
-    public function collectEntriesSharingAUrlOrItem(): array
+    /** @return list<list<int>> the entries of every URL, item and cross-post group that more than one entry carries */
+    public function collectEntriesSharingAKey(): array
     {
         return array_values(array_filter(
-            [...array_values($this->entriesByUrlHash), ...array_values($this->entriesByCanonicalItem)],
+            [
+                ...array_values($this->entriesByUrlHash),
+                ...array_values($this->entriesByCanonicalItem),
+                ...array_values($this->entriesByCrossPostHash),
+            ],
             static fn (array $entryIds): bool => \count($entryIds) > 1,
         ));
     }

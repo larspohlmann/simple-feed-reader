@@ -101,7 +101,8 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * When each given entry joined the story: the latest join among it and the collapsed copies the reader sees.
+     * When each given entry joined the story: the latest join among it and the collapsed copies and cross-posts the
+     * reader sees.
      *
      * @param list<int> $entryIds
      *
@@ -123,9 +124,12 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
                 'ON',
                 'joinedReader.feed = joinedEntry.feed AND joinedReader.user = :user',
             )
+            ->leftJoin('e.canonicalItem', 'item')
+            ->leftJoin('joinedEntry.canonicalItem', 'joinedItem')
             ->andWhere(
                 'joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash'
-                . ' OR joinedEntry.canonicalItem = e.canonicalItem',
+                . ' OR joinedEntry.canonicalItem = e.canonicalItem'
+                . ' OR joinedItem.crossPostHash = item.crossPostHash',
             )
             ->andWhere('e.id IN (:entryIds)')
             ->groupBy('e.id')

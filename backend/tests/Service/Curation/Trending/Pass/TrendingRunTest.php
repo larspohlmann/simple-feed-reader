@@ -114,7 +114,32 @@ final class TrendingRunTest extends TestCase
             );
         }
 
-        self::assertSame([[1, 2]], $run->collectEntriesSharingAUrlOrItem());
+        self::assertSame([[1, 2]], $run->collectEntriesSharingAKey());
+    }
+
+    public function testCrossPostsInTwoFeedsShareAStoryLink(): void
+    {
+        $run = TrendingRuns::of(TrendingWindow::Day);
+        foreach ([[1, 10, 7], [2, 20, 8]] as [$entryId, $feedId, $canonicalItemId]) {
+            $run->add(
+                new WindowEntryModel(
+                    $entryId,
+                    $feedId,
+                    null,
+                    'Before Rainbow Six',
+                    false,
+                    null,
+                    self::later(),
+                    new EntryLinksModel(null, null, null),
+                    $canonicalItemId,
+                    'cross-post-hash',
+                ),
+                [],
+                null,
+            );
+        }
+
+        self::assertContains([1, 2], $run->collectEntriesSharingAKey());
     }
 
     private function weightSharedWith(WindowEntryModel $later): float
