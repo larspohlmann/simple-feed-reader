@@ -79,6 +79,8 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
   2026-11-21), the way the Bluesky one already is: connect, import a small curated set, shoot,
   disconnect. One `social-setup.mjs` serves the three networks; the credentials stay in the
   gitignored env file Lars writes. This adds a `mastodon-light` shot.
+- A zoomed-in `lemmy-votes-light` shows the vote pill and the comment votes up close (Lars,
+  2026-11-21); the Social section carries it beside the full shot.
 - The notifications list is stubbed with invented actors, the way the admin user list is, even
   with real accounts connected.
 - Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of
