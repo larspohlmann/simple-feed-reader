@@ -15,5 +15,20 @@ final class DiscussionCountsTest extends TestCase
 
         self::assertNull($counts->score);
         self::assertNull($counts->commentCount);
+        self::assertNull($counts->likeCount);
+    }
+
+    public function testCommentsAndLikesCarryNoScore(): void
+    {
+        $counts = DiscussionCounts::fromCommentsAndLikes(3, 9);
+
+        self::assertNull($counts->score);
+        self::assertSame(3, $counts->commentCount);
+        self::assertSame(9, $counts->likeCount);
+    }
+
+    public function testScoreAndCommentsCarryNoLikeCount(): void
+    {
+        self::assertNull(DiscussionCounts::fromScoreAndComments(1, 2)->likeCount);
     }
 }

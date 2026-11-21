@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\CanonicalItem;
+use App\Entity\DiscussionCounts;
 use App\Enum\CanonicalItemKind;
 use App\Tests\Support\CanonicalItems;
 use PHPUnit\Framework\TestCase;
@@ -51,6 +52,26 @@ final class CanonicalItemTest extends TestCase
         self::assertSame(2, $item->getCommentCount());
     }
 
+    public function testRecordedCountsStoreTheLikeCount(): void
+    {
+        $item = self::buildItem();
+
+        $item->recordCounts(DiscussionCounts::fromCommentsAndLikes(1, 7));
+
+        self::assertSame(7, $item->getLikeCount());
+    }
+
+    public function testNullLikeCountKeepsTheStoredOne(): void
+    {
+        $item = self::buildItem();
+        $item->recordCounts(DiscussionCounts::fromCommentsAndLikes(1, 7));
+
+        $item->recordCounts(DiscussionCounts::fromCommentsAndLikes(2, null));
+
+        self::assertSame(7, $item->getLikeCount());
+        self::assertSame(2, $item->getCommentCount());
+    }
+
     public function testSelfReplyCountOnlyGrows(): void
     {
         $item = self::buildItem();
@@ -69,6 +90,7 @@ final class CanonicalItemTest extends TestCase
 
         self::assertNull($item->getScore());
         self::assertNull($item->getCommentCount());
+        self::assertNull($item->getLikeCount());
         self::assertSame(0, $item->getSelfReplyCount());
     }
 

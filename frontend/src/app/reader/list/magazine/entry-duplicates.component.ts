@@ -170,9 +170,17 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
 
   private buildCounts(copy: EntryDto): ChipCount[] {
     const counts: ChipCount[] = [];
-    const score = buildDiscussionCount(this.compactCount, copy.score, 'points');
+    const score = buildDiscussionCount(
+      this.compactCount,
+      copy.score,
+      'reader.discussionCounts.points',
+    );
     if (score) counts.push({ ...score, icon: 'arrow_upward' });
-    const comments = buildDiscussionCount(this.compactCount, copy.commentCount, 'comments');
+    const comments = buildDiscussionCount(
+      this.compactCount,
+      copy.commentCount,
+      'reader.discussionCounts.comments',
+    );
     if (comments) counts.push({ ...comments, icon: 'chat_bubble' });
     return counts;
   }

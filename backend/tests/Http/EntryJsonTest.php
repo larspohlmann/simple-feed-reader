@@ -376,6 +376,27 @@ final class EntryJsonTest extends TestCase
         self::assertSame($first['score'], $second['score']);
     }
 
+    public function testAPostsLikeCountIsEmitted(): void
+    {
+        $item = self::withId(
+            CanonicalItems::buildItem(CanonicalItemKind::Bluesky, 'at://did:plc:alice/app.bsky.feed.post/1'),
+            42,
+        );
+        $item->recordCounts(DiscussionCounts::fromCommentsAndLikes(2, 0));
+        $copies = [$this->entryTitled('Copy one'), $this->entryTitled('Copy two')];
+        foreach ($copies as $copy) {
+            $copy->linkTo($item);
+        }
+
+        [$first, $second] = array_map(
+            fn (Entry $copy): array => JsonMappers::entryJson()->listRow($this->row($copy)),
+            $copies,
+        );
+
+        self::assertSame(0, $first['likeCount']);
+        self::assertSame(0, $second['likeCount']);
+    }
+
     public function testArticleCarriesNullItemId(): void
     {
         $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
@@ -514,6 +535,7 @@ final class EntryJsonTest extends TestCase
 
         self::assertNull($json['score']);
         self::assertNull($json['commentCount']);
+        self::assertNull($json['likeCount']);
     }
 
     public function testAnArticleWithoutADiscussionHasNone(): void
@@ -548,7 +570,7 @@ final class EntryJsonTest extends TestCase
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote',
                 'canonicalItemId', 'title', 'url', 'discussionUrl',
-                'comments', 'score', 'commentCount',
+                'comments', 'score', 'commentCount', 'likeCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',

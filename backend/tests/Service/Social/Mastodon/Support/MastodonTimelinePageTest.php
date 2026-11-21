@@ -378,6 +378,30 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame(3, $page->parsed->entries[0]->discussionCounts->commentCount);
     }
 
+    public function testAStatusCarriesItsFavouritesAsItsLikeCount(): void
+    {
+        $counts = MastodonTimelinePage::fromStatuses([self::timelineStatus(['favourites_count' => 8])])
+            ->parsed->entries[0]->discussionCounts;
+
+        self::assertSame(8, $counts->likeCount);
+    }
+
+    public function testABoostCarriesItsOriginalsLikeCount(): void
+    {
+        $boost = self::timelineStatus([
+            'id' => '200',
+            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
+            'content' => '',
+            'account' => ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'https://mastodon.example/@carol'],
+            'favourites_count' => 0,
+            'reblog' => self::statusFields(['favourites_count' => 6]),
+        ]);
+
+        $page = MastodonTimelinePage::fromStatuses([$boost]);
+
+        self::assertSame(6, $page->parsed->entries[0]->discussionCounts->likeCount);
+    }
+
     public function testAThreadOnThePageFoldsIntoItsRoot(): void
     {
         $root = self::timelineStatus([

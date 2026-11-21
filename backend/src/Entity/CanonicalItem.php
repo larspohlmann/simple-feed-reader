@@ -42,6 +42,9 @@ final class CanonicalItem implements DiscussionCountStoreInterface
     #[ORM\Column(name: 'comment_count', nullable: true)]
     private ?int $commentCount = null;
 
+    #[ORM\Column(name: 'like_count', nullable: true)]
+    private ?int $likeCount = null;
+
     #[ORM\Column(name: 'self_reply_count', type: Types::SMALLINT, options: ['default' => 0])]
     private int $selfReplyCount = 0;
 
@@ -100,6 +103,7 @@ final class CanonicalItem implements DiscussionCountStoreInterface
     {
         $this->recordScore($counts->score);
         $this->recordCommentCount($counts->commentCount);
+        $this->likeCount = $counts->likeCount ?? $this->likeCount;
     }
 
     public function getCommentCount(): ?int
@@ -110,6 +114,11 @@ final class CanonicalItem implements DiscussionCountStoreInterface
     public function recordCommentCount(?int $commentCount): void
     {
         $this->commentCount = $commentCount ?? $this->commentCount;
+    }
+
+    public function getLikeCount(): ?int
+    {
+        return $this->likeCount;
     }
 
     public function getSelfReplyCount(): int

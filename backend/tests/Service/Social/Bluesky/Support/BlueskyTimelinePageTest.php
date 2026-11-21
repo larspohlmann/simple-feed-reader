@@ -108,6 +108,36 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertNull($entry->discussionCounts->commentCount);
     }
 
+    public function testAPostCarriesItsLikeCount(): void
+    {
+        $post = self::item(post: ['replyCount' => 4, 'likeCount' => 11]);
+
+        $counts = BlueskyTimelinePage::fromItems([$post], self::ALICE)->parsed->entries[0]->discussionCounts;
+
+        self::assertSame(11, $counts->likeCount);
+        self::assertSame(4, $counts->commentCount);
+        self::assertNull($counts->score);
+    }
+
+    public function testARepostCarriesTheOriginalPostsLikeCount(): void
+    {
+        $repost = self::item(
+            ['reason' => ['$type' => 'app.bsky.feed.defs#reasonRepost', 'by' => ['did' => 'did:plc:carol']]],
+            ['likeCount' => 5],
+        );
+
+        $entry = BlueskyTimelinePage::fromItems([$repost], self::ALICE)->parsed->entries[0];
+
+        self::assertSame(5, $entry->discussionCounts->likeCount);
+    }
+
+    public function testAPostWithoutALikeCountHasNone(): void
+    {
+        $entry = BlueskyTimelinePage::fromItems([self::item()], self::ALICE)->parsed->entries[0];
+
+        self::assertNull($entry->discussionCounts->likeCount);
+    }
+
     public function testARepostShowsTheOriginalWithATrailingAttributionAtTheRepostTime(): void
     {
         $item = self::item(['reason' => [

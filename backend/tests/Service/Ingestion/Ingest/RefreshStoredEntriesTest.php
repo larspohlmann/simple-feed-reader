@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest;
 
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LemmyPost;
+use App\Enum\SocialNetwork;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
@@ -55,6 +57,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
     }
 
     private const string POST = 'https://lemmy.world/post/1';
+    private const string BLUESKY_POST = 'at://did:plc:alice/app.bsky.feed.post/3kq';
 
     private static function header(string $counts): string
     {
@@ -75,6 +78,21 @@ final class RefreshStoredEntriesTest extends DbTestCase
         );
 
         return new ParsedFeedModel('T', null, null, null, [$post]);
+    }
+
+    private static function blueskyPost(?int $likeCount): ParsedFeedModel
+    {
+        $post = (new ParsedEntryModel(
+            self::BLUESKY_POST,
+            'https://bsky.app/profile/alice.bsky.social/post/3kq',
+            Headline::fromFeed('Post'),
+            'Alice',
+            null,
+            'Hello',
+            null,
+        ))->withDiscussionCounts(DiscussionCounts::fromCommentsAndLikes(1, $likeCount));
+
+        return new ParsedFeedModel('Home', null, null, null, [$post]);
     }
 
     private function storedPost(Feed $feed): Entry
@@ -267,6 +285,27 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(1, $entry->selectDiscussionCounts()->getCommentCount());
+    }
+
+    public function testAPostsLikeCountReachesItsItemAndAnUnknownOneKeepsIt(): void
+    {
+        $feed = $this->feed('social:bluesky:1:home');
+        $feed->classifyAs(SocialNetwork::Bluesky);
+        $this->ingestor()->ingest($feed, self::blueskyPost(7), self::context());
+        $this->entityManager->flush();
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::BLUESKY_POST]);
+        $item = $entry?->getCanonicalItem();
+        self::assertNotNull($item);
+        $ingested = $item->getLikeCount();
+
+        $this->refresher()->refreshStoredEntries($feed, self::blueskyPost(null));
+        $this->entityManager->flush();
+        $kept = $item->getLikeCount();
+
+        $this->refresher()->refreshStoredEntries($feed, self::blueskyPost(12));
+        $this->entityManager->flush();
+
+        self::assertSame([7, 7, 12], [$ingested, $kept, $item->getLikeCount()]);
     }
 
     public function testARefreshUpdatesTheStoredScore(): void
