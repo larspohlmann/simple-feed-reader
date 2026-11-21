@@ -16,7 +16,7 @@ use App\Service\Social\Notification\Model\NotificationListPageModel;
  *     id: int, kind: string, account: string, actors: list<ActorJson>,
  *     actorCount: int, excerpt: string|null, linkUrl: string, latestAt: string, seen: bool,
  *     answeredExcerpt: string|null, threadTitle: string|null, threadPlace: string|null, threadBy: string|null,
- *     onComment: bool
+ *     onComment: bool, entryId: int|null
  * }
  */
 final class SocialNotificationsJson
@@ -54,6 +54,7 @@ final class SocialNotificationsJson
             'threadPlace' => $group->subject->context->threadPlace,
             'threadBy' => $group->subject->context->threadBy,
             'onComment' => $group->subject->context->onComment,
+            'entryId' => $group->entryId,
         ];
     }
 

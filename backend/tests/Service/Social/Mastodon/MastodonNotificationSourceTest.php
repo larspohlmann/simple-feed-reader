@@ -10,6 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Mastodon\MastodonNotificationSource;
+use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
@@ -64,6 +65,69 @@ final class MastodonNotificationSourceTest extends TestCase
             $follow->subject,
         );
         self::assertSame('1030', $page->notifications[6]->subject->groupKey);
+    }
+
+    public function testALikeCarriesTheLikedStatusKey(): void
+    {
+        $like = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[0];
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/@alice/1100')?->keyHash(),
+            $like->subject->keys->postHash,
+        );
+        self::assertNull($like->subject->keys->answeredHash);
+        self::assertNull($like->subject->keys->rootHash);
+    }
+
+    public function testARepostAndAPollCarryTheirStatusKey(): void
+    {
+        $notifications = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications;
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/1090')?->keyHash(),
+            $notifications[1]->subject->keys->postHash,
+        );
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/1040')?->keyHash(),
+            $notifications[5]->subject->keys->postHash,
+        );
+    }
+
+    public function testAReplyAndAMentionCarryTheirOwnStatusKey(): void
+    {
+        $notifications = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications;
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://other.example/users/dave/statuses/5001')?->keyHash(),
+            $notifications[2]->subject->keys->postHash,
+        );
+        self::assertNull($notifications[2]->subject->keys->answeredHash);
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://other.example/users/erin/statuses/5002')?->keyHash(),
+            $notifications[3]->subject->keys->postHash,
+        );
+    }
+
+    public function testAQuoteCarriesTheQuotedStatusAsAnswered(): void
+    {
+        $keys = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[6]
+            ->subject->keys;
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://other.example/users/gus/statuses/5003')?->keyHash(),
+            $keys->postHash,
+        );
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/4001')?->keyHash(),
+            $keys->answeredHash,
+        );
+    }
+
+    public function testAFollowCarriesNoKeys(): void
+    {
+        $follow = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[4];
+
+        self::assertSame([], $follow->subject->keys->hashes());
     }
 
     public function testAReplyPointsAtThePostItAnswers(): void

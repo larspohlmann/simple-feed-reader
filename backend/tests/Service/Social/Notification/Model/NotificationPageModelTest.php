@@ -29,18 +29,18 @@ final class NotificationPageModelTest extends TestCase
         ));
     }
 
-    public function testWithContextsSetsTheContextOfEveryRowWithThatRemoteId(): void
+    public function testWithSubjectsSetsTheSubjectOfEveryRowWithThatRemoteId(): void
     {
         $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
         $unseen = self::notification('a', $createdAt);
         $seen = new FetchedNotificationModel('a', $unseen->kind, $unseen->actor, $unseen->subject, $createdAt, true);
         $page = new NotificationPageModel([$unseen, $seen, self::notification('b', $createdAt)], $createdAt);
-        $context = new NotificationContext('You said');
+        $subject = new NotificationSubject('k', 'text', 'https://example.test/p', new NotificationContext('You said'));
 
-        $applied = $page->withContexts(['a' => $context, 'z' => new NotificationContext('ignored')]);
+        $applied = $page->withSubjects(['a' => $subject, 'z' => new NotificationSubject('z', null, 'https://z.test')]);
 
-        self::assertEquals([$context, $context, new NotificationContext()], array_map(
-            static fn (FetchedNotificationModel $notification): NotificationContext => $notification->subject->context,
+        self::assertEquals([$subject, $subject, $unseen->subject], array_map(
+            static fn (FetchedNotificationModel $notification): NotificationSubject => $notification->subject,
             $applied->notifications,
         ));
         self::assertSame([false, true, false], array_map(
@@ -51,15 +51,15 @@ final class NotificationPageModelTest extends TestCase
         self::assertSame($createdAt, $applied->seenUntil);
     }
 
-    public function testWithContextsFindsARowWhoseNumericRemoteIdBecameAnIntegerKey(): void
+    public function testWithSubjectsFindsARowWhoseNumericRemoteIdBecameAnIntegerKey(): void
     {
         $createdAt = new \DateTimeImmutable('2026-11-16 09:00:00');
         $page = new NotificationPageModel([self::notification('123', $createdAt)], null);
-        $context = new NotificationContext('You said');
+        $subject = new NotificationSubject('k', null, 'https://example.test/p', new NotificationContext('You said'));
 
-        $applied = $page->withContexts(['123' => $context]);
+        $applied = $page->withSubjects(['123' => $subject]);
 
-        self::assertSame($context, $applied->notifications[0]->subject->context);
+        self::assertSame($subject, $applied->notifications[0]->subject);
     }
 
     private static function notification(string $remoteId, \DateTimeImmutable $createdAt): FetchedNotificationModel

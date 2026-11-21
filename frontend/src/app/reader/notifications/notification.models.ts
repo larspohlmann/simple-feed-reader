@@ -21,6 +21,7 @@ export interface NotificationGroupDto {
   threadBy: string | null;
   onComment: boolean;
   linkUrl: string;
+  entryId: number | null;
   latestAt: string;
   seen: boolean;
 }

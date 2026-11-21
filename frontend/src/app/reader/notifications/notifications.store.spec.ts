@@ -23,6 +23,7 @@ describe('NotificationsStore (#2240)', () => {
     threadBy: null,
     onComment: false,
     linkUrl: 'https://example.test/post',
+    entryId: null,
     latestAt: '2026-11-16T10:00:00+00:00',
     seen: true,
     ...over,

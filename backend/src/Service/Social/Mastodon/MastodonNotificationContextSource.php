@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Social\Mastodon;
 
 use App\Entity\NotificationContext;
+use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
 use App\Service\Social\Notification\Support\Excerpt;
@@ -27,22 +29,22 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     {
     }
 
-    public function findContexts(SocialAccount $account, array $fresh): array
+    public function findSubjects(SocialAccount $account, array $fresh): array
     {
         $statuses = [];
         foreach (array_chunk(self::answeredIds($fresh), self::STATUSES_PER_CALL) as $ids) {
             $statuses += $this->findStatuses($account, $ids);
         }
 
-        $contexts = [];
+        $subjects = [];
         foreach ($fresh as $row) {
-            $context = self::answered($row, $statuses);
-            if ($context !== null) {
-                $contexts[$row->remoteId] = $context;
+            $subject = self::findAnsweredSubject($row, $statuses);
+            if ($subject !== null) {
+                $subjects[$row->remoteId] = $subject;
             }
         }
 
-        return $contexts;
+        return $subjects;
     }
 
     /**
@@ -85,7 +87,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     }
 
     /** @param array<string, JsonNodeModel> $statuses */
-    private static function answered(FetchedNotificationModel $row, array $statuses): ?NotificationContext
+    private static function findAnsweredSubject(FetchedNotificationModel $row, array $statuses): ?NotificationSubject
     {
         $answeredId = $row->references->answeredId;
         if ($answeredId === null || !isset($statuses[$answeredId])) {
@@ -97,7 +99,9 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             $context = $context->withOnComment();
         }
 
-        return $context;
+        $keys = $row->subject->keys->withAnswered(MastodonStatusKey::parseKey($answered->string('uri'))?->keyHash());
+
+        return $row->subject->withContext($context)->withKeys($keys);
     }
 
     private static function withAnsweredExcerpt(

@@ -150,6 +150,7 @@
         "state": "accepted",
         "quoted_status": {
           "id": "4001",
+          "uri": "https://mastodon.example/users/alice/statuses/4001",
           "content": "<p>The post they quoted</p>",
           "account": {
             "id": "109",

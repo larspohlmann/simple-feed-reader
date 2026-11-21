@@ -1,6 +1,7 @@
 [
   {
     "id": "4000",
+    "uri": "https://mastodon.example/users/alice/statuses/4000",
     "content": "<p>My <b>own</b> post</p>",
     "account": {
       "id": "109",

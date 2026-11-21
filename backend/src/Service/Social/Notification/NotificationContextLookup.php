@@ -29,6 +29,6 @@ final readonly class NotificationContextLookup
         $source = $this->contextSources->get($account->getNetwork()->value);
         \assert($source instanceof NotificationContextSourceInterface);
 
-        return $page->withContexts($source->findContexts($account, $fresh));
+        return $page->withSubjects($source->findSubjects($account, $fresh));
     }
 }

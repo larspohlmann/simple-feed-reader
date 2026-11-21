@@ -3,7 +3,7 @@
     {
       "person_mention": {"id": 3, "recipient_id": 1, "comment_id": 55, "read": false, "published": "2026-11-16T09:30:00+02:00"},
       "comment": {"id": 55, "creator_id": 22, "post_id": 12, "content": "cc @lars@lemmy.example", "path": "0.55", "published": "2026-11-16T07:30:00Z"},
-      "post": {"id": 12, "name": "Weekly question thread"},
+      "post": {"id": 12, "ap_id": "https://lemmy.example/post/12", "name": "Weekly question thread"},
       "community": {"id": 5, "name": "askme"},
       "creator": {"id": 22, "name": "dave", "display_name": "Dave", "avatar": null, "actor_id": "https://lemmy.example/u/dave"}
     }

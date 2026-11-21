@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Bluesky;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -14,9 +15,11 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\BlueskyPostLookup;
 use App\Service\Social\Bluesky\BlueskySessions;
+use App\Service\Social\Bluesky\Support\BlueskyPostKey;
 use App\Service\Social\Bluesky\Support\BlueskyReplyReferences;
 use App\Service\Social\BlueskyPost\Support\AtPostUri;
 use App\Service\Social\BlueskyPost\Support\BlueskyWeb;
+use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
@@ -133,15 +136,34 @@ final readonly class BlueskyNotificationSource implements NotificationSourceInte
             return null;
         }
         $profileUrl = BlueskyWeb::profileUrl($did);
+        $references = BlueskyReplyReferences::fromRecord($entry->node('record'), $kind);
 
         return new FetchedNotificationModel(
             $remoteId,
             $kind,
             new NotificationActor($handle, $author->string('displayName'), $author->string('avatar'), $profileUrl),
-            self::buildSubject($kind, $entry, $remoteId, $profileUrl, $account, $likedPosts),
+            self::buildSubject($kind, $entry, $remoteId, $profileUrl, $account, $likedPosts)
+                ->withKeys(self::buildKeys($entry, $kind, $remoteId, $references)),
             $createdAt,
             $entry->isTrue('isRead'),
-            BlueskyReplyReferences::fromRecord($entry->node('record'), $kind),
+            $references,
+        );
+    }
+
+    private static function buildKeys(
+        JsonNodeModel $entry,
+        SocialNotificationKind $kind,
+        string $remoteId,
+        ContextReferenceModel $references,
+    ): NotificationPostKeys {
+        if ($kind === SocialNotificationKind::Follow) {
+            return new NotificationPostKeys();
+        }
+
+        return new NotificationPostKeys(
+            BlueskyPostKey::parseKey(self::likedPost($entry, $kind) ?? $remoteId)?->keyHash(),
+            BlueskyPostKey::parseKey($references->answeredId)?->keyHash(),
+            BlueskyPostKey::parseKey($references->threadRootId)?->keyHash(),
         );
     }
 

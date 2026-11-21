@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use PHPUnit\Framework\TestCase;
 
@@ -37,6 +38,20 @@ final class NotificationSubjectTest extends TestCase
         self::assertSame('text', $changed->excerpt);
         self::assertSame('https://example.test/p', $changed->linkUrl);
         self::assertSame($context, $changed->context);
+    }
+
+    public function testASubjectStartsWithoutKeysAndWithKeysKeepsTheRest(): void
+    {
+        $subject = new NotificationSubject('key', 'text', 'https://example.test/p');
+        $keys = new NotificationPostKeys('p', 'a', 'r');
+
+        $changed = $subject->withKeys($keys);
+
+        self::assertEquals(new NotificationPostKeys(), $subject->keys);
+        self::assertEquals(new NotificationPostKeys(), NotificationSubject::follow('https://x.test')->keys);
+        self::assertSame($keys, $changed->keys);
+        self::assertSame('key', $changed->groupKey);
+        self::assertSame($subject->context, $changed->context);
     }
 
     public function testAContextIsChangedOneFieldGroupAtATime(): void

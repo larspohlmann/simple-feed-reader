@@ -6,6 +6,7 @@ namespace App\Service\Social\Mastodon;
 
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -17,6 +18,7 @@ use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\Support\MastodonIds;
+use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
@@ -174,6 +176,19 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
             Excerpt::cutHtml($status->text('content')),
             $linkUrl,
             self::buildContext($kind, $status),
+            self::buildKeys($kind, $status),
+        );
+    }
+
+    private static function buildKeys(SocialNotificationKind $kind, JsonNodeModel $status): NotificationPostKeys
+    {
+        $answered = $kind === SocialNotificationKind::Quote
+            ? $status->node('quote')->node('quoted_status')->string('uri')
+            : null;
+
+        return new NotificationPostKeys(
+            MastodonStatusKey::parseKey($status->string('uri'))?->keyHash(),
+            MastodonStatusKey::parseKey($answered)?->keyHash(),
         );
     }
 

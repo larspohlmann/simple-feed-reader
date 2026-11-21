@@ -15,6 +15,7 @@ function group(overrides: Partial<NotificationGroupDto> = {}): NotificationGroup
     threadBy: null,
     onComment: false,
     linkUrl: 'https://social.example/p/1',
+    entryId: null,
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
     ...overrides,
