@@ -12,6 +12,7 @@
   color: var(--text-muted);
 }
 
+.lead,
 .sources,
 .compact,
 .separator {
@@ -26,6 +27,10 @@
 }
 
 @container (width < #{bp.$container-story-counts-narrow}) {
+  .lead {
+    display: none;
+  }
+
   .sources {
     position: absolute;
     clip-path: inset(50%);

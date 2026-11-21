@@ -1,5 +1,8 @@
 @use '../../theme/glass-rim';
 
+/* Where a headline's text column starts: past its glyph and the gap after it. */
+$text-inset: calc(var(--icon-md) + var(--space-2));
+
 @mixin card {
   @include glass-rim.filled(var(--surface-sunken));
 
@@ -10,12 +13,14 @@
   padding: var(--space-2) var(--space-3);
 }
 
-/* The card's last row: Follow and Hide at its bottom right (#2435). */
+/* The card's last row: the dates at its bottom left, Follow and Hide at its bottom right (#2435, #2447). */
 @mixin foot {
   @include card-padding;
 
   display: flex;
-  justify-content: flex-end;
-  padding-top: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
   font-size: var(--fs-xs);
 }

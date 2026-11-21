@@ -303,14 +303,16 @@ describe('StoryLayerComponent (#2329)', () => {
       return (fixture.nativeElement as HTMLElement).querySelector('.top app-story-title')!;
     }
 
-    it('counts the sources and shares between the title and the synopsis', () => {
+    it('dates the story between the title and the synopsis, and counts its sources and shares at the foot', () => {
       const card = mountCard();
 
-      expect(
-        card.querySelector('h3.title + app-story-source-count + app-story-dates + p.synopsis'),
-      ).not.toBeNull();
-      expect(card.querySelector('app-story-source-count')?.textContent).toContain('14 sources');
-      expect(card.querySelector('app-story-source-count')?.textContent).toContain('8 shares');
+      expect(card.querySelector('h3.title + app-story-dates + p.synopsis')).not.toBeNull();
+      expect(card.querySelector('.story-foot app-story-source-count')?.textContent).toContain(
+        '14 sources',
+      );
+      expect(card.querySelector('.story-foot app-story-source-count')?.textContent).toContain(
+        '8 shares',
+      );
     });
 
     it('ends with Follow and Hide, and the bar above it holds no Follow', () => {

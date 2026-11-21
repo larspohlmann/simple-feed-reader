@@ -114,12 +114,10 @@ describe("the card's counts and actions (#2435)", () => {
     expect(counts.textContent).not.toContain('share');
   });
 
-  it('names the counts between the title and the synopsis', () => {
+  it('names the dates between the title and the synopsis', () => {
     const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
 
-    expect(
-      element.querySelector('h3.title + app-story-source-count + app-story-dates + p.synopsis'),
-    ).not.toBeNull();
+    expect(element.querySelector('h3.title + app-story-dates + p.synopsis')).not.toBeNull();
   });
 
   it('offers the actions at the bottom of the card, after the synopsis', () => {
@@ -143,10 +141,12 @@ describe("the card's counts and actions (#2435)", () => {
   });
 });
 
-it('renders the dates under the counts', () => {
+it('renders the counts at the foot, before the actions', () => {
   const element = mountStory(aStory());
 
-  expect(element.querySelector('app-story-source-count + app-story-dates')).not.toBeNull();
+  expect(
+    element.querySelector('.story-foot > app-story-source-count + app-story-actions'),
+  ).not.toBeNull();
 });
 
 it('with linked false renders no link, yet the title and the actions', () => {

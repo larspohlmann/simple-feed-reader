@@ -48,3 +48,9 @@ a.story-link::after {
 
   position: relative;
 }
+
+.story-foot app-story-source-count {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-inline-start: story-card.$text-inset;
+}

@@ -51,3 +51,16 @@ it('carries a compact icon-and-number form of each count, its words as the toolt
     { icon: 'share', count: '2', title: '2 shares', hidden: 'true' },
   ]);
 });
+
+it('leads each full-word count with its icon, the story glyph and the share glyph', () => {
+  const leads = [...mount(storyWith(2)).querySelectorAll('.lead')].map((icon) => ({
+    icon: icon.textContent!.trim(),
+    hidden: icon.getAttribute('aria-hidden'),
+    before: icon.nextElementSibling!.classList.contains('sources'),
+  }));
+
+  expect(leads).toEqual([
+    { icon: 'trending_up', hidden: 'true', before: true },
+    { icon: 'share', hidden: 'true', before: true },
+  ]);
+});

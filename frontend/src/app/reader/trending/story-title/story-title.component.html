@@ -1,6 +1,5 @@
 <ng-template #headline>
   <app-story-headline [storyId]="story().id" [title]="story().title" [synopsis]="story().synopsis">
-    <app-story-source-count storyMeta [story]="story()" />
     <app-story-dates storyMeta [story]="story()" />
   </app-story-headline>
 </ng-template>
@@ -20,4 +19,7 @@
     <ng-container [ngTemplateOutlet]="headline" />
   </div>
 }
-<div class="story-foot"><app-story-actions [story]="story()" /></div>
+<div class="story-foot">
+  <app-story-source-count [story]="story()" />
+  <app-story-actions [story]="story()" />
+</div>
