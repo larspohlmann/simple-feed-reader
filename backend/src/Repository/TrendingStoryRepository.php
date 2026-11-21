@@ -14,6 +14,7 @@ use App\Service\Curation\Trending\Model\ShownEntriesModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
 use App\Service\Curation\Trending\Model\StoryLifespanModel;
+use App\Service\Curation\Trending\Model\StoryTitleCutoffsModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
@@ -122,27 +123,34 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The user's stories seen at or after $seenSince without a title or grown by half since theirs, last attempted at
-     * or before $attemptedBefore.
+     * The user's stories seen at or after $seenSince that are untitled and last tried before the retry cutoff, or
+     * titled before the re-title cutoff and doubled since.
      *
      * @return list<int>
      */
     public function findStoriesDueForTitle(
         int $userId,
-        \DateTimeImmutable $attemptedBefore,
+        StoryTitleCutoffsModel $cutoffs,
         \DateTimeImmutable $seenSince,
     ): array {
         /** @var list<int|string> $storyIds */
         $storyIds = $this->getEntityManager()->getConnection()->fetchFirstColumn(
             'SELECT story.id FROM trending_story story WHERE story.user_id = :user AND story.last_seen >= :seenSince'
-            . ' AND (story.llm_title_attempted_at IS NULL OR story.llm_title_attempted_at <= :attemptedBefore)'
-            . ' AND (story.llm_title IS NULL OR ' . self::buildMemberCount('story.id')
-            . ' * 2 >= story.llm_title_member_count * 3)'
+            . ' AND ((story.llm_title IS NULL AND (story.llm_title_attempted_at IS NULL'
+            . ' OR story.llm_title_attempted_at <= :retryBefore))'
+            . ' OR (story.llm_title IS NOT NULL AND story.llm_title_attempted_at <= :retitleBefore'
+            . ' AND ' . self::buildMemberCount('story.id') . ' >= story.llm_title_member_count * 2))'
             . ' ORDER BY story.id',
-            ['user' => $userId, 'attemptedBefore' => $attemptedBefore, 'seenSince' => $seenSince],
+            [
+                'user' => $userId,
+                'retryBefore' => $cutoffs->retryBefore,
+                'retitleBefore' => $cutoffs->retitleBefore,
+                'seenSince' => $seenSince,
+            ],
             [
                 'user' => ParameterType::INTEGER,
-                'attemptedBefore' => Types::DATETIME_IMMUTABLE,
+                'retryBefore' => Types::DATETIME_IMMUTABLE,
+                'retitleBefore' => Types::DATETIME_IMMUTABLE,
                 'seenSince' => Types::DATETIME_IMMUTABLE,
             ],
         );

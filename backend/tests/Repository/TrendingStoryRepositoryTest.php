@@ -26,6 +26,7 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Model\StoryTitleCutoffsModel;
 use App\Service\Curation\Trending\ReaderWindows;
 use App\Service\Curation\Trending\TrendingStories;
 use App\Service\Foundation\Url\UrlNormalizer;
@@ -722,18 +723,9 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$this->articleFeed('outlet'), 'outlet.example'],
             [$this->articleFeed('second'), 'second.example'],
         ]);
-        $this->entityManager->flush();
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 0, llm_title_attempted_at = ?'
-            . ' WHERE id = ?',
-            ['Hafenstreik', '2031-05-14 08:00:00', $story->requireId()],
-        );
+        $this->recordTitle($story, 'Hafenstreik', 0, '2031-05-14 05:00:00');
 
-        $due = $this->stories()->findStoriesDueForTitle(
-            $this->reader->requireId(),
-            new \DateTimeImmutable('2031-05-14 11:00:00'),
-            new \DateTimeImmutable('2031-05-07 00:00:00'),
-        );
+        $due = $this->findDueAtNoon();
 
         self::assertSame([$story->requireId()], $due);
     }
@@ -797,11 +789,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             ['2031-05-14 09:00:00', $second->requireId()],
         );
 
-        $due = $this->stories()->findStoriesDueForTitle(
-            $this->reader->requireId(),
-            new \DateTimeImmutable('2031-05-14 11:00:00'),
-            new \DateTimeImmutable('2031-05-07 00:00:00'),
-        );
+        $due = $this->findDueAtNoon();
 
         self::assertSame([$first->requireId(), $second->requireId()], $due);
     }
@@ -811,21 +799,82 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 10:00:00',
-            ...[...$this->persistLemmyCopies(), $this->member($this->articleFeed('outlet'))],
+            ...[
+                ...$this->persistLemmyCopies(),
+                $this->member($this->articleFeed('outlet')),
+                $this->member($this->articleFeed('second')),
+            ],
         );
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 2, llm_title_attempted_at = ?'
-            . ' WHERE id = ?',
-            ['Hafenstreik', '2031-05-14 08:00:00', $story->requireId()],
-        );
+        $this->recordTitle($story, 'Hafenstreik', 2, '2031-05-14 05:00:00');
 
-        $due = $this->stories()->findStoriesDueForTitle(
-            $this->reader->requireId(),
-            new \DateTimeImmutable('2031-05-14 11:00:00'),
-            new \DateTimeImmutable('2031-05-07 00:00:00'),
-        );
+        $due = $this->findDueAtNoon();
 
         self::assertSame([], $due);
+    }
+
+    public function testATitledStoryGrownByHalfIsNotDue(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('first'), 'first.example'],
+            [$this->articleFeed('second'), 'second.example'],
+            [$this->articleFeed('third'), 'third.example'],
+        ]);
+        $this->recordTitle($story, 'Hafenstreik', 2, '2031-05-14 04:00:00');
+
+        self::assertSame([], $this->findDueAtNoon());
+    }
+
+    public function testATitledStoryDoublesButWaitsSixHours(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('first'), 'first.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->recordTitle($story, 'Hafenstreik', 1, '2031-05-14 08:00:00');
+
+        self::assertSame([], $this->findDueAtNoon());
+    }
+
+    public function testADoubledStoryIsDueSixHoursAfterItsTitle(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('first'), 'first.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->recordTitle($story, 'Hafenstreik', 1, '2031-05-14 05:00:00');
+
+        self::assertSame([$story->requireId()], $this->findDueAtNoon());
+    }
+
+    public function testAnUntitledStoryIsRetriedAfterAnHour(): void
+    {
+        $story = $this->storyOf([[$this->articleFeed('first'), 'first.example']]);
+        $this->recordTitle($story, null, null, '2031-05-14 10:30:00');
+
+        self::assertSame([$story->requireId()], $this->findDueAtNoon());
+    }
+
+    private function recordTitle(TrendingStory $story, ?string $title, ?int $memberCount, string $attemptedAt): void
+    {
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = ?, llm_title_attempted_at = ?'
+            . ' WHERE id = ?',
+            [$title, $memberCount, $attemptedAt, $story->requireId()],
+        );
+    }
+
+    /** @return list<int> */
+    private function findDueAtNoon(): array
+    {
+        return $this->stories()->findStoriesDueForTitle(
+            $this->reader->requireId(),
+            new StoryTitleCutoffsModel(
+                new \DateTimeImmutable('2031-05-14 11:00:00'),
+                new \DateTimeImmutable('2031-05-14 06:00:00'),
+            ),
+            new \DateTimeImmutable('2031-05-07 00:00:00'),
+        );
     }
 
     /** @param list<array{Feed, ?string}> $feedsAndSites */
