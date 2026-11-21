@@ -246,7 +246,7 @@ for (const [device, viewport] of [
       await expect(layer(page).locator('p.synopsis')).toHaveText(SYNOPSIS);
       await closeStory(page);
       const card = page.locator('app-story-title', { hasText: TITLE });
-      await expect(card.locator('h3.title + p.synopsis')).toHaveText(SYNOPSIS);
+      await expect(card.locator('h3.title ~ p.synopsis')).toHaveText(SYNOPSIS);
     });
 
     test('a story without one shows none, on its card or in its list', async ({ page }) => {
