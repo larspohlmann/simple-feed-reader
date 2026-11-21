@@ -74,8 +74,7 @@ export class EntryRowCache {
     });
   }
 
-  /** Optimistic like apart from `saveState`, settling when its answer lands; dropped unless the post can be liked
-   *  and no like is on the wire. */
+  /** Optimistic like apart from `saveState`; dropped unless the post can be liked and no like is on the wire. */
   setLiked(
     entry: EntryDto,
     isLiked: boolean,
@@ -99,7 +98,7 @@ export class EntryRowCache {
     );
   }
 
-  /** The vote shown at once, its score once the answer lands; settles with the answer. */
+  /** The vote shows at once; its score waits for the answer. */
   setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): Observable<void> {
     if (
       entry.myVote === null ||

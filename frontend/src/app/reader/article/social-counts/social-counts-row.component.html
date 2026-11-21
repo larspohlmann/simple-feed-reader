@@ -85,10 +85,10 @@
         [attr.aria-pressed]="liked()"
         [attr.title]="'reader.actionHint.' + likeKey() | transloco"
         [attr.aria-label]="'reader.' + likeKey() | transloco"
-        [attr.aria-busy]="likePending() || null"
+        [attr.aria-busy]="liking.pending() || null"
         (click)="toggleLike()"
       >
-        @if (likePending()) {
+        @if (liking.pending()) {
           <app-pending-dots />
         } @else {
           <app-icon name="thumb_up" size="sm" [fill]="liked() === true" />

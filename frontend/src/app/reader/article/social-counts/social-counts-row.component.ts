@@ -6,9 +6,9 @@ import {
   inject,
   input,
   output,
-  signal,
 } from '@angular/core';
-import { Observable, finalize } from 'rxjs';
+import { Observable } from 'rxjs';
+import { PendingAction } from '../../../core/rx/pending-action';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
@@ -66,14 +66,13 @@ export class SocialCountsRowComponent {
   readonly score = input<number | null>(null);
   readonly myVote = input<VoteValue | null>(null);
   readonly vote = input<((to: VoteValue) => Observable<unknown>) | null>(null);
-  /** Toggles the like; the thumb shows the pending dots until what it answers settles. */
   readonly like = input<(() => Observable<unknown>) | null>(null);
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
   readonly quoteRequested = output<void>();
 
   private readonly compactCount = inject(CompactCount);
-  protected readonly likePending = signal(false);
+  protected readonly liking = new PendingAction<true>();
 
   protected readonly shown = computed(
     () =>
@@ -144,10 +143,6 @@ export class SocialCountsRowComponent {
 
   protected toggleLike(): void {
     const like = this.like();
-    if (like === null || this.likePending()) return;
-    this.likePending.set(true);
-    like()
-      .pipe(finalize(() => this.likePending.set(false)))
-      .subscribe({ error: () => undefined });
+    if (like !== null) this.liking.run(true, like);
   }
 }

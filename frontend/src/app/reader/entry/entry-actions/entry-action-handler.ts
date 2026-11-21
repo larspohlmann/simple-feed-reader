@@ -6,9 +6,8 @@ import { VoteValue } from '../../vote-pill/vote';
 @Injectable({ providedIn: 'root', useFactory: () => IGNORED_ENTRY_ACTIONS })
 export abstract class EntryActionHandler {
   abstract favorite(entry: EntryDto): void;
-  /** Settles once the like's answer lands, failed or not. */
+  /** Like and vote settle once their answer lands, failed or not; a control waits on that. */
   abstract like(entry: EntryDto): Observable<void>;
-  /** Settles once the vote's answer lands, failed or not. */
   abstract vote(entry: EntryDto, to: VoteValue): Observable<void>;
   abstract keep(entry: EntryDto): void;
   abstract unshare(entry: EntryDto): void;

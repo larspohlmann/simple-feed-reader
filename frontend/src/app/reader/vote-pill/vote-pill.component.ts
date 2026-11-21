@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { Observable, finalize } from 'rxjs';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Observable } from 'rxjs';
+import { PendingAction } from '../../core/rx/pending-action';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CompactCount } from '../../core/i18n/compact-count';
@@ -21,9 +22,9 @@ export class VotePillComponent {
   /** `framed` takes its height from `--vote-pill-height` and its colour from where it sits. */
   readonly variant = input<'framed' | 'bare'>('framed');
   readonly myVote = input<VoteValue | null>(null);
-  /** Casts the vote; the tapped arrow shows the pending dots until what it answers settles. */
+  /** Casts the vote; the tapped arrow shows the pending dots until what it returns settles. */
   readonly vote = input<((to: VoteValue) => Observable<unknown>) | null>(null);
-  protected readonly pending = signal<'up' | 'down' | null>(null);
+  protected readonly voting = new PendingAction<'up' | 'down'>();
 
   private readonly compactCount = inject(CompactCount);
 
@@ -36,10 +37,7 @@ export class VotePillComponent {
     event.stopPropagation();
     const current = this.myVote();
     const vote = this.vote();
-    if (current === null || vote === null || this.pending() !== null) return;
-    this.pending.set(pressed);
-    vote(nextVote(current, pressed))
-      .pipe(finalize(() => this.pending.set(null)))
-      .subscribe({ error: () => undefined });
+    if (current === null || vote === null) return;
+    this.voting.run(pressed, () => vote(nextVote(current, pressed)));
   }
 }

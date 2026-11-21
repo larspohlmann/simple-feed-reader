@@ -43,7 +43,7 @@ export class OptimisticToggles {
     });
   }
 
-  /** Settles once the change's answer lands, failed or not; at once when the change is dropped. */
+  /** Settles at once when the change is dropped. */
   change(itemKey: string, change: OptimisticChange): Observable<void> {
     const keys = this.inFlight.get(itemKey) ?? new Set<string>();
     if (keys.has(change.key)) return EMPTY;

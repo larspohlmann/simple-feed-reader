@@ -87,7 +87,7 @@ export class CommentsService {
     if (post.canRepost) this.toggle(item, post, 'isReposted');
   }
 
-  /** The vote shown at once, its score once the answer lands; settles with the answer. */
+  /** The vote shows at once; its score waits for the answer. */
   vote(item: ItemRef, comment: EntryCommentDto, to: VoteValue): Observable<void> {
     if (comment.vote === null) return EMPTY;
     const { address, myVote: from } = comment.vote;

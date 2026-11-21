@@ -1,5 +1,3 @@
-import { VoteValue } from '../../vote-pill/vote';
-import { Observable } from 'rxjs';
 import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
@@ -11,6 +9,8 @@ import { CompactCount } from '../../../core/i18n/compact-count';
 import { buildDiscussionCount } from '../../../core/i18n/discussion-count';
 import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { showsShortPill } from '../preview-image';
+import { VoteValue } from '../../vote-pill/vote';
+import { Observable } from 'rxjs';
 
 /**
  * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
