@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser\Support;
 
-use App\Entity\EntryAttachment;
+use App\Entity\PlayableMediaFile;
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 
 /**
@@ -66,8 +66,8 @@ final class FeedMediaClassifier
 
     public static function classifyUrl(string $url): FeedMediaKind
     {
-        $extension = EntryAttachment::extractExtension($url);
-        if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {
+        $extension = PlayableMediaFile::extractExtension($url);
+        if (PlayableMediaFile::isAudioExtension($extension)) {
             return FeedMediaKind::Audio;
         }
 
