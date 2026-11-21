@@ -209,20 +209,16 @@ final class SocialNotificationRepository extends ServiceEntityRepository
     private function findRankedRowIds(array $groups, int $perGroup): array
     {
         $inGroup = '(social_account_id = ? AND kind = ? AND seen = ? AND subject_group_key = ? AND id <= ?)';
-        $tags = [];
-        $filters = [];
         $tagParameters = [];
         $filterParameters = [];
         foreach ($groups as $group) {
             $matching = [$group['accountId'], $group['kind'], $group['seen'], $group['groupKey'], $group['latestId']];
-            $tags[] = "WHEN $inGroup THEN ?";
             array_push($tagParameters, ...$matching);
             $tagParameters[] = $group['latestId'];
-            $filters[] = $inGroup;
             array_push($filterParameters, ...$matching);
         }
-        $tagged = implode(' ', $tags);
-        $inAnyGroup = implode(' OR ', $filters);
+        $tagged = implode(' ', array_pad([], count($groups), "WHEN $inGroup THEN ?"));
+        $inAnyGroup = implode(' OR ', array_pad([], count($groups), $inGroup));
         $sql = "SELECT id, group_latest_id FROM (
                 SELECT id, group_latest_id,
                     ROW_NUMBER() OVER (PARTITION BY group_latest_id ORDER BY id DESC) AS position

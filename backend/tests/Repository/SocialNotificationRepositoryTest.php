@@ -166,10 +166,13 @@ final class SocialNotificationRepositoryTest extends DbTestCase
 
     public function testNewestOfNoGroupsRunsNoStatement(): void
     {
-        self::assertSame(0, $this->statementsFor(fn () => self::assertSame(
-            [],
-            $this->notifications->findNewestPerGroup([], 3),
-        )));
+        $newest = null;
+        $statements = $this->statementsFor(function () use (&$newest): void {
+            $newest = $this->notifications->findNewestPerGroup([], 3);
+        });
+
+        self::assertSame([], $newest);
+        self::assertSame(0, $statements);
     }
 
     public function testNewestOfAGroupIgnoresRowsAboveItsLatestId(): void
