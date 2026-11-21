@@ -52,7 +52,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 
     /**
      * One month's runs as scalars, newest first: an entity drags the frozen pool, the winners and the provider replies.
-     * One row past the limit says another page exists; each table reads that many and the merge cuts them in PHP.
+     * Each kind reads one row past the limit, which says another page exists; the caller cuts the merged rows.
      *
      * @return list<HistoryRow>
      */
@@ -77,7 +77,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 
         usort($rows, self::compareNewestFirst(...));
 
-        return \array_slice($rows, 0, self::HISTORY_LIMIT + 1);
+        return $rows;
     }
 
     /**

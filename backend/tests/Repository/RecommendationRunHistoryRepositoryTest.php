@@ -195,7 +195,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
         $firstPage = $repository->pageForMonth($user, $this->august(), RunHistoryFilterModel::all());
 
-        self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT + 1, $firstPage);
+        self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT + 2, $firstPage);
         self::assertSame(AiRunKind::ForYou, $firstPage[0]['kind']);
 
         $lastKept = $firstPage[RecommendationRunHistoryRepository::HISTORY_LIMIT - 1];
