@@ -75,11 +75,15 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
 - New shots, all desktop light: `story-light` (a story's own list with its title card),
   `lemmy-light` (a Lemmy post open, with vote pill and threaded comments), `notifications-light`
   (the notifications list), `settings-directory-light`, `settings-visibility-light`.
-- `lemmy-setup.mjs`, after `podcast-setup.mjs`: borrows one public community feed, no account.
-- The notifications list is stubbed with invented example.com actors, the way the admin user list
-  is; the bell needs the Bluesky connection the social set already makes.
-- `trending-setup.mjs` stays; `tour.mjs` borrows the same feeds for its Trending scene and gives
-  them back, from one shared list.
+- Lars's Bluesky, Mastodon and Lemmy accounts are borrowed for the social shots (Lars,
+  2026-11-21), the way the Bluesky one already is: connect, import a small curated set, shoot,
+  disconnect. One `social-setup.mjs` serves the three networks; the credentials stay in the
+  gitignored env file Lars writes. This adds a `mastodon-light` shot.
+- The notifications list is stubbed with invented actors, the way the admin user list is, even
+  with real accounts connected.
+- Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of
+  overlapping news feeds and reports ready only above a floor (8 stories in the day window, 4
+  sources on the lead). `tour.mjs` borrows the same feeds for its Trending scene, from one list.
 - `share.png` is re-rendered with `scripts/homepage-share-image.mjs` after `magazine-light`.
 - `docs/screenshots.md` shows every file in `docs/screenshots/` and names none that is missing.
 
