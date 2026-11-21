@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ingestion\Parser\Support;
 
-use App\Entity\EntryAttachment;
+use App\Entity\PlayableMediaFile;
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 
 /**
@@ -13,15 +13,11 @@ use App\Service\Ingestion\Parser\Model\FeedMediaKind;
  */
 final class FeedMediaClassifier
 {
-    /** @var array<string, FeedMediaKind> file extension => the media it denotes */
-    private const array EXTENSION_KINDS = [
-        'jpg' => FeedMediaKind::Image, 'jpeg' => FeedMediaKind::Image, 'png' => FeedMediaKind::Image,
-        'gif' => FeedMediaKind::Image, 'webp' => FeedMediaKind::Image, 'avif' => FeedMediaKind::Image,
-        'bmp' => FeedMediaKind::Image, 'svg' => FeedMediaKind::Image,
-        'mp4' => FeedMediaKind::Video, 'm4v' => FeedMediaKind::Video, 'mov' => FeedMediaKind::Video,
-        'webm' => FeedMediaKind::Video, 'mkv' => FeedMediaKind::Video, 'avi' => FeedMediaKind::Video,
-        'ogv' => FeedMediaKind::Video,
-    ];
+    /** @var list<string> */
+    private const array IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
+
+    /** @var list<string> */
+    private const array UNPLAYABLE_MEDIA_EXTENSIONS = ['wma', 'mkv', 'avi', 'ogv'];
 
     public static function kind(\DOMElement $element): FeedMediaKind
     {
@@ -66,12 +62,15 @@ final class FeedMediaClassifier
 
     public static function classifyUrl(string $url): FeedMediaKind
     {
-        $extension = EntryAttachment::extractExtension($url);
-        if (\in_array($extension, EntryAttachment::AUDIO_EXTENSIONS, true)) {
-            return FeedMediaKind::Audio;
-        }
+        $extension = PlayableMediaFile::extractExtension($url);
 
-        return self::EXTENSION_KINDS[$extension] ?? FeedMediaKind::Unknown;
+        return match (true) {
+            PlayableMediaFile::isAudioExtension($extension) => FeedMediaKind::Audio,
+            PlayableMediaFile::isVideoExtension($extension) => FeedMediaKind::Video,
+            \in_array($extension, self::IMAGE_EXTENSIONS, true) => FeedMediaKind::Image,
+            \in_array($extension, self::UNPLAYABLE_MEDIA_EXTENSIONS, true) => FeedMediaKind::Other,
+            default => FeedMediaKind::Unknown,
+        };
     }
 
     private function __construct()

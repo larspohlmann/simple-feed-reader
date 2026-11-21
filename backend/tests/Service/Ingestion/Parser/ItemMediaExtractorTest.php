@@ -192,6 +192,16 @@ final class ItemMediaExtractorTest extends TestCase
         self::assertSame('application/pdf', $bundle->attachments[0]->mimeType);
     }
 
+    public function testATypelessUnplayableVideoEnclosureIsKeptAsAnAttachmentOnly(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem('<enclosure url="https://cdn/clip.mkv"/>'));
+
+        self::assertSame([], $bundle->media);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/clip.mkv', $bundle->attachments[0]->url);
+        self::assertSame(FeedMediaKind::Other, $bundle->attachments[0]->kind);
+    }
+
     public function testUnknownTypelessNodeIsLeftOut(): void
     {
         $bundle = $this->extractor->extract($this->rssItem(

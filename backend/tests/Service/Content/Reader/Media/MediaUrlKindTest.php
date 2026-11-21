@@ -10,6 +10,7 @@ use App\Service\Content\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Content\Reader\Media\EmbedProviders;
 use App\Service\Content\Reader\Media\MediaUrlKind;
 use App\Service\Content\Reader\Media\Model\MediaKind;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MediaUrlKindTest extends TestCase
@@ -117,5 +118,20 @@ final class MediaUrlKindTest extends TestCase
     public function testRefusesALiveAudioStream(): void
     {
         self::assertNull($this->kind->resolve('https://radio.test/live.aac'));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function mediaBrowsersDoNotPlay(): iterable
+    {
+        yield 'wma' => ['https://cdn.test/a.wma'];
+        yield 'mkv' => ['https://cdn.test/v.mkv'];
+        yield 'avi' => ['https://cdn.test/v.avi'];
+        yield 'ogv' => ['https://cdn.test/v.ogv'];
+    }
+
+    #[DataProvider('mediaBrowsersDoNotPlay')]
+    public function testRefusesMediaBrowsersDoNotPlay(string $url): void
+    {
+        self::assertNull($this->kind->resolve($url));
     }
 }

@@ -18,6 +18,8 @@ final class EntryAttachmentTest extends TestCase
         yield 'video mime type' => [new EntryAttachment('https://pod.test/episode.mp3', 'video/mp4'), false];
         yield 'no mime type, audio extension' => [new EntryAttachment('https://pod.test/episode.MP3?x=1'), true];
         yield 'no mime type, document extension' => [new EntryAttachment('https://pod.test/programme.pdf'), false];
+        yield 'no mime type, wma extension' => [new EntryAttachment('https://pod.test/episode.wma'), false];
+        yield 'wma mime type' => [new EntryAttachment('https://pod.test/episode.wma', 'audio/x-ms-wma'), true];
         yield 'no mime type, no extension' => [new EntryAttachment('https://pod.test/episode'), false];
     }
 

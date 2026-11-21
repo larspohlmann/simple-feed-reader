@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media;
 
+use App\Entity\PlayableMediaFile;
 use App\Service\Content\Reader\Media\Model\MediaKind;
 use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
 
@@ -13,8 +14,6 @@ use App\Service\Content\Reader\Media\Model\ResolvedMediaUrlModel;
  */
 final readonly class MediaUrlKind
 {
-    private const array AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'oga', 'ogg', 'opus', 'wav', 'flac'];
-    private const array VIDEO_EXTENSIONS = ['mp4', 'm4v', 'webm', 'mov'];
     private const array STREAM_EXTENSIONS = ['m3u8'];
 
     public function __construct(
@@ -62,12 +61,11 @@ final readonly class MediaUrlKind
 
     private function byExtension(string $bareUrl): ?MediaKind
     {
-        $path = parse_url($bareUrl, \PHP_URL_PATH);
-        $extension = strtolower(pathinfo(\is_string($path) ? $path : '', \PATHINFO_EXTENSION));
+        $extension = PlayableMediaFile::extractExtension($bareUrl);
 
         return match (true) {
-            \in_array($extension, self::AUDIO_EXTENSIONS, true) => MediaKind::Audio,
-            \in_array($extension, self::VIDEO_EXTENSIONS, true) => MediaKind::Video,
+            PlayableMediaFile::isAudioExtension($extension) => MediaKind::Audio,
+            PlayableMediaFile::isVideoExtension($extension) => MediaKind::Video,
             \in_array($extension, self::STREAM_EXTENSIONS, true) => MediaKind::Stream,
             default => null,
         };

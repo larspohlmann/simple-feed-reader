@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ingestion\Parser\Support;
 
 use App\Service\Ingestion\Parser\Model\FeedMediaKind;
 use App\Service\Ingestion\Parser\Support\FeedMediaClassifier;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FeedMediaClassifierTest extends TestCase
@@ -46,6 +47,26 @@ final class FeedMediaClassifierTest extends TestCase
     public function testAudioExtensionWithoutTypeIsAudio(): void
     {
         self::assertSame(FeedMediaKind::Audio, $this->kindOf('<enclosure url="https://a/ep.mp3"/>'));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unplayableMediaProvider(): iterable
+    {
+        yield 'wma enclosure' => ['<enclosure url="https://a/ep.wma"/>'];
+        yield 'mkv content' => ['<media:content url="https://v/clip.mkv"/>'];
+        yield 'uppercase avi' => ['<media:content url="https://v/clip.AVI"/>'];
+        yield 'ogv content' => ['<media:content url="https://v/clip.ogv"/>'];
+    }
+
+    #[DataProvider('unplayableMediaProvider')]
+    public function testMediaABrowserDoesNotPlayIsOther(string $xml): void
+    {
+        self::assertSame(FeedMediaKind::Other, $this->kindOf($xml));
+    }
+
+    public function testPlayableVideoExtensionWithoutTypeIsVideo(): void
+    {
+        self::assertSame(FeedMediaKind::Video, $this->kindOf('<media:content url="https://v/clip.webm"/>'));
     }
 
     public function testExplicitNonMediaTypeIsOther(): void

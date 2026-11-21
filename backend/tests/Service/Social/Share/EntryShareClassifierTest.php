@@ -136,6 +136,13 @@ final class EntryShareClassifierTest extends TestCase
         self::assertCount(2, $entry->getMedia());
     }
 
+    public function testATitledShareOfAVideoNoBrowserPlaysIsALink(): void
+    {
+        $entry = $this->classified(self::hackerNews('https://x.test/clip.avi'));
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+    }
+
     public function testATitledShareOfAnImageFileAlreadyAmongItsMediaMovesItFirst(): void
     {
         $entry = self::hackerNews('https://i.example/chart.png');
