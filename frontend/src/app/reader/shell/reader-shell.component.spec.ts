@@ -77,6 +77,7 @@ import {
   anEntry,
   aStory,
   aStoryArticle,
+  aStoryCard,
 } from '../../../testing/entry-testing';
 import { INCLUDED_EVERYWHERE } from '../tag-inclusion';
 
@@ -5215,16 +5216,7 @@ describe('ReaderShellComponent', () => {
           entries: [],
           nextCursor: null,
           title: 'Harbour strike',
-          story: {
-            id: 42,
-            title: 'Harbour strike',
-            synopsis: null,
-            outletCount: 3,
-            shareCount: 0,
-            followed: false,
-            createdAt: '2026-11-20T08:00:00+00:00',
-            lastAddedAt: '2026-11-21T08:00:00+00:00',
-          },
+          story: aStoryCard({ id: 42, title: 'Harbour strike', outletCount: 3 }),
           memberCount: 31,
           unreadCount: 12,
           lastOpenedAt: null,

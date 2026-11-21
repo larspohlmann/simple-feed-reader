@@ -10,7 +10,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { anEntry, aStoryCard } from '../../../../testing/entry-testing';
 import { EntryListComponent } from '../../list/entry-list/entry-list.component';
 import { ListOrderService } from '../../list/list-order.service';
 import { ListPreferences } from '../../list/list-preferences.service';
@@ -166,16 +166,13 @@ describe('StoryLayerComponent (#2329)', () => {
             useValue: {
               cardOf: (id: number) =>
                 id === story.id && title() !== null
-                  ? {
+                  ? aStoryCard({
                       id,
-                      title: title(),
+                      title: title() ?? undefined,
                       synopsis: synopsis(),
                       outletCount: sources()?.outletCount ?? 0,
                       shareCount: sources()?.shareCount ?? 0,
-                      followed: false,
-                      createdAt: '2026-11-20T08:00:00+00:00',
-                      lastAddedAt: '2026-11-21T08:00:00+00:00',
-                    }
+                    })
                   : null,
               followedOnServer: () => false,
             },

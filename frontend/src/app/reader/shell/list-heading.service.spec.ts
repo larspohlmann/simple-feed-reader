@@ -19,7 +19,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
-import { aStory, aStoryArticle } from '../../../testing/entry-testing';
+import { aStory, aStoryArticle, aStoryCard } from '../../../testing/entry-testing';
 import { makeSubscription } from '../testing/subscription.factory';
 import { TrendingBuiltAt } from '../trending/trending-built-at';
 import { TrendingWindowService } from '../trending/trending-window.service';
@@ -531,16 +531,7 @@ describe("ListHeading over a Trending story's list (#2329)", () => {
   }
 
   const tally = { memberCount: 31, unreadCount: 12 };
-  const aCard = (title: string): StoryCard => ({
-    id: 42,
-    title,
-    synopsis: null,
-    outletCount: 1,
-    shareCount: 0,
-    followed: false,
-    createdAt: '2026-11-20T08:00:00+00:00',
-    lastAddedAt: '2026-11-21T08:00:00+00:00',
-  });
+  const aCard = (title: string): StoryCard => aStoryCard({ id: 42, title, outletCount: 1 });
 
   it("titles the list with the story's page title, else its followed headline, else Story", () => {
     expect(

@@ -4,7 +4,6 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { formatLongDateTime, relativeTime } from '../../format';
 import { StoryCard } from '../trending.models';
 
-/** "created 2 days ago · last article 3 hours ago" on a story card (#2447). */
 @Component({
   selector: 'app-story-dates',
   changeDetection: ChangeDetectionStrategy.OnPush,

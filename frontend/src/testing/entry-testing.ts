@@ -2,7 +2,11 @@ import { EntryCommentDto, EntryCommentPostDto } from '../app/reader/entry-commen
 import { EntryDto } from '../app/reader/models';
 import { QuotedPostDto } from '../app/reader/quoted-post/quoted-post';
 import { LinkCardDto } from '../app/reader/link-card/link-card';
-import { StoryArticleDto, TrendingStoryDto } from '../app/reader/trending/trending.models';
+import {
+  StoryArticleDto,
+  StoryCard,
+  TrendingStoryDto,
+} from '../app/reader/trending/trending.models';
 
 /** A plain list entry: no image, no summary, nothing marked; `overrides` name what a test is about. */
 export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
@@ -58,19 +62,27 @@ export function aStoryArticle(overrides: Partial<StoryArticleDto> = {}): StoryAr
   return { ...anEntry(), shares: [], ...overrides };
 }
 
-/** A one-article Trending story nobody follows (#2017, #2128, #2328); `overrides` name what a test is about. */
-export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStoryDto {
-  const articles = overrides.articles ?? [aStoryArticle()];
+/** A story card nobody follows (#2447); `overrides` name what a test is about. */
+export function aStoryCard(overrides: Partial<StoryCard> = {}): StoryCard {
   return {
     id: 1,
     title: 'Harbour authority approves the tidal barrier',
     synopsis: null,
     followed: false,
     outletCount: 2,
-    viewed: false,
     shareCount: 0,
     createdAt: '2026-11-20T08:00:00+00:00',
     lastAddedAt: '2026-11-21T08:00:00+00:00',
+    ...overrides,
+  };
+}
+
+/** A one-article Trending story nobody follows (#2017, #2128, #2328); `overrides` name what a test is about. */
+export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStoryDto {
+  const articles = overrides.articles ?? [aStoryArticle()];
+  return {
+    ...aStoryCard(),
+    viewed: false,
     leadEntryId: articles[0].id,
     articles,
     ...overrides,
