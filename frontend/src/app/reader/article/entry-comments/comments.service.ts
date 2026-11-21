@@ -10,6 +10,7 @@ import { ReaderApi } from '../../reader-api';
 import { SocialPostApi, VoteAnswer } from '../../social-post-api';
 import { VoteValue } from '../../vote-pill/vote';
 import { ItemRef, buildItemKey } from '../../state/item-key';
+import { CommentTotals } from '../../state/comment-totals';
 import { withReply, withoutReply } from './thread-edits';
 
 const CACHE_CAP = 50;
@@ -46,14 +47,17 @@ export function commentTotal(
   state: CommentsState,
 ): number | null {
   if (!entry.comments) return null;
-  return state.status === 'ok' ? state.comments.length + state.omitted : entry.commentCount;
+  return state.status === 'ok' ? threadTotal(state) : entry.commentCount;
 }
+
+type LoadedThread = Extract<CommentsState, { status: 'ok' }>;
 
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
   private readonly api = inject(ReaderApi);
   private readonly socialPosts = inject(SocialPostApi);
   private readonly states = new Map<string, WritableSignal<CommentsState>>();
+  private readonly totals = inject(CommentTotals);
   private readonly toggles = new OptimisticToggles(inject(ToastService));
   private generation = 0;
 
@@ -66,15 +70,14 @@ export class CommentsService {
   }
 
   load(item: ItemRef): void {
-    const state = this.stateFor(item);
-    if (isStale(state())) this.fetch(state, this.api.comments(item.id));
+    if (isStale(this.stateFor(item)())) this.fetch(item, this.api.comments(item.id));
   }
 
   /** A reload waits out a like or repost on the wire, whose answer the reloaded thread might not include yet. */
   reload(item: ItemRef): void {
     const state = this.stateFor(item);
     if (state().status === 'loading' || this.toggles.isBusy(buildItemKey(item))) return;
-    this.fetch(state, this.api.comments(item.id, true));
+    this.fetch(item, this.api.comments(item.id, true));
   }
 
   /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
@@ -105,17 +108,17 @@ export class CommentsService {
 
   /** Shows a reply the reader just published, until the next load brings it from the network. */
   insertReply(item: ItemRef, parentAddress: string | null, reply: EntryCommentDto): void {
-    this.stateFor(item).update((state) =>
-      state.status === 'ok'
-        ? { ...state, comments: withReply(state.comments, parentAddress, reply) }
-        : state,
-    );
+    this.changeThread(item, (thread) => ({
+      ...thread,
+      comments: withReply(thread.comments, parentAddress, reply),
+    }));
   }
 
   removeReply(item: ItemRef, address: string): void {
-    this.stateFor(item).update((state) =>
-      state.status === 'ok' ? { ...state, comments: withoutReply(state.comments, address) } : state,
-    );
+    this.changeThread(item, (thread) => ({
+      ...thread,
+      comments: withoutReply(thread.comments, address),
+    }));
   }
 
   countQuote(item: ItemRef, address: string): void {
@@ -148,11 +151,24 @@ export class CommentsService {
     return state;
   }
 
-  private fetch(state: WritableSignal<CommentsState>, request: Observable<CommentsResponse>): void {
+  private changeThread(item: ItemRef, change: (thread: LoadedThread) => LoadedThread): void {
+    const state = this.stateFor(item);
+    const current = state();
+    if (current.status !== 'ok') return;
+    const changed = change(current);
+    state.set(changed);
+    this.totals.record(item, threadTotal(changed));
+  }
+
+  private fetch(item: ItemRef, request: Observable<CommentsResponse>): void {
+    const state = this.stateFor(item);
     const generation = this.generation;
     state.set({ status: 'loading' });
     request.pipe(catchError(() => of({ status: 'failed' } as const))).subscribe((response) => {
-      if (generation === this.generation) state.set(settled(response));
+      if (generation !== this.generation) return;
+      const next = settled(response);
+      state.set(next);
+      if (next.status === 'ok') this.totals.record(item, threadTotal(next));
     });
   }
 
@@ -161,6 +177,10 @@ export class CommentsService {
     this.states.clear();
     this.toggles.clear();
   }
+}
+
+function threadTotal(thread: LoadedThread): number {
+  return thread.comments.length + thread.omitted;
 }
 
 function isStale(state: CommentsState): boolean {

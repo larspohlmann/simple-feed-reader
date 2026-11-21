@@ -16,6 +16,7 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { provideStoryActions } from '../../../../testing/story-actions-testing';
+import { CommentTotals } from '../../state/comment-totals';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -480,6 +481,19 @@ describe('a Lemmy cross-post chip (#2420)', () => {
     expect(chip.textContent).toContain('3');
     expect(labels).toEqual(['12 points', '3 comments']);
     expect(chip.querySelector('.t')).toBeNull();
+  });
+
+  it('counts the comments of a cross-post thread the reader opened (#2433)', () => {
+    const duplicate = crossPost();
+    const fixture = mount(entry({ ...lead(), duplicates: [duplicate] }));
+
+    TestBed.inject(CommentTotals).record(duplicate, 8);
+    fixture.detectChanges();
+
+    const chip = fixture.nativeElement.querySelector('.also-entry') as HTMLElement;
+    const counts = Array.from(chip.querySelectorAll('[role="img"]'));
+
+    expect(counts.map((icon) => icon.getAttribute('aria-label'))).toContain('8 comments');
   });
 
   it('opens a cross-post in the reader on click, with no popover', () => {

@@ -11,6 +11,7 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
+import { CommentTotals } from '../../state/comment-totals';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -128,6 +129,17 @@ describe('EntryMetaComponent', () => {
       const element = discussionMeta({ score: null, commentCount: null, likeCount: 4 });
       const likes = element.querySelector('.discussion app-entry-like .likes');
       expect(likes?.getAttribute('aria-label')).toBe('4 likes');
+    });
+
+    it('shows the opened thread’s total over the stored count (#2433)', () => {
+      const counted = anEntry({ score: null, commentCount: 3 });
+      const fixture = mount([], counted);
+
+      TestBed.inject(CommentTotals).record(counted, 7);
+      fixture.detectChanges();
+
+      const bubble = (fixture.nativeElement as HTMLElement).querySelector('.comments');
+      expect(bubble?.getAttribute('aria-label')).toBe('7 comments');
     });
 
     it('shows a zero score', () => {
