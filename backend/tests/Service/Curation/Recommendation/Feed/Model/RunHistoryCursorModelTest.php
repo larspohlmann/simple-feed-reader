@@ -33,6 +33,14 @@ final class RunHistoryCursorModelTest extends TestCase
         self::assertSame(1795168800, $parsed->createdAt->getTimestamp());
     }
 
+    public function testParsesTheLastSecondADatetimeColumnHolds(): void
+    {
+        $parsed = RunHistoryCursorModel::parse('253402300799-story-1');
+
+        self::assertNotNull($parsed);
+        self::assertSame('9999-12-31 23:59:59', $parsed->createdAt->format('Y-m-d H:i:s'));
+    }
+
     #[DataProvider('malformedCursors')]
     public function testParseRejectsMalformedCursor(string $cursor): void
     {
@@ -50,6 +58,7 @@ final class RunHistoryCursorModelTest extends TestCase
         yield 'zero id' => ['1795168800-story-0'];
         yield 'non numeric timestamp' => ['x-story-1'];
         yield 'out of range timestamp' => ['99999999999999999999-story-1'];
+        yield 'timestamp past year 9999' => ['253402300800-story-1'];
         yield 'out of range id' => ['1795168800-story-99999999999999999999'];
     }
 }
