@@ -300,12 +300,16 @@ async function openReadableArticle(page, finger, readable) {
   throw new Error('No warmed article opened with its body');
 }
 
+// The first swipe is slow on purpose: it is the moment the app bar, the tag strip and the list
+// header fold into one title line, and the scene is there to show it.
 async function magazineScene({ finger }) {
+  await finger.hold(1700);
+  await finger.swipeUp({ distance: 260, steps: 55 });
   await finger.hold(1500);
   await finger.swipeUp();
   await finger.hold(1100);
   await finger.swipeUp();
-  await finger.hold(1400);
+  await finger.hold(1300);
 }
 
 async function readerScene({ page, finger, readable }) {

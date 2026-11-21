@@ -85,6 +85,9 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
   of repeating one lead article (Lars, 2026-11-21): lists and Trending leave such entries out by
   a word list, each desktop reading shot opens another tag and article, and shots of the same
   list start further down. Every image is still looked at before it is committed.
+- The collapsing top bar is shown (Lars, 2026-11-21): a `mobile-scrolled-light` shot beside
+  `mobile-magazine-light` in the Mobile section, and the tour's first scene scrolls slowly enough
+  for the bars to be seen folding away.
 - The notifications list is stubbed with invented actors, the way the admin user list is, even
   with real accounts connected.
 - Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of

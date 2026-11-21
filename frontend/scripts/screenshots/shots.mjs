@@ -332,6 +332,21 @@ async function openLeadStory(page) {
   await page.goto(`${BASE}/trending/stories/${storyId}`);
   await settle(page, 2500);
 }
+// A touch scroll, as a finger does it: the app bar, the tag strip and the list header fold into
+// one title line once the list moves, and a wheel or scrollTo would not show that on a phone.
+const SCROLLED_BY = 900;
+async function scrollListByTouch(page) {
+  await articles(page).first().waitFor();
+  const session = await page.context().newCDPSession(page);
+  await session.send('Input.synthesizeScrollGesture', {
+    x: PHONE.viewport.width / 2,
+    y: 500,
+    yDistance: -SCROLLED_BY,
+    speed: 900,
+    gestureSourceType: 'touch',
+  });
+  await settle(page, 1200);
+}
 async function openSidebarDrawer(page) {
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
   await page.getByRole('navigation', { name: 'Feeds' }).waitFor();
@@ -458,6 +473,8 @@ const SETS = {
     phone('mobile-settings-light', '/settings'),
     // A phone's list header leaves a tag's name three letters, so the phone lists stay on All items.
     phone('mobile-magazine-light', '/', { ...magazine, startAt: 3 }),
+    // The pair to mobile-magazine-light: the same list once it has been scrolled.
+    phone('mobile-scrolled-light', '/', { ...magazine, startAt: 3, before: scrollListByTouch }),
     phone('mobile-magazine-dark', '/', { ...magazine, theme: 'dark', startAt: 6 }),
     phone('mobile-list-light', '/', { layout: 'list', startAt: 14 }),
     phone('mobile-sidebar-light', '/', { ...magazine, before: openSidebarDrawer }),
