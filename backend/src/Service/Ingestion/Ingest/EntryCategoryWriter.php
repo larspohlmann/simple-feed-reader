@@ -16,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * Resolves feed-declared categories of newly created entries to shared
  * Category rows, then writes the per-entry links. Write-once: only for
- * entries ingest just created, never on refresh.
+ * entries ingest just created, never on refresh. The caller flushes.
  */
 final readonly class EntryCategoryWriter
 {

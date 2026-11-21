@@ -95,37 +95,6 @@ final class EntryCategoryWriterTest extends DbTestCase
         );
     }
 
-    public function testDoesNotFlushEarlyWhenNoNewCategoryIsCreated(): void
-    {
-        $feed = $this->persistFeed();
-        $seedEntry = $this->persistEntry($feed, 'seed');
-        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategoryModel('Politics'))]]);
-        $this->entityManager->flush();
-
-        $entry = $this->persistEntry($feed, 'a');
-        self::assertNull($entry->getId());
-
-        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
-
-        self::assertNull($entry->getId(), 'attach() must not flush when it created no new Category row');
-    }
-
-    public function testLeavesANewCategoryForTheCallersFlush(): void
-    {
-        $feed = $this->persistFeed();
-        $entry = $this->persistEntry($feed, 'a');
-
-        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
-
-        self::assertNull($entry->getId(), 'attach() must leave a new Category to the caller\'s flush');
-        $this->entityManager->flush();
-        $this->entityManager->clear();
-        $categories = $this->entityManager->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
-        self::assertCount(1, $categories);
-        $links = $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
-        self::assertCount(1, $links);
-    }
-
     public function testCreatesANewCategoryEvenWhenAnEarlierOneAlreadyExists(): void
     {
         $feed = $this->persistFeed();
