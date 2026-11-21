@@ -10,10 +10,12 @@ use App\Service\Curation\Ai\ConnectionPicks;
 use App\Service\Curation\Ai\Exception\ConnectionPickRejectedException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
+use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsUsers;
 
 final class ConnectionPicksTest extends DbTestCase
 {
+    use RequiresServices;
     use SeedsUsers;
 
     private function persistConnection(User $user): AiProviderSettings
@@ -27,10 +29,7 @@ final class ConnectionPicksTest extends DbTestCase
 
     private function connectionPicks(): ConnectionPicks
     {
-        /** @var ConnectionPicks $connectionPicks */
-        $connectionPicks = self::getContainer()->get(ConnectionPicks::class);
-
-        return $connectionPicks;
+        return $this->requireFromContainer(ConnectionPicks::class);
     }
 
     public function testNoIdIsNoPick(): void
