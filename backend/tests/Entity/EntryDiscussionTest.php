@@ -118,4 +118,14 @@ final class EntryDiscussionTest extends TestCase
         $discussion->recordCounts(DiscussionCounts::unknown());
         self::assertSame(5, $discussion->getCommentCount());
     }
+
+    public function testItStoresNoLikeCount(): void
+    {
+        $discussion = new EntryDiscussion();
+
+        $discussion->recordCounts(DiscussionCounts::fromCommentsAndLikes(1, 7));
+
+        self::assertNull($discussion->getLikeCount());
+        self::assertSame(1, $discussion->getCommentCount());
+    }
 }

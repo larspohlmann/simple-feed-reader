@@ -11,6 +11,8 @@ interface DiscussionCountStoreInterface
 
     public function getCommentCount(): ?int;
 
+    public function getLikeCount(): ?int;
+
     /** A read sees only part of a thread, a timeline page most of all, so the count only ever grows. */
     public function recordSelfReplyCount(int $selfReplyCount): void;
 
