@@ -286,6 +286,11 @@
         "scoringStep4": "Open Settings → AI and choose your LLM connection under Profile.",
         "scoringStep5": "Press “Use this one”. The picks then carry a score but no reasons."
       },
+      "runKind": {
+        "for_you": "For you",
+        "profile": "Profile",
+        "story": "Trending stories"
+      },
       "recommendations": {
         "title": "Recommendations",
         "forYouTitle": "For You",
@@ -351,6 +356,7 @@
         "historyLegend": "Status icons",
         "debugPanelTitle": "Debug log",
         "debugBatch": "Batch {{ n }}",
+        "debugStoryTitle": "Story title",
         "debugDedup": "Dedup",
         "debugDistill": "Distill",
         "debugAttempt": "attempt {{ n }}",

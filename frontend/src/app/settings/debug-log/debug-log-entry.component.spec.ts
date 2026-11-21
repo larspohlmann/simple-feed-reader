@@ -63,10 +63,21 @@ describe('DebugLogEntryComponent', () => {
     expect(text).toContain('412/1 KB');
   });
 
-  it('names a dedup call', () => {
-    const text = element(mount({ ...SETTLED, phase: 'dedup', batchNumber: null })).textContent;
+  it('names a consolidate call', () => {
+    const text = element(
+      mount({ ...SETTLED, phase: 'consolidate', batchNumber: null }),
+    ).textContent;
 
     expect(text).toContain('Dedup');
+  });
+
+  it('names a story title call', () => {
+    const text = element(
+      mount({ ...SETTLED, phase: 'story_title', batchNumber: null }),
+    ).textContent;
+
+    expect(text).toContain('Story title');
+    expect(text).not.toContain('Dedup');
   });
 
   it('names a profile distill call', () => {

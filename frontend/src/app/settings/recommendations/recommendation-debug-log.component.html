@@ -7,19 +7,25 @@
          panel's entire value is matching what the backend and its logs say. -->
     @if (run(); as r) {
       <div class="debug-panel__summary">
-        <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{ r.status }}</span>
-        <span class="debug-panel__meta">
-          {{
-            'settings.ai.recommendations.debugRunSummary'
-              | transloco
-                : {
-                    a: r.attempts,
-                    am: r.maxAttempts,
-                    t: r.transportFailures,
-                    tm: r.maxTransportFailures,
-                  }
-          }}
-        </span>
+        @if (r.status) {
+          <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{
+            r.status
+          }}</span>
+        }
+        @if (r.attempts !== null) {
+          <span class="debug-panel__meta">
+            {{
+              'settings.ai.recommendations.debugRunSummary'
+                | transloco
+                  : {
+                      a: r.attempts,
+                      am: r.maxAttempts,
+                      t: r.transportFailures,
+                      tm: r.maxTransportFailures,
+                    }
+            }}
+          </span>
+        }
         <span class="debug-panel__meta debug-panel__timeline">
           {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
         </span>
@@ -36,11 +42,14 @@
         }}</span>
         <select
           class="debug-panel__runs-select"
-          [value]="selectedRunId() ?? runs()[0].id"
+          [value]="selectedOptionValue()"
           (change)="onRunPicked($event)"
         >
-          @for (choice of runs(); track choice.id) {
-            <option [value]="choice.id">{{ time(choice.createdAt) }} · {{ choice.status }}</option>
+          @for (choice of runs(); track optionValue(choice)) {
+            <option [value]="optionValue(choice)">
+              {{ time(choice.createdAt) }} · {{ 'settings.ai.runKind.' + choice.kind | transloco
+              }}{{ choice.status ? ' · ' + choice.status : '' }}
+            </option>
           }
         </select>
       </label>

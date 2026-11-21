@@ -286,6 +286,11 @@
         "scoringStep4": "Ouvrez Paramètres → IA et choisissez votre connexion LLM sous Profil.",
         "scoringStep5": "Appuyez sur « Utiliser celle-ci ». Les sélections portent alors une note mais pas de justification."
       },
+      "runKind": {
+        "for_you": "Pour vous",
+        "profile": "Profil",
+        "story": "Sujets Tendances"
+      },
       "recommendations": {
         "title": "Recommandations",
         "forYouTitle": "Pour vous",
@@ -351,6 +356,7 @@
         "historyLegend": "Icônes de statut",
         "debugPanelTitle": "Journal de débogage",
         "debugBatch": "Lot {{ n }}",
+        "debugStoryTitle": "Titre du sujet",
         "debugDedup": "Dédoublonnage",
         "debugDistill": "Distillation",
         "debugAttempt": "tentative {{ n }}",

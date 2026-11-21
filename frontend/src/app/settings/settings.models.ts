@@ -17,7 +17,7 @@ export interface DebugLogEntry {
   /** The run this call belongs to. The log can hold more than one run (a
    *  resumed run keeps appending), so the panel groups rows by it. */
   runId: number;
-  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'story_title';
   batchNumber: number | null;
   attempt: number;
   verdict: 'usable' | 'unusable' | 'transport-failed' | null;
@@ -39,24 +39,32 @@ export interface DebugLogEntry {
   adjustment: DebugLogAdjustment | null;
 }
 
+export type AiRunKind = 'for_you' | 'profile' | 'story';
+
+export type DebugLogRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
 /** One run the debug panel may switch to. The log keeps the last ten runs,
  *  and the panel reads one at a time -- shipping all ten on every two-second
  *  poll would cost ten times what the panel costs today. */
 export interface DebugLogRunChoice {
+  kind: AiRunKind;
   id: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  /** Null for a Trending story run, which has no lifecycle of its own. */
+  status: DebugLogRunStatus | null;
   createdAt: string;
 }
 
 export interface DebugLogRunSummary {
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  kind: AiRunKind;
+  id: number;
+  status: DebugLogRunStatus | null;
   /** The run's own failure, distinct from a per-row `errorDetail` on
    *  `DebugLogEntry` -- null when the user has never run. */
   error: string | null;
-  attempts: number;
-  maxAttempts: number;
-  transportFailures: number;
-  maxTransportFailures: number;
+  attempts: number | null;
+  maxAttempts: number | null;
+  transportFailures: number | null;
+  maxTransportFailures: number | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -71,7 +79,7 @@ export interface DebugLogPayload {
 /** The full request/response pair for one logged provider call. */
 export interface DebugLogDetail {
   id: number;
-  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'story_title';
   batchNumber: number | null;
   attempt: number;
   verdict: string | null;

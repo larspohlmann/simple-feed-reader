@@ -16,7 +16,12 @@ import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { debugLogTime } from '../debug-log/debug-log-time';
 import { SettingsApi } from '../settings-api';
 import { LanguageService } from '../../core/i18n/language.service';
-import { DebugLogEntry, DebugLogRunChoice, DebugLogRunSummary } from '../settings.models';
+import {
+  AiRunKind,
+  DebugLogEntry,
+  DebugLogRunChoice,
+  DebugLogRunSummary,
+} from '../settings.models';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
 
 const POLL_MS = 2000;
@@ -73,12 +78,20 @@ export class RecommendationDebugLogComponent implements OnInit {
   readonly run = signal<DebugLogRunSummary | null>(null);
   /** The retained runs, newest first — what the picker offers (#401). */
   readonly runs = signal<DebugLogRunChoice[]>([]);
-  /** The run the panel is reading, or null for "whatever is newest". A null
-   *  selection keeps following the newest run as new ones start; an explicit
-   *  one stays where the user put it. */
-  readonly selectedRunId = signal<number | null>(null);
+  /** The run the panel is reading, or null for the server's default (the
+   *  newest For you run). A null selection keeps following it as new runs
+   *  start; an explicit one stays where the user put it. */
+  readonly selectedRun = signal<{ kind: AiRunKind; id: number } | null>(null);
+  readonly selectedOptionValue = computed(() => {
+    const selected = this.selectedRun() ?? this.newestForYouRun();
+    return selected === null ? '' : this.optionValue(selected);
+  });
   /** The picker is worth showing only once there is somewhere else to go. */
   readonly hasOlderRuns = computed(() => this.runs().length > 1);
+
+  private readonly newestForYouRun = computed(
+    () => this.runs().find((choice) => choice.kind === 'for_you') ?? null,
+  );
 
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -92,9 +105,9 @@ export class RecommendationDebugLogComponent implements OnInit {
 
   ngOnInit(): void {
     this.timer = setInterval(() => {
-      // An older run is finished by definition, so polling it would re-fetch
+      // A pinned run is finished by definition, so polling it would re-fetch
       // an unchanging payload every two seconds.
-      if (this.recs.running() && this.isViewingNewestRun()) this.fetch();
+      if (this.recs.running() && this.isFollowingDefault()) this.fetch();
     }, POLL_MS);
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
@@ -115,28 +128,35 @@ export class RecommendationDebugLogComponent implements OnInit {
     return finishedAt === null ? null : this.time(finishedAt);
   }
 
-  /** Switches the panel to another retained run. Selecting the newest is the
-   *  same as following it, so it clears the selection rather than pinning it —
-   *  otherwise the panel would stop tracking the next run that starts. */
-  selectRun(runId: number): void {
-    const newest = this.runs()[0]?.id ?? null;
-    this.selectedRunId.set(runId === newest ? null : runId);
+  /** Switches the panel to another retained run. Selecting the newest For you
+   *  run is the same as following the default, so it clears the selection
+   *  rather than pinning it — otherwise the panel would stop tracking the next
+   *  run that starts. */
+  selectRun(run: { kind: AiRunKind; id: number }): void {
+    const newest = this.newestForYouRun();
+    const isNewest = run.kind === 'for_you' && run.id === newest?.id;
+    this.selectedRun.set(isNewest ? null : { kind: run.kind, id: run.id });
     this.details.clear();
     this.fetch();
   }
 
-  protected onRunPicked(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.selectRun(Number(value));
+  optionValue(run: { kind: AiRunKind; id: number }): string {
+    return `${run.kind}:${run.id}`;
   }
 
-  private isViewingNewestRun(): boolean {
-    return this.selectedRunId() === null;
+  protected onRunPicked(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const choice = this.runs().find((candidate) => this.optionValue(candidate) === value);
+    if (choice) this.selectRun(choice);
+  }
+
+  private isFollowingDefault(): boolean {
+    return this.selectedRun() === null;
   }
 
   private fetch(): void {
     this.api
-      .debugLog(this.selectedRunId() ?? undefined)
+      .debugLog(this.selectedRun() ?? undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {

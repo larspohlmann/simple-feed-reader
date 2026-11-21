@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import {
   DebugLogDetail,
   DebugLogEntry,
+  AiRunKind,
   DebugLogPayload,
   OpmlImportResult,
   ReadingActivity,
@@ -56,11 +57,11 @@ export class SettingsApi {
     });
   }
 
-  /** The provider calls logged for one for-you run, in call order, plus that
-   *  run's own summary and the retained runs the panel may switch to. Without
-   *  a runId the newest run answers -- null when the user has never run. */
-  debugLog(runId?: number): Observable<DebugLogPayload> {
-    const query = runId === undefined ? '' : `?run=${runId}`;
+  /** The provider calls logged for one run, in call order, plus that run's
+   *  own summary and the retained runs of every kind the panel may switch to.
+   *  Without a run the server's default answers -- null when nothing ran. */
+  debugLog(run?: { kind: AiRunKind; id: number }): Observable<DebugLogPayload> {
+    const query = run === undefined ? '' : `?kind=${run.kind}&run=${run.id}`;
     return this.http.get<DebugLogPayload>(
       `${this.base}/api/recommendations/runs/debug-log${query}`,
     );

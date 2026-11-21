@@ -286,6 +286,11 @@
         "scoringStep4": "Öffne Einstellungen → KI und wähle unter Profil deine LLM-Verbindung.",
         "scoringStep5": "Drücke „Diesen verwenden“. Die Empfehlungen tragen dann eine Bewertung, aber keine Begründung."
       },
+      "runKind": {
+        "for_you": "Für dich",
+        "profile": "Profil",
+        "story": "Stories im Trend"
+      },
       "recommendations": {
         "title": "Empfehlungen",
         "forYouTitle": "Für dich",
@@ -351,6 +356,7 @@
         "historyLegend": "Status-Symbole",
         "debugPanelTitle": "Debug-Protokoll",
         "debugBatch": "Batch {{ n }}",
+        "debugStoryTitle": "Story-Titel",
         "debugDedup": "Dedup",
         "debugDistill": "Destillation",
         "debugAttempt": "Versuch {{ n }}",

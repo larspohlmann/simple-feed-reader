@@ -176,6 +176,15 @@ describe('SettingsApi', () => {
     testRequest.flush({ run: null, entries: [] });
   });
 
+  it('GETs the debug log of one run by kind and id', () => {
+    api.debugLog({ kind: 'story', id: 7 }).subscribe();
+    const testRequest = ctrl.expectOne(
+      'https://api.test/api/recommendations/runs/debug-log?kind=story&run=7',
+    );
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({ run: null, runs: [], entries: [] });
+  });
+
   it('GETs one debug log entry', () => {
     api.debugLogEntry(7).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');

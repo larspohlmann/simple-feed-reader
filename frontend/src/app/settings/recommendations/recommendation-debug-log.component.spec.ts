@@ -28,7 +28,7 @@ const BATCH_ENTRY: DebugLogEntry = {
 const DEDUP_ENTRY: DebugLogEntry = {
   id: 2,
   runId: 7,
-  phase: 'dedup',
+  phase: 'consolidate',
   batchNumber: null,
   attempt: 2,
   verdict: 'usable',
@@ -92,6 +92,8 @@ const DETAIL: DebugLogDetail = {
 };
 
 const RUN_SUMMARY: DebugLogRunSummary = {
+  kind: 'for_you',
+  id: 7,
   status: 'completed',
   error: null,
   attempts: 1,
@@ -103,6 +105,8 @@ const RUN_SUMMARY: DebugLogRunSummary = {
 };
 
 const FAILED_RUN_SUMMARY: DebugLogRunSummary = {
+  kind: 'for_you',
+  id: 7,
   status: 'failed',
   error: 'Too many transport failures',
   attempts: 3,
@@ -114,6 +118,8 @@ const FAILED_RUN_SUMMARY: DebugLogRunSummary = {
 };
 
 const RUNNING_RUN_SUMMARY: DebugLogRunSummary = {
+  kind: 'for_you',
+  id: 7,
   status: 'running',
   error: null,
   attempts: 1,
@@ -302,7 +308,7 @@ describe('RecommendationDebugLogComponent', () => {
     debugLog.mockReturnValue(
       of({
         run: null,
-        runs: [{ id: 7, status: 'completed', createdAt: '2026-08-08T10:00:00Z' }],
+        runs: [{ kind: 'for_you', id: 7, status: 'completed', createdAt: '2026-08-08T10:00:00Z' }],
         entries: [BATCH_ENTRY],
       }),
     );
@@ -318,8 +324,8 @@ describe('RecommendationDebugLogComponent', () => {
       of({
         run: null,
         runs: [
-          { id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
-          { id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'for_you', id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'for_you', id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
         ],
         entries: [BATCH_ENTRY],
       }),
@@ -330,11 +336,11 @@ describe('RecommendationDebugLogComponent', () => {
     ) as HTMLSelectElement;
     expect(select.options).toHaveLength(2);
 
-    select.value = '7';
+    select.value = 'for_you:7';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(debugLog).toHaveBeenLastCalledWith(7);
+    expect(debugLog).toHaveBeenLastCalledWith({ kind: 'for_you', id: 7 });
   });
 
   it('follows the newest run rather than pinning it when the newest is picked', () => {
@@ -342,8 +348,8 @@ describe('RecommendationDebugLogComponent', () => {
       of({
         run: null,
         runs: [
-          { id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
-          { id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'for_you', id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'for_you', id: 7, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
         ],
         entries: [BATCH_ENTRY],
       }),
@@ -353,13 +359,90 @@ describe('RecommendationDebugLogComponent', () => {
       '.debug-panel__runs-select',
     ) as HTMLSelectElement;
 
-    select.value = '9';
+    select.value = 'for_you:9';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    // undefined, not 9: an explicit pin would stop the panel following the
-    // next run that starts.
     expect(debugLog).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('labels each option with its time, kind and status, and none for a story run', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [
+          { kind: 'story', id: 12, status: null, createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'profile', id: 5, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'for_you', id: 9, status: 'failed', createdAt: '2026-08-08T10:00:00Z' },
+        ],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const fixture = mount();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      '.debug-panel__runs-select',
+    ) as HTMLSelectElement;
+    const labels = Array.from(select.options).map((option) => option.textContent?.trim() ?? '');
+
+    expect(labels[0]).toMatch(/ · Trending stories$/);
+    expect(labels[1]).toMatch(/ · Profile · completed$/);
+    expect(labels[2]).toMatch(/ · For you · failed$/);
+    expect(Array.from(select.options).map((option) => option.value)).toEqual([
+      'story:12',
+      'profile:5',
+      'for_you:9',
+    ]);
+  });
+
+  it('asks for a story run by kind and id', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [
+          { kind: 'for_you', id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+          { kind: 'story', id: 12, status: null, createdAt: '2026-08-08T10:00:00Z' },
+        ],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const fixture = mount();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      '.debug-panel__runs-select',
+    ) as HTMLSelectElement;
+
+    select.value = 'story:12';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(debugLog).toHaveBeenLastCalledWith({ kind: 'story', id: 12 });
+  });
+
+  it('hides the attempts line for a run without counters', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: {
+          kind: 'story',
+          id: 12,
+          status: null,
+          error: null,
+          attempts: null,
+          maxAttempts: null,
+          transportFailures: null,
+          maxTransportFailures: null,
+          createdAt: '2026-08-08T10:00:00Z',
+          completedAt: null,
+        },
+        runs: [],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const fixture = mount();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '.debug-panel__meta:not(.debug-panel__timeline)',
+      ),
+    ).toBeNull();
   });
 
   it('reports bytes streamed without an answer', () => {
