@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingestion\Refresh;
 
 use App\Entity\Entry;
+use App\Entity\EntryCategory;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
@@ -84,6 +85,28 @@ final class FeedOutcomePersisterTest extends DbTestCase
             (string) $post->getText()->getContentHtml(),
         );
         self::assertSame([], $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]));
+    }
+
+    public function testAFailedFirstRefreshThatBroughtANewCategoryIsRetriedInFull(): void
+    {
+        $feed = $this->feed('https://mastodon.example/@someone.rss');
+        $fetched = FetchOutcomeModel::succeeded(
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->postRss('<category>Europe</category>'), null, null),
+        );
+
+        $failing = new FlushFailingEntityManager($this->entityManager, thrown: DuplicateKeyViolation::exception());
+        $aborted = $this->persister($failing)->persist($feed, $fetched, $this->clock->now());
+        self::assertSame(FeedOutcome::Aborted, $aborted->outcome);
+        $this->entityManager->clear();
+
+        $this->persister($this->entityManager)->persist($this->reload($feed), $fetched, $this->clock->now());
+
+        $posts = $this->entityManager->getRepository(Entry::class)->findBy(['guid.value' => 'post-1']);
+        self::assertCount(1, $posts);
+        $queued = $this->entityManager->getRepository(ShareEnrichment::class)->findBy(['entry' => $posts[0]]);
+        self::assertCount(1, $queued);
+        self::assertSame(ShareEnrichmentKind::LinkCards, $queued[0]->getKind());
+        self::assertCount(1, $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $posts[0]]));
     }
 
     public function testAThrottledFetchIsLoggedAtInfo(): void
@@ -302,10 +325,10 @@ final class FeedOutcomePersisterTest extends DbTestCase
             . '</channel></rss>';
     }
 
-    private function postRss(): string
+    private function postRss(string $category = ''): string
     {
         return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>T</title>'
-            . '<item><link>https://mastodon.example/@someone/1</link><guid>post-1</guid>'
+            . '<item><link>https://mastodon.example/@someone/1</link><guid>post-1</guid>' . $category
             . '<description>&lt;p&gt;Worth a read: https://example.com/story&lt;/p&gt;</description></item>'
             . '</channel></rss>';
     }

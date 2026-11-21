@@ -54,9 +54,9 @@ final readonly class IncomingPageStore
     public function store(Feed $feed, IncomingFeedModel $incoming, FeedIngestContext $context): FeedRefreshResultModel
     {
         $stored = $this->withoutDeletedPosts($feed, $incoming);
-        $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
         // A backfilled image is not new content, so it stays out of the count.
         $this->storedEntryRefresher->refreshStoredEntries($feed, $stored->parsed);
+        $createdEntries = $this->ingestor->ingest($feed, $stored->parsed, $context);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->settle($feed, $stored, $createdEntries);
         $this->entityManager->flush();

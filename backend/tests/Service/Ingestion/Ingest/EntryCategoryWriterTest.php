@@ -110,20 +110,19 @@ final class EntryCategoryWriterTest extends DbTestCase
         self::assertNull($entry->getId(), 'attach() must not flush when it created no new Category row');
     }
 
-    public function testFlushesImmediatelyWhenANewCategoryIsCreated(): void
+    public function testLeavesANewCategoryForTheCallersFlush(): void
     {
         $feed = $this->persistFeed();
         $entry = $this->persistEntry($feed, 'a');
-        $this->entityManager->flush();
 
         $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
 
+        self::assertNull($entry->getId(), 'attach() must leave a new Category to the caller\'s flush');
+        $this->entityManager->flush();
+        $this->entityManager->clear();
         $categories = $this->entityManager->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
         self::assertCount(1, $categories);
-        self::assertNotNull(
-            $categories[0]->getId(),
-            'a newly created Category must be flushed inside attach(), not deferred to the caller',
-        );
+        self::assertCount(1, $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]));
     }
 
     public function testCreatesANewCategoryEvenWhenAnEarlierOneAlreadyExists(): void
