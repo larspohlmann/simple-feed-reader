@@ -122,7 +122,8 @@ final class EntryCategoryWriterTest extends DbTestCase
         $this->entityManager->clear();
         $categories = $this->entityManager->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
         self::assertCount(1, $categories);
-        self::assertCount(1, $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]));
+        $links = $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
+        self::assertCount(1, $links);
     }
 
     public function testCreatesANewCategoryEvenWhenAnEarlierOneAlreadyExists(): void

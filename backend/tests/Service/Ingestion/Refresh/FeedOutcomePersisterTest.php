@@ -90,9 +90,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
     public function testAFailedFirstRefreshThatBroughtANewCategoryIsRetriedInFull(): void
     {
         $feed = $this->feed('https://mastodon.example/@someone.rss');
-        $fetched = FetchOutcomeModel::succeeded(
-            FetchResponseModel::fetched($feed->getUrl(), false, $this->postRss('<category>Europe</category>'), null, null),
-        );
+        $body = $this->postRss('<category>Europe</category>');
+        $fetched = FetchOutcomeModel::succeeded(FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null));
 
         $failing = new FlushFailingEntityManager($this->entityManager, thrown: DuplicateKeyViolation::exception());
         $aborted = $this->persister($failing)->persist($feed, $fetched, $this->clock->now());
