@@ -302,6 +302,47 @@ describe('RecommendationRunHistoryComponent', () => {
 
       expect(months(element)).toHaveLength(1);
     });
+
+    it('ignores a late first-page failure for the kind the reader has since left', () => {
+      const late = new Subject<RunHistoryMonthPage>();
+      runHistoryMonth.mockReturnValueOnce(late);
+      const element = mount(OVERVIEW);
+      openMonth(months(element)[1]);
+      pickKind(element, 'Profile');
+      runHistoryMonth.mockReturnValue(new Subject<RunHistoryMonthPage>());
+      openMonth(months(element)[1]);
+
+      late.error(new Error('the endpoint is down'));
+      fixture.detectChanges();
+
+      const older = months(element)[1];
+      expect(older.querySelector('.run-history-month__failed')).toBeNull();
+      expect(older.querySelector('.run-history-month__loading')).not.toBeNull();
+    });
+
+    it('ignores a late "show more" failure for the kind the reader has since left', () => {
+      const overviewWithMore: RunHistoryOverview = {
+        ...OVERVIEW,
+        latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: '41' },
+      };
+      const late = new Subject<RunHistoryMonthPage>();
+      runHistoryMonth.mockReturnValueOnce(late);
+      const element = mount(overviewWithMore);
+      fixture.componentInstance.onShowMore('2026-08');
+      runHistory.mockReturnValue(of(overviewWithMore));
+      pickKind(element, 'Profile');
+      runHistoryMonth.mockReturnValue(new Subject<RunHistoryMonthPage>());
+      fixture.componentInstance.onShowMore('2026-08');
+      fixture.detectChanges();
+
+      late.error(new Error('the endpoint is down'));
+      fixture.detectChanges();
+
+      const newest = months(element)[0];
+      expect((newest.querySelector('.run-history-month__more') as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+    });
   });
 
   it('on completion, rows of different kinds that share an id are carried and kept apart', () => {

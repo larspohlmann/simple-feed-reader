@@ -163,7 +163,9 @@ export class RecommendationRunHistoryComponent {
         // Without a message this reads as a month with no runs, not a failed
         // fetch -- and closing and re-opening retries, but only if the
         // reader knows there's something to retry.
-        error: () => this.markFailed(month),
+        error: () => {
+          if (this.kind() === kind) this.markFailed(month);
+        },
       });
   }
 
@@ -187,7 +189,9 @@ export class RecommendationRunHistoryComponent {
         },
         // Unlike a first page, this one has rows on screen already: they stay,
         // and the button comes back enabled so the reader can try again.
-        error: () => this.stopFetch(month),
+        error: () => {
+          if (this.kind() === kind) this.stopFetch(month);
+        },
       });
   }
 
