@@ -243,6 +243,7 @@ for (const [device, viewport] of [
 
       await expect(layer(page).locator('p.synopsis')).toHaveText(SYNOPSIS);
       await closeStory(page);
+      await expect(layer(page)).toHaveCount(0);
       const card = page.locator('app-story-title', { hasText: TITLE });
       await expect(card.locator('h3.title ~ p.synopsis')).toHaveText(SYNOPSIS);
     });
