@@ -294,16 +294,18 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->ingestor()->ingest($feed, self::blueskyPost(7), self::context());
         $this->entityManager->flush();
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::BLUESKY_POST]);
-        self::assertNotNull($entry);
-        self::assertSame(7, $entry->getCanonicalItem()?->getLikeCount());
+        $item = $entry?->getCanonicalItem();
+        self::assertNotNull($item);
+        $ingested = $item->getLikeCount();
 
         $this->refresher()->refreshStoredEntries($feed, self::blueskyPost(null));
         $this->entityManager->flush();
-        self::assertSame(7, $entry->getCanonicalItem()?->getLikeCount());
+        $kept = $item->getLikeCount();
 
         $this->refresher()->refreshStoredEntries($feed, self::blueskyPost(12));
         $this->entityManager->flush();
-        self::assertSame(12, $entry->getCanonicalItem()?->getLikeCount());
+
+        self::assertSame([7, 7, 12], [$ingested, $kept, $item->getLikeCount()]);
     }
 
     public function testARefreshUpdatesTheStoredScore(): void

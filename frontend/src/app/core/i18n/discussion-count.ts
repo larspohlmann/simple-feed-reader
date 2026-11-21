@@ -7,15 +7,20 @@ export interface DiscussionCount {
   labelKey: string;
 }
 
+export type DiscussionCountLabel =
+  | 'reader.discussionCounts.points'
+  | 'reader.discussionCounts.comments'
+  | 'reader.socialCounts.likes';
+
 export function buildDiscussionCount(
   compactCount: CompactCount,
   count: number | null,
-  kind: 'points' | 'comments' | 'likes',
+  label: DiscussionCountLabel,
 ): DiscussionCount | null {
   if (count === null) return null;
   return {
     text: compactCount.format(count),
     count,
-    labelKey: pluralKey(`reader.discussionCounts.${kind}`, count),
+    labelKey: pluralKey(label, count),
   };
 }

@@ -57,12 +57,6 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
         return $this->commentCount;
     }
 
-    /** Likes are a social post's, so only its canonical item stores them. */
-    public function getLikeCount(): ?int
-    {
-        return null;
-    }
-
     public function recordSelfReplyCount(int $selfReplyCount): void
     {
         $this->selfReplyCount = max($this->selfReplyCount, $selfReplyCount);

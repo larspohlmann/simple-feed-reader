@@ -37,10 +37,14 @@ export class EntryMetaComponent {
   protected readonly actions = inject(EntryActionHandler);
   private readonly compactCount = inject(CompactCount);
   protected readonly comments = computed(() =>
-    buildDiscussionCount(this.compactCount, this.entry().commentCount, 'comments'),
+    buildDiscussionCount(
+      this.compactCount,
+      this.entry().commentCount,
+      'reader.discussionCounts.comments',
+    ),
   );
   protected readonly likes = computed(() =>
-    buildDiscussionCount(this.compactCount, this.entry().likeCount, 'likes'),
+    buildDiscussionCount(this.compactCount, this.entry().likeCount, 'reader.socialCounts.likes'),
   );
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.imageShown()));
 }

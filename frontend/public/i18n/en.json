@@ -1676,9 +1676,7 @@
       "pointsOne": "{{count}} point",
       "pointsOther": "{{count}} points",
       "commentsOne": "{{count}} comment",
-      "commentsOther": "{{count}} comments",
-      "likesOne": "{{count}} like",
-      "likesOther": "{{count}} likes"
+      "commentsOther": "{{count}} comments"
     },
     "socialCounts": {
       "likesOne": "{{count}} like",
