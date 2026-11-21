@@ -41,6 +41,16 @@ final class RunHistoryCursorModelTest extends TestCase
         self::assertSame('9999-12-31 23:59:59', $parsed->createdAt->format('Y-m-d H:i:s'));
     }
 
+    public function testAcceptsAnEighteenDigitId(): void
+    {
+        self::assertSame(123456789012345678, RunHistoryCursorModel::parse('1795168800-story-123456789012345678')?->id);
+    }
+
+    public function testParsesATwelveDigitTimestamp(): void
+    {
+        self::assertSame(100000000000, RunHistoryCursorModel::parse('100000000000-story-1')?->createdAt->getTimestamp());
+    }
+
     #[DataProvider('malformedCursors')]
     public function testParseRejectsMalformedCursor(string $cursor): void
     {
@@ -60,5 +70,6 @@ final class RunHistoryCursorModelTest extends TestCase
         yield 'out of range timestamp' => ['99999999999999999999-story-1'];
         yield 'timestamp past year 9999' => ['253402300800-story-1'];
         yield 'out of range id' => ['1795168800-story-99999999999999999999'];
+        yield 'nineteen digit id' => ['1795168800-story-1234567890123456789'];
     }
 }

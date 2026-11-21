@@ -20,11 +20,12 @@ final readonly class DebugLogRunRequestModel
     public static function parse(string $kind, string $run): ?self
     {
         $parsedKind = '' === $kind ? AiRunKind::ForYou : AiRunKind::tryFrom($kind);
-        if (null === $parsedKind || !ctype_digit($run) || strlen($run) > self::MAX_ID_DIGITS || (int) $run < 1) {
+        if (null === $parsedKind || !ctype_digit($run) || strlen($run) > self::MAX_ID_DIGITS) {
             return null;
         }
+        $id = (int) $run;
 
-        return new self($parsedKind, (int) $run);
+        return $id < 1 ? null : new self($parsedKind, $id);
     }
 
     public function isFor(DebugLogRunModel $run): bool

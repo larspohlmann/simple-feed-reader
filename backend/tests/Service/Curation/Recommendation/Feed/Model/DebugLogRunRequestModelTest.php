@@ -27,6 +27,14 @@ final class DebugLogRunRequestModelTest extends TestCase
         );
     }
 
+    public function testAcceptsAnEighteenDigitId(): void
+    {
+        self::assertEquals(
+            new DebugLogRunRequestModel(AiRunKind::ForYou, 123456789012345678),
+            DebugLogRunRequestModel::parse('', '123456789012345678'),
+        );
+    }
+
     #[DataProvider('provideNoRequest')]
     public function testIsNoRequest(string $kind, string $run): void
     {
