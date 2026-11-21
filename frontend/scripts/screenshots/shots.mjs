@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  apiGet,
   articles,
   BASE,
   leaveOutDistressingNews,
@@ -28,6 +29,7 @@ mkdirSync(RAW, { recursive: true });
 const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 4 / 3 };
 // A close-up of one control: the desktop page at twice the pixels, cut to the shot's clip.
 const DETAIL = { ...DESKTOP, deviceScaleFactor: 2 };
+const DEVICES = { desktop: DESKTOP, detail: DETAIL, phone: PHONE };
 const CLIP_PADDING = 16;
 
 const day = (daysAgo) => {
@@ -159,7 +161,6 @@ const fakeNotification = (id, kind, hoursAgo, extra = {}) => ({
   id,
   kind,
   account: `@${process.env.BLUESKY_HANDLE ?? 'jamie.example'}`,
-  actors: [fakeActor('Morgan Lee', 'morgan.example')],
   actorCount: 1,
   excerpt: null,
   answeredExcerpt: null,
@@ -243,9 +244,12 @@ async function scrollEverythingToTop(page) {
 
 // Sources whose reader extract starts with the text, not a share toast or an author bio. Each
 // reader shot opens another one, so no two shots show the same article.
+async function openInReader(row) {
+  await row.locator('.title, .dek').first().click();
+  await row.page().locator('app-reader-view').waitFor();
+}
 const openArticleFrom = (source) => async (page) => {
-  await articles(page).filter({ hasText: source }).first().locator('.title, .dek').first().click();
-  await page.locator('app-reader-view').waitFor();
+  await openInReader(articles(page).filter({ hasText: source }).first());
   await settle(page, 2500);
 };
 const openArticleInPaneFrom = (source) => async (page) => {
@@ -256,19 +260,12 @@ const openArticleInPaneFrom = (source) => async (page) => {
 // title: a click on a post's middle lands on the embedded link card instead.
 async function openPost(page) {
   const wanted = process.env.BLUESKY_POST_ACCOUNT ?? 'Lily Hay Newman';
-  const subscriptionId = await page.evaluate(async (title) => {
-    const token = localStorage.getItem('sfr.jwt');
-    const response = await fetch('/api/subscriptions', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const { subscriptions } = await response.json();
-    return subscriptions.find((subscription) => subscription.title?.includes(title))?.id ?? null;
-  }, wanted);
-  if (subscriptionId === null) throw new Error(`No subscription titled like "${wanted}"`);
-  await page.goto(`${BASE}/?subscription=${subscriptionId}`);
+  const { subscriptions } = await apiGet(page, '/api/subscriptions');
+  const followed = subscriptions.find((subscription) => subscription.title?.includes(wanted));
+  if (!followed) throw new Error(`No subscription titled like "${wanted}"`);
+  await page.goto(`${BASE}/?subscription=${followed.id}`);
   await settle(page, 2500);
-  await articles(page).first().locator('.title, .dek').first().click();
-  await page.locator('app-reader-view').waitFor();
+  await openInReader(articles(page).first());
   await settle(page, 3000);
 }
 // The most discussed Lemmy post near the top of the list, open beside it. LEMMY_POST (a title
@@ -291,9 +288,7 @@ async function discussedLemmyPost(page) {
   return articles(page).nth(mostDiscussed);
 }
 async function openDiscussedLemmyPost(page) {
-  const post = await discussedLemmyPost(page);
-  await post.locator('.title, .dek').first().click();
-  await page.locator('app-reader-view').waitFor();
+  await openInReader(await discussedLemmyPost(page));
   await page.locator('app-entry-comments app-vote-pill').first().waitFor({ timeout: 20000 });
   await scrollEverythingToTop(page);
 }
@@ -331,16 +326,9 @@ async function lemmyCommentVotes(page) {
   return { ...clip, y: clip.y + CLIP_PADDING, height: clip.height - CLIP_PADDING };
 }
 async function openLeadStory(page) {
-  const storyId = await page.evaluate(async () => {
-    const token = localStorage.getItem('sfr.jwt');
-    const response = await fetch('/api/trending?window=day', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const { stories } = await response.json();
-    return stories[0]?.id ?? null;
-  });
-  if (storyId === null) throw new Error('Trending has no story to open');
-  await page.goto(`${BASE}/trending/stories/${storyId}`);
+  const { stories } = await apiGet(page, '/api/trending?window=day');
+  if (stories.length === 0) throw new Error('Trending has no story to open');
+  await page.goto(`${BASE}/trending/stories/${stories[0].id}`);
   await settle(page, 2500);
 }
 // A touch scroll, as a finger does it: the app bar, the tag strip and the list header fold into
@@ -405,27 +393,12 @@ const podcastTag = () => {
 };
 const magazine = { layout: 'magazine' };
 const LEMMY_COMMUNITIES = '/?network=lemmy&feedKind=profile';
-const detail = (name, path, extra = {}) => ({
-  name,
-  device: 'detail',
-  theme: 'light',
-  path,
-  ...extra,
-});
-const desktop = (name, path, extra = {}) => ({
-  name,
-  device: 'desktop',
-  theme: 'light',
-  path,
-  ...extra,
-});
-const phone = (name, path, extra = {}) => ({
-  name,
-  device: 'phone',
-  theme: 'light',
-  path,
-  ...extra,
-});
+const shotOn =
+  (device) =>
+  (name, path, extra = {}) => ({ name, device, theme: 'light', path, ...extra });
+const detail = shotOn('detail');
+const desktop = shotOn('desktop');
+const phone = shotOn('phone');
 
 const SETS = {
   public: [
@@ -571,10 +544,11 @@ const SETS = {
 
 function selectShots(arguments_) {
   if (arguments_.length === 0 || arguments_.includes('all')) {
-    return Object.keys(SETS).flatMap((set) => SETS[set]);
+    return Object.values(SETS).flat();
   }
-  const known = [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.trending, ...SETS.social];
-  if (process.env.PODCAST_TAG) known.push(...SETS.listening);
+  const known = Object.keys(SETS)
+    .filter((set) => set !== 'listening' || process.env.PODCAST_TAG)
+    .flatMap((set) => SETS[set]);
   return arguments_.flatMap((key) => {
     if (key in SETS) return SETS[key];
     const shot = known.find((candidate) => candidate.name === key);
@@ -583,16 +557,11 @@ function selectShots(arguments_) {
   });
 }
 
-// Shots differ by what they show: a shot with a tag opens that tag of the demo account.
 async function tagPath(page, name) {
-  const tagId = await page.evaluate(async (wanted) => {
-    const token = localStorage.getItem('sfr.jwt');
-    const response = await fetch('/api/tags', { headers: { Authorization: `Bearer ${token}` } });
-    const { tags } = await response.json();
-    return tags.find((tag) => tag.name === wanted)?.id ?? null;
-  }, name);
-  if (tagId === null) throw new Error(`The demo account has no ${name} tag`);
-  return `/?tag=${tagId}`;
+  const { tags } = await apiGet(page, '/api/tags');
+  const tag = tags.find((candidate) => candidate.name === name);
+  if (!tag) throw new Error(`The demo account has no ${name} tag`);
+  return `/?tag=${tag.id}`;
 }
 
 // One box around every locator, with room around it, kept inside the viewport and under a height.
@@ -614,9 +583,7 @@ async function clipAround(locators, maxHeight = Number.POSITIVE_INFINITY) {
 
 async function capture(browser, shot) {
   const isPhone = shot.device === 'phone';
-  const context = await browser.newContext(
-    isPhone ? PHONE : shot.device === 'detail' ? DETAIL : DESKTOP,
-  );
+  const context = await browser.newContext(DEVICES[shot.device]);
   const page = await context.newPage();
   await page.addInitScript(seedSettings, { theme: shot.theme, layout: shot.layout });
   await leaveOutDistressingNews(page, { startAt: shot.startAt });

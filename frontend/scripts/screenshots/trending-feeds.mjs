@@ -24,3 +24,6 @@ export const TRENDING_FEEDS = [
 // Below this the day window is too thin to show: a shot or the tour would record a near-empty
 // list. Counted after the stories a shot leaves out (lib.mjs), so it is what the picture holds.
 export const TRENDING_FLOOR = { stories: 4, leadSources: 4, titledOnFirstScreen: 4 };
+// How trending-setup.mjs ends below the floor. Not 1: that is how node ends on an error, which a
+// caller must not take for a thin list.
+export const BELOW_FLOOR = 2;

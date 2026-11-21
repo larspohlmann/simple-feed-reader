@@ -96,7 +96,7 @@
 section{padding:var(--space-8) 0}
 section + section{border-top:1px solid var(--border)}
 .sect-head{max-width:60ch;margin-bottom:var(--space-6)}
-.sect-head h2{margin-top:var(--space-2)}
+.sect-head h2,.split h2{margin-top:var(--space-2)}
 .sect-head p{margin-top:var(--space-3);font-size:16px}
 
 .layouts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
@@ -285,7 +285,7 @@ pre .c{color:var(--text-muted)}
   <div class="wrap split">
     <div>
       <p class="eyebrow">Trending</p>
-      <h2 style="margin-top:8px">The stories several feeds are covering.</h2>
+      <h2>The stories several feeds are covering.</h2>
       <ul>
         <li><span><strong>Ranked by sources:</strong> articles about the same event form one story, over the last 24 hours or the last 7 days. An article counts once, however many feeds and posts carry it.</span></li>
         <li><span><strong>One card per story:</strong> its sources and shares, when it started and when its last article joined. A story opens as a list of its own.</span></li>
@@ -318,7 +318,7 @@ pre .c{color:var(--text-muted)}
   <div class="wrap split flip">
     <div>
       <p class="eyebrow">Social</p>
-      <h2 style="margin-top:8px">Bluesky, Mastodon and Lemmy.</h2>
+      <h2>Bluesky, Mastodon and Lemmy.</h2>
       <ul>
         <li><span><strong>Timelines as feeds:</strong> a connected account contributes its home timeline, lists, custom feeds and followed accounts, on Lemmy its communities. A search can be saved as a feed of its own.</span></li>
         <li><span><strong>Posts in full:</strong> embedded images, video, link cards and quotes, with like and reply counts and the replies below. A video in a list starts on its own as it scrolls into view, muted and one at a time.</span></li>
@@ -370,7 +370,7 @@ pre .c{color:var(--text-muted)}
   <div class="wrap split">
     <div>
       <p class="eyebrow">Self-hosted</p>
-      <h2 style="margin-top:8px">Accounts, administration and data.</h2>
+      <h2>Accounts, administration and data.</h2>
       <ul>
         <li><span><strong>Sign-in:</strong> email and password, Google, Apple or a passkey. Registration uses an invisible proof-of-work check, no CAPTCHA.</span></li>
         <li><span><strong>Administration:</strong> approve, suspend and delete users; set trial periods and feed limits; configure SMTP and an outbound proxy, each with a test button; update the install from the app, with the optional updater container.</span></li>

@@ -105,6 +105,14 @@ export async function signIn(page) {
   await dismissPasskeyOffer(page);
 }
 
+// A GET as the signed-in account of a page, parsed.
+export const apiGet = (page, path) =>
+  page.evaluate(async (url) => {
+    const token = localStorage.getItem('sfr.jwt');
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    return response.json();
+  }, path);
+
 // A signed-in page for the setup scripts, with a helper that calls the API as the demo account.
 export async function openApiSession(browser) {
   const page = await browser.newPage();

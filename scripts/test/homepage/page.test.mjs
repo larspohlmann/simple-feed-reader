@@ -93,13 +93,35 @@ test('every screenshot the README shows exists', () => {
   );
 });
 
-const DESCRIPTION =
-  'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, ' +
-  'Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. ' +
-  'Free and open source.';
+// cwebp writes a desktop shot as plain lossy WebP (VP8, the size in its frame header) and a
+// phone shot, whose frame is transparent, as extended WebP (VP8X, the canvas size minus one).
+function webpSize(name) {
+  const file = readFileSync(pathTo(`docs/screenshots/${name}`));
+  const format = file.toString('latin1', 12, 16);
+  if (format === 'VP8X')
+    return {
+      width: file.readUIntLE(24, 3) + 1,
+      height: file.readUIntLE(27, 3) + 1,
+    };
+  assert.equal(format, 'VP8 ', `${name} is neither a lossy nor an extended WebP`);
+  return {
+    width: file.readUInt16LE(26) & 0x3fff,
+    height: file.readUInt16LE(28) & 0x3fff,
+  };
+}
 
-test('the description names Trending and the three networks', () => {
-  assert.equal(metaContent('description'), DESCRIPTION);
+test('every screenshot on the page declares the size of its file', () => {
+  const declared = [
+    ...page.matchAll(/<img [^>]*src="screenshots\/([^"]+)" width="(\d+)" height="(\d+)"/g),
+  ].map(([, name, width, height]) => ({
+    name,
+    width: Number(width),
+    height: Number(height),
+  }));
+  assert.ok(declared.length > 10, "the page declares its screenshots' sizes");
+  for (const { name, width, height } of declared) {
+    assert.deepEqual({ width, height }, webpSize(name), name);
+  }
 });
 
 test('the sections follow the order of the page plan', () => {

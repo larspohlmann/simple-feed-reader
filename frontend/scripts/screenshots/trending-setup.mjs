@@ -10,7 +10,7 @@
 //   node --env-file=.env.screenshots trending-setup.mjs teardown   # unsubscribe them again
 import { chromium } from '@playwright/test';
 import { isCalmStory, openApiSession } from './lib.mjs';
-import { TRENDING_FEEDS, TRENDING_FLOOR } from './trending-feeds.mjs';
+import { BELOW_FLOOR, TRENDING_FEEDS, TRENDING_FLOOR } from './trending-feeds.mjs';
 
 const TAG_NAME = 'News';
 const TRENDING_ONLY = {
@@ -19,9 +19,8 @@ const TRENDING_ONLY = {
   includeInSavedSearches: false,
   includeInTrending: true,
 };
-// Not 1: that is how node ends on an error, which a caller must not take for a thin list.
-const BELOW_FLOOR = 2;
 const mode = process.argv[2] ?? 'subscribe';
+if (!['subscribe', 'status', 'teardown'].includes(mode)) throw new Error(`Unknown mode "${mode}"`);
 
 const browser = await chromium.launch();
 const api = await openApiSession(browser);
@@ -88,26 +87,28 @@ async function giveBack() {
   await unpickStoryWriter();
 }
 
+async function reportWindow(window) {
+  const { json } = await api('GET', `/api/trending?window=${window}`);
+  const stories = (json.stories ?? []).filter(isCalmStory);
+  const leadSources = Math.max(0, ...stories.map((story) => story.outletCount));
+  const firstScreen = stories.slice(0, TRENDING_FLOOR.titledOnFirstScreen);
+  const titled = firstScreen.filter((story) => story.synopsis !== null).length;
+  console.log(
+    `trending ${window}: ${stories.length} stories, lead has ${leadSources} sources, ` +
+      `${titled}/${firstScreen.length} of the first screen carry a synopsis`,
+  );
+  return { stories: stories.length, leadSources, titled };
+}
+
 // Whether the day window clears the floor; prints both windows either way.
 async function isWorthShowing() {
-  let ready = false;
-  for (const window of ['day', 'week']) {
-    const { json } = await api('GET', `/api/trending?window=${window}`);
-    const stories = (json.stories ?? []).filter(isCalmStory);
-    const leadSources = Math.max(0, ...stories.map((story) => story.outletCount));
-    const firstScreen = stories.slice(0, TRENDING_FLOOR.titledOnFirstScreen);
-    const titled = firstScreen.filter((story) => story.synopsis !== null).length;
-    console.log(
-      `trending ${window}: ${stories.length} stories, lead has ${leadSources} sources, ` +
-        `${titled}/${firstScreen.length} of the first screen carry a synopsis`,
-    );
-    if (window !== 'day') continue;
-    ready =
-      stories.length >= TRENDING_FLOOR.stories &&
-      leadSources >= TRENDING_FLOOR.leadSources &&
-      titled >= TRENDING_FLOOR.titledOnFirstScreen;
-  }
-  return ready;
+  const day = await reportWindow('day');
+  await reportWindow('week');
+  return (
+    day.stories >= TRENDING_FLOOR.stories &&
+    day.leadSources >= TRENDING_FLOOR.leadSources &&
+    day.titled >= TRENDING_FLOOR.titledOnFirstScreen
+  );
 }
 
 if (mode === 'teardown') {
@@ -116,7 +117,7 @@ if (mode === 'teardown') {
   if (mode === 'subscribe') {
     await subscribe();
     await pickStoryWriter();
-  } else if (mode !== 'status') throw new Error(`Unknown mode "${mode}"`);
+  }
   if (!(await isWorthShowing())) {
     console.log(
       `below the floor: ${TRENDING_FLOOR.stories} stories, ${TRENDING_FLOOR.leadSources} sources ` +

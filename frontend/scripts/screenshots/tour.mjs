@@ -29,6 +29,7 @@ import {
   signIn,
   stubAiryStyle,
 } from './lib.mjs';
+import { BELOW_FLOOR } from './trending-feeds.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(process.env.TOUR_OUT ?? join(HERE, '..', '..', '..', 'docs', 'homepage'));
@@ -603,12 +604,11 @@ rmSync(RAW, { recursive: true, force: true });
 mkdirSync(RAW, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 
-// trending-setup.mjs ends with this status while the list is below its floor; any other failure
-// is an error and stops the tour.
-const BELOW_FLOOR = 2;
-function isAboveFloor(mode) {
+// Runs trending-setup.mjs in a mode that ends by checking the floor; any failure other than a
+// thin list stops the tour.
+function isAboveFloorAfter(mode) {
   try {
-    execFileSync('node', mode ? [TRENDING_SETUP, mode] : [TRENDING_SETUP], { stdio: 'inherit' });
+    execFileSync('node', [TRENDING_SETUP, mode], { stdio: 'inherit' });
     return true;
   } catch (error) {
     if (error.status !== BELOW_FLOOR) throw error;
@@ -617,7 +617,7 @@ function isAboveFloor(mode) {
 }
 // Stories are built on the worker's schedule and titled within five minutes of that.
 async function waitForTrending() {
-  for (let minute = 0; !isAboveFloor('status'); minute++) {
+  for (let minute = 0; !isAboveFloorAfter('status'); minute++) {
     if (minute >= TRENDING_WAIT_MINUTES) throw new Error('Trending stayed below its floor');
     await new Promise((resolve) => setTimeout(resolve, 60_000));
   }
@@ -625,7 +625,7 @@ async function waitForTrending() {
 
 execFileSync('node', [PODCAST_SETUP], { stdio: 'inherit' });
 try {
-  if (!isAboveFloor()) await waitForTrending();
+  if (!isAboveFloorAfter('subscribe')) await waitForTrending();
   const browser = await chromium.launch({
     args: [`--force-device-scale-factor=${PHONE.deviceScaleFactor}`],
   });

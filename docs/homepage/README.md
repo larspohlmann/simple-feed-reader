@@ -56,7 +56,8 @@ node --test "scripts/test/homepage-changelog/*.test.mjs"
 page names a file that is not there, when the four copies of the description
 (meta, Open Graph, Twitter, JSON-LD) differ, when the gallery
 ([`docs/screenshots.md`](../screenshots.md)) misses a screenshot or names one that
-is gone, and when the tour's scene list does not match the scenes `tour.mjs` records.
+is gone, when a screenshot's `width` and `height` are not those of its file, and when the
+tour's scene list does not match the scenes `tour.mjs` records.
 
 ```bash
 node --test "scripts/test/homepage/*.test.mjs"
