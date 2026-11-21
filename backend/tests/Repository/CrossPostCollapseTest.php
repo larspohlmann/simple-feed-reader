@@ -60,20 +60,36 @@ final class CrossPostCollapseTest extends DbTestCase
     public function testACopyOfTheLeaderInAnotherFeedStillCollapsesByItem(): void
     {
         $leader = $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
-        $leaderCopy = LemmyPostEntries::buildEntry(
-            $this->feedB,
-            'https://lemmy.example/post/1',
-            publishedAt: '2026-11-14T09:00:00Z',
-        );
-        $leaderCopy->setPublishedAt(new \DateTimeImmutable('2026-11-14T09:00:00Z'));
-        $item = $leader->getCanonicalItem();
-        self::assertNotNull($item);
-        $leaderCopy->linkTo($item);
-        $this->entityManager->persist($leaderCopy);
+        $this->persistCopy($leader, $this->feedB);
         $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
         $this->entityManager->flush();
 
         self::assertSame([$leader->getId()], $this->listIds(EntryView::All));
+    }
+
+    public function testEqualPublishedMembersAreLedByTheLowerId(): void
+    {
+        $leader = $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
+        $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/2', 'h1', '2026-11-14T09:00:00Z');
+        $this->entityManager->flush();
+
+        self::assertSame([$leader->getId()], $this->listIds(EntryView::All));
+    }
+
+    public function testUnreadViewShowsTheUnreadCopyOfTheLeaderWhenItsLowerIdCopyIsRead(): void
+    {
+        $readCopy = $this->persistCrossPost(
+            $this->feedA,
+            'https://lemmy.example/post/1',
+            'h1',
+            '2026-11-14T09:00:00Z',
+        );
+        $unreadCopy = $this->persistCopy($readCopy, $this->feedB);
+        $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
+        $this->persistRead($readCopy);
+        $this->entityManager->flush();
+
+        self::assertSame([$unreadCopy->getId()], $this->listIds(EntryView::Unread));
     }
 
     public function testUnreadViewHidesTheGroupOnceItsLeaderIsRead(): void
@@ -216,6 +232,24 @@ final class CrossPostCollapseTest extends DbTestCase
         $entry->getCanonicalItem()?->recordCrossPostHash($hash);
 
         return $entry;
+    }
+
+    private function persistCopy(Entry $original, Feed $feed): Entry
+    {
+        $item = $original->getCanonicalItem();
+        self::assertNotNull($item);
+        $publishedAt = $original->getPublishedAt();
+        self::assertNotNull($publishedAt);
+        $copy = LemmyPostEntries::buildEntry(
+            $feed,
+            $item->getCanonicalKey(),
+            publishedAt: $publishedAt->format(\DATE_ATOM),
+        );
+        $copy->setPublishedAt($publishedAt);
+        $copy->linkTo($item);
+        $this->entityManager->persist($copy);
+
+        return $copy;
     }
 
     private function persistPost(Feed $feed, string $page, string $publishedAt): Entry

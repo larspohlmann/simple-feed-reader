@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use Doctrine\ORM\QueryBuilder;
 
-/** The scope each collapse semi-join applies to its earlier copy: one for copies, one for cross-posts. */
 final readonly class CollapseScope
 {
     /**

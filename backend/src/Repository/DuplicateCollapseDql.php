@@ -68,6 +68,7 @@ final readonly class DuplicateCollapseDql
             ->andWhere('leadItem.crossPostHash IS NOT NULL')
             ->andWhere('crossPostItem.crossPostHash = leadItem.crossPostHash')
             ->andWhere('crossPostItem <> leadItem')
+            // Hole-free only while every copy of an item shares publishedAt; a kind whose copies diverge loses groups.
             ->andWhere(\sprintf(
                 '%1$s.dates.publishedAt < e.dates.publishedAt'
                 . ' OR (%1$s.dates.publishedAt = e.dates.publishedAt AND %1$s.id < e.id)',

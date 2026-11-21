@@ -49,10 +49,10 @@ final class EntryListRepository extends ServiceEntityRepository
         }
 
         $ordering = $query->ordering();
-        $applyScope = $this->listScope($query, $groupSubscriptionIds);
+        $applyScope = $this->buildListScope($query, $groupSubscriptionIds);
         $collapseScope = CollapseScope::fromScopes(
             $applyScope,
-            $this->listScope($query->withoutReadFilter(), $groupSubscriptionIds),
+            $this->buildListScope($query->withoutReadFilter(), $groupSubscriptionIds),
         );
 
         $pageQuery = function () use ($query, $ordering, $applyScope, $collapseScope): QueryBuilder {
@@ -91,7 +91,7 @@ final class EntryListRepository extends ServiceEntityRepository
      *
      * @return \Closure(QueryBuilder, EntryAliases): void
      */
-    private function listScope(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
+    private function buildListScope(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
     {
         return function (QueryBuilder $qb, EntryAliases $aliases) use ($query, $groupSubscriptionIds): void {
             $this->scope->applyList($qb, $aliases, $query);
@@ -113,7 +113,7 @@ final class EntryListRepository extends ServiceEntityRepository
                 ->select('e.id')
                 ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
                 ->setParameter('user', $query->userId);
-            $this->listScope($query->inAllView(), $groupSubscriptionIds)($qb, EntryAliases::primary());
+            $this->buildListScope($query->inAllView(), $groupSubscriptionIds)($qb, EntryAliases::primary());
 
             return $qb;
         };
@@ -127,14 +127,14 @@ final class EntryListRepository extends ServiceEntityRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
-        $applyScope = $this->searchScope($query);
+        $applyScope = $this->buildSearchScope($query);
         $ordering = $query->ordering();
         $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
         $this->collapse->apply(
             $qb,
-            CollapseScope::fromScopes($applyScope, $this->searchScope($query->withoutReadFilter())),
+            CollapseScope::fromScopes($applyScope, $this->buildSearchScope($query->withoutReadFilter())),
             $query->userId,
         );
         $this->projection->applyCursor($qb, $query->cursor, $ordering);
@@ -149,7 +149,7 @@ final class EntryListRepository extends ServiceEntityRepository
     /**
      * @return \Closure(QueryBuilder, EntryAliases): void
      */
-    private function searchScope(EntrySearchQuery $query): \Closure
+    private function buildSearchScope(EntrySearchQuery $query): \Closure
     {
         return function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
             $this->scope->applySearch($qb, $aliases, $query);
