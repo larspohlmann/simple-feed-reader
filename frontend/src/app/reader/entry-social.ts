@@ -149,6 +149,10 @@ export interface SocialCountsDto {
 }
 
 /** The entry's social data when the reader can like it, else null. */
+export function steppedLikeCount(likeCount: number, isLiked: boolean): number {
+  return Math.max(0, likeCount + (isLiked ? 1 : -1));
+}
+
 export function likeableSocial(entry: { social: EntrySocialDto | null }): EntrySocialDto | null {
   return entry.social?.canLike ? entry.social : null;
 }

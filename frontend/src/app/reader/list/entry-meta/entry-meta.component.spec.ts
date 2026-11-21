@@ -99,42 +99,19 @@ describe('EntryMetaComponent', () => {
       expect(element.querySelector('.discussion .comments')?.textContent).toContain('3');
     });
 
-    it('shows nothing without a score, a comment count or a like count', () => {
+    it('shows nothing without a score or a comment count, whatever the like count', () => {
       expect(
-        discussionMeta({ score: null, commentCount: null, likeCount: null }).querySelector(
+        discussionMeta({ score: null, commentCount: null, likeCount: 4 }).querySelector(
           '.discussion',
         ),
       ).toBeNull();
     });
 
-    it('shows the like count after the comment bubble', () => {
-      const element = discussionMeta({ score: null, commentCount: 3, likeCount: 47 });
-      const likes = element.querySelector('.discussion .likes') as HTMLElement;
-      expect(likes.textContent).toContain('47');
-      expect(likes.querySelector('app-icon')?.getAttribute('name')).toBe('thumb_up');
-      expect(likes.getAttribute('role')).toBe('img');
-      expect(likes.getAttribute('aria-label')).toBe('47 likes');
-      expect(likes.previousElementSibling?.classList).toContain('comments');
-    });
-
-    it('words a single like in the singular', () => {
-      const likes = discussionMeta({ likeCount: 1 }).querySelector('.likes');
-      expect(likes?.getAttribute('aria-label')).toBe('1 like');
-    });
-
-    it('shows a zero like count', () => {
-      const likes = discussionMeta({ likeCount: 0 }).querySelector('.likes');
-      expect(likes?.textContent).toContain('0');
-    });
-
-    it('shows the like count alone without a score or a comment count', () => {
-      const element = discussionMeta({ score: null, commentCount: null, likeCount: 2 });
-      expect(element.querySelector('.discussion .likes')?.textContent).toContain('2');
-    });
-
-    it('is no button', () => {
+    it('leaves the like count to the like button', () => {
       expect(
-        discussionMeta({ likeCount: 2 }).querySelector('.likes button, button.likes'),
+        discussionMeta({ score: null, commentCount: 3, likeCount: 4 }).querySelector(
+          '.discussion .likes',
+        ),
       ).toBeNull();
     });
 
