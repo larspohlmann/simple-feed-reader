@@ -88,6 +88,8 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
 - The collapsing top bar is shown (Lars, 2026-11-21): a `mobile-scrolled-light` shot beside
   `mobile-magazine-light` in the Mobile section, and the tour's first scene scrolls slowly enough
   for the bars to be seen folding away.
+- The tour shows a video starting on its own (Lars, 2026-11-21): a "video" scene after the
+  magazine, with a followed account's video post placed third in the list so it scrolls into view.
 - The notifications list is stubbed with invented actors, the way the admin user list is, even
   with real accounts connected.
 - Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of

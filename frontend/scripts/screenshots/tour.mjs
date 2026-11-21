@@ -1,4 +1,4 @@
-// Records the homepage phone tour against the dev stack: six scenes on a 390×760 phone at 2x,
+// Records the homepage phone tour against the dev stack: seven scenes on a 390×760 phone at 2x,
 // once per theme, encoded to MP4 with a poster; the scene start times go into the homepage's
 // scene list. Run from `frontend/`:
 //
@@ -8,6 +8,8 @@
 // the podcasts it plays and the news feeds its Trending scene needs are borrowed through
 // podcast-setup.mjs and trending-setup.mjs and returned afterwards. It refuses to record while
 // Trending is below its floor; a run right after borrowing waits for the stories to be built.
+// The video scene needs a connected network with a video post among its followed accounts
+// (social-setup.mjs).
 // TOUR_OUT overrides the output folder (default docs/homepage); the page there, if any, gets the
 // start times.
 import { chromium } from '@playwright/test';
@@ -19,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import {
   articles,
   BASE,
+  isCalmEntry,
   leaveOutDistressingNews,
   PHONE,
   seedSettings,
@@ -33,6 +36,9 @@ const RAW = join(tmpdir(), 'sfr-tour');
 const PODCAST_SETUP = join(HERE, 'podcast-setup.mjs');
 const TRENDING_SETUP = join(HERE, 'trending-setup.mjs');
 const TRENDING_WAIT_MINUTES = 20;
+// Third in the magazine: below the fold at first, in view after the swipe that folds the bars.
+const VIDEO_POSITION = 2;
+const VIDEO_PAGES_SEARCHED = 5;
 const VIEWPORT = PHONE.viewport;
 const TOUR_PHONE = { ...PHONE, reducedMotion: 'no-preference' };
 const VIDEO_SIZE = {
@@ -300,16 +306,86 @@ async function openReadableArticle(page, finger, readable) {
   throw new Error('No warmed article opened with its body');
 }
 
-// The first swipe is slow on purpose: it is the moment the app bar, the tag strip and the list
-// header fold into one title line, and the scene is there to show it.
+// The swipe is slow on purpose: it is the moment the app bar, the tag strip and the list header
+// fold into one title line, and the scene is there to show it.
 async function magazineScene({ finger }) {
   await finger.hold(1700);
   await finger.swipeUp({ distance: 260, steps: 55 });
   await finger.hold(1500);
+}
+
+// The followed accounts' posts with a video of their own, which is the kind a list plays. Only
+// accounts picked for the demo are searched: a home timeline is the account owner's reading.
+async function findVideoPosts(page) {
+  return page.evaluate(
+    async ({ pages, networks }) => {
+      const token = localStorage.getItem('sfr.jwt');
+      const posts = [];
+      for (const network of networks) {
+        let cursor = null;
+        for (let fetched = 0; fetched < pages; fetched++) {
+          const query = new URLSearchParams({ view: 'all', network, feedKind: 'profile' });
+          if (cursor) query.set('cursor', cursor);
+          const response = await fetch(`/api/entries?${query}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!response.ok) break;
+          const { entries, nextCursor } = await response.json();
+          // A post that also shares a link shows the link's card in a list, not its video.
+          posts.push(
+            ...entries.filter(
+              (entry) =>
+                entry.linkCards.length === 0 &&
+                entry.media.some(
+                  (medium) => medium.kind === 'video' && /\.(m3u8|mp4)/.test(medium.url),
+                ),
+            ),
+          );
+          if (posts.length > 0 || !nextCursor) break;
+          cursor = nextCursor;
+        }
+      }
+      return posts;
+    },
+    { pages: VIDEO_PAGES_SEARCHED, networks: ['bluesky', 'mastodon'] },
+  );
+}
+
+const isAllItems = (address) =>
+  address.pathname === '/api/entries' &&
+  !['subscription', 'tag', 'network', 'q'].some((filter) => address.searchParams.has(filter));
+// The magazine moves the first entry with a lead-worthy picture to the front. The video would be
+// that entry and play from the first frame, so the list opens on an article's picture instead.
+const LEAD_PICTURE_WIDTH = 1000;
+const opensOnAPicture = (entry) =>
+  entry.media.every((medium) => medium.kind !== 'video') &&
+  entry.imageUrl !== null &&
+  entry.imageWidth >= LEAD_PICTURE_WIDTH &&
+  entry.imageWidth > entry.imageHeight;
+const placedInTheMagazine = (videoPost) => (entries, address) => {
+  if (!isAllItems(address)) return entries;
+  const others = entries.filter((entry) => entry.id !== videoPost.id);
+  const opener = others.findIndex(opensOnAPicture);
+  if (opener > 0) others.unshift(...others.splice(opener, 1));
+  return [...others.slice(0, VIDEO_POSITION), videoPost, ...others.slice(VIDEO_POSITION)];
+};
+
+// The post scrolls into view and starts on its own, muted; the scene waits until it really plays.
+const someListVideoPlays = () =>
+  [...document.querySelectorAll('app-entry-list article video')].some(
+    (video) => !video.paused && video.currentTime > 0,
+  );
+async function videoScene({ page, finger }) {
+  const isPlaying = () => page.evaluate(someListVideoPlays);
+  if (await isPlaying()) console.log('  the video leads the list and plays from the start');
+  for (let swipe = 0; swipe < 6 && !(await isPlaying()); swipe++) {
+    await finger.swipeUp({ distance: 240, steps: 30 });
+    await page.waitForFunction(someListVideoPlays, null, { timeout: 1800 }).catch(() => {});
+  }
+  if (!(await isPlaying())) throw new Error('No video in the magazine started playing');
+  await finger.hold(3600);
   await finger.swipeUp();
   await finger.hold(1100);
-  await finger.swipeUp();
-  await finger.hold(1300);
 }
 
 async function readerScene({ page, finger, readable }) {
@@ -335,13 +411,7 @@ async function trendingScene({ page, finger }) {
   await finger.hold(1900);
   await finger.swipeUp({ distance: 300 });
   await finger.hold(1300);
-  const story = storyCards(page).locator('a.story-link');
-  let onScreen = null;
-  for (const link of await story.all()) {
-    if (await comfortablyOnScreen(link)) onScreen = onScreen ?? link;
-  }
-  if (onScreen === null) throw new Error('No Trending story is on screen to open');
-  await finger.tap(onScreen);
+  await finger.tap(storyCards(page).locator('a.story-link'));
   await page.locator('app-story-layer').waitFor();
   await finger.hold(1900);
   await finger.swipeUp();
@@ -407,6 +477,7 @@ async function themeScene({ page, finger, theme }) {
 
 const SCENES = [
   ['magazine', magazineScene],
+  ['video', videoScene],
   ['reader', readerScene],
   ['trending', trendingScene],
   ['sidebar', sidebarScene],
@@ -422,12 +493,15 @@ async function prepare(browser) {
   const page = await session.newPage();
   await signIn(page);
   const readable = await warmReadableTitles(page);
+  const videoPost = (await findVideoPosts(page)).find(isCalmEntry);
+  if (!videoPost) throw new Error('No followed account has posted a video lately');
+  console.log(`  video post: ${videoPost.source} — ${videoPost.title.slice(0, 70)}`);
   const storageState = await session.storageState();
   await session.close();
-  return { readable, storageState };
+  return { readable, storageState, videoPost };
 }
 
-async function recordTheme(browser, theme, { readable, storageState }) {
+async function recordTheme(browser, theme, { readable, storageState, videoPost }) {
   const recording = await browser.newContext({
     ...TOUR_PHONE,
     storageState,
@@ -436,7 +510,7 @@ async function recordTheme(browser, theme, { readable, storageState }) {
   await recording.addInitScript(seedSettings, { theme, layout: 'magazine' });
   await recording.addInitScript(installTouchOverlay);
   await stubAiryStyle(recording);
-  await leaveOutDistressingNews(recording);
+  await leaveOutDistressingNews(recording, { arrange: placedInTheMagazine(videoPost) });
   const videoStart = Date.now();
   const elapsed = () => (Date.now() - videoStart) / 1000;
   const page = await recording.newPage();

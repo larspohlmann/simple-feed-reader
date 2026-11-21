@@ -21,6 +21,9 @@ screenshots; the [gallery](screenshots.md) has more.
   searches you choose.
 - Reading-time estimates, a progress bar, and an optional reading focus that
   dims everything but the passage in front of you.
+- Videos in lists and comments start on their own as they scroll into view,
+  muted and one at a time. A switch in the preferences turns that off, per
+  device.
 - Comments in the reader: a Reddit or Lemmy post shows its threaded discussion
   below it, a Bluesky or Mastodon post its replies, and the heading carries the
   count. Other feeds that publish a comments feed get a "Load comments" button.

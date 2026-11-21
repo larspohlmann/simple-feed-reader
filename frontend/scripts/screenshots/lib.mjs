@@ -49,7 +49,7 @@ const DISTRESSING = new RegExp(
   '\\b(' +
     [
       'shot|shoot\\w*|gun\\w*|kill\\w*|dead|deadly|death\\w*|dies|died|fatal\\w*|murder\\w*',
-      'massacre\\w*|attack\\w*|assault\\w*|stabb\\w*|bomb\\w*|missile\\w*|airstrike\\w*|war|wars',
+      'massacre\\w*|violen\\w*|attack\\w*|assault\\w*|stabb\\w*|bomb\\w*|missile\\w*|airstrike\\w*|war|wars',
       'terror\\w*|hostage\\w*|kidnap\\w*|rape\\w*|abus\\w*|suicid\\w*|genocid\\w*|executed|execution\\w*',
       'victim\\w*|crash\\w*|arson|cartel\\w*|trafficking|overdose\\w*|famine|corpse\\w*|bod(y|ies) found',
     ].join('|') +
@@ -64,18 +64,23 @@ const isCalm = (item) => {
 };
 const isCalmStory = (story) => isCalm(story) && (story.articles ?? []).every(isCalm);
 
+export const isCalmEntry = isCalm;
+
 // `startAt` drops that many entries from the top of a list's first page, so two shots of the
-// same list do not lead with the same article.
-export async function leaveOutDistressingNews(pageOrContext, { startAt = 0 } = {}) {
+// same list do not lead with the same article. `arrange` reorders a first page: it gets the
+// entries and the request's address and returns the entries to show.
+export async function leaveOutDistressingNews(pageOrContext, { startAt = 0, arrange } = {}) {
   await pageOrContext.route(/\/api\/(entries|trending)(\/[^?]*)?(\?.*)?$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     const response = await route.fetch();
     const isJson = response.headers()['content-type']?.includes('json');
     if (!response.ok() || !isJson) return route.fulfill({ response });
     const body = await response.json();
-    const isFirstPage = !new URL(route.request().url()).searchParams.has('cursor');
+    const address = new URL(route.request().url());
+    const isFirstPage = !address.searchParams.has('cursor');
     if (Array.isArray(body.entries)) {
       body.entries = body.entries.filter(isCalm).slice(isFirstPage ? startAt : 0);
+      if (isFirstPage && arrange) body.entries = arrange(body.entries, address);
     }
     if (Array.isArray(body.stories)) body.stories = body.stories.filter(isCalmStory);
     await route.fulfill({ response, json: body });
