@@ -28,36 +28,47 @@ final readonly class SocialLikes
         private PostLiking $liking,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
-        private SocialCountsCache $countsCache,
+        private LiveLikeCounts $likeCounts,
         private ConfirmedDeletion $confirmedDeletion,
     ) {
     }
 
-    /** @throws NotASocialPostException */
-    public function like(User $user, Entry $entry): void
+    /**
+     * Likes the post and answers its like count, read live once the like is made.
+     *
+     * @throws NotASocialPostException
+     */
+    public function like(User $user, Entry $entry): ?int
     {
         $item = $this->postAddresses->requireItem($entry);
         if (null !== $this->likes->findOneFor($user, $item)) {
-            return;
+            return $item->getLikeCount();
         }
         $post = $this->posts->find($user, $entry);
         $result = $this->liking->like($post);
 
         $this->store($user, $item, $post->account, $result->likeId);
-        $this->countsCache->forget($entry);
+
+        return $this->likeCounts->refreshLikeCount($user, $entry, $item);
     }
 
-    /** @throws NotASocialPostException */
-    public function unlike(User $user, Entry $entry): void
+    /**
+     * Takes the like back and answers the post's like count, read live once the like is gone.
+     *
+     * @throws NotASocialPostException
+     */
+    public function unlike(User $user, Entry $entry): ?int
     {
-        $like = $this->likes->findOneFor($user, $this->postAddresses->requireItem($entry));
+        $item = $this->postAddresses->requireItem($entry);
+        $like = $this->likes->findOneFor($user, $item);
         if (null === $like) {
-            return;
+            return $item->getLikeCount();
         }
         $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
         $this->drop($like);
-        $this->countsCache->forget($entry);
+
+        return $this->likeCounts->refreshLikeCount($user, $entry, $item);
     }
 
     /**

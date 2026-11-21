@@ -12,7 +12,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
 
 /**
- * The per-entry actions — favorite, like on the post's network with its count (#1600, #2425), keep,
+ * The per-entry actions — favorite, like on the post's network with its count (#1600), keep,
  * mark read, delete my own post (#1972), led by the declared duration, play and
  * add-to-playlist on an audio entry (#1436, #1449) — as one control cluster.
  * Lives here, not repeated per block: a second copy (hero vs entry-row) once

@@ -11,4 +11,10 @@ final class SocialLikeJson
     {
         return ['isLiked' => $isLiked];
     }
+
+    /** @return array{isLiked: bool, likeCount: int|null} */
+    public static function fromPostLike(bool $isLiked, ?int $likeCount): array
+    {
+        return ['isLiked' => $isLiked, 'likeCount' => $likeCount];
+    }
 }

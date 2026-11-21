@@ -78,8 +78,12 @@ export class EntryRowCache {
     const social = likeableSocial(entry);
     if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    const likeCount = entry.likeCount === null ? null : steppedLikeCount(entry.likeCount, isLiked);
+    const likeCount = steppedLikeCount(entry.likeCount, isLiked);
     this.optimistic(entry, { social: { ...social, isLiked }, likeCount }, request$).subscribe({
+      next: (answer) => {
+        if (answer.likeCount === null) return;
+        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
+      },
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
@@ -91,7 +95,11 @@ export class EntryRowCache {
     const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
     this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
       next: (answer) =>
-        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, myVote: answer.myVote })),
+        this.patch(this.collectCopyIds(entry), (row) => ({
+          ...row,
+          myVote: answer.myVote,
+          score: answer.score,
+        })),
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }

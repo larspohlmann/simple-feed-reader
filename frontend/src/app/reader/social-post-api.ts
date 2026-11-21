@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import {
   ComposerContextDto,
   EntryLikeDto,
+  EntryPostLikeDto,
   EntryRepostDto,
   PostDeletionDto,
   PublishedPostDto,
@@ -40,12 +41,12 @@ export class SocialPostApi {
     return this.http.get<SocialViewerDto>(this.entryPath(entryId, 'social/viewer'));
   }
 
-  like(entryId: number): Observable<EntryLikeDto> {
-    return this.http.put<EntryLikeDto>(this.entryPath(entryId, 'like'), null);
+  like(entryId: number): Observable<EntryPostLikeDto> {
+    return this.http.put<EntryPostLikeDto>(this.entryPath(entryId, 'like'), null);
   }
 
-  unlike(entryId: number): Observable<EntryLikeDto> {
-    return this.http.delete<EntryLikeDto>(this.entryPath(entryId, 'like'));
+  unlike(entryId: number): Observable<EntryPostLikeDto> {
+    return this.http.delete<EntryPostLikeDto>(this.entryPath(entryId, 'like'));
   }
 
   repost(entryId: number): Observable<EntryRepostDto> {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Social;
 
 use App\Entity\CanonicalItem;
+use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
@@ -25,8 +26,10 @@ use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\LiveLikeCounts;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\PostLiking;
+use App\Service\Social\Social\SocialCounts;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Service\Social\Social\SocialLikes;
 use App\Service\Social\Social\SocialPostFinder;
@@ -36,6 +39,7 @@ use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\ConfirmedDeletions;
 use App\Tests\Support\FakeHomeServerCheck;
 use App\Tests\Support\FakeMastodonNetwork;
+use App\Tests\Support\FakePostCountsSource;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -55,6 +59,7 @@ final class SocialLikesTest extends DbTestCase
 
     private FakeMastodonNetwork $mastodon;
     private SocialCountsCache $countsCache;
+    private FakePostCountsSource $publicSource;
     private User $owner;
     private ?CanonicalItem $item = null;
 
@@ -63,6 +68,7 @@ final class SocialLikesTest extends DbTestCase
         parent::setUp();
         $this->mastodon = new FakeMastodonNetwork();
         $this->countsCache = new SocialCountsCache(new ArrayAdapter(), SocialRuleWiring::postAddresses());
+        $this->publicSource = new FakePostCountsSource(new SocialCountsModel(7, 0, 2, null));
         $this->owner = $this->user('social-likes-service@example.test');
     }
 
@@ -107,27 +113,55 @@ final class SocialLikesTest extends DbTestCase
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
     }
 
-    public function testALikeDropsThePostsCachedCounts(): void
+    public function testALikeAnswersAndStoresThePostsLiveLikeCount(): void
     {
         $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->countsCache->remember($entry, new SocialCountsModel(4, 0, 0, null));
 
-        $this->likes()->like($this->owner, $entry);
+        $likeCount = $this->likes()->like($this->owner, $entry);
 
-        self::assertNull($this->countsCache->find($entry));
+        self::assertSame(7, $likeCount);
+        self::assertSame(7, $this->ensureItem()->getLikeCount());
+        self::assertSame(2, $this->ensureItem()->getCommentCount());
+        self::assertEquals(new SocialCountsModel(7, 0, 2, null), $this->countsCache->find($entry));
     }
 
-    public function testAnUnlikeDropsThePostsCachedCounts(): void
+    public function testAnUnlikeAnswersThePostsLiveLikeCount(): void
     {
         $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->likes()->like($this->owner, $entry);
-        $this->countsCache->remember($entry, new SocialCountsModel(5, 0, 0, null));
+        $this->publicSource = new FakePostCountsSource(new SocialCountsModel(6, 0, 2, null));
 
-        $this->likes()->unlike($this->owner, $entry);
+        $likeCount = $this->likes()->unlike($this->owner, $entry);
 
-        self::assertNull($this->countsCache->find($entry));
+        self::assertSame(6, $likeCount);
+        self::assertSame(6, $this->ensureItem()->getLikeCount());
+    }
+
+    public function testALikeWhoseCountTheNetworkWillNotSayAnswersTheStoredOne(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->ensureItem()->recordCounts(DiscussionCounts::fromCommentsAndLikes(null, 3));
+        $this->entityManager->flush();
+        $this->publicSource->failWith(new SocialNetworkUnreachableException('down'));
+
+        $likeCount = $this->likes()->like($this->owner, $entry);
+
+        self::assertSame(3, $likeCount);
+        self::assertNotNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
+    }
+
+    public function testALikeAlreadyMadeAnswersTheStoredCountWithoutAsking(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->likes()->like($this->owner, $entry);
+        $this->publicSource->failWith(new \LogicException('A repeated like must not ask for counts.'));
+
+        self::assertSame(7, $this->likes()->like($this->owner, $entry));
     }
 
     public function testAnUnlikeOfAnEntryThatIsNoPostLongerStillTakesTheLikeBack(): void
@@ -142,7 +176,7 @@ final class SocialLikesTest extends DbTestCase
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
     }
 
-    public function testALikeOnOneCopyDropsTheCountsEveryCopyShows(): void
+    public function testALikeOnOneCopyRefreshesTheCountsEveryCopyShows(): void
     {
         $this->mastodonAccount();
         $rssCopy = $this->entryOn(self::FEED_URL, self::STATUS_URL);
@@ -151,7 +185,7 @@ final class SocialLikesTest extends DbTestCase
 
         $this->likes()->like($this->owner, $rssCopy);
 
-        self::assertNull($this->countsCache->find($uriCopy));
+        self::assertEquals(new SocialCountsModel(7, 0, 2, null), $this->countsCache->find($uriCopy));
     }
 
     public function testAFailedLikeKeepsTheCachedCounts(): void
@@ -508,23 +542,33 @@ final class SocialLikesTest extends DbTestCase
         $guard = new ActingAccountGuard($this->entityManager);
         $mastodon = $this->mastodon;
 
+        $publicSource = $this->publicSource;
         $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
+        $posts = new SocialPostFinder(
+            $chooser,
+            $guard,
+            new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+            SocialRuleWiring::postAddresses(),
+        );
+        $deletions = ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck());
+        $counts = new SocialCounts(
+            $this->countsCache,
+            $posts,
+            $deletions,
+            new ServiceLocator(['mastodon' => static fn (): FakePostCountsSource => $publicSource]),
+            SocialRuleWiring::postAddresses(),
+        );
 
         return new SocialLikes(
             $this->likeRepository(),
-            new SocialPostFinder(
-                $chooser,
-                $guard,
-                new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
-                SocialRuleWiring::postAddresses(),
-            ),
+            $posts,
             $chooser,
             SocialRuleWiring::postAddresses(),
             new PostLiking($guard, new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon])),
             $this->entityManager,
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
-            $this->countsCache,
-            ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck()),
+            new LiveLikeCounts($counts, $this->entityManager),
+            $deletions,
         );
     }
 
