@@ -18,10 +18,6 @@ final readonly class MastodonCanonicalKeyRule implements CanonicalKeyRuleInterfa
         if (SocialNetwork::Mastodon !== $entry->getFeed()->getNetwork()) {
             return null;
         }
-        $guid = SavedCopyGuid::stripSuffix($entry->getGuid());
-        $url = $entry->getUrl();
-        $status = MastodonStatusKey::parseStatusKey($guid) ?? MastodonStatusKey::parseStatusKey($url);
-
-        return $status ?? MastodonStatusKey::parseAbsoluteKey($guid) ?? MastodonStatusKey::parseAbsoluteKey($url);
+        return MastodonStatusKey::parseEntryKey(SavedCopyGuid::stripSuffix($entry->getGuid()), $entry->getUrl());
     }
 }

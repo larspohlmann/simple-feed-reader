@@ -32,21 +32,24 @@ final class MastodonStatusKeyTest extends TestCase
         self::assertNull(MastodonStatusKey::parseKey('not a url'));
     }
 
-    public function testStatusKeyIgnoresAnAbsoluteAddressThatIsNoStatus(): void
+    public function testEntryKeyPrefersAStatusAddressOverAnEarlierAbsoluteOne(): void
     {
-        self::assertNull(MastodonStatusKey::parseStatusKey('https://pl.example/objects/9f1c'));
-        self::assertNull(MastodonStatusKey::parseStatusKey(null));
-        self::assertSame(
-            'https://mastodon.example/users/alice/statuses/123',
-            MastodonStatusKey::parseStatusKey('https://mastodon.example/@alice/123')?->key,
-        );
+        $status = 'https://mastodon.example/@alice/123';
+        $key = MastodonStatusKey::parseEntryKey('https://pl.example/objects/9f1c', $status);
+
+        self::assertSame('https://mastodon.example/users/alice/statuses/123', $key?->key);
     }
 
-    public function testAbsoluteKeyKeepsAnyAbsoluteAddressAsIs(): void
+    public function testEntryKeyFallsBackToTheFirstAbsoluteAddress(): void
     {
-        $address = 'https://mastodon.example/@alice/123';
-
-        self::assertSame($address, MastodonStatusKey::parseAbsoluteKey($address)?->key);
-        self::assertNull(MastodonStatusKey::parseAbsoluteKey('not a url'));
+        self::assertSame(
+            'https://pl.example/objects/9f1c',
+            MastodonStatusKey::parseEntryKey('https://pl.example/objects/9f1c', 'https://pl.example/other')?->key,
+        );
+        self::assertSame(
+            'https://pl.example/other',
+            MastodonStatusKey::parseEntryKey(null, 'https://pl.example/other')?->key,
+        );
+        self::assertNull(MastodonStatusKey::parseEntryKey('not a url', null));
     }
 }

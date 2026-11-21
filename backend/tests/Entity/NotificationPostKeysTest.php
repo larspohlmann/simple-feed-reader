@@ -17,6 +17,21 @@ final class NotificationPostKeysTest extends TestCase
         self::assertSame([], new NotificationPostKeys()->hashes());
     }
 
+    public function testPickEntryIdTakesTheFirstPresentHashInPostAnsweredRootOrder(): void
+    {
+        $keys = new NotificationPostKeys('p', 'a', 'r');
+
+        self::assertSame(1, $keys->pickEntryId(['r' => 3, 'a' => 2, 'p' => 1]));
+        self::assertSame(2, $keys->pickEntryId(['r' => 3, 'a' => 2]));
+        self::assertSame(3, $keys->pickEntryId(['r' => 3]));
+    }
+
+    public function testPickEntryIdIsNullWhenNoHashIsPresent(): void
+    {
+        self::assertNull(new NotificationPostKeys('p', 'a', 'r')->pickEntryId(['x' => 1]));
+        self::assertNull(new NotificationPostKeys()->pickEntryId(['x' => 1]));
+    }
+
     public function testWithAnsweredKeepsTheOtherHashes(): void
     {
         self::assertEquals(

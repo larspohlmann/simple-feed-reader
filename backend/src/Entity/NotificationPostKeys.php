@@ -28,6 +28,18 @@ final readonly class NotificationPostKeys
         )));
     }
 
+    /** @param array<string, int> $entryIdsByHash */
+    public function pickEntryId(array $entryIdsByHash): ?int
+    {
+        foreach ($this->hashes() as $hash) {
+            if (isset($entryIdsByHash[$hash])) {
+                return $entryIdsByHash[$hash];
+            }
+        }
+
+        return null;
+    }
+
     #[\NoDiscard]
     public function withAnswered(?string $answeredHash): self
     {

@@ -19,7 +19,14 @@ final class MastodonStatusKey
         return self::parseStatusKey($address) ?? self::parseAbsoluteKey($address);
     }
 
-    public static function parseStatusKey(?string $address): ?CanonicalKeyModel
+    public static function parseEntryKey(?string $guid, ?string $url): ?CanonicalKeyModel
+    {
+        $status = self::parseStatusKey($guid) ?? self::parseStatusKey($url);
+
+        return $status ?? self::parseAbsoluteKey($guid) ?? self::parseAbsoluteKey($url);
+    }
+
+    private static function parseStatusKey(?string $address): ?CanonicalKeyModel
     {
         if (null === $address) {
             return null;
@@ -29,7 +36,7 @@ final class MastodonStatusKey
         return null === $status ? null : new CanonicalKeyModel(CanonicalItemKind::Mastodon, $status->uri());
     }
 
-    public static function parseAbsoluteKey(?string $address): ?CanonicalKeyModel
+    private static function parseAbsoluteKey(?string $address): ?CanonicalKeyModel
     {
         $absolute = AbsoluteHttpUrl::keepIfAbsolute($address);
 
