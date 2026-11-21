@@ -28,7 +28,6 @@ final class Version20261121150000 extends AbstractMigration
         $this->addSql('ALTER TABLE canonical_item DROP COLUMN ' . self::COLUMN);
     }
 
-    /** MySQL commits each DDL statement, so a transaction would protect nothing there. */
     public function isTransactional(): bool
     {
         return false;
