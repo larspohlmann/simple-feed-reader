@@ -239,7 +239,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
         $rows = $this->getEntityManager()->getConnection()->fetchAllKeyValue(
             $sql,
             $parameters,
-            array_map(self::parameterType(...), $parameters),
+            array_map(self::resolveParameterType(...), $parameters),
         );
 
         $latestIdByRowId = [];
@@ -250,7 +250,7 @@ final class SocialNotificationRepository extends ServiceEntityRepository
         return $latestIdByRowId;
     }
 
-    private static function parameterType(int|string|bool $parameter): ParameterType
+    private static function resolveParameterType(int|string|bool $parameter): ParameterType
     {
         return match (true) {
             is_bool($parameter) => ParameterType::BOOLEAN,
