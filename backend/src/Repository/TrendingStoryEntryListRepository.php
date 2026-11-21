@@ -21,6 +21,13 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class TrendingStoryEntryListRepository extends ServiceEntityRepository
 {
+    private const array COLLAPSE_KEY_COLUMNS = [
+        'e.id AS id',
+        'e.location.urlHash AS urlHash',
+        'IDENTITY(e.canonicalItem) AS itemId',
+        'item.crossPostHash AS crossPostHash',
+    ];
+
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
@@ -57,7 +64,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setMaxResults($query->page->limit)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $query->userId);
         if ($query->page->onlyUnread) {
             $this->scopes->unread($qb, EntryAliases::primary());
         }
@@ -79,7 +86,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setParameter('notHidden', false, Types::BOOLEAN)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $query->userId);
 
         /** @var array{memberCount: int|string, unreadCount: int|string|null} $row */
         $row = $qb->getQuery()->getSingleResult();
@@ -101,7 +108,8 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * When each given entry joined the story: the latest join among it and the collapsed copies the reader sees.
+     * When each given entry joined the story: the latest join among it and the collapsed copies and cross-posts the
+     * reader sees.
      *
      * @param list<int> $entryIds
      *
@@ -113,34 +121,92 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             return [];
         }
 
-        $qb = $this->createQueryBuilder('e')
-            ->select('e.id AS id', 'MAX(joined.joinedAt) AS joinedAt')
-            ->join(TrendingStoryEntry::class, 'joined', 'ON', 'joined.story = :story')
-            ->join('joined.entry', 'joinedEntry')
-            ->join(
-                Subscription::class,
-                'joinedReader',
-                'ON',
-                'joinedReader.feed = joinedEntry.feed AND joinedReader.user = :user',
-            )
-            ->andWhere(
-                'joinedEntry = e OR joinedEntry.location.urlHash = e.location.urlHash'
-                . ' OR joinedEntry.canonicalItem = e.canonicalItem',
-            )
-            ->andWhere('e.id IN (:entryIds)')
-            ->groupBy('e.id')
-            ->setParameter('entryIds', $entryIds)
-            ->setParameter('user', $query->userId)
-            ->setParameter('story', $query->storyId);
+        $latestJoinByKey = [];
+        foreach ($this->findSubscribedMemberJoins($query) as $member) {
+            foreach (self::buildCollapseKeys($member) as $key) {
+                $latestJoinByKey[$key] = max($latestJoinByKey[$key] ?? $member['joinedAt'], $member['joinedAt']);
+            }
+        }
 
-        /** @var list<array{id: int|string, joinedAt: string}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
         $joinedAt = [];
-        foreach ($rows as $row) {
-            $joinedAt[(int) $row['id']] = NaiveUtc::parse($row['joinedAt']);
+        foreach ($this->findCollapseKeyRows($entryIds) as $entry) {
+            $joins = array_intersect_key($latestJoinByKey, array_flip(self::buildCollapseKeys($entry)));
+            if ($joins !== []) {
+                $joinedAt[(int) $entry['id']] = max($joins);
+            }
         }
 
         return $joinedAt;
+    }
+
+    /**
+     * @return list<array{
+     *     id: int|string, urlHash: ?string, itemId: int|string|null, crossPostHash: ?string,
+     *     joinedAt: \DateTimeImmutable,
+     * }>
+     */
+    private function findSubscribedMemberJoins(TrendingStoryListQuery $query): array
+    {
+        /**
+         * @var list<array{
+         *     id: int|string, urlHash: ?string, itemId: int|string|null, crossPostHash: ?string,
+         *     joinedAt: \DateTimeImmutable,
+         * }> $rows
+         */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select(...self::COLLAPSE_KEY_COLUMNS)
+            ->addSelect('joined.joinedAt AS joinedAt')
+            ->from(TrendingStoryEntry::class, 'joined')
+            ->join('joined.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin('e.canonicalItem', 'item')
+            ->andWhere('joined.story = :story')
+            ->setParameter('user', $query->userId)
+            ->setParameter('story', $query->storyId)
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
+    /**
+     * @param non-empty-list<int> $entryIds
+     *
+     * @return list<array{id: int|string, urlHash: ?string, itemId: int|string|null, crossPostHash: ?string}>
+     */
+    private function findCollapseKeyRows(array $entryIds): array
+    {
+        /** @var list<array{id: int|string, urlHash: ?string, itemId: int|string|null, crossPostHash: ?string}> $rows */
+        $rows = $this->createQueryBuilder('e')
+            ->select(...self::COLLAPSE_KEY_COLUMNS)
+            ->leftJoin('e.canonicalItem', 'item')
+            ->andWhere('e.id IN (:entryIds)')
+            ->setParameter('entryIds', $entryIds)
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
+    /**
+     * @param array{id: int|string, urlHash: ?string, itemId: int|string|null, crossPostHash: ?string} $row
+     *
+     * @return list<string>
+     */
+    private static function buildCollapseKeys(array $row): array
+    {
+        $keys = ['entry:' . $row['id']];
+        if ($row['urlHash'] !== null) {
+            $keys[] = 'url:' . $row['urlHash'];
+        }
+        if ($row['itemId'] !== null) {
+            $keys[] = 'item:' . $row['itemId'];
+        }
+        if ($row['crossPostHash'] !== null) {
+            $keys[] = 'crossPost:' . $row['crossPostHash'];
+        }
+
+        return $keys;
     }
 
     /** On the primary alias and inside the collapse subquery alike, or a collapsed copy punches a hole in the page. */

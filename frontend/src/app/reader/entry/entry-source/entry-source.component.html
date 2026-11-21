@@ -33,13 +33,13 @@
       [href]="links.open(community.url, 'lemmy')"
       target="_blank"
       rel="noopener noreferrer"
-      >c/{{ community.name }}</a
+      >{{ formatCommunityLabel(community) }}</a
     >
   } @else if (layout() === 'kicker') {
     <span class="community-separator" aria-hidden="true">·</span>
-    <span class="community">c/{{ community.name }}</span>
+    <span class="community">{{ formatCommunityLabel(community) }}</span>
   } @else {
-    <span class="community"> · c/{{ community.name }}</span>
+    <span class="community"> · {{ formatCommunityLabel(community) }}</span>
   }
 }
 @if (savedIn(); as savedTitle) {

@@ -1,0 +1,238 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Migrations;
+
+use App\Entity\CanonicalItem;
+use App\Entity\Headline;
+use App\Enum\CanonicalItemKind;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Ingestion\Ingest\CrossPostKeyRule\LemmyCrossPostKeyRule;
+use App\Service\Ingestion\Ingest\Support\LemmyLinkedUrl;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\ParameterType;
+use DoctrineMigrations\Version20261121120000;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+
+final class Version20261121120000Test extends TestCase
+{
+    private const string AUTHOR = 'https://lemmy.world/u/PerfectDark';
+    private const string LINK = 'https://example.com/story';
+
+    private Connection $connection;
+
+    protected function setUp(): void
+    {
+        require_once \dirname(__DIR__, 2) . '/migrations/Version20261121120000.php';
+        $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
+        foreach ($this->buildOldSchema() as $statement) {
+            $this->connection->executeStatement($statement);
+        }
+    }
+
+    public function testCopiesOfOneLinkCrossPostShareAHash(): void
+    {
+        $link = '<a href="' . self::LINK . '">' . self::LINK . '</a>';
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'First title', '<p>' . $link . '</p>');
+        $this->insertItem(2, 'lemmy', self::AUTHOR, 'Second title', $link);
+        $this->insertItem(3, 'lemmy', self::AUTHOR . '/', 'Third title', '<p>' . $link . '</p>');
+
+        $this->migrate('up');
+
+        $hashes = array_values($this->readHashes());
+        self::assertNotNull($hashes[0]);
+        self::assertSame([$hashes[0], $hashes[0]], [$hashes[1], $hashes[2]]);
+    }
+
+    public function testATextCrossPostSharesAHashAndAnotherTitleDoesNot(): void
+    {
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'Same words', '<p>Body one</p><p>Body two</p>');
+        $this->insertItem(2, 'lemmy', self::AUTHOR, 'Same  Words', '<div>Body one</div><div>Body two</div>');
+        $this->insertItem(3, 'lemmy', self::AUTHOR, 'Other words', '<p>Body one</p><p>Body two</p>');
+
+        $this->migrate('up');
+
+        $hashes = array_values($this->readHashes());
+        self::assertNotNull($hashes[0]);
+        self::assertSame($hashes[0], $hashes[1]);
+        self::assertNotNull($hashes[2]);
+        self::assertNotSame($hashes[0], $hashes[2]);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function provideIngestedBodies(): iterable
+    {
+        yield 'link post' => ['<p><a href="' . self::LINK . '">' . self::LINK . '</a></p>'];
+        yield 'text post' => ['<p>Body <b>one</b></p><ul><li>two</li></ul>'];
+    }
+
+    #[DataProvider('provideIngestedBodies')]
+    public function testTheMigratedHashEqualsTheOneIngestionBuilds(string $ingestedBody): void
+    {
+        $storedBody = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($ingestedBody);
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A  Title', (string) $storedBody);
+        $parsed = new ParsedEntryModel(
+            'guid', null, Headline::fromFeed('A  Title'), 'PerfectDark', null, $ingestedBody, null,
+            authorUrl: self::AUTHOR,
+        )->withLinkedUrl(LemmyLinkedUrl::parse($ingestedBody));
+        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'key', new \DateTimeImmutable());
+
+        $this->migrate('up');
+
+        $ingested = new LemmyCrossPostKeyRule(new UrlNormalizer())->findHash($item, $parsed);
+        self::assertNotNull($ingested);
+        self::assertSame($ingested, $this->readHashes()[1]);
+    }
+
+    public function testAMastodonItemStaysUnkeyed(): void
+    {
+        $this->insertItem(1, 'mastodon', self::AUTHOR, 'A toot', '<p>text</p>');
+
+        $this->migrate('up');
+
+        self::assertSame([1 => null], $this->readHashes());
+    }
+
+    public function testAnItemKeysFromItsLowestIdCopy(): void
+    {
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'Original', '<p>Body</p>');
+        $this->connection->insert('entry', [
+            'id' => 9, 'canonical_item_id' => 1, 'author_url' => self::AUTHOR, 'title' => 'Edited', 'content_html' => '<p>Other</p>',
+        ]);
+        $this->insertItem(2, 'lemmy', self::AUTHOR, 'Original', '<p>Body</p>');
+
+        $this->migrate('up');
+
+        $hashes = $this->readHashes();
+        self::assertNotNull($hashes[1]);
+        self::assertSame($hashes[2], $hashes[1]);
+    }
+
+    public function testMoreThanOneBatchIsKeyed(): void
+    {
+        for ($id = 1; $id <= 1001; ++$id) {
+            $this->insertItem($id, 'lemmy', 'https://lemmy.world/u/user' . $id, 'Title', '<p>Body</p>');
+        }
+
+        $this->migrate('up');
+
+        self::assertCount(1001, array_unique(array_filter($this->readHashes())));
+    }
+
+    public function testDownDropsTheColumn(): void
+    {
+        $this->migrate('up');
+
+        $this->migrate('down');
+
+        self::assertNotContains('cross_post_hash', $this->readColumns());
+    }
+
+    public function testRunningUpTwiceChangesNothing(): void
+    {
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->migrate('up');
+        $hashes = $this->readHashes();
+
+        $this->migrate('up');
+
+        self::assertSame($hashes, $this->readHashes());
+        self::assertSame(1, $this->countCrossPostIndexes());
+    }
+
+    public function testAColumnLeftByAnInterruptedRunIsBackfilledAndIndexed(): void
+    {
+        $this->connection->executeStatement('ALTER TABLE canonical_item ADD cross_post_hash VARCHAR(64) DEFAULT NULL');
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->insertItem(2, 'mastodon', self::AUTHOR, 'A toot', '<p>text</p>');
+
+        $this->migrate('up');
+
+        $hashes = $this->readHashes();
+        self::assertNotNull($hashes[1]);
+        self::assertNull($hashes[2]);
+        self::assertSame(1, $this->countCrossPostIndexes());
+    }
+
+    public function testAnAlreadyKeyedItemIsLeftAlone(): void
+    {
+        $this->connection->executeStatement('ALTER TABLE canonical_item ADD cross_post_hash VARCHAR(64) DEFAULT NULL');
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->connection->update('canonical_item', ['cross_post_hash' => 'kept'], ['id' => 1]);
+
+        $this->migrate('up');
+
+        self::assertSame([1 => 'kept'], $this->readHashes());
+    }
+
+    private function countCrossPostIndexes(): int
+    {
+        return \count(array_filter(
+            $this->connection->createSchemaManager()->introspectTable('canonical_item')->getIndexes(),
+            static fn ($index): bool => $index->getName() === 'idx_canonical_item_cross_post_hash',
+        ));
+    }
+
+    /** @return array<int, ?string> */
+    private function readHashes(): array
+    {
+        /** @var array<int, ?string> $hashes */
+        $hashes = $this->connection->fetchAllKeyValue('SELECT id, cross_post_hash FROM canonical_item ORDER BY id');
+
+        return $hashes;
+    }
+
+    /** @return list<string> */
+    private function readColumns(): array
+    {
+        return array_map(
+            static fn ($column): string => $column->getName(),
+            $this->connection->createSchemaManager()->introspectTable('canonical_item')->getColumns(),
+        );
+    }
+
+    private function insertItem(int $id, string $kind, string $authorUrl, string $title, string $contentHtml): void
+    {
+        $this->connection->insert('canonical_item', [
+            'id' => $id, 'kind' => $kind, 'canonical_key' => 'key' . $id, 'key_hash' => 'hash' . $id,
+            'score' => 0, 'comment_count' => 0, 'self_reply_count' => 0, 'created_at' => '2026-11-21 00:00:00',
+        ]);
+        $this->connection->insert('entry', [
+            'id' => $id, 'canonical_item_id' => $id, 'author_url' => $authorUrl, 'title' => $title, 'content_html' => $contentHtml,
+        ]);
+    }
+
+    private function migrate(string $direction): void
+    {
+        $migration = new Version20261121120000($this->connection, new NullLogger());
+        $schema = $this->connection->createSchemaManager()->introspectSchema();
+        'up' === $direction ? $migration->up($schema) : $migration->down($schema);
+        foreach ($migration->getSql() as $query) {
+            $statement = $this->connection->prepare($query->getStatement());
+            foreach (array_values($query->getParameters()) as $index => $value) {
+                $statement->bindValue($index + 1, $value, \is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
+            }
+            $statement->executeStatement();
+        }
+    }
+
+    /** @return list<string> */
+    private function buildOldSchema(): array
+    {
+        return [
+            'CREATE TABLE canonical_item (id INTEGER PRIMARY KEY, kind VARCHAR(16) NOT NULL, canonical_key VARCHAR(2048) NOT NULL,'
+            . ' key_hash VARCHAR(64) NOT NULL, score INTEGER NOT NULL, comment_count INTEGER NOT NULL,'
+            . ' self_reply_count INTEGER NOT NULL, created_at DATETIME NOT NULL)',
+            'CREATE TABLE entry (id INTEGER PRIMARY KEY, canonical_item_id INTEGER DEFAULT NULL, author_url VARCHAR(2048) DEFAULT NULL,'
+            . ' title VARCHAR(1024) NOT NULL, content_html CLOB DEFAULT NULL)',
+            'CREATE INDEX idx_entry_item_feed_date ON entry (canonical_item_id, id)',
+        ];
+    }
+}

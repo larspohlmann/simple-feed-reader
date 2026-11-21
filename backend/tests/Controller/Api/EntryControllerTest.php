@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
@@ -13,6 +14,7 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\PostCommunity;
 use App\Entity\QuotedPostContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -26,6 +28,7 @@ use App\Repository\EntryStateRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\LemmyPostCopies;
+use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\SharedLinks;
@@ -421,6 +424,57 @@ final class EntryControllerTest extends ApiTestCase
         self::assertSame('Feed B', $duplicate['source']);
         self::assertArrayNotHasKey('contentHtml', $duplicate);
         self::assertArrayHasKey('excerpt', $duplicate);
+    }
+
+    public function testACrossPostLeaderListsItsCommunitiesWithScoreAndComments(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-cross-posts@example.com');
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $this->persistCrossPost($entityManager, $user, 'games', '2026-11-14T09:00:00Z');
+        $member = $this->persistCrossPost($entityManager, $user, 'retrogaming', '2026-11-14T10:00:00Z');
+        $member->recordCounts(DiscussionCounts::fromScoreAndComments(12, 3));
+        $entityManager->flush();
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
+        $entry = $body['entries'][0];
+        self::assertIsArray($entry);
+        self::assertIsArray($entry['duplicates']);
+        $duplicate = $entry['duplicates'][0];
+        self::assertIsArray($duplicate);
+        self::assertIsArray($duplicate['community']);
+        self::assertSame('retrogaming', $duplicate['community']['name']);
+        self::assertSame(12, $duplicate['score']);
+        self::assertSame(3, $duplicate['commentCount']);
+    }
+
+    private function persistCrossPost(
+        EntityManagerInterface $entityManager,
+        User $user,
+        string $community,
+        string $publishedAt,
+    ): CanonicalItem {
+        $feed = new Feed('https://lemmy.example/c/' . $community . '.xml');
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $page = 'https://lemmy.example/post/' . $community;
+        $entry = LemmyPostEntries::buildEntry($feed, $page, publishedAt: $publishedAt);
+        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
+        $item = LemmyPostEntries::linkCrossPost($entityManager, $entry, $page, 'cross-post-hash');
+        $entityManager->persist($entry);
+        LemmyPostEntries::storeCommunity(
+            $entityManager,
+            $item,
+            PostCommunity::fromIdentityAndUrl($community . '@lemmy.example', 'https://lemmy.example/c/' . $community),
+        );
+
+        return $item;
     }
 
     public function testPaginatesWithCursor(): void

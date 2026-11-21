@@ -49,6 +49,37 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         );
     }
 
+    public function testAStorysCrossPostGroupListsAsOneRowAndTalliesOnce(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-cross-post@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $leader = $this->persistCrossPost($fixtures, 'games', '2031-05-14 08:00:00');
+        $member = $this->persistCrossPost($fixtures, 'retrogaming', '2031-05-14 08:30:00');
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $leader, $member);
+        $query = new TrendingStoryListQuery($reader->requireId(), $story->requireId());
+
+        self::assertSame(1, $this->entries->countMembersAndUnread($query)->memberCount);
+        self::assertSame(
+            [$leader->getId()],
+            array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $this->entries->listMembers($query)),
+        );
+    }
+
+    public function testJoinedAtByEntryReadsALaterCrossPost(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-joined-at-cross-post@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $leader = $this->persistCrossPost($fixtures, 'games', '2031-05-14 08:00:00');
+        $story = $fixtures->story(TrendingWindow::Day, '2031-05-14 09:00:00', $leader);
+        $member = $this->persistCrossPost($fixtures, 'retrogaming', '2031-05-14 08:30:00');
+        $fixtures->join($story, '2031-05-14 10:00:00', $member);
+
+        self::assertEquals(
+            [$leader->requireId() => self::at('2031-05-14 10:00:00')],
+            $this->joinedAtOf($reader, $story, $leader),
+        );
+    }
+
     public function testJoinedAtByEntryReadsACopyOfTheSameItem(): void
     {
         $reader = $this->fixtures->reader('story-entry-list-joined-at-item@example.com');
@@ -202,6 +233,20 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
             $fixtures->feed('local', SocialNetwork::Lemmy),
             $fixtures->feed('all', SocialNetwork::Lemmy),
         );
+    }
+
+    private function persistCrossPost(TrendingFixtures $fixtures, string $community, string $publishedAt): Entry
+    {
+        $page = 'https://lemmy.example/post/' . $community;
+        $post = LemmyPostEntries::persistPost(
+            $this->entityManager,
+            $fixtures->feed($community, SocialNetwork::Lemmy),
+            $page,
+            $publishedAt,
+        );
+        $post->getCanonicalItem()?->recordCrossPostHash('cross-post-hash');
+
+        return $post;
     }
 
     private static function at(string $time): \DateTimeImmutable

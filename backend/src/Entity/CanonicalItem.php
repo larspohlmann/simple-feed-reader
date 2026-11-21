@@ -14,6 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'canonical_item')]
 #[ORM\UniqueConstraint(name: 'uniq_canonical_item_kind_key', columns: ['kind', 'key_hash'])]
 #[ORM\Index(name: 'idx_canonical_item_created_at', columns: ['created_at'])]
+#[ORM\Index(name: 'idx_canonical_item_cross_post_hash', columns: ['cross_post_hash'])]
 final class CanonicalItem implements DiscussionCountStoreInterface
 {
     use PersistedId;
@@ -31,6 +32,9 @@ final class CanonicalItem implements DiscussionCountStoreInterface
 
     #[ORM\Column(name: 'key_hash', length: 64)]
     private string $keyHash;
+
+    #[ORM\Column(name: 'cross_post_hash', length: 64, nullable: true)]
+    private ?string $crossPostHash = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $score = null;
@@ -70,6 +74,16 @@ final class CanonicalItem implements DiscussionCountStoreInterface
     public function getCanonicalKey(): string
     {
         return $this->canonicalKey;
+    }
+
+    public function getCrossPostHash(): ?string
+    {
+        return $this->crossPostHash;
+    }
+
+    public function recordCrossPostHash(string $hash): void
+    {
+        $this->crossPostHash ??= $hash;
     }
 
     public function getScore(): ?int

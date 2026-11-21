@@ -448,3 +448,60 @@ it("shows a copy's row in the popover without the story's pieces", () => {
   expect(panel.querySelector('app-story-sharers')).toBeNull();
   expect(panel.querySelector('app-story-actions')).toBeNull();
 });
+
+describe('a Lemmy cross-post chip (#2420)', () => {
+  const lead = () =>
+    entry({ canonicalItemId: 1, community: { name: 'games', url: 'https://lemmy.world/c/games' } });
+  const crossPost = (over: Partial<EntryDto> = {}) =>
+    entry({
+      id: 2,
+      canonicalItemId: 2,
+      community: { name: 'retrogaming', url: 'https://lemmy.world/c/retrogaming' },
+      score: 12,
+      commentCount: 3,
+      ...over,
+    });
+  const chipOf = (duplicate: EntryDto) =>
+    mount(entry({ ...lead(), duplicates: [duplicate] })).nativeElement.querySelector(
+      '.also-entry',
+    ) as HTMLElement;
+
+  it('labels a cross-post chip by its community, with its score and comment count', () => {
+    const chip = chipOf(crossPost());
+    const labels = Array.from(chip.querySelectorAll('[role="img"]')).map((icon) =>
+      icon.getAttribute('aria-label'),
+    );
+
+    expect(chip.querySelector('.feed')!.textContent).toBe('c/retrogaming');
+    expect(chip.textContent).toContain('12');
+    expect(chip.textContent).toContain('3');
+    expect(labels).toEqual(['12 points', '3 comments']);
+    expect(chip.querySelector('.t')).toBeNull();
+  });
+
+  it('opens a cross-post in the reader on click, with no popover', () => {
+    const duplicate = crossPost();
+    chipOf(duplicate).click();
+
+    expect(entryActions.open).toHaveBeenCalledWith(duplicate);
+    expect(
+      TestBed.inject(OverlayContainer).getContainerElement().querySelector('.dup-popover'),
+    ).toBeNull();
+  });
+
+  it('omits the score and the count a cross-post does not have', () => {
+    expect(
+      chipOf(crossPost({ score: null, commentCount: null })).querySelector('[role="img"]'),
+    ).toBeNull();
+  });
+
+  it('keeps the popover for a copy of the same item', () => {
+    const fixture = mount(entry({ ...lead(), duplicates: [crossPost({ canonicalItemId: 1 })] }));
+    (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(
+      TestBed.inject(OverlayContainer).getContainerElement().querySelector('.dup-popover'),
+    ).not.toBeNull();
+  });
+});

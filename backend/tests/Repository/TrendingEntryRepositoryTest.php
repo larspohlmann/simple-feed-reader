@@ -207,6 +207,26 @@ final class TrendingEntryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testAWindowEntryCarriesItsItemsCrossPostHash(): void
+    {
+        $fixtures = new TrendingFixtures($this->entityManager);
+        $post = LemmyPostEntries::buildEntry(
+            $fixtures->feed('lemmy', SocialNetwork::Lemmy),
+            publishedAt: '2031-05-14 09:00:00',
+        );
+        $item = LemmyPostEntries::linkItem($post);
+        $item->recordCrossPostHash('cross-post-hash');
+        $this->entityManager->persist($item);
+        $this->entityManager->persist($post);
+        $fixtures->entry($fixtures->feed('plain'), 'No item', '2031-05-14 09:00:00');
+        $fixtures->flush();
+
+        self::assertSame(
+            ['cross-post-hash', null],
+            array_map(static fn (WindowEntryModel $row): ?string => $row->crossPostHash, $this->readWindowEntries()),
+        );
+    }
+
     public function testAWindowEntryReadsItsOwnLanguageBeforeItsFeeds(): void
     {
         $fixtures = new TrendingFixtures($this->entityManager);

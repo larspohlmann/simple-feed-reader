@@ -49,13 +49,17 @@ final class EntryListRepository extends ServiceEntityRepository
         }
 
         $ordering = $query->ordering();
-        $applyScope = $this->listScope($query, $groupSubscriptionIds);
+        $applyScope = $this->buildListScope($query, $groupSubscriptionIds);
+        $collapseScope = CollapseScope::fromScopes(
+            $applyScope,
+            $this->buildListScope($query->withoutReadFilter(), $groupSubscriptionIds),
+        );
 
-        $pageQuery = function () use ($query, $ordering, $applyScope): QueryBuilder {
+        $pageQuery = function () use ($query, $ordering, $applyScope, $collapseScope): QueryBuilder {
             $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
                 ->setMaxResults($query->limit);
             $applyScope($qb, EntryAliases::primary());
-            $this->collapse->apply($qb, $applyScope, $query->userId);
+            $this->collapse->apply($qb, $collapseScope, $query->userId);
             $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
             return $qb;
@@ -79,7 +83,7 @@ final class EntryListRepository extends ServiceEntityRepository
         );
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
+        return $this->attachDuplicates($survivors, $collapseScope, $query->userId);
     }
 
     /**
@@ -87,7 +91,7 @@ final class EntryListRepository extends ServiceEntityRepository
      *
      * @return \Closure(QueryBuilder, EntryAliases): void
      */
-    private function listScope(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
+    private function buildListScope(EntryQuery $query, ?array $groupSubscriptionIds): \Closure
     {
         return function (QueryBuilder $qb, EntryAliases $aliases) use ($query, $groupSubscriptionIds): void {
             $this->scope->applyList($qb, $aliases, $query);
@@ -109,7 +113,7 @@ final class EntryListRepository extends ServiceEntityRepository
                 ->select('e.id')
                 ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
                 ->setParameter('user', $query->userId);
-            $this->listScope($query->inAllView(), $groupSubscriptionIds)($qb, EntryAliases::primary());
+            $this->buildListScope($query->inAllView(), $groupSubscriptionIds)($qb, EntryAliases::primary());
 
             return $qb;
         };
@@ -123,21 +127,30 @@ final class EntryListRepository extends ServiceEntityRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
-        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
-            $this->scope->applySearch($qb, $aliases, $query);
-        };
+        $applyScope = $this->buildSearchScope($query);
         $ordering = $query->ordering();
         $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $applyScope, $query->userId);
+        $collapseScope = CollapseScope::fromScopes($applyScope, $this->buildSearchScope($query->withoutReadFilter()));
+        $this->collapse->apply($qb, $collapseScope, $query->userId);
         $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
+        return $this->attachDuplicates($survivors, $collapseScope, $query->userId);
+    }
+
+    /**
+     * @return \Closure(QueryBuilder, EntryAliases): void
+     */
+    private function buildSearchScope(EntrySearchQuery $query): \Closure
+    {
+        return function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+            $this->scope->applySearch($qb, $aliases, $query);
+        };
     }
 
     /**
@@ -177,13 +190,14 @@ final class EntryListRepository extends ServiceEntityRepository
         };
         $rowQuery = $this->projection->newestFirst($this->projection->rowQueryBuilder($userId));
         $applyScope($rowQuery, EntryAliases::primary());
-        $this->collapse->apply($rowQuery, $applyScope, $userId);
+        $collapseScope = CollapseScope::fromScope($applyScope);
+        $this->collapse->apply($rowQuery, $collapseScope, $userId);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $rowQuery->getQuery()->getResult();
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return $this->attachDuplicates($survivors, $applyScope, $userId);
+        return $this->attachDuplicates($survivors, $collapseScope, $userId);
     }
 
     /**
@@ -247,37 +261,46 @@ final class EntryListRepository extends ServiceEntityRepository
 
     /**
      * Attach to each survivor the in-scope copies the collapse hid, so a card can
-     * name them. One extra query per key and page over the same scope, minus the
-     * collapse and the cursor.
+     * name them, then its cross-posts. One extra query per key and page over the
+     * same scope, minus the collapse and the cursor.
      *
-     * @param list<EntryListRow>                          $survivors
-     * @param callable(QueryBuilder, EntryAliases): void  $applyScope
+     * @param list<EntryListRow> $survivors
      *
      * @return list<EntryListRow>
      */
-    private function attachDuplicates(array $survivors, callable $applyScope, int $userId): array
+    private function attachDuplicates(array $survivors, CollapseScope $scope, int $userId): array
     {
         $hashes = self::collectKeys($survivors, static fn (Entry $entry): ?string => $entry->getUrlHash());
         $itemIds = self::collectKeys(
             $survivors,
             static fn (Entry $entry): ?int => $entry->getCanonicalItemId(),
         );
-        if ($hashes === [] && $itemIds === []) {
+        $crossPostHashes = self::collectKeys(
+            $survivors,
+            static fn (Entry $entry): ?string => $entry->getCanonicalItem()?->getCrossPostHash(),
+        );
+        if ($hashes === [] && $itemIds === [] && $crossPostHashes === []) {
             return $survivors;
         }
 
         $survivorIds = array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $survivors);
-        $buildCopiesQuery = function () use ($applyScope, $userId, $survivorIds): QueryBuilder {
+        $buildCopiesQuery = function (\Closure $applyScope) use ($userId, $survivorIds): QueryBuilder {
             $qb = $this->projection->rowQueryBuilder($userId);
             $applyScope($qb, EntryAliases::primary());
 
             return $qb->andWhere('e.id NOT IN (:survivorIds)')->setParameter('survivorIds', $survivorIds);
         };
-        $copiesByHash = $hashes === [] ? [] : $this->findCopiesByUrlHash($buildCopiesQuery(), $hashes);
-        $copiesByItem = $itemIds === [] ? [] : $this->findCopiesByItem($buildCopiesQuery(), $itemIds);
+        $copiesByHash = $hashes === [] ? [] : $this->findCopiesByUrlHash($buildCopiesQuery($scope->copies), $hashes);
+        $copiesByItem = $itemIds === [] ? [] : $this->findCopiesByItem($buildCopiesQuery($scope->copies), $itemIds);
+        $crossPostsByHash = $crossPostHashes === []
+            ? []
+            : $this->findCrossPosts($buildCopiesQuery($scope->crossPosts), $crossPostHashes, $itemIds);
 
         return array_map(
-            static fn (EntryListRow $row): EntryListRow => self::attachCopies($row, $copiesByHash, $copiesByItem),
+            static fn (EntryListRow $row): EntryListRow => self::attachCrossPosts(
+                self::attachCopies($row, $copiesByHash, $copiesByItem),
+                $crossPostsByHash,
+            ),
             $survivors,
         );
     }
@@ -305,6 +328,28 @@ final class EntryListRepository extends ServiceEntityRepository
         $query = $qb->andWhere('e.canonicalItem IN (:dupItems)')->setParameter('dupItems', $itemIds)->getQuery();
 
         return $this->groupCopies($query, static fn (Entry $entry): ?int => $entry->getCanonicalItemId());
+    }
+
+    /**
+     * @param list<string> $hashes
+     * @param list<int>    $survivorItemIds
+     *
+     * @return array<string, list<EntryListRow>>
+     */
+    private function findCrossPosts(QueryBuilder $qb, array $hashes, array $survivorItemIds): array
+    {
+        $query = $qb->andWhere('ci.crossPostHash IN (:crossPostHashes)')
+            ->andWhere('e.canonicalItem NOT IN (:survivorItemIds)')
+            ->setParameter('crossPostHashes', $hashes)
+            ->setParameter('survivorItemIds', $survivorItemIds)
+            ->orderBy('e.dates.publishedAt', 'ASC')
+            ->addOrderBy('e.id', 'ASC')
+            ->getQuery();
+
+        return $this->groupCopies(
+            $query,
+            static fn (Entry $entry): ?string => $entry->getCanonicalItem()?->getCrossPostHash(),
+        );
     }
 
     /**
@@ -358,6 +403,26 @@ final class EntryListRepository extends ServiceEntityRepository
         }
 
         return $copies === [] ? $row : $row->withDuplicates(array_values($copies));
+    }
+
+    /**
+     * @param array<string, list<EntryListRow>> $crossPostsByHash
+     */
+    private static function attachCrossPosts(EntryListRow $row, array $crossPostsByHash): EntryListRow
+    {
+        $hash = $row->entry->getCanonicalItem()?->getCrossPostHash();
+        if ($hash === null || !isset($crossPostsByHash[$hash])) {
+            return $row;
+        }
+        $pills = [];
+        foreach ($crossPostsByHash[$hash] as $crossPost) {
+            $itemId = $crossPost->entry->getCanonicalItemId();
+            if ($itemId !== null) {
+                $pills[$itemId] ??= $crossPost;
+            }
+        }
+
+        return $row->withDuplicates([...$row->duplicates, ...array_values($pills)]);
     }
 
     /**

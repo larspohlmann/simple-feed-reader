@@ -11,8 +11,11 @@ use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Category\CategoryNormalizer;
 use App\Service\Ingestion\Ingest\CanonicalItemWriter;
+use App\Service\Ingestion\Ingest\CrossPostKeyRule\LemmyCrossPostKeyRule;
+use App\Service\Ingestion\Ingest\CrossPostKeys;
 use App\Service\Ingestion\Ingest\EntryCategoryWriter;
 use App\Service\Ingestion\Ingest\EntryImageWriter;
 use App\Service\Ingestion\Ingest\EntryIngestor;
@@ -89,7 +92,10 @@ final class EntryIngestors
         EntityManagerInterface $entityManager,
         ClockInterface $clock,
     ): CanonicalItemWriter {
-        return new CanonicalItemWriter(CanonicalItems::buildLinker($entityManager, $clock));
+        return new CanonicalItemWriter(
+            CanonicalItems::buildLinker($entityManager, $clock),
+            new CrossPostKeys([new LemmyCrossPostKeyRule(new UrlNormalizer())]),
+        );
     }
 
     private static function buildLemmyPostWriter(EntityManagerInterface $entityManager): LemmyPostWriter

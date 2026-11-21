@@ -84,7 +84,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->setParameter('searchIds', $savedSearchIds)
             ->orderBy('e.id', 'ASC');
         $this->scopes->inSavedSearches($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $userId);
 
         /** @var list<array{id: int, searchId: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -225,7 +225,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     {
         $qb->setParameter('searchIds', $savedSearchIds);
         $this->applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $userId);
     }
 
     private function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void

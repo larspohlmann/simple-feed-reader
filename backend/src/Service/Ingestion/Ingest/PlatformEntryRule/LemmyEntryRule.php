@@ -6,6 +6,7 @@ namespace App\Service\Ingestion\Ingest\PlatformEntryRule;
 
 use App\Entity\Discussion;
 use App\Service\Foundation\Url\Support\LemmyPostUrl;
+use App\Service\Ingestion\Ingest\Support\LemmyLinkedUrl;
 use App\Service\Ingestion\Ingest\Support\LemmyPostHeader;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
@@ -28,7 +29,8 @@ final readonly class LemmyEntryRule implements PlatformEntryRuleInterface
         $thread = $entry->asDiscussionThread(Discussion::platformThread($pageUrl))
             ->withContentHtml($post->bodyHtml)
             ->withAuthor($post->authorName, $post->profileUrl)
-            ->withDiscussionCounts($post->counts);
+            ->withDiscussionCounts($post->counts)
+            ->withLinkedUrl(LemmyLinkedUrl::parse($post->bodyHtml));
 
         return $thread->inCommunity($post->community);
     }

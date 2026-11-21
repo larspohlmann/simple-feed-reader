@@ -16,6 +16,7 @@ final readonly class ParsedEntryModel
     public Discussion $discussion;
     public DiscussionCounts $discussionCounts;
     public ?PostCommunity $community;
+    public ?string $linkedUrl;
 
     public function __construct(
         public string $guid,
@@ -36,6 +37,7 @@ final readonly class ParsedEntryModel
         $this->discussion = $discussion ?? Discussion::none();
         $this->discussionCounts = DiscussionCounts::unknown();
         $this->community = null;
+        $this->linkedUrl = null;
     }
 
     #[\NoDiscard]
@@ -60,6 +62,12 @@ final readonly class ParsedEntryModel
     public function inCommunity(?PostCommunity $community): self
     {
         return clone($this, ['community' => $community]);
+    }
+
+    #[\NoDiscard]
+    public function withLinkedUrl(?string $linkedUrl): self
+    {
+        return clone($this, ['linkedUrl' => $linkedUrl]);
     }
 
     #[\NoDiscard]

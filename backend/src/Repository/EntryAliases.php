@@ -31,6 +31,11 @@ final readonly class EntryAliases
         return new self('e3', 'es3', 'esh3', 's3', 'nf3');
     }
 
+    public static function crossPostCollapse(): self
+    {
+        return new self('e4', 'es4', 'esh4', 's4', 'nf4');
+    }
+
     public function subscriptionKey(): string
     {
         return $this->subscription . '.id';

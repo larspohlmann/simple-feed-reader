@@ -10,6 +10,11 @@ use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Enum\SocialNetwork;
+use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
+use App\Service\Ingestion\Ingest\CanonicalItemWriter;
+use App\Service\Ingestion\Ingest\CrossPostKeyRule\CrossPostKeyRuleInterface;
+use App\Service\Ingestion\Ingest\CrossPostKeys;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
@@ -21,6 +26,7 @@ use App\Tests\Support\QueryRecorder;
 final class CanonicalItemWriterTest extends DbTestCase
 {
     private const string POST = 'https://lemmy.world/post/7';
+    private const string AUTHOR = 'https://lemmy.world/u/perfectdark';
     private const string OTHER_POST = 'https://lemmy.world/post/8';
 
     public function testTwoCopiesInOneFlushShareOneItem(): void
@@ -177,6 +183,111 @@ final class CanonicalItemWriterTest extends DbTestCase
         self::assertSame(0, $this->countItemRows());
     }
 
+    public function testTwoCommunitiesOfOneLinkPostShareAHash(): void
+    {
+        $feed = $this->buildFeed('https://example.com/a.xml');
+
+        [$first, $second] = $this->requireIngestor()->ingest(
+            $feed,
+            self::buildParsedFeed(
+                self::buildLinkPost(self::POST, 'https://x.example/a'),
+                self::buildLinkPost(self::OTHER_POST, 'https://x.example/a?utm_source=l'),
+            ),
+            self::buildContext(),
+        );
+        $this->entityManager->flush();
+
+        self::assertNotSame($first->getCanonicalItem(), $second->getCanonicalItem());
+        self::assertNotNull($first->getCanonicalItem()?->getCrossPostHash());
+        self::assertSame(
+            $first->getCanonicalItem()->getCrossPostHash(),
+            $second->getCanonicalItem()?->getCrossPostHash(),
+        );
+    }
+
+    public function testALaterCopyKeepsTheFirstCopysHash(): void
+    {
+        $first = $this->buildFeed('https://example.com/a.xml');
+        $second = $this->buildFeed('https://example.com/b.xml');
+        [$copyA] = $this->requireIngestor()->ingest(
+            $first,
+            self::buildParsedFeed(self::buildLinkPost(self::POST, 'https://x.example/a')),
+            self::buildContext(),
+        );
+        $this->entityManager->flush();
+        $hash = $copyA->getCanonicalItem()?->getCrossPostHash();
+
+        [$copyB] = $this->requireIngestor()->ingest(
+            $second,
+            self::buildParsedFeed(self::buildLinkPost(self::POST, 'https://x.example/other')),
+            self::buildContext(),
+        );
+        $this->entityManager->flush();
+
+        self::assertNotNull($hash);
+        self::assertSame($copyA->getCanonicalItem(), $copyB->getCanonicalItem());
+        self::assertSame($hash, $copyB->getCanonicalItem()->getCrossPostHash());
+    }
+
+    public function testAnItemThatAlreadyHasAHashIsNotAskedForOneAgain(): void
+    {
+        $post = self::buildLinkPost(self::POST, 'https://x.example/a');
+        [$first] = $this->requireIngestor()->ingest(
+            $this->buildFeed('https://example.com/a.xml'),
+            self::buildParsedFeed($post),
+            self::buildContext(),
+        );
+        $now = new \DateTimeImmutable('2026-11-20T12:00:00Z');
+        $laterCopy = new Entry($this->buildFeed('https://example.com/b.xml'), self::POST, null, 'Post', $now, $now);
+        $laterCopy->setDiscussion(Discussion::platformThread(self::POST));
+        $rule = new class implements CrossPostKeyRuleInterface {
+            public int $asked = 0;
+
+            public function findHash(CanonicalItem $item, ParsedEntryModel $parsed): string
+            {
+                ++$this->asked;
+
+                return 'other';
+            }
+        };
+        $linker = self::getContainer()->get(CanonicalItemLinker::class);
+        self::assertInstanceOf(CanonicalItemLinker::class, $linker);
+
+        new CanonicalItemWriter($linker, new CrossPostKeys([$rule]))->attach([[$laterCopy, $post]]);
+
+        self::assertSame($first->getCanonicalItem(), $laterCopy->getCanonicalItem());
+        self::assertSame(0, $rule->asked);
+    }
+
+    public function testAMastodonItemGetsNoHash(): void
+    {
+        $post = 'https://mastodon.social/@someone/115000000000000001';
+        $feed = $this->buildFeed('https://example.com/a.xml');
+        $feed->classifyAs(SocialNetwork::Mastodon);
+        [$status] = $this->requireIngestor()->ingest(
+            $feed,
+            self::buildParsedFeed(
+                new ParsedEntryModel(
+                    $post,
+                    $post,
+                    Headline::fromFeed('Status'),
+                    null,
+                    null,
+                    null,
+                    null,
+                    authorUrl: self::AUTHOR,
+                )
+                    ->asDiscussionThread(Discussion::platformThread($post))
+                    ->withLinkedUrl('https://x.example/a'),
+            ),
+            self::buildContext(),
+        );
+        $this->entityManager->flush();
+
+        self::assertNotNull($status->getCanonicalItem());
+        self::assertNull($status->getCanonicalItem()->getCrossPostHash());
+    }
+
     private function buildFeed(string $url): Feed
     {
         $feed = new Feed($url);
@@ -199,6 +310,22 @@ final class CanonicalItemWriterTest extends DbTestCase
         return new ParsedEntryModel($page, $page, Headline::fromFeed('Post'), null, null, null, null)
             ->asDiscussionThread(Discussion::platformThread($page))
             ->withDiscussionCounts(DiscussionCounts::fromScoreAndComments($score, $commentCount));
+    }
+
+    private static function buildLinkPost(string $page, string $linkedUrl): ParsedEntryModel
+    {
+        return new ParsedEntryModel(
+            $page,
+            $page,
+            Headline::fromFeed('Post'),
+            null,
+            null,
+            null,
+            null,
+            authorUrl: self::AUTHOR,
+        )
+            ->asDiscussionThread(Discussion::platformThread($page))
+            ->withLinkedUrl($linkedUrl);
     }
 
     private static function buildParsedFeed(ParsedEntryModel ...$entries): ParsedFeedModel

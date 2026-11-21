@@ -51,6 +51,12 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame('A link post', $linkPost->headline->text);
     }
 
+    public function testALinkPostCarriesItsLinkedUrl(): void
+    {
+        self::assertSame('https://news.example/story', $this->entries()[self::LINK_POST]->linkedUrl);
+        self::assertNull($this->entries()[self::TEXT_POST]->linkedUrl);
+    }
+
     public function testTheBodyIsRenderedMarkdown(): void
     {
         $textPost = $this->entries()[self::TEXT_POST];

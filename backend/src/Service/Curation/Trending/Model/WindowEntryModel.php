@@ -18,6 +18,7 @@ final readonly class WindowEntryModel
         public \DateTimeImmutable $effectiveDate,
         public EntryLinksModel $links,
         public ?int $canonicalItemId = null,
+        public ?string $crossPostHash = null,
     ) {
     }
 }

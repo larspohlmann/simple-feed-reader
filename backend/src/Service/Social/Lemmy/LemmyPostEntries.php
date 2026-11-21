@@ -125,6 +125,7 @@ final readonly class LemmyPostEntries
         return $this->buildPostEntry($postView, $address)
             ->asDiscussionThread($thread)
             ->withDiscussionCounts(self::buildCounts($postView->node('counts')))
+            ->withLinkedUrl($postView->node('post')->string('url'))
             ->inCommunity(self::parseCommunity($postView->node('community')));
     }
 

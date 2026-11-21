@@ -8,19 +8,42 @@
       <span class="lead">{{ label() | transloco }}</span>
     }
     @for (item of shown(); track item.copy.id) {
-      <button
-        type="button"
-        class="also-entry reads-as-text"
-        [attr.aria-expanded]="displayed()?.id === item.copy.id"
-        [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
-        [attr.title]="item.feed"
-        (click)="toggle(item.copy, $event)"
-        (keydown.enter)="$event.stopPropagation()"
-        (keydown.space)="$event.stopPropagation()"
-      >
-        <span class="feed">{{ item.feed }}</span> <span class="sep">·</span>
-        <span class="t">{{ item.when }}</span>
-      </button>
+      @if (item.crossPost) {
+        <button
+          type="button"
+          class="also-entry reads-as-text"
+          [attr.title]="item.feed"
+          (click)="openCrossPost(item.copy, $event)"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        >
+          <span class="feed">{{ item.feed }}</span>
+          @for (count of item.counts; track count.icon) {
+            <span
+              class="count"
+              role="img"
+              [attr.aria-label]="count.labelKey | transloco: { count: count.count }"
+            >
+              <app-icon [name]="count.icon" size="sm" aria-hidden="true" />{{ count.text }}
+            </span>
+          }
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="also-entry reads-as-text"
+          [attr.aria-expanded]="displayed()?.id === item.copy.id"
+          [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
+          [attr.title]="item.feed"
+          (click)="toggle(item.copy, $event)"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        >
+          <span class="feed">{{ item.feed }}</span>
+          <span class="sep">·</span>
+          <span class="t">{{ item.when }}</span>
+        </button>
+      }
     }
     @if (hiddenCount() > 0) {
       <button

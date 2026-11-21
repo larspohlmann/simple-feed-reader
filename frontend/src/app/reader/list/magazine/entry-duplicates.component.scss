@@ -65,6 +65,15 @@
   text-overflow: ellipsis;
 }
 
+.count {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .sep,
 .t {
   flex: none;

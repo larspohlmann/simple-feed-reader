@@ -6,7 +6,7 @@ import { selectionQueryParams } from '../../query/query';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
-import { sourceNameOf } from './source-name';
+import { formatCommunityLabel, sourceNameOf } from './source-name';
 
 /** Where the source sits: a list row names it unlinked, a magazine kicker and the article link the feed's list. */
 export type EntrySourceLayout = 'row' | 'kicker' | 'article';
@@ -24,6 +24,7 @@ export type EntrySourceLayout = 'row' | 'kicker' | 'article';
 })
 export class EntrySourceComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly formatCommunityLabel = formatCommunityLabel;
 
   readonly entry = input.required<EntryDto>();
   readonly layout = input.required<EntrySourceLayout>();

@@ -8,3 +8,9 @@ export function sourceNameOf(
 ): string {
   return entry.poster?.name ?? rows.find(entry.subscriptionId)?.title ?? entry.source;
 }
+
+export function formatCommunityLabel(
+  community: Pick<NonNullable<EntryDto['community']>, 'name'>,
+): string {
+  return `c/${community.name}`;
+}

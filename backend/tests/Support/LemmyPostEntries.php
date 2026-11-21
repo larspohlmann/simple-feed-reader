@@ -54,11 +54,40 @@ final class LemmyPostEntries
         return [$firstCopy, $secondCopy];
     }
 
+    /** A post published at $publishedAt, linked to an item of its own; both persisted, the caller flushes. */
+    public static function persistPost(
+        EntityManagerInterface $entityManager,
+        Feed $feed,
+        string $page,
+        string $publishedAt,
+    ): Entry {
+        $entry = self::buildEntry($feed, $page, publishedAt: $publishedAt);
+        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
+        $entityManager->persist(self::linkItem($entry, $page));
+        $entityManager->persist($entry);
+
+        return $entry;
+    }
+
     /** The item a Lemmy post's copies share, linked to the entry; the caller persists it. */
     public static function linkItem(Entry $entry, string $page = self::PAGE): CanonicalItem
     {
         $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, $page);
         $entry->linkTo($item);
+
+        return $item;
+    }
+
+    /** Links the entry to a Lemmy item keyed into a cross-post group and persists the item. */
+    public static function linkCrossPost(
+        EntityManagerInterface $entityManager,
+        Entry $entry,
+        string $page,
+        string $crossPostHash,
+    ): CanonicalItem {
+        $item = self::linkItem($entry, $page);
+        $item->recordCrossPostHash($crossPostHash);
+        $entityManager->persist($item);
 
         return $item;
     }
