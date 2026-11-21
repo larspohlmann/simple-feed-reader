@@ -336,7 +336,7 @@
         "debug": "Mode débogage",
         "debugHint": "Conserve les journaux d'appels de chaque cycle.",
         "historyTitle": "Historique des cycles",
-        "historyHint": "Ce que chaque exécution d'IA a consommé, et ce qu'elle a coûté.",
+        "historyHint": "Ce que chaque cycle d'IA a consommé, et ce qu'il a coûté.",
         "historyKindAll": "Tous",
         "historyKindFilterLabel": "Filtrer par type",
         "historyTotal": "Total dépensé",
