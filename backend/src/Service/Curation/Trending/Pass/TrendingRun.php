@@ -22,14 +22,8 @@ final class TrendingRun
     /** @var array<int, int> entry id => effective date in Unix seconds */
     private array $effectiveTimes = [];
 
-    /** @var array<string, list<int>> */
-    private array $entriesByUrlHash = [];
-
-    /** @var array<int, list<int>> */
-    private array $entriesByCanonicalItem = [];
-
-    /** @var array<string, list<int>> */
-    private array $entriesByCrossPostHash = [];
+    /** @var array<string, array<array-key, list<int>>> per key kind, the entries carrying each key */
+    private array $entriesByKey = ['url' => [], 'item' => [], 'crossPost' => []];
 
     /** @var array<string, string> one string per site, however many entries share it */
     private array $sites = [];
@@ -47,14 +41,10 @@ final class TrendingRun
         $this->feedOfEntry[$entry->id] = $entry->feedId;
         $this->effectiveTimes[$entry->id] = $entry->effectiveDate->getTimestamp();
         foreach ($urlHashes as $urlHash) {
-            $this->entriesByUrlHash[$urlHash][] = $entry->id;
+            $this->indexEntry('url', $urlHash, $entry->id);
         }
-        if ($entry->canonicalItemId !== null) {
-            $this->entriesByCanonicalItem[$entry->canonicalItemId][] = $entry->id;
-        }
-        if ($entry->crossPostHash !== null) {
-            $this->entriesByCrossPostHash[$entry->crossPostHash][] = $entry->id;
-        }
+        $this->indexEntry('item', $entry->canonicalItemId, $entry->id);
+        $this->indexEntry('crossPost', $entry->crossPostHash, $entry->id);
         $articleSite = $entry->links->articleSite();
         $this->members[$entry->id] = new StoryMemberModel(
             $entry->id,
@@ -119,12 +109,15 @@ final class TrendingRun
     public function collectEntriesSharingAKey(): array
     {
         return array_values(array_filter(
-            [
-                ...array_values($this->entriesByUrlHash),
-                ...array_values($this->entriesByCanonicalItem),
-                ...array_values($this->entriesByCrossPostHash),
-            ],
+            array_merge(...array_map(array_values(...), array_values($this->entriesByKey))),
             static fn (array $entryIds): bool => \count($entryIds) > 1,
         ));
+    }
+
+    private function indexEntry(string $kind, int|string|null $key, int $entryId): void
+    {
+        if ($key !== null) {
+            $this->entriesByKey[$kind][$key][] = $entryId;
+        }
     }
 }
