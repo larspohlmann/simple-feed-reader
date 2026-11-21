@@ -8,6 +8,7 @@ use App\Entity\ProfileRun;
 use App\Entity\StoryAiRun;
 use App\Entity\User;
 use App\Enum\AiRunKind;
+use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\StoryAiTask;
 use App\Repository\RecommendationRunHistoryRepository;
@@ -263,6 +264,41 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         self::assertEquals($storyRun->getCreatedAt(), $everyKind[0]['createdAt']);
     }
 
+    public function testProfileRunsThatFinishedWithoutACallAreLeftOutOfPageTimelineAndTotal(): void
+    {
+        $user = $this->user('history-profile-no-call@example.com');
+        $generated = $this->persistProfileRunFinishedAt(
+            $user,
+            new \DateTimeImmutable('2026-08-03 10:00:00'),
+            ProfileRunOutcome::Generated,
+        );
+        $unchanged = $this->persistProfileRunFinishedAt(
+            $user,
+            new \DateTimeImmutable('2026-08-03 10:01:00'),
+            ProfileRunOutcome::Unchanged,
+        );
+        $noHistory = $this->persistProfileRunFinishedAt(
+            $user,
+            new \DateTimeImmutable('2026-08-03 10:02:00'),
+            ProfileRunOutcome::NoHistory,
+        );
+        $inFlight = $this->persistProfileRunAt($user, new \DateTimeImmutable('2026-08-03 10:03:00'));
+        $this->priceRow('profile_run', $generated->requireId(), 200);
+        $this->priceRow('profile_run', $unchanged->requireId(), 40);
+        $this->priceRow('profile_run', $noHistory->requireId(), 5);
+        $repository = $this->historyRepository();
+
+        $page = $repository->pageForMonth($user, $this->august(), RunHistoryFilterModel::all());
+        $timeline = $repository->spendTimeline($user, AiRunKind::Profile);
+
+        self::assertSame([$inFlight->requireId(), $generated->requireId()], array_column($page, 'id'));
+        self::assertEquals(
+            [$inFlight->getCreatedAt(), $generated->getCreatedAt()],
+            array_column($timeline, 'createdAt'),
+        );
+        self::assertSame(200, $repository->totalCostNanoCredits($user));
+    }
+
     private function august(): MonthWindowModel
     {
         return MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
@@ -272,6 +308,19 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
     {
         $run = new ProfileRun($user, ProfileRunTrigger::Manual, $createdAt);
         $this->entityManager->persist($run);
+        $this->entityManager->flush();
+
+        return $run;
+    }
+
+    private function persistProfileRunFinishedAt(
+        User $user,
+        \DateTimeImmutable $createdAt,
+        ProfileRunOutcome $outcome,
+    ): ProfileRun {
+        $run = $this->persistProfileRunAt($user, $createdAt);
+        $run->start('fingerprint', 'llm.example.test', 'qwen3-14b');
+        $run->complete($outcome, $createdAt->modify('+1 minute'));
         $this->entityManager->flush();
 
         return $run;

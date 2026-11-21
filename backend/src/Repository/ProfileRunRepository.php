@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\ProfileRun;
 use App\Entity\User;
+use App\Enum\ProfileRunOutcome;
 use App\Enum\RunStatus;
 use App\Service\Operations\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -87,12 +88,14 @@ final class ProfileRunRepository extends ServiceEntityRepository
         return $rows[0]['fingerprint'] ?? null;
     }
 
-    /** @return list<ProfileRun> newest first */
+    /** @return list<ProfileRun> newest first, leaving out the runs that finished without a call */
     public function findNewestForUser(User $user, int $limit): array
     {
         /** @var list<ProfileRun> $profileRuns */
         $profileRuns = $this->createQueryBuilder('p')
             ->andWhere('p.user = :user')->setParameter('user', $user)
+            ->andWhere('p.outcome IS NULL OR p.outcome NOT IN (:withoutCall)')
+            ->setParameter('withoutCall', ProfileRunOutcome::withoutCall())
             ->orderBy('p.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()

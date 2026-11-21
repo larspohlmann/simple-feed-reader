@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\StoryAiRun;
 use App\Entity\User;
 use App\Enum\AiRunKind;
+use App\Enum\ProfileRunOutcome;
 use App\Enum\RunStatus;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
@@ -141,9 +142,15 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 
     private function buildRunQuery(AiRunKind $kind, User $user): QueryBuilder
     {
-        return $this->getEntityManager()->createQueryBuilder()
+        $query = $this->getEntityManager()->createQueryBuilder()
             ->from(self::resolveEntityClass($kind), 'r')
             ->andWhere('r.user = :user')->setParameter('user', $user);
+        if (AiRunKind::Profile !== $kind) {
+            return $query;
+        }
+
+        return $query->andWhere('r.outcome IS NULL OR r.outcome NOT IN (:withoutCall)')
+            ->setParameter('withoutCall', ProfileRunOutcome::withoutCall());
     }
 
     /** @return class-string */
