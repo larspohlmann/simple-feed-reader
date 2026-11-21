@@ -106,6 +106,9 @@ export class RecommendationRunHistoryComponent {
   );
 
   private overviewRequest: Subscription | null = null;
+  /** Dropped on a kind switch: a late page for the previous kind would
+   *  otherwise land in the list the reader just switched to. */
+  private monthRequests = new Subscription();
 
   /** The five statuses the mobile legend spells out, in a fixed order --
    *  read once here rather than re-derived per render. */
@@ -124,6 +127,8 @@ export class RecommendationRunHistoryComponent {
     const picked = KIND_FILTERS.find((filter) => filter.option === option)!.kind;
     if (picked === this.kind()) return;
 
+    this.monthRequests.unsubscribe();
+    this.monthRequests = new Subscription();
     this.filterUsed.set(true);
     this.sections.set([]);
     this.kind.set(picked);
@@ -151,22 +156,19 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.runs !== null || section.loading) return;
 
-    const kind = this.kind();
     this.startFetch(month);
-    this.api
-      .runHistoryMonth(month, this.timeZone, { kind: kind ?? undefined })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (page) => {
-          if (this.kind() === kind) this.replaceRows(month, page.runs, page.nextCursor);
-        },
-        // Without a message this reads as a month with no runs, not a failed
-        // fetch -- and closing and re-opening retries, but only if the
-        // reader knows there's something to retry.
-        error: () => {
-          if (this.kind() === kind) this.markFailed(month);
-        },
-      });
+    this.monthRequests.add(
+      this.api
+        .runHistoryMonth(month, this.timeZone, { kind: this.kind() ?? undefined })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (page) => this.replaceRows(month, page.runs, page.nextCursor),
+          // Without a message this reads as a month with no runs, not a failed
+          // fetch -- and closing and re-opening retries, but only if the
+          // reader knows there's something to retry.
+          error: () => this.markFailed(month),
+        }),
+    );
   }
 
   /** "Show more" for a month that already has rows: appends the next page and
@@ -175,24 +177,21 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.nextCursor === null || section.loading) return;
 
-    const kind = this.kind();
     this.startFetch(month);
-    this.api
-      .runHistoryMonth(month, this.timeZone, {
-        kind: kind ?? undefined,
-        before: section.nextCursor,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (page) => {
-          if (this.kind() === kind) this.appendRows(month, page.runs, page.nextCursor);
-        },
-        // Unlike a first page, this one has rows on screen already: they stay,
-        // and the button comes back enabled so the reader can try again.
-        error: () => {
-          if (this.kind() === kind) this.stopFetch(month);
-        },
-      });
+    this.monthRequests.add(
+      this.api
+        .runHistoryMonth(month, this.timeZone, {
+          kind: this.kind() ?? undefined,
+          before: section.nextCursor,
+        })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (page) => this.appendRows(month, page.runs, page.nextCursor),
+          // Unlike a first page, this one has rows on screen already: they stay,
+          // and the button comes back enabled so the reader can try again.
+          error: () => this.stopFetch(month),
+        }),
+    );
   }
 
   /** A *tracked* read of `sections()` -- safe only because `onOpened` and
