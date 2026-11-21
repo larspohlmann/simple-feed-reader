@@ -10,8 +10,7 @@ export type DebugLogAdjustment =
   | { setting: 'token-parameter' | 'output-cap'; value: string }
   | { setting: 'reasoning-suppression'; value: null };
 
-/** One provider call logged during a for-you run or a profile run. `verdict`
- *  is null while the call is still streaming. */
+/** One provider call of a logged run; `verdict` is null while it still streams. */
 export interface DebugLogEntry {
   id: number;
   /** The run this call belongs to. The log can hold more than one run (a
@@ -91,8 +90,7 @@ export interface DebugLogDetail {
   finishReason: string | null;
 }
 
-/** One finished (or in-flight) for-you run, as the history card shows it.
- *  Provider/model are what the run actually called, copied on start -- not the
+/** Provider/model are what the run actually called, copied on start -- not the
  *  account's current (editable) config, which would otherwise rename past runs. */
 export interface RunHistoryRow {
   id: number;
@@ -128,12 +126,11 @@ export interface RunHistoryMonth {
   costNanoCredits: number | null;
 }
 
-/** One page of one month's runs. `nextCursor` is the id to pass as `before`
- *  for the next page, or null when the month is exhausted. */
 export interface RunHistoryMonthPage {
   month: string;
   runs: RunHistoryRow[];
-  /** Opaque: the server's own position in the month's order, sent back as `before`. */
+  /** Opaque: the server's own position in the month's order, sent back as
+   *  `before`; null once the month is exhausted. */
   nextCursor: string | null;
 }
 

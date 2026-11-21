@@ -70,8 +70,6 @@ export class RecommendationRunHistoryMonthComponent {
     return formatCost(nanoCredits, this.language.lang());
   }
 
-  /** What the run was for, in the active language -- ids restart per kind, so
-   *  the kind is part of what names a row. */
   kindLabel(run: RunHistoryRow): string {
     return this.i18n.translate(`settings.ai.runKind.${run.kind}`);
   }
