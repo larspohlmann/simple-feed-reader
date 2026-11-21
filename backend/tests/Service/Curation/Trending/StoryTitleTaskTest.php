@@ -130,11 +130,11 @@ final class StoryTitleTaskTest extends DbTestCase
         self::assertCount(2, $this->chat()->calls());
     }
 
-    public function testATitleIsRewrittenOnceTheStoryGrewByHalf(): void
+    public function testATitleIsRewrittenOnceTheStoryDoubledSixHoursAfterIt(): void
     {
         $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
-        $story = $this->shownStory(4);
-        $this->storeTitle($story, 'Alter Titel', 4, '2031-05-14 10:00:00');
+        $story = $this->shownStory(2);
+        $this->storeTitle($story, 'Alter Titel', 2, '2031-05-14 05:00:00');
         $this->fixtures->join($story, '2031-05-14 11:00:00', $this->outletEntry('Hafenstreik geht weiter'));
 
         $this->sweep()->runDue();
@@ -148,7 +148,18 @@ final class StoryTitleTaskTest extends DbTestCase
 
         self::assertCount(1, $this->chat()->calls());
         self::assertSame('Hafenstreik in Hamburg dauert an', $this->titleColumnsOf($story)['llm_title']);
-        self::assertSame(6, $this->titleColumnsOf($story)['llm_title_member_count']);
+        self::assertSame(4, $this->titleColumnsOf($story)['llm_title_member_count']);
+    }
+
+    public function testADoubledStoryWaitsSixHoursAfterItsLastTitle(): void
+    {
+        $this->runFixtures->seedReadyAiSettingsFor($this->reader, 'qwen3-14b');
+        $story = $this->shownStory(4);
+        $this->storeTitle($story, 'Alter Titel', 2, '2031-05-14 06:01:00');
+
+        $this->sweep()->runDue();
+
+        self::assertCount(0, $this->chat()->calls());
     }
 
     public function testARateLimitStopsTheUsersSweepWithoutStamping(): void
