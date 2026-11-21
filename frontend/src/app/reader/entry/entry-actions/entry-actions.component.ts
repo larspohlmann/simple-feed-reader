@@ -5,12 +5,14 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../../models';
 import { likeableSocial } from '../../entry-social';
+import { CompactCount } from '../../../core/i18n/compact-count';
+import { buildDiscussionCount } from '../../../core/i18n/discussion-count';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
 
 /**
- * The per-entry actions — favorite, like on the post's network (#1600), keep,
+ * The per-entry actions — favorite, like on the post's network with its count (#1600), keep,
  * mark read, delete my own post (#1972), led by the declared duration, play and
  * add-to-playlist on an audio entry (#1436, #1449) — as one control cluster.
  * Lives here, not repeated per block: a second copy (hero vs entry-row) once
@@ -42,6 +44,12 @@ export class EntryActionsComponent {
   protected readonly likeable = computed(() => {
     return this.like() ? likeableSocial(this.entry()) : null;
   });
+  private readonly compactCount = inject(CompactCount);
+  protected readonly likes = computed(() =>
+    this.like()
+      ? buildDiscussionCount(this.compactCount, this.entry().likeCount, 'reader.socialCounts.likes')
+      : null,
+  );
   protected readonly entryAudio = new EntryAudio(
     { entry: this.entry },
     inject(AudioPlayerService),

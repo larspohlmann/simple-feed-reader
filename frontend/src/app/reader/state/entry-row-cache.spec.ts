@@ -26,8 +26,8 @@ describe('EntryRowCache', () => {
   beforeEach(() => {
     readerApi = { updateState: jest.fn(() => of({})) };
     socialPosts = {
-      like: jest.fn(() => of({ isLiked: true })),
-      unlike: jest.fn(() => of({ isLiked: false })),
+      like: jest.fn(() => of({ isLiked: true, likeCount: null })),
+      unlike: jest.fn(() => of({ isLiked: false, likeCount: null })),
       vote: jest.fn(() => of({ myVote: 1, score: 11 })),
     };
     TestBed.configureTestingModule({
@@ -66,6 +66,70 @@ describe('EntryRowCache', () => {
     cache.setLiked(readShownEntry(1), true, jest.fn());
 
     expect(readShownEntry(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
+  });
+
+  it('setLiked steps the like count on every copy', () => {
+    holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
+
+    cache.setLiked(readShownEntry(1), true, jest.fn());
+
+    expect(readShownEntry(1).likeCount).toBe(5);
+    expect(readShownEntry(2).likeCount).toBe(5);
+  });
+
+  it('an unlike steps the like count down, never below zero', () => {
+    holdEntries(buildCopy(1, 7, { likeCount: 0, social: { ...social, isLiked: true } }));
+
+    cache.setLiked(readShownEntry(1), false, jest.fn());
+
+    expect(readShownEntry(1).likeCount).toBe(0);
+  });
+
+  it('takes the like count the network answers on every copy', () => {
+    socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: 12 }));
+    holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
+
+    cache.setLiked(readShownEntry(1), true, jest.fn());
+
+    expect(readShownEntry(1).likeCount).toBe(12);
+    expect(readShownEntry(2).likeCount).toBe(12);
+  });
+
+  it('keeps the stepped like count when the network answers none', () => {
+    holdEntries(buildCopy(1, 7, { likeCount: 4 }));
+
+    cache.setLiked(readShownEntry(1), true, jest.fn());
+
+    expect(readShownEntry(1).likeCount).toBe(5);
+  });
+
+  it('takes the score the network answers on every copy', () => {
+    socialPosts.vote.mockReturnValue(of({ myVote: 1, score: 40 }));
+    holdEntries(buildCopy(1, 7), buildCopy(2, 7));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+
+    expect(readShownEntry(1).score).toBe(40);
+    expect(readShownEntry(2).score).toBe(40);
+  });
+
+  it('a like leaves an unknown like count unknown', () => {
+    holdEntries(buildCopy(1, 7));
+
+    cache.setLiked(readShownEntry(1), true, jest.fn());
+
+    expect(readShownEntry(1).likeCount).toBeNull();
+  });
+
+  it('puts the like count back when the like fails', () => {
+    const failing = new Subject<never>();
+    socialPosts.like.mockReturnValue(failing);
+    holdEntries(buildCopy(1, 7, { likeCount: 4 }));
+
+    cache.setLiked(readShownEntry(1), true, jest.fn());
+    failing.error(new Error('no'));
+
+    expect(readShownEntry(1).likeCount).toBe(4);
   });
 
   it('a vote on the wire for one copy holds back a vote on the other', () => {

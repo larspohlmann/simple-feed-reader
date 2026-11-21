@@ -34,6 +34,18 @@ button {
   cursor: pointer;
 }
 
+.likes {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.count {
+  margin-inline-start: var(--space-1);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 .danger {
   color: var(--danger);
 }

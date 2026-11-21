@@ -5,7 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
-import { likeableSocial } from '../entry-social';
+import { likeableSocial, steppedLikeCount } from '../entry-social';
 import { VoteValue, steppedScore } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
@@ -78,7 +78,12 @@ export class EntryRowCache {
     const social = likeableSocial(entry);
     if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
+    const likeCount = steppedLikeCount(entry.likeCount, isLiked);
+    this.optimistic(entry, { social: { ...social, isLiked }, likeCount }, request$).subscribe({
+      next: (answer) => {
+        if (answer.likeCount === null) return;
+        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
+      },
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
@@ -90,7 +95,11 @@ export class EntryRowCache {
     const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
     this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
       next: (answer) =>
-        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, myVote: answer.myVote })),
+        this.patch(this.collectCopyIds(entry), (row) => ({
+          ...row,
+          myVote: answer.myVote,
+          score: answer.score,
+        })),
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
   }
@@ -227,9 +236,9 @@ export class EntryRowCache {
   }
 }
 
-const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score', 'likeCount'] as const;
 
-/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
+/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like and its count. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
   const shared: RowPatch = {};
   for (const key of SHARED_KEYS) {

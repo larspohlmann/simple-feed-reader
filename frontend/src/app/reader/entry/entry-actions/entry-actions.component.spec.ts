@@ -428,6 +428,38 @@ describe('EntryActionsComponent', () => {
       expect(fixture.componentInstance.cardOpened).toBe(false);
     });
 
+    it('shows the like count on the like button', () => {
+      const like = buttons(mount({ ...blueskyPost(), likeCount: 47 }))[1];
+      expect(like.querySelector('.count')?.textContent?.trim()).toBe('47');
+      expect(like.getAttribute('aria-label')).toBe('Like on Bluesky, 47 likes');
+    });
+
+    it('shows a zero like count on the like button', () => {
+      const like = buttons(mount({ ...blueskyPost(), likeCount: 0 }))[1];
+      expect(like.querySelector('.count')?.textContent?.trim()).toBe('0');
+    });
+
+    it('shows no number on the like button while the count is unknown', () => {
+      const like = buttons(mount(blueskyPost()))[1];
+      expect(like.querySelector('.count')).toBeNull();
+      expect(like.getAttribute('aria-label')).toBe('Like on Bluesky');
+    });
+
+    it('shows a known count without a button on a post the user cannot like', () => {
+      const post = anEntry({
+        likeCount: 1,
+        social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
+      });
+      const element = mount(post).nativeElement as HTMLElement;
+
+      const likes = element.querySelector('.likes') as HTMLElement;
+      expect(likes.tagName).toBe('SPAN');
+      expect(likes.getAttribute('role')).toBe('img');
+      expect(likes.getAttribute('aria-label')).toBe('1 like');
+      expect(likes.textContent).toContain('thumb_up');
+      expect(element.querySelectorAll('button .count, .likes')).toHaveLength(1);
+    });
+
     it('offers no like on an entry that is no social post', () => {
       expect(mount().nativeElement.textContent).not.toContain('thumb_up');
     });

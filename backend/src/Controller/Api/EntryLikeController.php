@@ -33,9 +33,7 @@ final readonly class EntryLikeController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialLikeLimiter, $user);
 
-        $this->socialLikes->like($user, $entry);
-
-        return new JsonResponse(SocialLikeJson::from(true));
+        return new JsonResponse(SocialLikeJson::fromPostLike(true, $this->socialLikes->like($user, $entry)));
     }
 
     #[Route('/{id}/like', name: 'api_entries_unlike', methods: ['DELETE'], requirements: ['id' => '\d+'])]
@@ -44,8 +42,6 @@ final readonly class EntryLikeController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialLikeLimiter, $user);
 
-        $this->socialLikes->unlike($user, $entry);
-
-        return new JsonResponse(SocialLikeJson::from(false));
+        return new JsonResponse(SocialLikeJson::fromPostLike(false, $this->socialLikes->unlike($user, $entry)));
     }
 }

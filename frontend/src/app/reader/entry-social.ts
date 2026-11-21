@@ -15,6 +15,11 @@ export interface EntryLikeDto {
   isLiked: boolean;
 }
 
+/** The answer of liking or unliking a post: its like count as the network reports it, null when unknown. */
+export interface EntryPostLikeDto extends EntryLikeDto {
+  likeCount: number | null;
+}
+
 /** The answer of `DELETE /api/entries/{id}/post`: whether the network still had the post. */
 export interface PostDeletionDto {
   outcome: 'deleted' | 'alreadyGone';
@@ -146,6 +151,10 @@ export interface SocialCountsDto {
   reposts: number;
   replies: number;
   quotes: number | null;
+}
+
+export function steppedLikeCount(likeCount: number | null, isLiked: boolean): number | null {
+  return likeCount === null ? null : Math.max(0, likeCount + (isLiked ? 1 : -1));
 }
 
 /** The entry's social data when the reader can like it, else null. */

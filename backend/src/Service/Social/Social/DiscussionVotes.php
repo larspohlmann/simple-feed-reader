@@ -60,7 +60,9 @@ final readonly class DiscussionVotes
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
+        $item->recordScore($result->score);
         $this->mirror($user, $item, $account, $result->myVote);
+        $this->entityManager->flush();
 
         return $result;
     }

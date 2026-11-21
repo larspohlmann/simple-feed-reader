@@ -80,6 +80,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         self::assertSame([self::LIKE], $this->routesAsked());
         self::assertSame('{"post_id":42,"score":1}', $this->http->requests[0]['body']);
         self::assertSame([VoteScore::Up], $this->storedScores());
+        self::assertSame(43, $this->itemScoreOf($entryId));
     }
 
     public function testAVoteOnAFederatedCopyActsOnTheResolvedPost(): void
@@ -454,5 +455,14 @@ final class EntryVoteControllerTest extends ApiTestCase
             static fn (DiscussionVote $vote): VoteScore => $vote->getScore(),
             $this->entityManager()->getRepository(DiscussionVote::class)->findAll(),
         );
+    }
+
+    private function itemScoreOf(int $entryId): ?int
+    {
+        $this->entityManager()->clear();
+        $entry = $this->entityManager()->find(Entry::class, $entryId);
+        self::assertNotNull($entry);
+
+        return $entry->getCanonicalItem()?->getScore();
     }
 }
