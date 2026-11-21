@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Subscription;
@@ -23,6 +24,8 @@ use App\Tests\Support\TrendingFixtures;
 final class TrendingStoryEntryListRepositoryTest extends DbTestCase
 {
     private const string ARTICLE = 'https://news.example/article';
+    private const string POST = 'https://social.example/@poster/1';
+    private const string OTHER_POST = 'https://social.example/@other/1';
 
     private TrendingFixtures $fixtures;
     private TrendingStoryEntryListRepository $entries;
@@ -202,6 +205,51 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         self::assertNull($this->headingOf($other, $story));
     }
 
+    public function testAStorysSourcesAndSharesCountEveryMemberPlacedOrNot(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-sources@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $story = $fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 10:00:00', [
+            [$fixtures->entry($fixtures->feed('alpha'), 'Article', '2031-05-14 08:00:00'), 'alpha.example'],
+            [$fixtures->entry($fixtures->feed('beta'), 'Article', '2031-05-14 08:00:00'), 'beta.example'],
+            [$this->postIn($fixtures, 'home', self::POST), 'shared.example'],
+            [$this->postIn($fixtures, 'discover', self::POST), 'shared.example'],
+            [$this->postIn($fixtures, 'local', self::OTHER_POST), 'other.example'],
+        ]);
+        $fixtures->join(
+            $story,
+            '2031-05-14 11:00:00',
+            $fixtures->entry($fixtures->feed('gamma'), 'Joined late', '2031-05-14 10:30:00'),
+        );
+
+        $sources = $this->entries->countSourcesAndShares(
+            new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
+        );
+
+        self::assertSame([5, 2], [$sources->outletCount, $sources->shareCount]);
+    }
+
+    public function testAnUnplacedEarlierCopyOfAnArticleLeavesTheLaterCopyUncounted(): void
+    {
+        $reader = $this->fixtures->reader('story-entry-list-sources-copy@example.com');
+        $fixtures = $this->fixtures->ownedBy($reader);
+        $earlier = $fixtures->article($fixtures->feed('alpha'), 'Copy', '2031-05-14 08:00:00', self::ARTICLE);
+        $later = $fixtures->article($fixtures->feed('beta'), 'Copy', '2031-05-14 09:00:00', self::ARTICLE);
+        $story = $fixtures->story(
+            TrendingWindow::Day,
+            '2031-05-14 10:00:00',
+            $later,
+            $fixtures->entry($fixtures->feed('gamma'), 'Other', '2031-05-14 09:00:00'),
+        );
+        $fixtures->join($story, '2031-05-14 11:00:00', $earlier);
+
+        $sources = $this->entries->countSourcesAndShares(
+            new TrendingStoryListQuery($reader->requireId(), $story->requireId()),
+        );
+
+        self::assertSame([2, 0], [$sources->outletCount, $sources->shareCount]);
+    }
+
     private function storyIn(TrendingFixtures $fixtures, Feed $feed): TrendingStory
     {
         return $fixtures->story(
@@ -252,6 +300,20 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     private static function at(string $time): \DateTimeImmutable
     {
         return new \DateTimeImmutable($time, new \DateTimeZone('UTC'));
+    }
+
+    /** A post by the account its URL names, in the named Mastodon timeline the reader follows. */
+    private function postIn(TrendingFixtures $fixtures, string $timeline, string $postUrl): Entry
+    {
+        $post = $fixtures->article(
+            $fixtures->feed($timeline, SocialNetwork::Mastodon),
+            'Post',
+            '2031-05-14 09:00:00',
+            $postUrl,
+        );
+        $post->setAuthor(new EntryAuthor('Poster', \dirname($postUrl)));
+
+        return $post;
     }
 
     private function copyOf(Feed $feed, string $title): Entry

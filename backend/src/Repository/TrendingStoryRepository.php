@@ -30,9 +30,6 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** A story is shown only when this many article feeds, or this many article sites, carry it. */
     private const int MINIMUM_ARTICLE_SOURCES = 2;
 
-    private const string ARTICLE_FEEDS
-        = 'COUNT(DISTINCT CASE WHEN member_feed.network IS NULL THEN story_member.feed_id END)';
-
     private const array VISIBILITY_TYPES = [
         'user' => ParameterType::INTEGER,
         'minimum' => ParameterType::INTEGER,
@@ -316,20 +313,14 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     private static function visibleStories(ReaderWindowModel $reader): string
     {
         return 'SELECT story.id AS story_id, story.last_seen,'
-            . ' ' . self::sources() . ' AS outlet_count'
-            . ' FROM trending_story story'
-            . ' JOIN trending_story_entry story_member ON story_member.story_id = story.id'
-            . ' JOIN feed member_feed ON member_feed.id = story_member.feed_id'
-            . ' JOIN entry member_entry ON member_entry.id = story_member.entry_id'
-            . ' LEFT JOIN canonical_item member_item ON member_item.id = member_entry.canonical_item_id'
+            . ' ' . TrendingSourcesSql::sources() . ' AS outlet_count'
+            . TrendingSourcesSql::MEMBERS
             . ' LEFT JOIN trending_story_hide hidden ON hidden.story_id = story.id AND hidden.user_id = :user'
             . ' WHERE ' . implode(' AND ', [
                 'story.user_id = :user',
                 'hidden.story_id IS NULL',
                 TrendingPlacementSql::buildPlacedCondition($reader->window, 'story_member'),
-                self::buildNoEarlierArticleCopy($reader->window),
-                self::buildNoEarlierItemCopy($reader->window),
-                self::buildNoEarlierCrossPost($reader->window),
+                ...TrendingSourcesSql::noEarlierCopies($reader->window),
                 ...self::notShownInAShorterWindow($reader),
             ]);
     }
@@ -349,72 +340,8 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     {
         return ' GROUP BY story.id, story.last_seen'
             . ' HAVING outlet_count >= :minimum'
-            . ' AND (' . self::ARTICLE_FEEDS . ' >= :minimumArticleSources'
+            . ' AND (' . TrendingSourcesSql::ARTICLE_FEEDS . ' >= :minimumArticleSources'
             . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';
-    }
-
-    /**
-     * A story's sources (#2229, #2056): each article feed, and each social account whose
-     * post shares a story card. An account is the post's author, else its feed when it names none, so a post's copies
-     * in several timelines and two posts of one account count once.
-     */
-    private static function sources(): string
-    {
-        $sharesACard = 'member_feed.network IS NOT NULL AND story_member.article_site IS NOT NULL';
-
-        return '(' . self::ARTICLE_FEEDS
-            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' THEN member_entry.author_url END)'
-            . ' + COUNT(DISTINCT CASE WHEN ' . $sharesACard . ' AND member_entry.author_url IS NULL'
-            . ' THEN story_member.feed_id END))';
-    }
-
-    /** As in DuplicateCollapseDql, only the lowest-id copy of an article counts; a post counts by its account. */
-    private static function buildNoEarlierArticleCopy(TrendingWindow $window): string
-    {
-        return self::buildNoEarlierCopy(
-            $window,
-            'member_feed.network IS NOT NULL',
-            ' JOIN feed earlier_feed ON earlier_feed.id = earlier_member.feed_id AND earlier_feed.network IS NULL',
-            'earlier_entry.url_hash = member_entry.url_hash',
-        );
-    }
-
-    /** Only the lowest-id copy of an item counts, in whatever feed: its copies' authors and feeds differ. */
-    private static function buildNoEarlierItemCopy(TrendingWindow $window): string
-    {
-        return self::buildNoEarlierCopy(
-            $window,
-            'member_entry.canonical_item_id IS NULL',
-            '',
-            'earlier_entry.canonical_item_id = member_entry.canonical_item_id',
-        );
-    }
-
-    /** Only the lowest-id member of a cross-post group counts. */
-    private static function buildNoEarlierCrossPost(TrendingWindow $window): string
-    {
-        return self::buildNoEarlierCopy(
-            $window,
-            'member_item.cross_post_hash IS NULL',
-            ' JOIN canonical_item earlier_item ON earlier_item.id = earlier_entry.canonical_item_id',
-            'earlier_item.cross_post_hash = member_item.cross_post_hash',
-        );
-    }
-
-    /** A member counts when `$exemption` holds, else when no placed member of its story with a lower entry id is `$sameCopy`. */
-    private static function buildNoEarlierCopy(
-        TrendingWindow $window,
-        string $exemption,
-        string $earlierJoin,
-        string $sameCopy,
-    ): string {
-        return '(' . $exemption
-            . ' OR NOT EXISTS (SELECT 1 FROM trending_story_entry earlier_member'
-            . ' JOIN entry earlier_entry ON earlier_entry.id = earlier_member.entry_id' . $earlierJoin
-            . ' WHERE earlier_member.story_id = story.id'
-            . ' AND ' . TrendingPlacementSql::buildPlacedCondition($window, 'earlier_member')
-            . ' AND earlier_member.entry_id < story_member.entry_id'
-            . ' AND ' . $sameCopy . '))';
     }
 
     /**

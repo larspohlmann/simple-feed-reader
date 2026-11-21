@@ -9,3 +9,13 @@
 @mixin card-padding {
   padding: var(--space-2) var(--space-3);
 }
+
+/* The card's last row: Follow and Hide at its bottom right (#2435). */
+@mixin foot {
+  @include card-padding;
+
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-1);
+  font-size: var(--fs-xs);
+}

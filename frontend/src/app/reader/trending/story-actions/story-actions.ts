@@ -3,12 +3,12 @@ import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { TrendingFollowAction } from '../trending-follow-action';
 import { TrendingHideAction } from '../trending-hide-action';
-import { TrendingStoryDto } from '../trending.models';
+import { StoryRef } from '../trending.models';
 
 export interface StoryActions {
-  follow(story: TrendingStoryDto): void;
-  hide(story: TrendingStoryDto): void;
-  isFollowed(story: Pick<TrendingStoryDto, 'id' | 'followed'>): boolean;
+  follow(story: StoryRef): void;
+  hide(story: StoryRef): void;
+  isFollowed(story: StoryRef): boolean;
 }
 
 export const STORY_ACTIONS = new InjectionToken<Signal<StoryActions | null>>('STORY_ACTIONS');

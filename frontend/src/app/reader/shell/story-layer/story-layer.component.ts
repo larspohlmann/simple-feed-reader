@@ -13,7 +13,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ArticleGestures } from '../../article/article-layer/article-gestures.service';
 import { EntryListComponent } from '../../list/entry-list/entry-list.component';
@@ -24,7 +23,9 @@ import { ReadingLayout } from '../../reading-layout.service';
 import { FollowedStoryVisit } from '../../state/followed-story-visit';
 import { ListContext } from '../../state/list-context';
 import { OpenStory } from '../../state/open-story';
+import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { StoryHeadlineComponent } from '../../trending/story-headline/story-headline.component';
+import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { TrendingFollowAction } from '../../trending/trending-follow-action';
 import { ListCover } from '../list-cover';
 import { ListHeading } from '../list-heading.service';
@@ -32,13 +33,14 @@ import { MarkReadActions } from '../mark-read-actions.service';
 import { StoryFollowing } from '../story-following.service';
 import { StoryOverlay } from '../story-overlay.service';
 import { StoryListContext } from './story-list-context';
+import { provideStoryLayerActions } from './story-layer-actions';
 
 /** A list's end loads more of it, so no pull past the end takes the story off as it does an article. */
 const NO_PULL_BACK = signal<ScrollHost | undefined>(undefined);
 
 /** A Trending story's list over the list the reader was on (#2329): the reader's own entry list and header,
- *  scoped to the story by a list context of its own, with the way back ahead of the title and Follow beside the
- *  list's actions. Full-screen, a rightward swipe takes it off as it does an article. */
+ *  scoped to the story by a list context of its own, with the way back ahead of the title, and the story's counts,
+ *  Follow and Hide on its title card as on a Trending card (#2442). Full-screen, a rightward swipe takes it off as it does an article. */
 @Component({
   selector: 'app-story-layer',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,9 +48,10 @@ const NO_PULL_BACK = signal<ScrollHost | undefined>(undefined);
     EntryListComponent,
     IconComponent,
     IconButtonDirective,
-    ListActionDirective,
     NgTemplateOutlet,
+    StoryActionsComponent,
     StoryHeadlineComponent,
+    StorySourceCountComponent,
     TranslocoPipe,
   ],
   templateUrl: './story-layer.component.html',
@@ -61,6 +64,7 @@ const NO_PULL_BACK = signal<ScrollHost | undefined>(undefined);
     FollowedStoryVisit,
     TrendingFollowAction,
     StoryFollowing,
+    provideStoryLayerActions(),
     ArticleGestures,
   ],
   host: {
@@ -81,7 +85,6 @@ export class StoryLayerComponent {
   protected readonly overlay = inject(StoryOverlay);
   protected readonly context = inject(StoryListContext);
   protected readonly heading = inject(ListHeading);
-  protected readonly following = inject(StoryFollowing);
   protected readonly visit = inject(FollowedStoryVisit);
   protected readonly listPreferences = inject(ListPreferences);
   protected readonly listOrder = inject(ListOrderService);
@@ -92,6 +95,13 @@ export class StoryLayerComponent {
   protected readonly synopsis = computed(() =>
     this.openStory.synopsisOf(this.context.selection().id),
   );
+  protected readonly sources = computed(() =>
+    this.openStory.sourcesOf(this.context.selection().id),
+  );
+  protected readonly storyRef = computed(() => {
+    const id = this.context.selection().id;
+    return { id, followed: this.openStory.followedOnServer(id) };
+  });
   private readonly headlineTemplate = viewChild.required<TemplateRef<unknown>>('headlineTemplate');
   protected readonly topBlock = computed(() => (this.title() ? this.headlineTemplate() : null));
   readonly list = viewChild(EntryListComponent);
