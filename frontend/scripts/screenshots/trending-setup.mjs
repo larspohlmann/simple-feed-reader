@@ -41,6 +41,11 @@ async function subscribe() {
     console.log(`${result.status} ${url}`);
     const subscriptionId = result.json?.subscription?.id;
     if (subscriptionId === undefined) continue;
+    // Teardown finds the borrowed feeds by their stored address.
+    const storedUrl = result.json.subscription.feedUrl;
+    if (storedUrl !== url) {
+      throw new Error(`${url} is stored as ${storedUrl}: list that address in trending-feeds.mjs`);
+    }
     await api('POST', '/api/entries/mark-read', { scope: 'feed', id: subscriptionId, until: dayAgo });
   }
   const subscriptionIds = await borrowedSubscriptionIds();

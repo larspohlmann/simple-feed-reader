@@ -10,7 +10,7 @@ export const TRENDING_FEEDS = [
   'https://www.france24.com/en/rss',
   'https://feeds.skynews.com/feeds/rss/world.xml',
   'https://www.independent.co.uk/news/world/rss',
-  'https://abcnews.go.com/abcnews/internationalheadlines',
+  'https://abcnews.com/abcnews/internationalheadlines',
   'https://feeds.washingtonpost.com/rss/world',
   'https://www.cbsnews.com/latest/rss/world',
   'https://www.latimes.com/world-nation/rss2.0.xml',
