@@ -13,8 +13,10 @@ use App\Service\Ingestion\Parser\Model\FeedMediaKind;
  */
 final class FeedMediaClassifier
 {
+    /** @var list<string> */
     private const array IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
 
+    /** @var list<string> */
     private const array UNPLAYABLE_MEDIA_EXTENSIONS = ['wma', 'mkv', 'avi', 'ogv'];
 
     public static function kind(\DOMElement $element): FeedMediaKind
@@ -67,11 +69,11 @@ final class FeedMediaClassifier
         if (PlayableMediaFile::isVideoExtension($extension)) {
             return FeedMediaKind::Video;
         }
-        if (in_array($extension, self::IMAGE_EXTENSIONS, true)) {
+        if (\in_array($extension, self::IMAGE_EXTENSIONS, true)) {
             return FeedMediaKind::Image;
         }
 
-        return in_array($extension, self::UNPLAYABLE_MEDIA_EXTENSIONS, true)
+        return \in_array($extension, self::UNPLAYABLE_MEDIA_EXTENSIONS, true)
             ? FeedMediaKind::Other
             : FeedMediaKind::Unknown;
     }
