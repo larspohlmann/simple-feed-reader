@@ -50,15 +50,16 @@ final readonly class NotificationList
         $found = $this->notifications->findGroupPage($accountIds, $cursor, self::PAGE_SIZE);
         $hasNextPage = count($found) > self::PAGE_SIZE;
         $shown = array_slice($found, 0, self::PAGE_SIZE);
-        $newest = $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP);
-
-        $shownRows = array_filter($newest, static fn (array $rows): bool => $rows !== []);
-        $entryIds = $this->findEntryIds($user, $network, $shownRows);
+        $newest = array_filter(
+            $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP),
+            static fn (array $rows): bool => $rows !== [],
+        );
+        $entryIds = $this->findEntryIds($user, $network, $newest);
 
         $groups = [];
         foreach ($shown as $group) {
-            $rows = $newest[$group['latestId']];
-            if ($rows === []) {
+            $rows = $newest[$group['latestId']] ?? null;
+            if ($rows === null) {
                 continue;
             }
             $groups[] = new NotificationGroupModel(
@@ -99,7 +100,7 @@ final readonly class NotificationList
         return $this->canonicalItems->findReadableEntryIds(
             $user->requireId(),
             CanonicalItemKind::fromNetwork($network),
-            array_values(array_unique($hashes)),
+            $hashes,
         );
     }
 
