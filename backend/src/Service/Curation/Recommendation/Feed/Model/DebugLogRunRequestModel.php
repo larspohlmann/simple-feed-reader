@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Feed\Model;
 
 use App\Enum\AiRunKind;
+use App\Service\Curation\Recommendation\Feed\Support\RunIdText;
 
 final readonly class DebugLogRunRequestModel
 {
-    private const int MAX_ID_DIGITS = 18;
-
     public function __construct(
         public AiRunKind $kind,
         public int $id,
@@ -20,12 +19,9 @@ final readonly class DebugLogRunRequestModel
     public static function parse(string $kind, string $run): ?self
     {
         $parsedKind = '' === $kind ? AiRunKind::ForYou : AiRunKind::tryFrom($kind);
-        if (null === $parsedKind || !ctype_digit($run) || strlen($run) > self::MAX_ID_DIGITS) {
-            return null;
-        }
-        $id = (int) $run;
+        $id = RunIdText::parse($run);
 
-        return $id < 1 ? null : new self($parsedKind, $id);
+        return null === $parsedKind || null === $id ? null : new self($parsedKind, $id);
     }
 
     public function isFor(DebugLogRunModel $run): bool
