@@ -108,6 +108,8 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
         $mine = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-05 00:00:00'));
         $this->fixtures()->persistRunAt($otherUser, new \DateTimeImmutable('2026-08-05 00:00:00'));
+        $this->persistProfileRunAt($otherUser, new \DateTimeImmutable('2026-08-05 00:01:00'));
+        $this->persistStoryRunAt($otherUser, new \DateTimeImmutable('2026-08-05 00:02:00'));
 
         $window = MonthWindowModel::fromMonth('2026-08', ViewerTimeZoneModel::fromIdentifier(null));
         $rows = $this->historyRepository()->pageForMonth($user, $window, RunHistoryFilterModel::all());

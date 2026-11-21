@@ -470,6 +470,26 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
         self::assertSame([$older->getId()], array_column($payload['entries'], 'runId'));
     }
 
+    public function testAStoryIdThatOnlyAForYouRunCarriesFallsBackToTheDefault(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('debug-log-kind-collision@example.test');
+        $older = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
+        $newer = $this->fixtures()->createRun($user);
+        $this->fixtures()->log($newer, CallPhase::Batch, 1, 1, 'newer request');
+        $this->entityManager()->flush();
+
+        $client->request('GET', self::ROUTE . '?kind=story&run=' . $older->getId(), server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var array{entries: list<array<string, mixed>>, run: array<string, mixed>} $payload */
+        $payload = $this->payload($client);
+        self::assertSame('for_you', $payload['run']['kind']);
+        self::assertSame($newer->getId(), $payload['run']['id']);
+        self::assertSame([$newer->getId()], array_column($payload['entries'], 'runId'));
+    }
+
     public function testStoryRunEntryIsServed(): void
     {
         $client = self::createClient();
