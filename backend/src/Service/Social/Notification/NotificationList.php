@@ -56,10 +56,14 @@ final readonly class NotificationList
             static fn (array $rows): bool => $rows !== [],
         );
         $subjects = array_map(static fn (array $rows): NotificationSubject => $rows[0]->getSubject(), $newest);
+        $hashes = array_merge(...array_map(
+            static fn (NotificationSubject $subject): array => $subject->keys->hashes(),
+            $subjects,
+        ));
         $entryIds = $this->canonicalItems->findReadableEntryIds(
             $user->requireId(),
             CanonicalItemKind::fromNetwork($network),
-            array_merge(...array_map($this->hashesOf(...), $subjects)),
+            $hashes,
         );
 
         $groups = [];
@@ -90,11 +94,5 @@ final readonly class NotificationList
             ),
             $needingReconnect,
         );
-    }
-
-    /** @return list<string> */
-    private function hashesOf(NotificationSubject $subject): array
-    {
-        return $subject->keys->hashes();
     }
 }
