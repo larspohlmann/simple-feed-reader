@@ -43,6 +43,7 @@ use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\SocialRuleWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -194,6 +195,48 @@ final class SocialLikesTest extends DbTestCase
         $this->storeLike($account, '110');
 
         self::assertNull($this->likes()->unlike($this->owner, $entry));
+    }
+
+    public function testAnUnlikeNeverCountsBelowZero(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($account, '110');
+        $this->ensureItem()->recordCounts(DiscussionCounts::fromCommentsAndLikes(null, 0));
+        $this->entityManager->flush();
+
+        self::assertSame(0, $this->likes()->unlike($this->owner, $entry));
+    }
+
+    public function testALikeTheNetworkCountsAsNoneButHoldsCountsAsOne(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->mastodon->knowsCounts(new SocialCountsModel(0, 0, 0, null));
+        $this->mastodon->knowsTheLike();
+
+        self::assertSame(1, $this->likes()->like($this->owner, $entry));
+    }
+
+    /** @return iterable<string, array{\RuntimeException}> */
+    public static function unreadablePosts(): iterable
+    {
+        yield 'post not found' => [new SocialPostNotFoundException('gone')];
+        yield 'account needs reconnecting' => [new SocialAccountNeedsReconnectException('reconnect')];
+        yield 'credentials rejected' => [new SocialCredentialsRejectedException('rejected')];
+        yield 'network unreachable' => [new SocialNetworkUnreachableException('down')];
+    }
+
+    #[DataProvider('unreadablePosts')]
+    public function testAnUnlikeWhosePostCannotBeReadAnswersNoCount(\RuntimeException $failure): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($account, '110');
+        $this->mastodon->onResolve(static fn () => throw $failure);
+
+        self::assertNull($this->likes()->unlike($this->owner, $entry));
+        self::assertNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
     }
 
     public function testALikeAlreadyMadeAnswersTheStoredCountWithoutAsking(): void
