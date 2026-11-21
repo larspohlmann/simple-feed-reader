@@ -26,37 +26,21 @@ final readonly class DebugLogRunModel
 
     public static function fromRecommendationRun(RecommendationRun $run): self
     {
-        return new self(
+        return self::buildCountedRun(
             AiRunKind::ForYou,
-            $run->requireId(),
-            $run->getStatus(),
-            $run->getError(),
-            new RunCallCountersModel(
-                $run->getAttempts(),
-                RecommendationRun::MAX_ATTEMPTS,
-                $run->getTransportFailures(),
-                RecommendationRun::MAX_TRANSPORT_FAILURES,
-            ),
-            $run->getCreatedAt(),
-            $run->getCompletedAt(),
+            $run,
+            RecommendationRun::MAX_ATTEMPTS,
+            RecommendationRun::MAX_TRANSPORT_FAILURES,
         );
     }
 
     public static function fromProfileRun(ProfileRun $run): self
     {
-        return new self(
+        return self::buildCountedRun(
             AiRunKind::Profile,
-            $run->requireId(),
-            $run->getStatus(),
-            $run->getError(),
-            new RunCallCountersModel(
-                $run->getAttempts(),
-                ProfileRun::MAX_ATTEMPTS,
-                $run->getTransportFailures(),
-                ProfileRun::MAX_TRANSPORT_FAILURES,
-            ),
-            $run->getCreatedAt(),
-            $run->getCompletedAt(),
+            $run,
+            ProfileRun::MAX_ATTEMPTS,
+            ProfileRun::MAX_TRANSPORT_FAILURES,
         );
     }
 
@@ -68,5 +52,27 @@ final readonly class DebugLogRunModel
     public function toHistoryCursor(): RunHistoryCursorModel
     {
         return new RunHistoryCursorModel($this->createdAt, $this->kind, $this->id);
+    }
+
+    private static function buildCountedRun(
+        AiRunKind $kind,
+        RecommendationRun|ProfileRun $run,
+        int $maxAttempts,
+        int $maxTransportFailures,
+    ): self {
+        return new self(
+            $kind,
+            $run->requireId(),
+            $run->getStatus(),
+            $run->getError(),
+            new RunCallCountersModel(
+                $run->getAttempts(),
+                $maxAttempts,
+                $run->getTransportFailures(),
+                $maxTransportFailures,
+            ),
+            $run->getCreatedAt(),
+            $run->getCompletedAt(),
+        );
     }
 }
