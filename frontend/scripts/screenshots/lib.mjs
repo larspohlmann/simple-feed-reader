@@ -59,13 +59,14 @@ const DISTRESSING = new RegExp(
 );
 // SHOT_SKIP adds a pattern for one run: a headline that passes the list but does not suit the page.
 const SKIPPED = process.env.SHOT_SKIP ? new RegExp(process.env.SHOT_SKIP, 'i') : null;
-const isCalm = (item) => {
+export const isCalmEntry = (item) => {
   const text = [item.title, item.summary, item.synopsis].filter(Boolean).join(' ');
   return !DISTRESSING.test(text) && !SKIPPED?.test(text);
 };
-const isCalmStory = (story) => isCalm(story) && (story.articles ?? []).every(isCalm);
-
-export const isCalmEntry = isCalm;
+const isCalmArticle = (article) =>
+  isCalmEntry(article) && (article.shares ?? []).every(isCalmEntry);
+export const isCalmStory = (story) =>
+  isCalmEntry(story) && (story.articles ?? []).every(isCalmArticle);
 
 // `startAt` drops that many entries from the top of a list's first page, so two shots of the
 // same list do not lead with the same article. `arrange` reorders a first page: it gets the
@@ -80,7 +81,7 @@ export async function leaveOutDistressingNews(pageOrContext, { startAt = 0, arra
     const address = new URL(route.request().url());
     const isFirstPage = !address.searchParams.has('cursor');
     if (Array.isArray(body.entries)) {
-      body.entries = body.entries.filter(isCalm).slice(isFirstPage ? startAt : 0);
+      body.entries = body.entries.filter(isCalmEntry).slice(isFirstPage ? startAt : 0);
       if (isFirstPage && arrange) body.entries = arrange(body.entries, address);
     }
     if (Array.isArray(body.stories)) body.stories = body.stories.filter(isCalmStory);

@@ -362,9 +362,8 @@ const opensOnAPicture = (entry) =>
   entry.imageUrl !== null &&
   entry.imageWidth >= LEAD_PICTURE_WIDTH &&
   entry.imageWidth > entry.imageHeight;
-// The magazine folds a run of one source into a group as tall as several cards, which pushed the
-// video out of reach on a match day: the tour's list takes each source's newest entry first,
-// then each one's next.
+// The magazine folds a run of one source into a group as tall as several cards, too far for the
+// video to scroll into view: the list takes each source's newest entry first, then each one's next.
 function oneSourceAfterAnother(entries) {
   const bySource = [...Map.groupBy(entries, (entry) => entry.subscriptionId).values()];
   const rounds = Math.max(0, ...bySource.map((own) => own.length));
@@ -604,27 +603,29 @@ rmSync(RAW, { recursive: true, force: true });
 mkdirSync(RAW, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 
+// trending-setup.mjs ends with this status while the list is below its floor; any other failure
+// is an error and stops the tour.
+const BELOW_FLOOR = 2;
+function isAboveFloor(mode) {
+  try {
+    execFileSync('node', mode ? [TRENDING_SETUP, mode] : [TRENDING_SETUP], { stdio: 'inherit' });
+    return true;
+  } catch (error) {
+    if (error.status !== BELOW_FLOOR) throw error;
+    return false;
+  }
+}
 // Stories are built on the worker's schedule and titled within five minutes of that.
 async function waitForTrending() {
-  for (let minute = 0; ; minute++) {
-    try {
-      execFileSync('node', [TRENDING_SETUP, 'status'], { stdio: 'inherit' });
-      return;
-    } catch {
-      if (minute >= TRENDING_WAIT_MINUTES) throw new Error('Trending stayed below its floor');
-      await new Promise((resolve) => setTimeout(resolve, 60_000));
-    }
+  for (let minute = 0; !isAboveFloor('status'); minute++) {
+    if (minute >= TRENDING_WAIT_MINUTES) throw new Error('Trending stayed below its floor');
+    await new Promise((resolve) => setTimeout(resolve, 60_000));
   }
 }
 
 execFileSync('node', [PODCAST_SETUP], { stdio: 'inherit' });
 try {
-  try {
-    execFileSync('node', [TRENDING_SETUP], { stdio: 'inherit' });
-  } catch {
-    // Exits 1 while the stories are not built yet; waitForTrending decides.
-  }
-  await waitForTrending();
+  if (!isAboveFloor()) await waitForTrending();
   const browser = await chromium.launch({
     args: [`--force-device-scale-factor=${PHONE.deviceScaleFactor}`],
   });
@@ -642,6 +643,9 @@ try {
     await browser.close();
   }
 } finally {
-  execFileSync('node', [PODCAST_SETUP, 'teardown'], { stdio: 'inherit' });
-  execFileSync('node', [TRENDING_SETUP, 'teardown'], { stdio: 'inherit' });
+  try {
+    execFileSync('node', [PODCAST_SETUP, 'teardown'], { stdio: 'inherit' });
+  } finally {
+    execFileSync('node', [TRENDING_SETUP, 'teardown'], { stdio: 'inherit' });
+  }
 }

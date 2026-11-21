@@ -256,9 +256,6 @@ const openArticleInPaneFrom = (source) => async (page) => {
 // title: a click on a post's middle lands on the embedded link card instead.
 async function openPost(page) {
   const wanted = process.env.BLUESKY_POST_ACCOUNT ?? 'Lily Hay Newman';
-  await openNewestPostFrom(page, wanted);
-}
-async function openNewestPostFrom(page, wanted) {
   const subscriptionId = await page.evaluate(async (title) => {
     const token = localStorage.getItem('sfr.jwt');
     const response = await fetch('/api/subscriptions', {
@@ -302,8 +299,9 @@ async function openDiscussedLemmyPost(page) {
 }
 // Leaves the Comments heading clear of the reader's sticky bar.
 const ROOM_ABOVE_COMMENTS = 96;
-// The end of the post's text, kept above its votes in the close-up.
+// The end of the post's text, kept above its votes in the close-up, and the votes row itself.
 const POST_TEXT_ABOVE_VOTES = 190;
+const VOTES_ROW_HEIGHT = 96;
 const openDiscussedLemmyPostWithRoomAboveComments = (room) => async (page) => {
   await openDiscussedLemmyPost(page);
   await page.locator('app-entry-comments .head').evaluate((head, roomAbove) => {
@@ -494,7 +492,6 @@ const SETS = {
     phone('mobile-settings-light', '/settings'),
     // A phone's list header leaves a tag's name three letters, so the phone lists stay on All items.
     phone('mobile-magazine-light', '/', { ...magazine, startAt: 3 }),
-    // The pair to mobile-magazine-light: the same list once it has been scrolled.
     phone('mobile-scrolled-light', '/', { ...magazine, startAt: 3, before: scrollListByTouch }),
     phone('mobile-magazine-dark', '/', { ...magazine, theme: 'dark', startAt: 6 }),
     phone('mobile-list-light', '/', { layout: 'list', startAt: 14 }),
@@ -527,7 +524,7 @@ const SETS = {
     detail('lemmy-votes-light', LEMMY_COMMUNITIES, {
       layout: 'pane',
       before: openDiscussedLemmyPostWithRoomAboveComments(
-        ROOM_ABOVE_COMMENTS + POST_TEXT_ABOVE_VOTES + ROOM_ABOVE_COMMENTS,
+        ROOM_ABOVE_COMMENTS + POST_TEXT_ABOVE_VOTES + VOTES_ROW_HEIGHT,
       ),
       clip: lemmyPostVotes,
     }),

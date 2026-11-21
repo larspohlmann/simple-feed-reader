@@ -70,13 +70,27 @@ test('the scene list matches the tour', () => {
     buttons.map((button) => button.match(/data-scene="(\w+)"/)[1]),
     recorded,
   );
-  for (const button of buttons) {
-    for (const theme of ['light', 'dark']) {
+  for (const theme of ['light', 'dark']) {
+    const starts = buttons.map((button) => {
       const start = button.match(new RegExp(`data-${theme}="([^"]*)"`));
       const isTime = start && start[1] !== '' && Number.isFinite(Number(start[1]));
       assert.ok(isTime, `${button} has no data-${theme} time`);
-    }
+      return Number(start[1]);
+    });
+    const inOrder = starts.every((start, index) => index === 0 || start > starts[index - 1]);
+    assert.ok(inOrder, `the ${theme} scene times do not rise: ${starts.join(', ')}`);
   }
+});
+
+test('every screenshot the README shows exists', () => {
+  const shown = [...read('README.md').matchAll(/docs\/screenshots\/([a-z0-9-]+\.webp)/g)].map(
+    (match) => match[1],
+  );
+  assert.ok(shown.length > 5, 'the README shows its screenshots');
+  assert.deepEqual(
+    shown.filter((name) => !screenshotFiles.includes(name)),
+    [],
+  );
 });
 
 const DESCRIPTION =

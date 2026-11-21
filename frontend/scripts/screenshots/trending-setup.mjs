@@ -6,10 +6,10 @@
 // borrowed, its first connection that can write is picked for them, and unpicked on teardown.
 //
 //   node --env-file=.env.screenshots trending-setup.mjs            # subscribe
-//   node --env-file=.env.screenshots trending-setup.mjs status     # exits 1 until Trending is worth showing
+//   node --env-file=.env.screenshots trending-setup.mjs status     # exits 2 until Trending is worth showing
 //   node --env-file=.env.screenshots trending-setup.mjs teardown   # unsubscribe them again
 import { chromium } from '@playwright/test';
-import { openApiSession } from './lib.mjs';
+import { isCalmStory, openApiSession } from './lib.mjs';
 import { TRENDING_FEEDS, TRENDING_FLOOR } from './trending-feeds.mjs';
 
 const TAG_NAME = 'News';
@@ -19,6 +19,8 @@ const TRENDING_ONLY = {
   includeInSavedSearches: false,
   includeInTrending: true,
 };
+// Not 1: that is how node ends on an error, which a caller must not take for a thin list.
+const BELOW_FLOOR = 2;
 const mode = process.argv[2] ?? 'subscribe';
 
 const browser = await chromium.launch();
@@ -44,6 +46,9 @@ async function subscribe() {
     // Teardown finds the borrowed feeds by their stored address.
     const storedUrl = result.json.subscription.feedUrl;
     if (storedUrl !== url) {
+      await api('POST', '/api/subscriptions/bulk-unsubscribe', {
+        subscriptionIds: [subscriptionId],
+      });
       throw new Error(`${url} is stored as ${storedUrl}: list that address in trending-feeds.mjs`);
     }
     await api('POST', '/api/entries/mark-read', {
@@ -66,14 +71,21 @@ async function pickStoryWriter() {
   await api('PUT', STORY_SETTINGS, { writingConnectionId: writer.id, titlesEnabled: true });
   console.log(`story titles written by ${writer.name}`);
 }
-const unpickStoryWriter = () =>
-  api('PUT', STORY_SETTINGS, { writingConnectionId: null, titlesEnabled: true });
+async function unpickStoryWriter() {
+  const { json: settings } = await api('GET', STORY_SETTINGS);
+  await api('PUT', STORY_SETTINGS, {
+    writingConnectionId: null,
+    titlesEnabled: settings.titlesEnabled,
+  });
+}
 
-async function unsubscribe() {
+// The writer was picked with the feeds, so it goes only when feeds went.
+async function giveBack() {
   const subscriptionIds = await borrowedSubscriptionIds();
   if (subscriptionIds.length === 0) return console.log('nothing borrowed');
   const removed = await api('POST', '/api/subscriptions/bulk-unsubscribe', { subscriptionIds });
   console.log(`unsubscribed ${removed.json?.removed ?? 0}`);
+  await unpickStoryWriter();
 }
 
 // Whether the day window clears the floor; prints both windows either way.
@@ -81,7 +93,7 @@ async function isWorthShowing() {
   let ready = false;
   for (const window of ['day', 'week']) {
     const { json } = await api('GET', `/api/trending?window=${window}`);
-    const stories = json.stories ?? [];
+    const stories = (json.stories ?? []).filter(isCalmStory);
     const leadSources = Math.max(0, ...stories.map((story) => story.outletCount));
     const firstScreen = stories.slice(0, TRENDING_FLOOR.titledOnFirstScreen);
     const titled = firstScreen.filter((story) => story.synopsis !== null).length;
@@ -99,8 +111,7 @@ async function isWorthShowing() {
 }
 
 if (mode === 'teardown') {
-  await unsubscribe();
-  await unpickStoryWriter();
+  await giveBack();
 } else {
   if (mode === 'subscribe') {
     await subscribe();
@@ -111,7 +122,7 @@ if (mode === 'teardown') {
       `below the floor: ${TRENDING_FLOOR.stories} stories, ${TRENDING_FLOOR.leadSources} sources ` +
         'on the lead, a synopsis on every first-screen story',
     );
-    process.exitCode = 1;
+    process.exitCode = BELOW_FLOOR;
   }
 }
 await browser.close();

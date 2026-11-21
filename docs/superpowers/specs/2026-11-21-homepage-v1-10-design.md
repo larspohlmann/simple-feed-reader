@@ -93,8 +93,8 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
 - The notifications list is stubbed with invented actors, the way the admin user list is, even
   with real accounts connected.
 - Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of
-  overlapping news feeds and reports ready only above a floor (8 stories in the day window, 4
-  sources on the lead). `tour.mjs` borrows the same feeds for its Trending scene, from one list.
+  overlapping news feeds and reports ready only above a floor (4 stories in the day window
+  after the calm filter, 4 sources on the lead; first written as 8 before the filter existed). `tour.mjs` borrows the same feeds for its Trending scene, from one list.
 - `share.png` is re-rendered with `scripts/homepage-share-image.mjs` after `magazine-light`.
 - `docs/screenshots.md` shows every file in `docs/screenshots/` and names none that is missing.
 

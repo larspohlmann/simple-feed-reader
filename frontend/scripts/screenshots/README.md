@@ -41,8 +41,8 @@ for network in bluesky mastodon lemmy; do
 done
 
 # The Trending shots need news feeds whose stories overlap (trending-feeds.mjs): borrow them, wait
-# until `status` exits 0, shoot, give them back. Below its floor (8 stories in the day window, 4
-# sources on the lead, a synopsis on the first five) the list is too thin to show. A rebuild runs
+# until `status` exits 0, shoot, give them back. Below its floor (4 stories in the day window after
+# the calm filter, 4 sources on the lead, a synopsis on those four) the list is too thin to show. A rebuild runs
 # on the worker's schedule and titles follow within five minutes;
 # `docker compose exec php bin/console app:trending:rebuild --user=<id> day` builds at once.
 node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs
@@ -100,8 +100,9 @@ page's scene list. `TOUR_OUT` points a trial run elsewhere; it updates a page on
 has an `index.html`. It needs `ffmpeg` and `cwebp` on the PATH, and stops rather than record a
 tour in which no video played. Check each video before committing,
 for example with a contact sheet:
-`ffmpeg -i tour-light.mp4 -vf "fps=1,scale=200:-1,tile=9x5" -frames:v 1 sheet.png`.
-An aborted run can leave the podcasts borrowed; `podcast-setup.mjs teardown` returns them.
+`ffmpeg -i tour-light.mp4 -vf "fps=1,scale=200:-1,tile=10x6" -frames:v 1 sheet.png`.
+An aborted run can leave the podcasts and the Trending feeds borrowed; `podcast-setup.mjs teardown`
+and `trending-setup.mjs teardown` return them.
 
 The demo account's password can be reset from the stack:
 

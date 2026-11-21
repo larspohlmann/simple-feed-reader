@@ -5,7 +5,7 @@
 //   node --env-file=.env.screenshots social-setup.mjs bluesky              # connect + import
 //     BLUESKY_IMPORT_HANDLES=heise.de,ct.de BLUESKY_IMPORT_COLLECTIONS=Discover picks what to import
 //   node --env-file=.env.screenshots social-setup.mjs lemmy candidates     # connect, list what could be imported
-//   node --env-file=.env.screenshots social-setup.mjs mastodon teardown    # unsubscribe, untag, disconnect
+//   node --env-file=.env.screenshots social-setup.mjs mastodon teardown    # unsubscribe, disconnect
 //
 // Lemmy with two-factor sign-in: pass the current code as LEMMY_TOTP=123456 on the command line.
 import { chromium } from '@playwright/test';

@@ -21,5 +21,6 @@ export const TRENDING_FEEDS = [
   'https://feeds.bbci.co.uk/news/technology/rss.xml',
 ];
 
-// Below this the day window is too thin to show: a shot or the tour would record a near-empty list.
-export const TRENDING_FLOOR = { stories: 8, leadSources: 4, titledOnFirstScreen: 5 };
+// Below this the day window is too thin to show: a shot or the tour would record a near-empty
+// list. Counted after the stories a shot leaves out (lib.mjs), so it is what the picture holds.
+export const TRENDING_FLOOR = { stories: 4, leadSources: 4, titledOnFirstScreen: 4 };
