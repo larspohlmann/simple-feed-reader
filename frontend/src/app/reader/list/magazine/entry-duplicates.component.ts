@@ -18,6 +18,7 @@ import { formatCommunityLabel, sourceNameOf } from '../../entry/entry-source/sou
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
 import { injectStory, StoryContextDirective } from '../../trending/story-context';
+import { CommentTotals } from '../../state/comment-totals';
 
 let nextId = 0;
 
@@ -72,6 +73,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
   private readonly compactCount = inject(CompactCount);
+  private readonly commentTotals = inject(CommentTotals);
   private readonly named = computed((): AlsoChip[] =>
     this.copies().map((copy) => {
       const community = isCrossPost(this.entry(), copy) ? copy.community : null;
@@ -179,7 +181,7 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     if (score) counts.push({ ...score, icon: 'arrow_upward' });
     const comments = buildDiscussionCount(
       this.compactCount,
-      copy.commentCount,
+      this.commentTotals.latestCount(copy),
       'reader.discussionCounts.comments',
     );
     if (comments) counts.push({ ...comments, icon: 'chat_bubble' });

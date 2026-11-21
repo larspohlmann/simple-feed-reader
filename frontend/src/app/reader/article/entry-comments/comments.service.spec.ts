@@ -7,6 +7,7 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
 import { aCommentPost, anEntryComment } from '../../../../testing/entry-testing';
+import { CommentTotals } from '../../state/comment-totals';
 
 describe('CommentsService', () => {
   let api: { comments: jest.Mock };
@@ -468,6 +469,41 @@ describe('CommentsService', () => {
       service.load({ id: 1, canonicalItemId: null });
 
       expect(service.state({ id: 2, canonicalItemId: null })().status).toBe('idle');
+    });
+  });
+  describe('the totals a list row shows (#2433)', () => {
+    const listed = { id: 1, canonicalItemId: null, commentCount: 12 };
+    const shown = () => TestBed.inject(CommentTotals).latestCount(listed);
+
+    it('records the loaded thread’s total', () => {
+      service.load(buildItemRef(1));
+
+      expect(shown()).toBe(4);
+    });
+
+    it('records the total a reload brings', () => {
+      service.load(buildItemRef(1));
+      api.comments.mockReturnValue(of({ ...ok, omitted: 9 }));
+      service.reload(buildItemRef(1));
+
+      expect(shown()).toBe(10);
+    });
+
+    it('counts a reply the reader published and drops one they deleted', () => {
+      service.load(buildItemRef(1));
+      const reply = anEntryComment({ post: aCommentPost({ address: 'at://mine' }) });
+      service.insertReply(buildItemRef(1), null, reply);
+      expect(shown()).toBe(5);
+
+      service.removeReply(buildItemRef(1), 'at://mine');
+      expect(shown()).toBe(4);
+    });
+
+    it('records nothing for a thread that failed to load', () => {
+      api.comments.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      service.load(buildItemRef(1));
+
+      expect(shown()).toBe(12);
     });
   });
 });
