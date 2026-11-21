@@ -4,6 +4,7 @@
    title's square bottom, so the two read as stacked cards. The airy magazine draws no card. */
 :host {
   --story-title-tuck: var(--space-3);
+  --story-text-gap: var(--space-2);
 
   @include story-card.card;
 
@@ -47,10 +48,4 @@ a.story-link::after {
   @include story-card.foot;
 
   position: relative;
-}
-
-.story-foot app-story-source-count {
-  flex: 1 1 0;
-  min-width: 0;
-  margin-inline-start: story-card.$text-inset;
 }
