@@ -12,6 +12,7 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Schema\Table;
 use Doctrine\Migrations\AbstractMigration;
 
 final class Version20261121120000 extends AbstractMigration
@@ -27,12 +28,16 @@ final class Version20261121120000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->skipIf($schema->getTable('canonical_item')->hasColumn(self::COLUMN), self::COLUMN . ' already exists.');
         $this->requireSupportedPlatform();
+        $table = $schema->getTable('canonical_item');
 
-        $this->addSql('ALTER TABLE canonical_item ADD ' . self::COLUMN . ' VARCHAR(64) DEFAULT NULL');
-        $this->addSql('CREATE INDEX ' . self::INDEX . ' ON canonical_item (' . self::COLUMN . ')');
-        $this->queueBackfill();
+        if (!$table->hasColumn(self::COLUMN)) {
+            $this->addSql('ALTER TABLE canonical_item ADD ' . self::COLUMN . ' VARCHAR(64) DEFAULT NULL');
+        }
+        if (!$table->hasIndex(self::INDEX)) {
+            $this->addSql('CREATE INDEX ' . self::INDEX . ' ON canonical_item (' . self::COLUMN . ')');
+        }
+        $this->queueBackfill($table);
         if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
             $this->addSql('ANALYZE TABLE canonical_item');
         }
@@ -57,8 +62,9 @@ final class Version20261121120000 extends AbstractMigration
         return $this->connection->getDatabasePlatform() instanceof SQLitePlatform;
     }
 
-    private function queueBackfill(): void
+    private function queueBackfill(Table $table): void
     {
+        $unkeyed = $table->hasColumn(self::COLUMN) ? ' AND ci.' . self::COLUMN . ' IS NULL' : '';
         $urlNormalizer = new UrlNormalizer();
         $lastId = 0;
         do {
@@ -66,7 +72,7 @@ final class Version20261121120000 extends AbstractMigration
                 'SELECT ci.id, e.author_url, e.title, e.content_html FROM canonical_item ci'
                 . ' JOIN entry e ON e.id = (SELECT MIN(first_copy.id) FROM entry first_copy'
                 . ' WHERE first_copy.canonical_item_id = ci.id)'
-                . " WHERE ci.kind = 'lemmy' AND ci.id > :lastId ORDER BY ci.id LIMIT " . self::BATCH,
+                . " WHERE ci.kind = 'lemmy' AND ci.id > :lastId" . $unkeyed . ' ORDER BY ci.id LIMIT ' . self::BATCH,
                 ['lastId' => $lastId],
             );
             $hashes = [];

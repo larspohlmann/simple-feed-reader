@@ -16,8 +16,8 @@ use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\ParameterType;
-use Doctrine\Migrations\Exception\SkipMigration;
 use DoctrineMigrations\Version20261121120000;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -73,7 +73,7 @@ final class Version20261121120000Test extends TestCase
         yield 'text post' => ['<p>Body <b>one</b></p><ul><li>two</li></ul>'];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('provideIngestedBodies')]
+    #[DataProvider('provideIngestedBodies')]
     public function testTheMigratedHashEqualsTheOneIngestionBuilds(string $ingestedBody): void
     {
         $storedBody = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($ingestedBody);
@@ -135,13 +135,49 @@ final class Version20261121120000Test extends TestCase
         self::assertNotContains('cross_post_hash', $this->readColumns());
     }
 
-    public function testRunningUpTwiceSkips(): void
+    public function testRunningUpTwiceChangesNothing(): void
     {
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->migrate('up');
+        $hashes = $this->readHashes();
+
         $this->migrate('up');
 
-        $this->expectException(SkipMigration::class);
+        self::assertSame($hashes, $this->readHashes());
+        self::assertSame(1, $this->countCrossPostIndexes());
+    }
+
+    public function testAColumnLeftByAnInterruptedRunIsBackfilledAndIndexed(): void
+    {
+        $this->connection->executeStatement('ALTER TABLE canonical_item ADD cross_post_hash VARCHAR(64) DEFAULT NULL');
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->insertItem(2, 'mastodon', self::AUTHOR, 'A toot', '<p>text</p>');
 
         $this->migrate('up');
+
+        $hashes = $this->readHashes();
+        self::assertNotNull($hashes[1]);
+        self::assertNull($hashes[2]);
+        self::assertSame(1, $this->countCrossPostIndexes());
+    }
+
+    public function testAnAlreadyKeyedItemIsLeftAlone(): void
+    {
+        $this->connection->executeStatement('ALTER TABLE canonical_item ADD cross_post_hash VARCHAR(64) DEFAULT NULL');
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A title', '<p>Body</p>');
+        $this->connection->update('canonical_item', ['cross_post_hash' => 'kept'], ['id' => 1]);
+
+        $this->migrate('up');
+
+        self::assertSame([1 => 'kept'], $this->readHashes());
+    }
+
+    private function countCrossPostIndexes(): int
+    {
+        return \count(array_filter(
+            $this->connection->createSchemaManager()->introspectTable('canonical_item')->getIndexes(),
+            static fn ($index): bool => $index->getName() === 'idx_canonical_item_cross_post_hash',
+        ));
     }
 
     /** @return array<int, ?string> */
