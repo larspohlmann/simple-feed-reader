@@ -8,6 +8,8 @@ use App\Entity\User;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryFilterModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
@@ -31,7 +33,7 @@ final readonly class RecommendationRunHistory
      */
     public function overview(User $user, ViewerTimeZoneModel $viewer): RunHistoryOverviewModel
     {
-        $months = $this->summariser->summarise($this->runs->spendTimeline($user), $viewer);
+        $months = $this->summariser->summarise($this->runs->spendTimeline($user, null), $viewer);
 
         return new RunHistoryOverviewModel(
             $this->runs->totalCostNanoCredits($user),
@@ -40,9 +42,9 @@ final readonly class RecommendationRunHistory
         );
     }
 
-    public function month(User $user, MonthWindowModel $window, ?int $beforeRunId): RunHistoryMonthPageModel
+    public function month(User $user, MonthWindowModel $window, RunHistoryFilterModel $filter): RunHistoryMonthPageModel
     {
-        [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $beforeRunId));
+        [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $filter));
 
         return new RunHistoryMonthPageModel($window->month, $rows, $nextCursor);
     }
@@ -61,13 +63,15 @@ final readonly class RecommendationRunHistory
             return null;
         }
 
-        return $this->month($user, MonthWindowModel::fromMonth($newestMonth->month, $viewer), null);
+        $window = MonthWindowModel::fromMonth($newestMonth->month, $viewer);
+
+        return $this->month($user, $window, RunHistoryFilterModel::all());
     }
 
     /**
      * @param list<HistoryRow> $rows
      *
-     * @return array{0: list<HistoryRow>, 1: ?int}
+     * @return array{0: list<HistoryRow>, 1: ?RunHistoryCursorModel}
      */
     private function truncate(array $rows): array
     {
@@ -76,7 +80,10 @@ final readonly class RecommendationRunHistory
         }
 
         $kept = \array_slice($rows, 0, RecommendationRunHistoryRepository::HISTORY_LIMIT);
+        $lastKept = array_last($kept);
 
-        return [$kept, array_last($kept)['id']];
+        $nextCursor = new RunHistoryCursorModel($lastKept['createdAt'], $lastKept['kind'], $lastKept['id']);
+
+        return [$kept, $nextCursor];
     }
 }

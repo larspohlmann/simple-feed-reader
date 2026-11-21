@@ -114,9 +114,10 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
         self::assertCount(RecommendationRunHistoryRepository::HISTORY_LIMIT, $returnedRuns);
         // Newest first, with the single oldest seeded run dropped by the cap.
         self::assertSame(array_reverse(\array_slice($seededIds, 1)), array_column($returnedRuns, 'id'));
-        self::assertSame($seededIds[1], $latest['nextCursor']);
+        $expectedCursor = sprintf('%d-for_you-%d', $seededRuns[1]->getCreatedAt()->getTimestamp(), $seededIds[1]);
+        self::assertSame($expectedCursor, $latest['nextCursor']);
 
-        $client->request('GET', self::HISTORY_ROUTE . '/2026-08?before=' . $seededIds[1], server: $headers);
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-08?before=' . $expectedCursor, server: $headers);
 
         self::assertResponseIsSuccessful();
         $nextPage = $this->payload($client);
@@ -315,7 +316,8 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
 
         $client->request(
             'GET',
-            self::HISTORY_ROUTE . '/2026-08?before=' . $middle->getId(),
+            self::HISTORY_ROUTE . '/2026-08?before='
+            . sprintf('%d-for_you-%d', $middle->getCreatedAt()->getTimestamp(), $middle->requireId()),
             server: $headers,
         );
 

@@ -62,4 +62,9 @@ final class StoryAiRun
     {
         return $this->task;
     }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
 }

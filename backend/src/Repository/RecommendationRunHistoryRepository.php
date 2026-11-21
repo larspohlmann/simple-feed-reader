@@ -4,22 +4,29 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
+use App\Entity\StoryAiRun;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\RunStatus;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryFilterModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The run cost history's reads: one month's page, the spend timeline, and the all-time total.
+ * The run cost history's reads over every run kind: one month's page, the spend timeline, and the all-time total.
  *
  * @extends ServiceEntityRepository<RecommendationRun>
  *
  * @phpstan-type HistoryRow array{
  *     id: int,
- *     status: RunStatus,
+ *     kind: AiRunKind,
+ *     status: ?RunStatus,
  *     providerHost: ?string,
  *     model: ?string,
  *     createdAt: \DateTimeImmutable,
@@ -30,6 +37,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *     cachedTokens: int,
  *     costNanoCredits: int|string|null,
  * }
+ * @phpstan-type SpendRow array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}
  */
 final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 {
@@ -43,76 +51,157 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 
     /**
      * One month's runs as scalars, newest first: an entity drags the frozen pool, the winners and the provider replies.
-     * One row past the limit says another page exists; $beforeRunId pages back, as ids ascend with creation time.
+     * One row past the limit says another page exists; each table reads that many and the merge cuts them in PHP.
      *
      * @return list<HistoryRow>
      */
-    public function pageForMonth(User $user, MonthWindowModel $window, ?int $beforeRunId): array
+    public function pageForMonth(User $user, MonthWindowModel $window, RunHistoryFilterModel $filter): array
     {
-        $query = $this->buildHistoryRowsQuery($user)
-            ->andWhere('r.createdAt >= :start')->setParameter('start', $window->startUtc)
-            ->andWhere('r.createdAt < :end')->setParameter('end', $window->endUtc)
-            ->orderBy('r.id', 'DESC')
-            ->setMaxResults(self::HISTORY_LIMIT + 1);
+        $rows = [];
+        foreach (self::resolveKinds($filter->kind) as $kind) {
+            $query = $this->buildHistoryRowsQuery($kind, $user)
+                ->andWhere('r.createdAt >= :start')->setParameter('start', $window->startUtc)
+                ->andWhere('r.createdAt < :end')->setParameter('end', $window->endUtc)
+                ->orderBy('r.createdAt', 'DESC')
+                ->addOrderBy('r.id', 'DESC')
+                ->setMaxResults(self::HISTORY_LIMIT + 1);
+            if (null !== $filter->before) {
+                self::applyCursor($query, $kind, $filter->before);
+            }
 
-        if (null !== $beforeRunId) {
-            $query->andWhere('r.id < :before')->setParameter('before', $beforeRunId);
+            /** @var list<array<string, mixed>> $kindRows */
+            $kindRows = $query->getQuery()->getArrayResult();
+            $rows = [...$rows, ...self::tagRows($kind, $kindRows)];
         }
 
-        /** @var list<HistoryRow> $rows */
-        $rows = $query->getQuery()->getArrayResult();
+        usort($rows, self::compareNewestFirst(...));
 
-        return $rows;
+        return \array_slice($rows, 0, self::HISTORY_LIMIT + 1);
     }
 
     /**
      * Every run's creation time and price, newest first, grouped by month in PHP: DQL has no month extraction, and the
-     * buckets are cut in the viewer's zone while the column holds naive UTC.
+     * buckets are cut in the viewer's zone while the column holds naive UTC. A null kind reads every kind.
      *
-     * @return list<array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}>
+     * @return list<SpendRow>
      */
-    public function spendTimeline(User $user): array
+    public function spendTimeline(User $user, ?AiRunKind $kind): array
     {
-        /** @var list<array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}> $rows */
-        $rows = $this->createQueryBuilder('r')
-            ->select('r.createdAt AS createdAt', 'r.providerUsage.costNanoCredits AS costNanoCredits')
-            ->andWhere('r.user = :user')->setParameter('user', $user)
-            ->orderBy('r.id', 'DESC')
-            ->getQuery()
-            ->getArrayResult();
+        $rows = [];
+        foreach (self::resolveKinds($kind) as $runKind) {
+            /** @var list<SpendRow> $kindRows */
+            $kindRows = $this->buildRunQuery($runKind, $user)
+                ->select('r.createdAt AS createdAt', 'r.providerUsage.costNanoCredits AS costNanoCredits')
+                ->getQuery()
+                ->getArrayResult();
+            $rows = [...$rows, ...$kindRows];
+        }
+
+        usort($rows, static fn (array $left, array $right): int => $right['createdAt'] <=> $left['createdAt']);
 
         return $rows;
     }
 
-    /** Summed over every run, not one page; null when no run reported a price, which is not the same as zero. */
+    /** Summed over every run of every kind, not one page; null when no run reported a price, which is not zero. */
     public function totalCostNanoCredits(User $user): ?int
     {
-        $total = $this->createQueryBuilder('r')
-            ->select('SUM(r.providerUsage.costNanoCredits)')
-            ->andWhere('r.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
+        $totals = [];
+        foreach (AiRunKind::cases() as $kind) {
+            $total = $this->buildRunQuery($kind, $user)
+                ->select('SUM(r.providerUsage.costNanoCredits)')
+                ->getQuery()
+                ->getSingleScalarResult();
+            if (null !== $total) {
+                $totals[] = (int) $total;
+            }
+        }
 
-        return null === $total ? null : (int) $total;
+        return [] === $totals ? null : array_sum($totals);
     }
 
-    private function buildHistoryRowsQuery(User $user): QueryBuilder
+    private function buildHistoryRowsQuery(AiRunKind $kind, User $user): QueryBuilder
     {
-        return $this->createQueryBuilder('r')
-            ->select(
-                'r.id AS id',
-                'r.status AS status',
-                'r.createdAt AS createdAt',
-                'r.completedAt AS completedAt',
-                'r.providerUsage.providerHost AS providerHost',
-                'r.providerUsage.model AS model',
-                'r.providerUsage.promptTokens AS promptTokens',
-                'r.providerUsage.completionTokens AS completionTokens',
-                'r.providerUsage.reasoningTokens AS reasoningTokens',
-                'r.providerUsage.cachedTokens AS cachedTokens',
-                'r.providerUsage.costNanoCredits AS costNanoCredits',
-            )
+        $query = $this->buildRunQuery($kind, $user)->select(
+            'r.id AS id',
+            'r.createdAt AS createdAt',
+            'r.providerUsage.providerHost AS providerHost',
+            'r.providerUsage.model AS model',
+            'r.providerUsage.promptTokens AS promptTokens',
+            'r.providerUsage.completionTokens AS completionTokens',
+            'r.providerUsage.reasoningTokens AS reasoningTokens',
+            'r.providerUsage.cachedTokens AS cachedTokens',
+            'r.providerUsage.costNanoCredits AS costNanoCredits',
+        );
+        if (AiRunKind::Story === $kind) {
+            return $query;
+        }
+
+        return $query->addSelect('r.status AS status', 'r.completedAt AS completedAt');
+    }
+
+    private function buildRunQuery(AiRunKind $kind, User $user): QueryBuilder
+    {
+        return $this->getEntityManager()->createQueryBuilder()
+            ->from(self::resolveEntityClass($kind), 'r')
             ->andWhere('r.user = :user')->setParameter('user', $user);
+    }
+
+    /** @return class-string */
+    private static function resolveEntityClass(AiRunKind $kind): string
+    {
+        return match ($kind) {
+            AiRunKind::ForYou => RecommendationRun::class,
+            AiRunKind::Profile => ProfileRun::class,
+            AiRunKind::Story => StoryAiRun::class,
+        };
+    }
+
+    /** @return list<AiRunKind> */
+    private static function resolveKinds(?AiRunKind $kind): array
+    {
+        return null === $kind ? AiRunKind::cases() : [$kind];
+    }
+
+    /** Within the cursor's second the kind rank orders the tables, so a page break inside one second loses no run. */
+    private static function applyCursor(QueryBuilder $query, AiRunKind $kind, RunHistoryCursorModel $before): void
+    {
+        $query->setParameter('at', $before->createdAt, Types::DATETIME_IMMUTABLE);
+        $rankOrder = $kind->tieRank() <=> $before->kind->tieRank();
+        if (0 !== $rankOrder) {
+            $query->andWhere(1 === $rankOrder ? 'r.createdAt < :at' : 'r.createdAt <= :at');
+
+            return;
+        }
+
+        $query->andWhere('r.createdAt < :at OR (r.createdAt = :at AND r.id < :id)')
+            ->setParameter('id', $before->id);
+    }
+
+    /**
+     * A story run has no status or completion, and DQL cannot select a typed null, so those keys are added here.
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return list<HistoryRow>
+     */
+    private static function tagRows(AiRunKind $kind, array $rows): array
+    {
+        /** @var list<HistoryRow> $tagged */
+        $tagged = array_map(
+            static fn (array $row): array => ['status' => null, 'completedAt' => null, ...$row, 'kind' => $kind],
+            $rows,
+        );
+
+        return $tagged;
+    }
+
+    /**
+     * @param HistoryRow $left
+     * @param HistoryRow $right
+     */
+    private static function compareNewestFirst(array $left, array $right): int
+    {
+        return [$right['createdAt'], $right['kind']->tieRank(), $right['id']]
+            <=> [$left['createdAt'], $left['kind']->tieRank(), $left['id']];
     }
 }

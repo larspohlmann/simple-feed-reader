@@ -7,6 +7,8 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\RecommendationRunHistoryJson;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryFilterModel;
 use App\Service\Curation\Recommendation\Feed\RecommendationRunHistory;
 use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -45,7 +47,7 @@ final readonly class RecommendationRunHistoryController
         return new JsonResponse(RecommendationRunHistoryJson::monthPage($this->history->month(
             $user,
             MonthWindowModel::fromMonth($month, ViewerTimeZoneModel::fromIdentifier($request->query->get('tz'))),
-            $request->query->getInt('before') ?: null,
+            new RunHistoryFilterModel(null, RunHistoryCursorModel::parse($request->query->getString('before'))),
         )));
     }
 }
