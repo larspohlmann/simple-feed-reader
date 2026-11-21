@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Ingest\Support;
 
 use App\Service\Foundation\Html\Support\HtmlDocumentParser;
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\Text;
 
@@ -12,6 +13,9 @@ final class LemmyLinkedUrl
 {
     public static function parse(?string $bodyHtml): ?string
     {
+        if (preg_match('#^\s*(?:<p\b[^>]*>\s*)?<a\b#i', (string) $bodyHtml) !== 1) {
+            return null;
+        }
         $body = HtmlDocumentParser::parseFragment((string) $bodyHtml)->body;
         if ($body === null) {
             return null;
@@ -48,7 +52,7 @@ final class LemmyLinkedUrl
             return null;
         }
 
-        return preg_match('#^https?://[^\s/]#i', $href) === 1 ? $href : null;
+        return AbsoluteHttpUrl::parseHostAndPath($href) === null ? null : $href;
     }
 
     private function __construct()
