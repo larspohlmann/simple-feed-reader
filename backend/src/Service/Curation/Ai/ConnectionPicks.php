@@ -6,6 +6,8 @@ namespace App\Service\Curation\Ai;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
+use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\Exception\ConnectionPickRejectedException;
 
 /** A feature's saved connection pick, judged by whether a connection can serve that feature. */
 final readonly class ConnectionPicks
@@ -43,9 +45,25 @@ final readonly class ConnectionPicks
      * The stored pick stays allowed after it stopped serving, so saving the other settings never rejects it.
      *
      * @param \Closure(AiProviderSettings): bool $canServe
+     *
+     * @throws ConfigurationNotFoundException when the connection is not this account's
+     * @throws ConnectionPickRejectedException when it is not the stored pick and cannot serve
      */
-    public function allows(AiProviderSettings $connection, ?AiProviderSettings $storedPick, \Closure $canServe): bool
-    {
-        return $connection === $storedPick || $canServe($connection);
+    public function requireAllowedPickIfSet(
+        User $user,
+        ?int $connectionId,
+        ?AiProviderSettings $storedPick,
+        \Closure $canServe,
+    ): ?AiProviderSettings {
+        if (null === $connectionId) {
+            return null;
+        }
+
+        $connection = $this->configurations->require($user, $connectionId);
+        if ($connection !== $storedPick && !$canServe($connection)) {
+            throw new ConnectionPickRejectedException(sprintf('Connection %d cannot serve here.', $connectionId));
+        }
+
+        return $connection;
     }
 }

@@ -8,9 +8,9 @@ use App\Entity\AiProviderSettings;
 use App\Entity\StorySettings;
 use App\Entity\User;
 use App\Repository\StorySettingsRepository;
-use App\Service\Curation\Ai\AiConfigurationForUser;
 use App\Service\Curation\Ai\ConnectionPicks;
 use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\Exception\ConnectionPickRejectedException;
 use App\Service\Curation\StoryAi\Exception\WritingConnectionRejectedException;
 use App\Service\Curation\StoryAi\Model\StorySettingsChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,7 +20,6 @@ final readonly class StorySettingsEditor
     public const string REJECTION = 'Only a ready LLM connection can write story text.';
 
     public function __construct(
-        private AiConfigurationForUser $configurations,
         private StoryWritingConnections $writingConnections,
         private ConnectionPicks $connectionPicks,
         private StorySettingsRepository $storySettings,
@@ -50,20 +49,15 @@ final readonly class StorySettingsEditor
         ?StorySettings $storedSettings,
         ?int $connectionId,
     ): ?AiProviderSettings {
-        if (null === $connectionId) {
-            return null;
+        try {
+            return $this->connectionPicks->requireAllowedPickIfSet(
+                $user,
+                $connectionId,
+                $storedSettings?->getWritingConnection(),
+                $this->writingConnections->canWriteText(...),
+            );
+        } catch (ConnectionPickRejectedException $exception) {
+            throw new WritingConnectionRejectedException(self::REJECTION, previous: $exception);
         }
-
-        $connection = $this->configurations->require($user, $connectionId);
-        $allowed = $this->connectionPicks->allows(
-            $connection,
-            $storedSettings?->getWritingConnection(),
-            $this->writingConnections->canWriteText(...),
-        );
-        if (!$allowed) {
-            throw new WritingConnectionRejectedException(self::REJECTION);
-        }
-
-        return $connection;
     }
 }

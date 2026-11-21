@@ -8,9 +8,9 @@ use App\Entity\AiProviderSettings;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Curation\Ai\AiConfigurationForUser;
 use App\Service\Curation\Ai\ConnectionPicks;
 use App\Service\Curation\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Curation\Ai\Exception\ConnectionPickRejectedException;
 use App\Service\Curation\Recommendation\Exception\ProfileConnectionRejectedException;
 use App\Service\Curation\Recommendation\Profile\Model\ProfileSettingsChangeModel;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
@@ -20,7 +20,6 @@ final readonly class ProfileSettingsEditor
     public const string REJECTION = 'Only a ready LLM connection can build your profile.';
 
     public function __construct(
-        private AiConfigurationForUser $configurations,
         private ProfileConnections $profileConnections,
         private ConnectionPicks $connectionPicks,
         private RecommendationSettingsWriter $writer,
@@ -44,20 +43,15 @@ final readonly class ProfileSettingsEditor
 
     private function requireAllowedConnectionIfSet(User $user, ?int $connectionId): ?AiProviderSettings
     {
-        if (null === $connectionId) {
-            return null;
+        try {
+            return $this->connectionPicks->requireAllowedPickIfSet(
+                $user,
+                $connectionId,
+                $this->recommendationSettings->findForUser($user)?->profileSettings()->connection,
+                $this->profileConnections->canBuildProfiles(...),
+            );
+        } catch (ConnectionPickRejectedException $exception) {
+            throw new ProfileConnectionRejectedException(self::REJECTION, previous: $exception);
         }
-
-        $connection = $this->configurations->require($user, $connectionId);
-        $allowed = $this->connectionPicks->allows(
-            $connection,
-            $this->recommendationSettings->findForUser($user)?->profileSettings()->connection,
-            $this->profileConnections->canBuildProfiles(...),
-        );
-        if (!$allowed) {
-            throw new ProfileConnectionRejectedException(self::REJECTION);
-        }
-
-        return $connection;
     }
 }
