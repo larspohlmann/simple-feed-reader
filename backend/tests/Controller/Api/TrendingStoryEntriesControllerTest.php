@@ -393,6 +393,72 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
         self::assertSame('The dockers have stopped work.', $this->page($story)['synopsis']);
     }
 
+    public function testThePageOfATitledStoryCarriesItsCard(): void
+    {
+        $reader = $this->signInAsOwner('story-list-card@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->follow($story);
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ?, llm_synopsis = ?, first_joined_at = ?, last_joined_at = ?'
+            . ' WHERE id = ?',
+            [
+                'Harbour strike in Hamburg',
+                'The dockers have stopped work.',
+                '2031-05-13 08:00:00',
+                '2031-05-14 09:30:00',
+                $story->requireId(),
+            ],
+        );
+
+        self::assertSame(
+            [
+                'id' => $story->requireId(),
+                'title' => 'Harbour strike in Hamburg',
+                'synopsis' => 'The dockers have stopped work.',
+                'outletCount' => $this->page($story)['outletCount'],
+                'shareCount' => $this->page($story)['shareCount'],
+                'followed' => true,
+                'createdAt' => '2031-05-13T08:00:00+00:00',
+                'lastAddedAt' => '2031-05-14T09:30:00+00:00',
+            ],
+            $this->page($story)['story'],
+        );
+    }
+
+    public function testTheCardOfAnUnfollowedStoryIsNotFollowed(): void
+    {
+        $reader = $this->signInAsOwner('story-list-card-unfollowed@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE trending_story SET llm_title = ? WHERE id = ?',
+            ['Harbour strike in Hamburg', $story->requireId()],
+        );
+
+        $card = $this->page($story)['story'];
+
+        self::assertIsArray($card);
+        self::assertFalse($card['followed']);
+    }
+
+    public function testThePageOfAStoryTheReaderCannotSeeAnyMemberOfHasNoCard(): void
+    {
+        $reader = $this->signInAsOwner('story-list-no-card@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $story = $this->storyOf($alpha, $beta);
+        $this->entityManager()->getConnection()->executeStatement(
+            'DELETE FROM subscription WHERE user_id = ?',
+            [$reader->requireId()],
+        );
+
+        $page = $this->page($story);
+
+        self::assertNull($page['story']);
+        self::assertArrayHasKey('outletCount', $page);
+        self::assertArrayHasKey('shareCount', $page);
+    }
+
     public function testThePageOfAStoryWithoutAnLlmTitleHasNoSynopsis(): void
     {
         $reader = $this->signInAsOwner('story-list-no-synopsis@example.com');

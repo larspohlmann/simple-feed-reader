@@ -13,6 +13,7 @@ final readonly class TrendingStoryPage
 {
     public function __construct(
         private EntryPage $entryPage,
+        private StoryCardJson $storyCardJson,
     ) {
     }
 
@@ -20,6 +21,16 @@ final readonly class TrendingStoryPage
      * @return array{
      *   entries: list<array<string, mixed>>,
      *   nextCursor: string|null,
+     *   story: array{
+     *     id: int,
+     *     title: string,
+     *     synopsis: string|null,
+     *     outletCount: int,
+     *     shareCount: int,
+     *     followed: bool,
+     *     createdAt: string,
+     *     lastAddedAt: string,
+     *   }|null,
      *   title: string|null,
      *   synopsis: string|null,
      *   memberCount: int,
@@ -41,7 +52,10 @@ final readonly class TrendingStoryPage
             $result->rows,
         );
 
+        $face = $result->face();
+
         return $page + [
+            'story' => $face === null ? null : $this->storyCardJson->from($face),
             'title' => $result->heading?->title,
             'synopsis' => $result->heading?->synopsis,
             'memberCount' => $result->tally->memberCount,

@@ -7,6 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\TrendingWindow;
+use App\Http\StoryCardJson;
 use App\Http\TrendingJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowMarks;
@@ -35,7 +36,7 @@ final class TrendingJsonTest extends TestCase
             true,
         );
 
-        $page = (new TrendingJson(JsonMappers::entryJson()))
+        $page = (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
         $story = $page['stories'][0];
 
@@ -44,6 +45,8 @@ final class TrendingJsonTest extends TestCase
         self::assertFalse($story['viewed']);
         self::assertSame(3, $story['shareCount']);
         self::assertTrue($story['followed']);
+        self::assertSame('2031-05-14T08:00:00+00:00', $story['createdAt']);
+        self::assertSame('2031-05-14T10:00:00+00:00', $story['lastAddedAt']);
         self::assertSame(501, $story['leadEntryId']);
         $articles = $story['articles'];
         self::assertIsList($articles);
@@ -84,7 +87,7 @@ final class TrendingJsonTest extends TestCase
         );
         $entryRow = array_keys(JsonMappers::entryJson()->listRow($this->row(700)));
 
-        $page = (new TrendingJson(JsonMappers::entryJson()))
+        $page = (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]));
 
         $articles = $page['stories'][0]['articles'];
@@ -108,7 +111,7 @@ final class TrendingJsonTest extends TestCase
             false,
         );
 
-        return (new TrendingJson(JsonMappers::entryJson()))
+        return (new TrendingJson(JsonMappers::entryJson(), new StoryCardJson()))
             ->page(new TrendingPageModel(TrendingWindow::Day, null, [$card]))['stories'][0];
     }
 
