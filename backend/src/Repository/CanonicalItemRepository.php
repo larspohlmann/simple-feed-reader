@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\CanonicalItem;
+use App\Entity\Entry;
+use App\Entity\Subscription;
+use App\Enum\CanonicalItemKind;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Foundation\CanonicalItem\Model\CanonicalKeyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -141,5 +144,42 @@ final class CanonicalItemRepository extends ServiceEntityRepository
         }
 
         return $byId;
+    }
+
+    /**
+     * @param list<string> $keyHashes
+     *
+     * @return array<string, int> the lowest id of an entry the user can read, by key hash
+     */
+    public function findReadableEntryIds(int $userId, CanonicalItemKind $kind, array $keyHashes): array
+    {
+        if ($keyHashes === []) {
+            return [];
+        }
+        /** @var list<array{keyHash: string, entryId: int|string}> $rows */
+        $rows = $this->createQueryBuilder('item')
+            ->select('item.keyHash AS keyHash', 'MIN(entry.id) AS entryId')
+            ->join(Entry::class, 'entry', 'WITH', 'entry.canonicalItem = item')
+            ->join(
+                Subscription::class,
+                'subscription',
+                'WITH',
+                'subscription.feed = entry.feed AND subscription.user = :user',
+            )
+            ->andWhere('item.kind = :kind')
+            ->andWhere('item.keyHash IN (:hashes)')
+            ->groupBy('item.keyHash')
+            ->setParameter('user', $userId)
+            ->setParameter('kind', $kind)
+            ->setParameter('hashes', $keyHashes)
+            ->getQuery()
+            ->getResult();
+
+        $entryIds = [];
+        foreach ($rows as $row) {
+            $entryIds[$row['keyHash']] = (int) $row['entryId'];
+        }
+
+        return $entryIds;
     }
 }
