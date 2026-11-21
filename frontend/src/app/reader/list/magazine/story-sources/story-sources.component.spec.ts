@@ -1,4 +1,3 @@
-import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryDto } from '../../../models';
@@ -9,7 +8,6 @@ import { EntryActionHandler } from '../../../entry/entry-actions/entry-action-ha
 import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../testing/account-identity-testing';
 import { LinkReaderNavigation } from '../../../shell/link-reader-navigation.service';
-import { provideStoryActions } from '../../../../../testing/story-actions-testing';
 
 const open = jest.fn();
 const navigation = { layer: jest.fn(), openAlone: jest.fn() };
@@ -24,12 +22,10 @@ beforeEach(() => {
 function mount(
   story: TrendingStoryDto,
   reader: Partial<LinkReaderNavigation> | null = navigation,
-  storyActions: Provider[] = [],
 ): HTMLElement {
   TestBed.configureTestingModule({
     imports: [StorySourcesComponent, provideTranslocoTesting()],
     providers: [
-      ...storyActions,
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
       ...(reader ? [{ provide: LinkReaderNavigation, useValue: reader }] : []),
@@ -66,7 +62,7 @@ const copies = [
 ];
 
 describe("a Trending story's sources (#2128)", () => {
-  const onTrending = (story: TrendingStoryDto) => mount(story, navigation, provideStoryActions());
+  const onTrending = (story: TrendingStoryDto) => mount(story);
 
   it('holds only the toggle, leaving counts and actions to the title card (#2435)', () => {
     const sources = onTrending(storyWith(copies)).querySelector('.more-sources')!;

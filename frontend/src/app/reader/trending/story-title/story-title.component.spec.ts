@@ -61,9 +61,10 @@ it('shows the synopsis beneath the title', () => {
 it('names the link by the title and describes it by the synopsis, unique per story', () => {
   const element = mount('Any event', 12, 'Dockers walked out.');
   const link = element.querySelector('a.story-link')!;
+  const heading = element.querySelector('h3.title')!;
   const synopsis = element.querySelector('p.synopsis')!;
 
-  expect(link.getAttribute('aria-label')).toBe('Any event');
+  expect(link.getAttribute('aria-labelledby')).toBe(heading.id);
   expect(link.getAttribute('aria-describedby')).toBe(synopsis.id);
   expect(synopsis.id).toBe('story-synopsis-12');
 });
@@ -92,14 +93,18 @@ it("links to the story's list and opens it when clicked", async () => {
 
 describe("the card's counts and actions (#2435)", () => {
   it('names how many feeds covered the story and how often it was shared', () => {
-    const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector('.counts')!;
+    const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector(
+      'app-story-source-count',
+    )!;
 
     expect(counts.textContent).toContain('7 sources');
     expect(counts.textContent).toContain('2 shares');
   });
 
   it('names no shares on a story no post shares', () => {
-    const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector('.counts')!;
+    const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector(
+      'app-story-source-count',
+    )!;
 
     expect(counts.textContent).not.toContain('share');
   });
@@ -107,7 +112,7 @@ describe("the card's counts and actions (#2435)", () => {
   it('names the counts between the title and the synopsis', () => {
     const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
 
-    expect(element.querySelector('h3.title + .counts + p.synopsis')).not.toBeNull();
+    expect(element.querySelector('h3.title + app-story-source-count + p.synopsis')).not.toBeNull();
   });
 
   it('offers the actions at the bottom of the card, after the synopsis', () => {
@@ -127,6 +132,6 @@ describe("the card's counts and actions (#2435)", () => {
     const element = mountStory(aStory(), 'all');
 
     expect(element.querySelector('.story-actions')).toBeNull();
-    expect(element.querySelector('.counts')).not.toBeNull();
+    expect(element.querySelector('app-story-source-count')).not.toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 <app-icon class="icon" [name]="storyIcon" size="md" />
 <div class="text">
   <h3 class="title" [id]="titleId()">{{ title() }}</h3>
-  <ng-content />
+  <ng-content select="[storyMeta]" />
   @if (synopsis(); as synopsis) {
     <p class="synopsis" [id]="synopsisId()">{{ synopsis }}</p>
   }

@@ -1,5 +1,5 @@
 import { EMPTY } from 'rxjs';
-import { Component, Provider } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -15,7 +15,6 @@ import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unren
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
-import { provideStoryActions } from '../../../../testing/story-actions-testing';
 import { CommentTotals } from '../../state/comment-totals';
 
 const entryActions = {
@@ -45,11 +44,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 const article = (over: Partial<StoryArticleDto> = {}): StoryArticleDto =>
   aStoryArticle({ ...entry(), ...over });
 
-function mount(testEntry: ListItem, arrange?: () => void, storyActions: Provider[] = []) {
+function mount(testEntry: ListItem, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
-      ...storyActions,
       provideStoryContext(storyOf(testEntry)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
@@ -75,9 +73,7 @@ it('renders nothing without duplicates', () => {
 
 describe("a Trending story's footer in the list layout (#2128)", () => {
   const footOf = (row: ListItem) =>
-    (mount(row, undefined, provideStoryActions()).nativeElement as HTMLElement).querySelector(
-      '.also-foot',
-    );
+    (mount(row).nativeElement as HTMLElement).querySelector('.also-foot');
 
   it('lists the other outlets and leaves the story actions to its title card (#2435)', () => {
     const foot = footOf(aStory({ articles: [article(), article({ id: 2 })] }))!;
@@ -417,7 +413,6 @@ it("shows a copy's row in the popover without the story's pieces", () => {
   TestBed.configureTestingModule({
     imports: [StoryCardHostComponent, provideTranslocoTesting()],
     providers: [
-      ...provideStoryActions(),
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
