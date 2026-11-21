@@ -110,6 +110,24 @@ async function stubAdminUsers(page) {
   );
   await page.route(/\/api\/admin\/users\/3$/, (route) => route.fulfill({ json: FAKE_DETAIL }));
 }
+// The real page shows the address and passkey domain of the machine the dev stack runs on.
+const EXAMPLE_HOST = 'reader.example.com';
+async function stubInstanceSettings(page) {
+  await page.route(/\/api\/admin\/settings$/, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      json: {
+        ...(await response.json()),
+        publicBaseUrl: `https://${EXAMPLE_HOST}`,
+        publicBaseUrlDefault: `https://${EXAMPLE_HOST}`,
+        passkeyRpId: null,
+        passkeyRpIdEffective: EXAMPLE_HOST,
+      },
+    });
+  });
+}
 // The real page shows this instance's proxy host and username.
 async function stubProxy(page) {
   await page.route(/\/api\/admin\/proxy$/, (route) =>
@@ -390,7 +408,10 @@ const SETS = {
       theme: 'dark',
     }),
     desktop('admin-catalog-light', '/settings/admin/catalog'),
-    desktop('admin-settings-dark', '/settings/admin/settings', { theme: 'dark' }),
+    desktop('admin-settings-dark', '/settings/admin/settings', {
+      theme: 'dark',
+      stub: stubInstanceSettings,
+    }),
     desktop('admin-mail-light', '/settings/admin/mail'),
     desktop('admin-proxy-light', '/settings/admin/proxy', { stub: stubProxy }),
   ],
