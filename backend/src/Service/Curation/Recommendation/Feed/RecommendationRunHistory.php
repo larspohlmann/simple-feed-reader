@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryFilterModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 use App\Service\Foundation\Clock\Model\ViewerTimeZoneModel;
@@ -26,23 +29,23 @@ final readonly class RecommendationRunHistory
     }
 
     /**
-     * The total is summed by the database, not derived from the timeline, so it stays whole if the timeline is ever
-     * capped.
+     * The total is summed by the database over every kind, not derived from the timeline, so it stays whole when the
+     * timeline is capped or a kind filter narrows it.
      */
-    public function overview(User $user, ViewerTimeZoneModel $viewer): RunHistoryOverviewModel
+    public function overview(User $user, ViewerTimeZoneModel $viewer, ?AiRunKind $kind): RunHistoryOverviewModel
     {
-        $months = $this->summariser->summarise($this->runs->spendTimeline($user), $viewer);
+        $months = $this->summariser->summarise($this->runs->spendTimeline($user, $kind), $viewer);
 
         return new RunHistoryOverviewModel(
             $this->runs->totalCostNanoCredits($user),
             $months,
-            $this->latestMonthPage($user, $viewer, $months[0] ?? null),
+            $this->latestMonthPage($user, $viewer, $months[0] ?? null, $kind),
         );
     }
 
-    public function month(User $user, MonthWindowModel $window, ?int $beforeRunId): RunHistoryMonthPageModel
+    public function month(User $user, MonthWindowModel $window, RunHistoryFilterModel $filter): RunHistoryMonthPageModel
     {
-        [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $beforeRunId));
+        [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $filter));
 
         return new RunHistoryMonthPageModel($window->month, $rows, $nextCursor);
     }
@@ -56,18 +59,21 @@ final readonly class RecommendationRunHistory
         User $user,
         ViewerTimeZoneModel $viewer,
         ?HistoryMonthModel $newestMonth,
+        ?AiRunKind $kind,
     ): ?RunHistoryMonthPageModel {
         if (null === $newestMonth) {
             return null;
         }
 
-        return $this->month($user, MonthWindowModel::fromMonth($newestMonth->month, $viewer), null);
+        $window = MonthWindowModel::fromMonth($newestMonth->month, $viewer);
+
+        return $this->month($user, $window, new RunHistoryFilterModel($kind, null));
     }
 
     /**
      * @param list<HistoryRow> $rows
      *
-     * @return array{0: list<HistoryRow>, 1: ?int}
+     * @return array{0: list<HistoryRow>, 1: ?RunHistoryCursorModel}
      */
     private function truncate(array $rows): array
     {
@@ -76,7 +82,10 @@ final readonly class RecommendationRunHistory
         }
 
         $kept = \array_slice($rows, 0, RecommendationRunHistoryRepository::HISTORY_LIMIT);
+        $lastKept = array_last($kept);
 
-        return [$kept, array_last($kept)['id']];
+        $nextCursor = new RunHistoryCursorModel($lastKept['createdAt'], $lastKept['kind'], $lastKept['id']);
+
+        return [$kept, $nextCursor];
     }
 }

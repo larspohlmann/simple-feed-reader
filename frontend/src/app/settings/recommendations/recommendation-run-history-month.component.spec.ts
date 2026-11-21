@@ -8,6 +8,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const PRICED_RUN: RunHistoryRow = {
   id: 42,
+  kind: 'for_you',
   status: 'completed',
   providerHost: 'openrouter.ai',
   model: 'x-ai/grok-4-fast',
@@ -34,7 +35,7 @@ interface MountProperties {
   runCount: number;
   costNanoCredits: number | null;
   runs: RunHistoryRow[] | null;
-  nextCursor: number | null;
+  nextCursor: string | null;
   loading: boolean;
   failed: boolean;
 }
@@ -344,6 +345,47 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     ).toBe('2216');
   });
 
+  it('leads the provider line with the translated kind of the run', () => {
+    const element = mount({
+      runs: [
+        PRICED_RUN,
+        { ...UNPRICED_RUN, id: 7, kind: 'profile' },
+        { ...PRICED_RUN, id: 8, kind: 'story' },
+      ],
+    });
+
+    const lines = Array.from(
+      element.querySelectorAll('.run-history-month__list .run-history-month__provider'),
+      (line) => line.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(lines[0]).toContain('For you · openrouter.ai · x-ai/grok-4-fast');
+    expect(lines[1]).toContain('Profile · localhost · bonsai-27b');
+    expect(lines[2]).toContain('Trending stories ·');
+  });
+
+  it('renders a dash and no icon for a run without a status', () => {
+    const element = mount({
+      runs: [
+        { ...PRICED_RUN, kind: 'story', status: null, completedAt: null, durationSeconds: null },
+      ],
+    });
+
+    const status = element.querySelector('.run-history-month__list .run-history-month__status');
+    expect(status?.querySelector('.run-history-month__status-icon')).toBeNull();
+    expect(status?.querySelector('.run-history-month__status-word')).toBeNull();
+    expect(status?.textContent).toContain('—');
+  });
+
+  it('keeps two rows of different kinds that share an id', () => {
+    const element = mount({
+      runs: [PRICED_RUN, { ...PRICED_RUN, kind: 'profile' }],
+    });
+
+    expect(
+      element.querySelectorAll('.run-history-month__list .run-history-month__row'),
+    ).toHaveLength(2);
+  });
+
   it('renders the icon matching the row status', () => {
     const element = mount({ runs: [PRICED_RUN] }); // status: 'completed'
 
@@ -369,13 +411,13 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('shows "show more" when another page is available', () => {
-    const element = mount({ runs: [PRICED_RUN], nextCursor: 40 });
+    const element = mount({ runs: [PRICED_RUN], nextCursor: '40' });
 
     expect(element.querySelector('.run-history-month__more')).not.toBeNull();
   });
 
   it('emits showMore when "show more" is clicked', () => {
-    const element = mount({ runs: [PRICED_RUN], nextCursor: 40 });
+    const element = mount({ runs: [PRICED_RUN], nextCursor: '40' });
     let emitted = 0;
     fixture.componentInstance.showMore.subscribe(() => emitted++);
 

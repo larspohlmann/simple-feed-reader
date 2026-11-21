@@ -8,10 +8,13 @@ use App\Entity\CallOutcome;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoryAiRun;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\StoryAiTask;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
@@ -74,7 +77,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                 'createdAt' => $row['createdAt']->format(\DATE_ATOM),
                 'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
             ],
-            $this->logs->listForRun($this->user, $run->requireId()),
+            $this->logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()),
         );
 
         self::assertSame(
@@ -139,7 +142,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertNotNull($streamingId);
         self::assertSame(
             [$streamingId => ''],
-            $this->logs->streamingTextForRun($this->user, $run->requireId()),
+            $this->logs->streamingTextForRun($this->user, AiRunKind::ForYou, $run->requireId()),
         );
     }
 
@@ -217,7 +220,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         // Bulk DQL bypasses the identity map: clear before asserting survival, or find() serves the stale in-memory
         // row.
         $this->entityManager->clear();
-        self::assertSame([], $this->logs->listForRun($this->user, $run->requireId()));
+        self::assertSame([], $this->logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()));
         self::assertNotNull($this->entityManager->find(RecommendationRunLog::class, $keptId));
     }
 
@@ -225,10 +228,13 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        self::assertSame([CallPhase::Batch], array_column($this->logs->listForRun($owner, $run->requireId()), 'phase'));
+        self::assertSame(
+            [CallPhase::Batch],
+            array_column($this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()), 'phase'),
+        );
         self::assertSame(
             [CallPhase::Distill],
-            array_column($this->logs->listForProfileRun($owner, $profileRun->requireId()), 'phase'),
+            array_column($this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()), 'phase'),
         );
     }
 
@@ -236,20 +242,23 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $runRowId = $this->logs->listForRun($owner, $run->requireId())[0]['id'];
-        $profileRowId = $this->logs->listForProfileRun($owner, $profileRun->requireId())[0]['id'];
+        $runRowId = $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId())[0]['id'];
+        $profileRowId = $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId())[0]['id'];
 
-        self::assertSame([$runRowId], array_keys($this->logs->streamingTextForRun($owner, $run->requireId())));
+        self::assertSame(
+            [$runRowId],
+            array_keys($this->logs->streamingTextForRun($owner, AiRunKind::ForYou, $run->requireId())),
+        );
         self::assertSame(
             [$profileRowId],
-            array_keys($this->logs->streamingTextForProfileRun($owner, $profileRun->requireId())),
+            array_keys($this->logs->streamingTextForRun($owner, AiRunKind::Profile, $profileRun->requireId())),
         );
     }
 
     public function testAProfileRunRowIsReadableByItsOwnerOnly(): void
     {
         [$owner, , $profileRun] = $this->ownerWithARunAndAProfileRun();
-        $rowId = $this->logs->listForProfileRun($owner, $profileRun->requireId())[0]['id'];
+        $rowId = $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId())[0]['id'];
 
         self::assertSame('{"profile-request":1}', $this->logs->getOneForUser($owner, $rowId)->getRequestBody());
 
@@ -264,9 +273,9 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         $this->logs->deleteForUserOutsideProfileRuns($owner, [$kept->requireId()]);
 
-        self::assertCount(1, $this->logs->listForProfileRun($owner, $kept->requireId()));
-        self::assertSame([], $this->logs->listForProfileRun($owner, $dropped->requireId()));
-        self::assertCount(1, $this->logs->listForRun($owner, $run->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $kept->requireId()));
+        self::assertSame([], $this->logs->listForRun($owner, AiRunKind::Profile, $dropped->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
     }
 
     public function testThePurgeOfRecommendationRowsLeavesProfileRunRows(): void
@@ -275,8 +284,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         $this->logs->deleteForUserOutsideRuns($owner, []);
 
-        self::assertSame([], $this->logs->listForRun($owner, $run->requireId()));
-        self::assertCount(1, $this->logs->listForProfileRun($owner, $profileRun->requireId()));
+        self::assertSame([], $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
     }
 
     public function testTheRunTrimLeavesProfileRunRows(): void
@@ -285,8 +294,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         $this->logs->deleteForUserOutsideRuns($owner, [$run->requireId()]);
 
-        self::assertCount(1, $this->logs->listForRun($owner, $run->requireId()));
-        self::assertCount(1, $this->logs->listForProfileRun($owner, $profileRun->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
     }
 
     public function testAProfileRunsAttemptsAreCountedOnItsOwn(): void
@@ -295,6 +304,49 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->profileRunWithOneRow($owner);
 
         self::assertSame(1, $this->logs->countProfileRunAttempts($profileRun));
+    }
+
+    public function testListForStoryAiRun(): void
+    {
+        $storyRun = $this->storyRunWithOneRow($this->user);
+        $this->storyRunWithOneRow($this->otherUser);
+        $this->fixtures->log($this->fixtures->createRun($this->user), CallPhase::Batch, 1, 1, 'r');
+        $this->entityManager->flush();
+
+        $rows = $this->logs->listForRun($this->user, AiRunKind::Story, $storyRun->requireId());
+
+        self::assertSame([CallPhase::StoryTitle], array_column($rows, 'phase'));
+        self::assertSame([$storyRun->requireId()], array_column($rows, 'runId'));
+        self::assertSame([], $this->logs->listForRun($this->otherUser, AiRunKind::Story, $storyRun->requireId()));
+        self::assertSame(
+            [$rows[0]['id'] => ''],
+            $this->logs->streamingTextForRun($this->user, AiRunKind::Story, $storyRun->requireId()),
+        );
+    }
+
+    public function testGetOneForUserServesStoryRunRow(): void
+    {
+        $storyRun = $this->storyRunWithOneRow($this->user);
+        $rowId = $this->logs->listForRun($this->user, AiRunKind::Story, $storyRun->requireId())[0]['id'];
+
+        self::assertSame('{"story-request":1}', $this->logs->getOneForUser($this->user, $rowId)->getRequestBody());
+
+        $this->expectException(RecordNotFoundException::class);
+        $this->logs->getOneForUser($this->otherUser, $rowId);
+    }
+
+    private function storyRunWithOneRow(User $owner): StoryAiRun
+    {
+        $storyRun = new StoryAiRun($owner, StoryAiTask::Title, new \DateTimeImmutable('2026-10-03T09:00:00Z'));
+        $this->entityManager->persist($storyRun);
+        $this->entityManager->persist(RecommendationRunLog::forStoryAiRun(
+            $storyRun,
+            '{"story-request":1}',
+            new \DateTimeImmutable('2026-10-03T09:00:05Z'),
+        ));
+        $this->entityManager->flush();
+
+        return $storyRun;
     }
 
     /** @return array{User, RecommendationRun, ProfileRun} */

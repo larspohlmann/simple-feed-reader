@@ -98,6 +98,35 @@ final class ProfileRunRepositoryTest extends DbTestCase
         );
     }
 
+    public function testTheNewestRunsAreTheAccountsOwnUpToTheLimit(): void
+    {
+        $owner = $this->user('profile-runs-newest@example.test');
+        $this->completed($owner, 'fp-1');
+        $second = $this->completed($owner, 'fp-2');
+        $third = $this->failed($owner);
+        $this->failed($this->user('profile-runs-newest-other@example.test'));
+
+        self::assertSame(
+            [$third, $second],
+            $this->profileRuns()->findNewestForUser($owner, 2),
+        );
+    }
+
+    public function testTheNewestRunsLeaveOutTheRunsThatFinishedWithoutACall(): void
+    {
+        $owner = $this->user('profile-runs-newest-no-call@example.test');
+        $generated = $this->completed($owner, 'fp-generated');
+        $this->completedWith($owner, 'fp-unchanged', ProfileRunOutcome::Unchanged);
+        $this->completedWith($owner, 'fp-no-history', ProfileRunOutcome::NoHistory);
+        $failed = $this->failed($owner);
+        $running = $this->running($owner, 'fp-running');
+
+        self::assertSame(
+            [$running, $failed, $generated],
+            $this->profileRuns()->findNewestForUser($owner, 5),
+        );
+    }
+
     public function testTheActiveBacklogCountsOnlyUnfinishedRuns(): void
     {
         $owner = $this->user('profile-runs-backlog@example.test');
@@ -127,8 +156,13 @@ final class ProfileRunRepositoryTest extends DbTestCase
 
     private function completed(User $owner, string $fingerprint): ProfileRun
     {
+        return $this->completedWith($owner, $fingerprint, ProfileRunOutcome::Generated);
+    }
+
+    private function completedWith(User $owner, string $fingerprint, ProfileRunOutcome $outcome): ProfileRun
+    {
         $profileRun = $this->running($owner, $fingerprint);
-        $profileRun->complete(ProfileRunOutcome::Generated, new \DateTimeImmutable('2026-10-03 09:02:00'));
+        $profileRun->complete($outcome, new \DateTimeImmutable('2026-10-03 09:02:00'));
         $this->entityManager->flush();
 
         return $profileRun;

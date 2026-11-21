@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
@@ -314,7 +315,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         /** @var RecommendationRunLogRepository $logs */
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
-        $rows = $logs->listForRun($this->user, $run->requireId());
+        $rows = $logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId());
 
         self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         self::assertSame('gone', $rows[0]['errorDetail']);
@@ -449,7 +450,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         /** @var RecommendationRunLogRepository $logs */
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
 
-        return array_column($logs->listForRun($this->user, $run->requireId()), 'verdict');
+        return array_column($logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()), 'verdict');
     }
 
     private function resolver(): RecommendationConsolidationResolver

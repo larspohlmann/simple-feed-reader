@@ -1,0 +1,78 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\Recommendation\Feed\Model;
+
+use App\Entity\ProfileRun;
+use App\Entity\RecommendationRun;
+use App\Entity\StoryAiRun;
+use App\Enum\AiRunKind;
+use App\Enum\RunStatus;
+
+/** A story run records no status, error, retries or completion, so those stay null rather than invented. */
+final readonly class DebugLogRunModel
+{
+    public function __construct(
+        public AiRunKind $kind,
+        public int $id,
+        public ?RunStatus $status,
+        public ?string $error,
+        public ?RunCallCountersModel $counters,
+        public \DateTimeImmutable $createdAt,
+        public ?\DateTimeImmutable $completedAt,
+    ) {
+    }
+
+    public static function fromRecommendationRun(RecommendationRun $run): self
+    {
+        return self::buildCountedRun(
+            AiRunKind::ForYou,
+            $run,
+            RecommendationRun::MAX_ATTEMPTS,
+            RecommendationRun::MAX_TRANSPORT_FAILURES,
+        );
+    }
+
+    public static function fromProfileRun(ProfileRun $run): self
+    {
+        return self::buildCountedRun(
+            AiRunKind::Profile,
+            $run,
+            ProfileRun::MAX_ATTEMPTS,
+            ProfileRun::MAX_TRANSPORT_FAILURES,
+        );
+    }
+
+    public static function fromStoryAiRun(StoryAiRun $run): self
+    {
+        return new self(AiRunKind::Story, $run->requireId(), null, null, null, $run->getCreatedAt(), null);
+    }
+
+    public function toHistoryCursor(): RunHistoryCursorModel
+    {
+        return new RunHistoryCursorModel($this->createdAt, $this->kind, $this->id);
+    }
+
+    private static function buildCountedRun(
+        AiRunKind $kind,
+        RecommendationRun|ProfileRun $run,
+        int $maxAttempts,
+        int $maxTransportFailures,
+    ): self {
+        return new self(
+            $kind,
+            $run->requireId(),
+            $run->getStatus(),
+            $run->getError(),
+            new RunCallCountersModel(
+                $run->getAttempts(),
+                $maxAttempts,
+                $run->getTransportFailures(),
+                $maxTransportFailures,
+            ),
+            $run->getCreatedAt(),
+            $run->getCompletedAt(),
+        );
+    }
+}

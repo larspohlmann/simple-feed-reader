@@ -286,6 +286,11 @@
         "scoringStep4": "Öffne Einstellungen → KI und wähle unter Profil deine LLM-Verbindung.",
         "scoringStep5": "Drücke „Diesen verwenden“. Die Empfehlungen tragen dann eine Bewertung, aber keine Begründung."
       },
+      "runKind": {
+        "for_you": "Für dich",
+        "profile": "Profil",
+        "story": "Stories im Trend"
+      },
       "recommendations": {
         "title": "Empfehlungen",
         "forYouTitle": "Für dich",
@@ -331,7 +336,9 @@
         "debug": "Debug-Modus",
         "debugHint": "Behält die Aufrufprotokolle je Lauf.",
         "historyTitle": "Verlauf der Läufe",
-        "historyHint": "Was jeder Empfehlungslauf verbraucht hat und was er gekostet hat.",
+        "historyHint": "Was jeder KI-Lauf verbraucht hat und was er gekostet hat.",
+        "historyKindAll": "Alle",
+        "historyKindFilterLabel": "Nach Art filtern",
         "historyTotal": "Gesamtkosten",
         "historyColWhen": "Wann",
         "historyColProvider": "Anbieter",
@@ -351,6 +358,7 @@
         "historyLegend": "Status-Symbole",
         "debugPanelTitle": "Debug-Protokoll",
         "debugBatch": "Batch {{ n }}",
+        "debugStoryTitle": "Story-Titel",
         "debugDedup": "Dedup",
         "debugDistill": "Destillation",
         "debugAttempt": "Versuch {{ n }}",
@@ -366,6 +374,7 @@
         "debugAdjustedReasoning": "Für den nächsten Versuch angepasst: Reasoning wird nicht mehr unterdrückt",
         "debugRunGroup": "Lauf · {{ start }} → {{ end }}",
         "debugRunPicker": "Lauf zum Ansehen",
+        "debugRunNoCalls": "Für diesen Lauf sind keine Aufrufe protokolliert.",
         "debugRunSummary": "Versuche {{ a }}/{{ am }} · Transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Details",

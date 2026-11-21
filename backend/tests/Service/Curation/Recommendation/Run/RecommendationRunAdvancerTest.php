@@ -16,6 +16,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationBatchSize;
@@ -2946,7 +2947,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
 
-        return $this->runLogs()->listForRun($this->user, $run->requireId());
+        return $this->runLogs()->listForRun($this->user, AiRunKind::ForYou, $run->requireId());
     }
 
     private function runLogs(): RecommendationRunLogRepository

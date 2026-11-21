@@ -286,6 +286,11 @@
         "scoringStep4": "Abre Configuración → IA y elige tu conexión LLM en Perfil.",
         "scoringStep5": "Pulsa “Usar esta”. Las selecciones llevarán entonces una puntuación, pero no motivos."
       },
+      "runKind": {
+        "for_you": "Para ti",
+        "profile": "Perfil",
+        "story": "Noticias en Tendencias"
+      },
       "recommendations": {
         "title": "Recomendaciones",
         "forYouTitle": "Para ti",
@@ -331,7 +336,9 @@
         "debug": "Modo de depuración",
         "debugHint": "Guarda los registros de llamadas de cada ejecución.",
         "historyTitle": "Historial de ejecuciones",
-        "historyHint": "Qué consumió cada ejecución de recomendaciones y cuánto costó.",
+        "historyHint": "Qué consumió cada ejecución de IA y cuánto costó.",
+        "historyKindAll": "Todos",
+        "historyKindFilterLabel": "Filtrar por tipo",
         "historyTotal": "Gasto total",
         "historyColWhen": "Cuándo",
         "historyColProvider": "Proveedor",
@@ -351,6 +358,7 @@
         "historyLegend": "Iconos de estado",
         "debugPanelTitle": "Registro de depuración",
         "debugBatch": "Lote {{ n }}",
+        "debugStoryTitle": "Título de la noticia",
         "debugDedup": "Deduplicación",
         "debugDistill": "Destilado",
         "debugAttempt": "intento {{ n }}",
@@ -366,6 +374,7 @@
         "debugAdjustedReasoning": "Ajustado para el siguiente intento: ya no se suprime el razonamiento",
         "debugRunGroup": "Ejecución · {{ start }} → {{ end }}",
         "debugRunPicker": "Ejecución que examinar",
+        "debugRunNoCalls": "No hay llamadas registradas para esta ejecución.",
         "debugRunSummary": "intentos {{ a }}/{{ am }} · transporte {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Detalles",

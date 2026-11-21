@@ -10,14 +10,13 @@ export type DebugLogAdjustment =
   | { setting: 'token-parameter' | 'output-cap'; value: string }
   | { setting: 'reasoning-suppression'; value: null };
 
-/** One provider call logged during a for-you run or a profile run. `verdict`
- *  is null while the call is still streaming. */
+/** One provider call of a logged run; `verdict` is null while it still streams. */
 export interface DebugLogEntry {
   id: number;
   /** The run this call belongs to. The log can hold more than one run (a
    *  resumed run keeps appending), so the panel groups rows by it. */
   runId: number;
-  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'story_title';
   batchNumber: number | null;
   attempt: number;
   verdict: 'usable' | 'unusable' | 'transport-failed' | null;
@@ -39,24 +38,32 @@ export interface DebugLogEntry {
   adjustment: DebugLogAdjustment | null;
 }
 
+export type AiRunKind = 'for_you' | 'profile' | 'story';
+
+export type DebugLogRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
 /** One run the debug panel may switch to. The log keeps the last ten runs,
  *  and the panel reads one at a time -- shipping all ten on every two-second
  *  poll would cost ten times what the panel costs today. */
 export interface DebugLogRunChoice {
+  kind: AiRunKind;
   id: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  /** Null for a Trending story run, which has no lifecycle of its own. */
+  status: DebugLogRunStatus | null;
   createdAt: string;
 }
 
 export interface DebugLogRunSummary {
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  kind: AiRunKind;
+  id: number;
+  status: DebugLogRunStatus | null;
   /** The run's own failure, distinct from a per-row `errorDetail` on
    *  `DebugLogEntry` -- null when the user has never run. */
   error: string | null;
-  attempts: number;
-  maxAttempts: number;
-  transportFailures: number;
-  maxTransportFailures: number;
+  attempts: number | null;
+  maxAttempts: number | null;
+  transportFailures: number | null;
+  maxTransportFailures: number | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -71,7 +78,7 @@ export interface DebugLogPayload {
 /** The full request/response pair for one logged provider call. */
 export interface DebugLogDetail {
   id: number;
-  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'story_title';
   batchNumber: number | null;
   attempt: number;
   verdict: string | null;
@@ -83,12 +90,13 @@ export interface DebugLogDetail {
   finishReason: string | null;
 }
 
-/** One finished (or in-flight) for-you run, as the history card shows it.
- *  Provider/model are what the run actually called, copied on start -- not the
+/** Provider/model are what the run actually called, copied on start -- not the
  *  account's current (editable) config, which would otherwise rename past runs. */
 export interface RunHistoryRow {
   id: number;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  kind: AiRunKind;
+  /** Null for a Trending story run, which has no lifecycle of its own. */
+  status: DebugLogRunStatus | null;
   /** Null on runs that predate the column, and on one that failed before it
    *  was ever stamped. */
   providerHost: string | null;
@@ -118,12 +126,12 @@ export interface RunHistoryMonth {
   costNanoCredits: number | null;
 }
 
-/** One page of one month's runs. `nextCursor` is the id to pass as `before`
- *  for the next page, or null when the month is exhausted. */
 export interface RunHistoryMonthPage {
   month: string;
   runs: RunHistoryRow[];
-  nextCursor: number | null;
+  /** Opaque: the server's own position in the month's order, sent back as
+   *  `before`; null once the month is exhausted. */
+  nextCursor: string | null;
 }
 
 /** What the history route answers with: every month the account has runs in,

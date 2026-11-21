@@ -286,6 +286,11 @@
         "scoringStep4": "Open Settings → AI and choose your LLM connection under Profile.",
         "scoringStep5": "Press “Use this one”. The picks then carry a score but no reasons."
       },
+      "runKind": {
+        "for_you": "For you",
+        "profile": "Profile",
+        "story": "Trending stories"
+      },
       "recommendations": {
         "title": "Recommendations",
         "forYouTitle": "For You",
@@ -331,7 +336,9 @@
         "debug": "Debug mode",
         "debugHint": "Keeps per-run call logs.",
         "historyTitle": "Run history",
-        "historyHint": "What each recommendation run consumed, and what it cost.",
+        "historyHint": "What each AI run consumed, and what it cost.",
+        "historyKindAll": "All",
+        "historyKindFilterLabel": "Filter by kind",
         "historyTotal": "Total spent",
         "historyColWhen": "When",
         "historyColProvider": "Provider",
@@ -351,6 +358,7 @@
         "historyLegend": "Status icons",
         "debugPanelTitle": "Debug log",
         "debugBatch": "Batch {{ n }}",
+        "debugStoryTitle": "Story title",
         "debugDedup": "Dedup",
         "debugDistill": "Distill",
         "debugAttempt": "attempt {{ n }}",
@@ -366,6 +374,7 @@
         "debugAdjustedReasoning": "Adjusted for the next attempt: reasoning no longer suppressed",
         "debugRunGroup": "Run · {{ start }} → {{ end }}",
         "debugRunPicker": "Run to inspect",
+        "debugRunNoCalls": "No calls are logged for this run.",
         "debugRunSummary": "attempts {{ a }}/{{ am }} · transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Details",

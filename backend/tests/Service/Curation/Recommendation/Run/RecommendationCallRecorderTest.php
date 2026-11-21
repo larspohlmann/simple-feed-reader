@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\StoryAiRun;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
@@ -215,7 +216,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $this->recorder->beginForProfileRun($profileRun, $this->request([['role' => 'user', 'content' => 'history']]));
 
-        $rows = $this->logs->listForProfileRun($this->user, $profileRun->requireId());
+        $rows = $this->logs->listForRun($this->user, AiRunKind::Profile, $profileRun->requireId());
         self::assertCount(1, $rows);
         self::assertSame(CallPhase::Distill, $rows[0]['phase']);
         self::assertNull($rows[0]['batchNumber']);
@@ -231,7 +232,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $this->recorder->beginForProfileRun($profileRun, $this->request([]));
 
-        $rows = $this->logs->listForProfileRun($this->user, $profileRun->requireId());
+        $rows = $this->logs->listForRun($this->user, AiRunKind::Profile, $profileRun->requireId());
         self::assertSame([1, 2], array_column($rows, 'attempt'));
     }
 
@@ -397,7 +398,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     private function logRows(): array
     {
-        return $this->logs()->listForRun($this->user, $this->run->requireId());
+        return $this->logs()->listForRun($this->user, AiRunKind::ForYou, $this->run->requireId());
     }
 
     /** @param list<array{role: string, content: string}> $messages */

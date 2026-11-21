@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import {
   DebugLogDetail,
   DebugLogEntry,
+  AiRunKind,
   DebugLogPayload,
   OpmlImportResult,
   ReadingActivity,
@@ -56,11 +57,11 @@ export class SettingsApi {
     });
   }
 
-  /** The provider calls logged for one for-you run, in call order, plus that
-   *  run's own summary and the retained runs the panel may switch to. Without
-   *  a runId the newest run answers -- null when the user has never run. */
-  debugLog(runId?: number): Observable<DebugLogPayload> {
-    const query = runId === undefined ? '' : `?run=${runId}`;
+  /** The provider calls logged for one run, in call order, plus that run's
+   *  own summary and the retained runs of every kind the panel may switch to.
+   *  Without a run the server's default answers -- null when nothing ran. */
+  debugLog(run?: { kind: AiRunKind; id: number }): Observable<DebugLogPayload> {
+    const query = run === undefined ? '' : `?kind=${run.kind}&run=${run.id}`;
     return this.http.get<DebugLogPayload>(
       `${this.base}/api/recommendations/runs/debug-log${query}`,
     );
@@ -87,24 +88,30 @@ export class SettingsApi {
    *  spend, plus the newest month's first page and the all-time total -- one
    *  call, since the card's first paint needs it all and each request costs a
    *  PHP boot. `timeZone` is IANA; the server buckets months in it, UTC on fallback. */
-  runHistory(timeZone: string): Observable<RunHistoryOverview> {
+  runHistory(timeZone: string, kind?: AiRunKind): Observable<RunHistoryOverview> {
     return this.http.get<RunHistoryOverview>(`${this.base}/api/recommendations/runs/history`, {
-      params: { tz: timeZone },
+      params: this.historyParams(timeZone, kind),
     });
   }
 
   /** One month's runs, newest first. Without `before` this is the month's
-   *  first page; with it, the next page after that cursor. */
+   *  first page; with it, the next page after that opaque cursor. */
   runHistoryMonth(
     month: string,
     timeZone: string,
-    before?: number,
+    page: { kind?: AiRunKind; before?: string } = {},
   ): Observable<RunHistoryMonthPage> {
-    const params: Record<string, string | number> = { tz: timeZone };
-    if (before !== undefined) params['before'] = before;
+    const params = this.historyParams(timeZone, page.kind);
+    if (page.before !== undefined) params['before'] = page.before;
     return this.http.get<RunHistoryMonthPage>(
       `${this.base}/api/recommendations/runs/history/${month}`,
       { params },
     );
+  }
+
+  private historyParams(timeZone: string, kind: AiRunKind | undefined): Record<string, string> {
+    const params: Record<string, string> = { tz: timeZone };
+    if (kind !== undefined) params['kind'] = kind;
+    return params;
   }
 }

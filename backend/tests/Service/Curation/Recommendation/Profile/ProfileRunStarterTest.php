@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Recommendation\Profile;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
@@ -87,7 +88,7 @@ final class ProfileRunStarterTest extends DbTestCase
 
         $this->starter()->start($this->owner, ProfileRunTrigger::Manual);
 
-        self::assertSame([], $this->logs()->listForProfileRun($this->owner, $oldest->requireId()));
+        self::assertSame([], $this->logs()->listForRun($this->owner, AiRunKind::Profile, $oldest->requireId()));
     }
 
     private function finishedProfileRunWithOneRow(): ProfileRun

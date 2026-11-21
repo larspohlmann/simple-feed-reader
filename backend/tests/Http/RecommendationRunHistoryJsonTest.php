@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Enum\AiRunKind;
 use App\Enum\RunStatus;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -123,14 +125,27 @@ final class RecommendationRunHistoryJsonTest extends TestCase
         self::assertNull($payload['runs'][0]['costNanoCredits']);
     }
 
+    public function testAStoryRowHasNoStatusCompletionOrDuration(): void
+    {
+        $payload = self::monthPage(
+            '2026-08',
+            [$this->row(['kind' => AiRunKind::Story, 'status' => null, 'completedAt' => null])],
+            null,
+        );
+
+        self::assertNull($payload['runs'][0]['status']);
+        self::assertNull($payload['runs'][0]['completedAt']);
+        self::assertNull($payload['runs'][0]['durationSeconds']);
+    }
+
     public function testAMonthPageRendersMonthRunsAndNextCursorAndNothingElse(): void
     {
-        $payload = self::monthPage('2026-07', [$this->completedRow()], 361);
+        $payload = self::monthPage('2026-07', [$this->completedRow()], self::cursor());
 
         self::assertSame(['month', 'runs', 'nextCursor'], array_keys($payload));
         self::assertSame('2026-07', $payload['month']);
         self::assertCount(1, $payload['runs']);
-        self::assertSame(361, $payload['nextCursor']);
+        self::assertSame('1786871520-for_you-361', $payload['nextCursor']);
     }
 
     public function testAMonthPageWithNoFurtherRowsKeepsTheCursorKeyPresentAndNull(): void
@@ -143,7 +158,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
     public function testAnOverviewWithTwoMonthsAndALatestRendersAllThreeKeysInOrder(): void
     {
-        $latest = new RunHistoryMonthPageModel('2026-08', [$this->completedRow()], 361);
+        $latest = new RunHistoryMonthPageModel('2026-08', [$this->completedRow()], self::cursor());
 
         $payload = RecommendationRunHistoryJson::overview(new RunHistoryOverviewModel(
             918_200_000,
@@ -180,9 +195,14 @@ final class RecommendationRunHistoryJsonTest extends TestCase
      *
      * @return MonthPagePayload
      */
-    private static function monthPage(string $month, array $rows, ?int $nextCursor): array
+    private static function monthPage(string $month, array $rows, ?RunHistoryCursorModel $nextCursor): array
     {
         return RecommendationRunHistoryJson::monthPage(new RunHistoryMonthPageModel($month, $rows, $nextCursor));
+    }
+
+    private static function cursor(): RunHistoryCursorModel
+    {
+        return new RunHistoryCursorModel(new \DateTimeImmutable('2026-08-16 09:12:00'), AiRunKind::ForYou, 361);
     }
 
     /** @return HistoryRow */
@@ -201,6 +221,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
         /** @var HistoryRow $row */
         $row = [
             'id' => 42,
+            'kind' => AiRunKind::ForYou,
             'status' => RunStatus::Completed,
             'providerHost' => 'openrouter.ai',
             'model' => 'x-ai/grok-4-fast',

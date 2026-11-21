@@ -10,6 +10,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\StoredProfile;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
@@ -316,7 +317,7 @@ final class ProfileRunTickTest extends DbTestCase
 
         $this->advance($profileRun, TickDriver::Poll);
 
-        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        $rows = $this->logs()->listForRun($this->owner, AiRunKind::Profile, $profileRun->requireId());
         self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         self::assertSame(
             ['That provider refused the request (status 400): No.'],
@@ -365,7 +366,7 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
         self::assertSame(0, $this->saved($profileRun)->getAttempts());
         self::assertTrue($this->savedConnection()->refusesSuppressedReasoning());
-        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        $rows = $this->logs()->listForRun($this->owner, AiRunKind::Profile, $profileRun->requireId());
         self::assertSame([RequestAdjustment::ReasoningSuppression], array_column($rows, 'adjustedSetting'));
         self::assertSame([null], array_column($rows, 'adjustedValue'));
 
@@ -484,7 +485,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->advance($profileRun, TickDriver::Poll);
         $this->advance($profileRun, TickDriver::Poll);
 
-        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        $rows = $this->logs()->listForRun($this->owner, AiRunKind::Profile, $profileRun->requireId());
         self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
     }
 

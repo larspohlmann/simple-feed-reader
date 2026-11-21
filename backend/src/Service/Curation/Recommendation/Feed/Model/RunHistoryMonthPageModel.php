@@ -15,7 +15,7 @@ final readonly class RunHistoryMonthPageModel
     public function __construct(
         public string $month,
         public array $rows,
-        public ?int $nextCursor,
+        public ?RunHistoryCursorModel $nextCursor,
     ) {
     }
 }

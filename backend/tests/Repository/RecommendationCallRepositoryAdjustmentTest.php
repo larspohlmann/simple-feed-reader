@@ -8,6 +8,7 @@ use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RequestAdjustment;
@@ -155,7 +156,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
     {
         $this->entityManager->clear();
         $adjusted = [];
-        foreach ($this->logs->listForRun($this->user, $run->requireId()) as $row) {
+        foreach ($this->logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()) as $row) {
             $adjusted[$row['id']] = [$row['adjustedSetting'], $row['adjustedValue']];
         }
 

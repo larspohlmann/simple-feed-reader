@@ -1,4 +1,4 @@
-@if (entries().length > 0) {
+@if (runs().length > 0 || entries().length > 0) {
   <!-- No card wrapper: this panel already sits inside the Diagnostics group's
        "Debug log" drill-in (#541); the drill-in label names it, so a card with
        its own heading would nest a card in a card. -->
@@ -7,21 +7,31 @@
          panel's entire value is matching what the backend and its logs say. -->
     @if (run(); as r) {
       <div class="debug-panel__summary">
-        <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{ r.status }}</span>
-        <span class="debug-panel__meta">
-          {{
-            'settings.ai.recommendations.debugRunSummary'
-              | transloco
-                : {
-                    a: r.attempts,
-                    am: r.maxAttempts,
-                    t: r.transportFailures,
-                    tm: r.maxTransportFailures,
-                  }
-          }}
-        </span>
+        @if (r.status) {
+          <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{
+            r.status
+          }}</span>
+        }
+        @if (r.attempts !== null) {
+          <span class="debug-panel__meta">
+            {{
+              'settings.ai.recommendations.debugRunSummary'
+                | transloco
+                  : {
+                      a: r.attempts,
+                      am: r.maxAttempts,
+                      t: r.transportFailures,
+                      tm: r.maxTransportFailures,
+                    }
+            }}
+          </span>
+        }
         <span class="debug-panel__meta debug-panel__timeline">
-          {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+          @if (r.status === null) {
+            {{ time(r.createdAt) }}
+          } @else {
+            {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+          }
         </span>
         @if (r.error; as runError) {
           <p class="debug-panel__run-error">{{ runError }}</p>
@@ -36,14 +46,23 @@
         }}</span>
         <select
           class="debug-panel__runs-select"
-          [value]="selectedRunId() ?? runs()[0].id"
+          [value]="selectedOptionValue()"
           (change)="onRunPicked($event)"
         >
-          @for (choice of runs(); track choice.id) {
-            <option [value]="choice.id">{{ time(choice.createdAt) }} · {{ choice.status }}</option>
+          @for (choice of runs(); track optionValue(choice)) {
+            <option [value]="optionValue(choice)">
+              {{ time(choice.createdAt) }} · {{ 'settings.ai.runKind.' + choice.kind | transloco
+              }}{{ choice.status ? ' · ' + choice.status : '' }}
+            </option>
           }
         </select>
       </label>
+    }
+
+    @if (entries().length === 0) {
+      <p class="debug-panel__empty">
+        {{ 'settings.ai.recommendations.debugRunNoCalls' | transloco }}
+      </p>
     }
 
     <div class="debug-panel__grid-wrap">

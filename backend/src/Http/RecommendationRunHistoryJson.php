@@ -17,7 +17,7 @@ use App\Service\Curation\Recommendation\Feed\Model\RunHistoryOverviewModel;
  * @phpstan-type MonthPagePayload array{
  *     month: string,
  *     runs: list<array<string, mixed>>,
- *     nextCursor: ?int,
+ *     nextCursor: ?string,
  * }
  * @phpstan-type OverviewPayload array{
  *     totalCostNanoCredits: ?int,
@@ -46,7 +46,7 @@ final class RecommendationRunHistoryJson
         return [
             'month' => $page->month,
             'runs' => array_map(self::row(...), $page->rows),
-            'nextCursor' => $page->nextCursor,
+            'nextCursor' => $page->nextCursor?->toCursor(),
         ];
     }
 
@@ -71,7 +71,8 @@ final class RecommendationRunHistoryJson
 
         return [
             'id' => $run['id'],
-            'status' => $run['status']->value,
+            'kind' => $run['kind']->value,
+            'status' => $run['status']?->value,
             'providerHost' => $run['providerHost'],
             'model' => $run['model'],
             'createdAt' => $run['createdAt']->format(\DateTimeInterface::ATOM),
@@ -93,7 +94,7 @@ final class RecommendationRunHistoryJson
      */
     private static function readCompletedAt(array $run): ?\DateTimeImmutable
     {
-        if (!$run['status']->isTerminal()) {
+        if (true !== $run['status']?->isTerminal()) {
             return null;
         }
 

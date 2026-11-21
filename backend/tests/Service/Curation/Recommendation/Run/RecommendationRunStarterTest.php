@@ -9,6 +9,7 @@ use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
@@ -285,7 +286,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
 
-        return $this->runLogs()->listForRun($this->user, $run->requireId());
+        return $this->runLogs()->listForRun($this->user, AiRunKind::ForYou, $run->requireId());
     }
 
     private function runLogs(): RecommendationRunLogRepository

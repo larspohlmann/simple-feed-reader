@@ -8,6 +8,7 @@ use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RequestAdjustment;
@@ -38,15 +39,19 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     }
 
     /** @return list<DebugLogRow> */
-    public function listForRun(User $user, int $runId): array
+    public function listForRun(User $user, AiRunKind $kind, int $runId): array
     {
-        return $this->findListRows($user, self::OWNER_RUN, $runId);
+        return $this->findListRows($user, self::resolveOwner($kind), $runId);
     }
 
-    /** @return list<DebugLogRow> the rows of one profile run; `runId` carries the profile run's id */
-    public function listForProfileRun(User $user, int $profileRunId): array
+    /** @return self::OWNER_* */
+    private static function resolveOwner(AiRunKind $kind): string
     {
-        return $this->findListRows($user, self::OWNER_PROFILE_RUN, $profileRunId);
+        return match ($kind) {
+            AiRunKind::ForYou => self::OWNER_RUN,
+            AiRunKind::Profile => self::OWNER_PROFILE_RUN,
+            AiRunKind::Story => self::OWNER_STORY_AI_RUN,
+        };
     }
 
     /**
@@ -155,15 +160,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      *
      * @return array<int, string> log id => response text so far
      */
-    public function streamingTextForRun(User $user, int $runId): array
+    public function streamingTextForRun(User $user, AiRunKind $kind, int $runId): array
     {
-        return $this->findStreamingTexts($user, self::OWNER_RUN, $runId);
-    }
-
-    /** @return array<int, string> log id => response text so far */
-    public function streamingTextForProfileRun(User $user, int $profileRunId): array
-    {
-        return $this->findStreamingTexts($user, self::OWNER_PROFILE_RUN, $profileRunId);
+        return $this->findStreamingTexts($user, self::resolveOwner($kind), $runId);
     }
 
     /**
@@ -199,8 +198,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         $log = $this->createQueryBuilder('l')
             ->leftJoin('l.run', 'r')
             ->leftJoin('l.profileRun', 'p')
+            ->leftJoin('l.storyAiRun', 's')
             ->where('l.id = :id')
-            ->andWhere('r.user = :user OR p.user = :user')
+            ->andWhere('r.user = :user OR p.user = :user OR s.user = :user')
             ->setParameter('id', $logId)
             ->setParameter('user', $user)
             ->getQuery()

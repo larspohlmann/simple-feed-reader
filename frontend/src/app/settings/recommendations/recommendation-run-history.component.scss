@@ -21,6 +21,10 @@
     color: var(--text-secondary);
   }
 
+  &__filter {
+    margin: 0 0 var(--space-3);
+  }
+
   &__total {
     @include glass-rim.filled(var(--surface-0));
 

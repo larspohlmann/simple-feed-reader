@@ -286,6 +286,11 @@
         "scoringStep4": "Ouvrez Paramètres → IA et choisissez votre connexion LLM sous Profil.",
         "scoringStep5": "Appuyez sur « Utiliser celle-ci ». Les sélections portent alors une note mais pas de justification."
       },
+      "runKind": {
+        "for_you": "Pour vous",
+        "profile": "Profil",
+        "story": "Sujets Tendances"
+      },
       "recommendations": {
         "title": "Recommandations",
         "forYouTitle": "Pour vous",
@@ -331,7 +336,9 @@
         "debug": "Mode débogage",
         "debugHint": "Conserve les journaux d'appels de chaque cycle.",
         "historyTitle": "Historique des cycles",
-        "historyHint": "Ce que chaque cycle de recommandations a consommé, et ce qu'il a coûté.",
+        "historyHint": "Ce que chaque cycle d'IA a consommé, et ce qu'il a coûté.",
+        "historyKindAll": "Tous",
+        "historyKindFilterLabel": "Filtrer par type",
         "historyTotal": "Total dépensé",
         "historyColWhen": "Date",
         "historyColProvider": "Fournisseur",
@@ -351,6 +358,7 @@
         "historyLegend": "Icônes de statut",
         "debugPanelTitle": "Journal de débogage",
         "debugBatch": "Lot {{ n }}",
+        "debugStoryTitle": "Titre du sujet",
         "debugDedup": "Dédoublonnage",
         "debugDistill": "Distillation",
         "debugAttempt": "tentative {{ n }}",
@@ -366,6 +374,7 @@
         "debugAdjustedReasoning": "Ajusté pour la prochaine tentative : le raisonnement n'est plus supprimé",
         "debugRunGroup": "Cycle · {{ start }} → {{ end }}",
         "debugRunPicker": "Cycle à examiner",
+        "debugRunNoCalls": "Aucun appel n'est journalisé pour ce cycle.",
         "debugRunSummary": "tentatives {{ a }}/{{ am }} · transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Détails",

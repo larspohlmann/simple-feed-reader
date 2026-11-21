@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\ProfileRun;
 use App\Entity\User;
+use App\Enum\ProfileRunOutcome;
 use App\Enum\RunStatus;
 use App\Service\Operations\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -87,6 +88,20 @@ final class ProfileRunRepository extends ServiceEntityRepository
         return $rows[0]['fingerprint'] ?? null;
     }
 
+    /** @return list<ProfileRun> newest first, leaving out the runs that finished without a call */
+    public function findNewestForUser(User $user, int $limit): array
+    {
+        /** @var list<ProfileRun> $profileRuns */
+        $profileRuns = self::restrictToRunsWithCall($this->createQueryBuilder('p'), 'p')
+            ->andWhere('p.user = :user')->setParameter('user', $user)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $profileRuns;
+    }
+
     /** @return list<int> newest first */
     public function findNewestIdsForUser(User $user, int $limit): array
     {
@@ -111,6 +126,12 @@ final class ProfileRunRepository extends ServiceEntityRepository
             ->getSingleResult();
 
         return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
+    }
+
+    public static function restrictToRunsWithCall(QueryBuilder $qb, string $alias): QueryBuilder
+    {
+        return $qb->andWhere(sprintf('%1$s.outcome IS NULL OR %1$s.outcome NOT IN (:withoutCall)', $alias))
+            ->setParameter('withoutCall', ProfileRunOutcome::withoutCall());
     }
 
     private function activeStatusQuery(): QueryBuilder
