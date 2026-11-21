@@ -20,8 +20,8 @@
   border-end-end-radius: 0;
 }
 
-/* An empty link stretched over the card, so the actions between title and synopsis are
-   buttons beside it, never inside it: a button never nests in an anchor. */
+/* An empty link stretched over the card, so the actions are buttons beside it, never
+   inside it: a button never nests in an anchor. */
 .story-link {
   position: absolute;
   inset: 0;
@@ -34,18 +34,20 @@
 
 app-story-headline {
   @include story-card.card-padding;
+
+  padding-bottom: 0;
 }
 
-.story-line {
+.story-foot {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-1) var(--space-3) var(--space-2);
   font-size: var(--fs-xs);
 }
 
 .counts {
-  flex: 1;
   display: flex;
+  font-size: var(--fs-xs);
   align-items: center;
   gap: var(--space-1);
   min-width: 0;

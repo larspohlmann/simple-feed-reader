@@ -90,34 +90,36 @@ it("links to the story's list and opens it when clicked", async () => {
   expect(TestBed.inject(Router).url).toBe('/trending/stories/12');
 });
 
-describe("the card's story line (#2435)", () => {
+describe("the card's counts and actions (#2435)", () => {
   it('names how many feeds covered the story and how often it was shared', () => {
-    const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector(
-      '.story-line .counts',
-    )!;
+    const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector('.counts')!;
 
     expect(counts.textContent).toContain('7 sources');
     expect(counts.textContent).toContain('2 shares');
   });
 
   it('names no shares on a story no post shares', () => {
-    const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector(
-      '.story-line .counts',
-    )!;
+    const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector('.counts')!;
 
     expect(counts.textContent).not.toContain('share');
   });
 
-  it('sits between the title and the synopsis', () => {
+  it('names the counts between the title and the synopsis', () => {
     const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
 
-    expect(element.querySelector('h3.title + .story-line + p.synopsis')).not.toBeNull();
+    expect(element.querySelector('h3.title + .counts + p.synopsis')).not.toBeNull();
+  });
+
+  it('offers the actions at the bottom of the card, after the synopsis', () => {
+    const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
+
+    expect(element.lastElementChild!.classList.contains('story-foot')).toBe(true);
   });
 
   it('offers Follow and Hide beside the counts, outside the link', () => {
     const element = mountStory(aStory());
 
-    expect(element.querySelectorAll('.story-line .story-actions button')).toHaveLength(2);
+    expect(element.querySelectorAll('.story-foot .story-actions button')).toHaveLength(2);
     expect(element.querySelector('a.story-link button')).toBeNull();
   });
 
@@ -125,6 +127,6 @@ describe("the card's story line (#2435)", () => {
     const element = mountStory(aStory(), 'all');
 
     expect(element.querySelector('.story-actions')).toBeNull();
-    expect(element.querySelector('.story-line .counts')).not.toBeNull();
+    expect(element.querySelector('.counts')).not.toBeNull();
   });
 });
