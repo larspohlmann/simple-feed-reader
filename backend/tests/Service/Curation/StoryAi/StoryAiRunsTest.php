@@ -65,6 +65,21 @@ final class StoryAiRunsTest extends DbTestCase
         self::assertCount(1, $this->runIdsOf($this->owner));
     }
 
+    public function testOpeningARunStampsTheConnectionsProviderAndModel(): void
+    {
+        $openedId = $this->runs()->openFor($this->pass)->requireId();
+
+        $stamp = $this->entityManager->createQueryBuilder()
+            ->select('run.providerUsage.providerHost AS providerHost', 'run.providerUsage.model AS model')
+            ->from(StoryAiRun::class, 'run')
+            ->where('run.id = :id')
+            ->setParameter('id', $openedId)
+            ->getQuery()
+            ->getSingleResult();
+
+        self::assertSame(['providerHost' => 'api.example.test', 'model' => 'qwen3-14b'], $stamp);
+    }
+
     private function runWithOneLogRow(User $owner): int
     {
         $run = new StoryAiRun($owner, StoryAiTask::Title, new \DateTimeImmutable('2031-05-13 10:00:00'));

@@ -6,13 +6,11 @@
     <!-- r.status renders the API's own wire vocabulary, not translated copy: this
          panel's entire value is matching what the backend and its logs say. -->
     @if (run(); as r) {
-      <div class="debug-panel__summary">
-        @if (r.status) {
+      @if (r.status) {
+        <div class="debug-panel__summary">
           <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{
             r.status
           }}</span>
-        }
-        @if (r.attempts !== null) {
           <span class="debug-panel__meta">
             {{
               'settings.ai.recommendations.debugRunSummary'
@@ -25,18 +23,14 @@
                     }
             }}
           </span>
-        }
-        <span class="debug-panel__meta debug-panel__timeline">
-          @if (r.status === null) {
-            {{ time(r.createdAt) }}
-          } @else {
+          <span class="debug-panel__meta debug-panel__timeline">
             {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+          </span>
+          @if (r.error; as runError) {
+            <p class="debug-panel__run-error">{{ runError }}</p>
           }
-        </span>
-        @if (r.error; as runError) {
-          <p class="debug-panel__run-error">{{ runError }}</p>
-        }
-      </div>
+        </div>
+      }
     }
 
     @if (hasOlderRuns()) {

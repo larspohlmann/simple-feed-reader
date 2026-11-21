@@ -67,4 +67,9 @@ final class StoryAiRun
     {
         return $this->createdAt;
     }
+
+    public function stampProvider(?string $providerHost, ?string $model): void
+    {
+        $this->providerUsage->stamp($providerHost, $model);
+    }
 }
