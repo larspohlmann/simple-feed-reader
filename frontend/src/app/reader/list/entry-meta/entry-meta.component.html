@@ -1,9 +1,13 @@
 @let score = entry().score;
 @let commentBubble = comments();
-@if (score !== null || commentBubble !== null) {
+@let likeShown = showsLike();
+@if (score !== null || likeShown || commentBubble !== null) {
   <span class="discussion">
     @if (score !== null) {
       <app-vote-pill [score]="score" [myVote]="entry().myVote" [vote]="voteOnEntry" />
+    }
+    @if (likeShown) {
+      <app-entry-like [entry]="entry()" />
     }
     @if (commentBubble !== null) {
       <span
@@ -22,4 +26,4 @@
   [savedSearches]="entry().savedSearches ?? []"
   [short]="shortPill()"
 />
-<app-entry-actions [entry]="entry()" [size]="size()" />
+<app-entry-actions [entry]="entry()" [size]="size()" [like]="false" />

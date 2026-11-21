@@ -101,12 +101,33 @@ describe('EntryMetaComponent', () => {
       expect(element.querySelector('.discussion .comments')?.textContent).toContain('3');
     });
 
-    it('shows nothing without a score or a comment count, whatever the like count', () => {
+    it('shows nothing without a score, a like or a comment count', () => {
       expect(
-        discussionMeta({ score: null, commentCount: null, likeCount: 4 }).querySelector(
+        discussionMeta({ score: null, commentCount: null, likeCount: null }).querySelector(
           '.discussion',
         ),
       ).toBeNull();
+    });
+
+    it('puts the like before the comment count, out of the actions', () => {
+      const element = discussionMeta({
+        score: null,
+        commentCount: 3,
+        likeCount: 47,
+        social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+      });
+      const discussion = element.querySelector('.discussion') as HTMLElement;
+      expect(discussion.firstElementChild?.tagName).toBe('APP-ENTRY-LIKE');
+      expect(discussion.lastElementChild?.classList).toContain('comments');
+      const like = discussion.querySelector('app-entry-like button') as HTMLElement;
+      expect(like.getAttribute('aria-label')).toBe('Like on Bluesky, 47 likes');
+      expect(element.querySelector('app-entry-actions app-entry-like')).toBeNull();
+    });
+
+    it('shows a bare like count where the reader cannot like', () => {
+      const element = discussionMeta({ score: null, commentCount: null, likeCount: 4 });
+      const likes = element.querySelector('.discussion app-entry-like .likes');
+      expect(likes?.getAttribute('aria-label')).toBe('4 likes');
     });
 
     it('shows a zero score', () => {

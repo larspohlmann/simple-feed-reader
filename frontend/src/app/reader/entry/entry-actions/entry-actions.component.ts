@@ -1,16 +1,12 @@
-import { Component, computed, inject, input } from '@angular/core';
-import { PendingAction } from '../../../core/rx/pending-action';
+import { Component, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
-import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../../models';
-import { likeableSocial } from '../../entry-social';
-import { CompactCount } from '../../../core/i18n/compact-count';
-import { buildDiscussionCount } from '../../../core/i18n/discussion-count';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { EntryLikeComponent } from '../entry-like/entry-like.component';
 import { ListenLauncher } from '../../audio/listen-launcher';
 
 /**
@@ -28,7 +24,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
  */
 @Component({
   selector: 'app-entry-actions',
-  imports: [IconComponent, PendingDotsComponent, TranslocoPipe, FlagToggleDirective],
+  imports: [IconComponent, EntryLikeComponent, TranslocoPipe, FlagToggleDirective],
   templateUrl: './entry-actions.component.html',
   styleUrl: './entry-actions.component.scss',
   host: { '[class.glyph-md]': "size() === 'md'" },
@@ -41,26 +37,12 @@ export class EntryActionsComponent {
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   /** Off in the article view, whose own Listen row offers the same two controls. */
   readonly audio = input(true);
-  /** Off in the article view, whose counts row below the post carries the like (#1615). */
+  /** Off where another row carries the like: the article's counts row (#1615), the meta row's discussion cluster (#2431). */
   readonly like = input(true);
-  protected readonly likeable = computed(() => {
-    return this.like() ? likeableSocial(this.entry()) : null;
-  });
-  private readonly compactCount = inject(CompactCount);
-  protected readonly likes = computed(() =>
-    this.like()
-      ? buildDiscussionCount(this.compactCount, this.entry().likeCount, 'reader.socialCounts.likes')
-      : null,
-  );
   protected readonly entryAudio = new EntryAudio(
     { entry: this.entry },
     inject(AudioPlayerService),
     inject(ListenLauncher),
   );
   protected readonly actions = inject(EntryActionHandler);
-  protected readonly liking = new PendingAction<true>();
-
-  protected toggleLike(): void {
-    this.liking.run(true, () => this.actions.like(this.entry()));
-  }
 }

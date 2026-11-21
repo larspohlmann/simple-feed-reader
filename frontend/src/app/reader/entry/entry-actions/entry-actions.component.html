@@ -44,36 +44,8 @@
 >
   <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
-@let likeCount = likes();
-@let likeCountLabel =
-  likeCount === null ? null : (likeCount.labelKey | transloco: { count: likeCount.count });
-@if (likeable(); as social) {
-  @let likeKey = (social.isLiked ? 'unlike' : 'like') + '.' + social.network;
-  @let likeLabel = 'reader.' + likeKey | transloco;
-  <button
-    type="button"
-    [attr.title]="'reader.actionHint.' + likeKey | transloco"
-    [attr.aria-label]="likeCountLabel === null ? likeLabel : likeLabel + ', ' + likeCountLabel"
-    [appFlagToggle]="social.isLiked"
-    [attr.aria-busy]="liking.pending() || null"
-    (click)="$event.stopPropagation(); toggleLike()"
-    (keydown.enter)="$event.stopPropagation()"
-    (keydown.space)="$event.stopPropagation()"
-  >
-    @if (liking.pending()) {
-      <app-pending-dots [size]="size()" />
-    } @else {
-      <app-icon name="thumb_up" [size]="size()" [fill]="social.isLiked" />
-    }
-    @if (likeCount !== null) {
-      <span class="count">{{ likeCount.text }}</span>
-    }
-  </button>
-} @else if (likeCount !== null) {
-  <span class="likes" role="img" [attr.aria-label]="likeCountLabel">
-    <app-icon name="thumb_up" [size]="size()" aria-hidden="true" />
-    <span class="count">{{ likeCount.text }}</span>
-  </span>
+@if (like()) {
+  <app-entry-like [entry]="entry()" [size]="size()" />
 }
 <button
   type="button"
