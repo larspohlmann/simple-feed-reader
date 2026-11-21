@@ -220,7 +220,7 @@ describe('StoryLayerComponent (#2329)', () => {
     fixture.detectChanges();
 
     expect(list.topBlock()).not.toBeNull();
-    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top .story-headline');
+    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top app-story-title');
     expect(headline?.querySelector('h3.title')?.textContent?.trim()).toBe(
       'Dockers strike at the harbour',
     );
@@ -235,7 +235,7 @@ describe('StoryLayerComponent (#2329)', () => {
     title.set('Dockers strike at the harbour');
     fixture.detectChanges();
 
-    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top .story-headline');
+    const headline = (fixture.nativeElement as HTMLElement).querySelector('.top app-story-title');
     expect(headline?.querySelector('h3.title')).not.toBeNull();
     expect(headline?.querySelector('.synopsis')).toBeNull();
   });
@@ -244,7 +244,19 @@ describe('StoryLayerComponent (#2329)', () => {
     const { element, list } = mount();
 
     expect(list.topBlock()).toBeNull();
-    expect(element.querySelector('.story-headline')).toBeNull();
+    expect(element.querySelector('app-story-title')).toBeNull();
+  });
+
+  it('is the shared story card, with no link and no card of its own', () => {
+    const fixture = mountFixture();
+
+    title.set('Dockers strike at the harbour');
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-story-title')).not.toBeNull();
+    expect(element.querySelector('a.story-link')).toBeNull();
+    expect(element.querySelector('.story-card')).toBeNull();
   });
 
   it('lets rows leave its own list', () => {
@@ -291,13 +303,15 @@ describe('StoryLayerComponent (#2329)', () => {
       synopsis.set('Dockers walked out at dawn.');
       sources.set({ outletCount: 14, shareCount: 8 });
       fixture.detectChanges();
-      return (fixture.nativeElement as HTMLElement).querySelector('.top .story-card')!;
+      return (fixture.nativeElement as HTMLElement).querySelector('.top app-story-title')!;
     }
 
     it('counts the sources and shares between the title and the synopsis', () => {
       const card = mountCard();
 
-      expect(card.querySelector('h3.title + app-story-source-count + p.synopsis')).not.toBeNull();
+      expect(
+        card.querySelector('h3.title + app-story-source-count + app-story-dates + p.synopsis'),
+      ).not.toBeNull();
       expect(card.querySelector('app-story-source-count')?.textContent).toContain('14 sources');
       expect(card.querySelector('app-story-source-count')?.textContent).toContain('8 shares');
     });
@@ -323,7 +337,7 @@ describe('StoryLayerComponent (#2329)', () => {
       mountCard().querySelectorAll<HTMLButtonElement>('.story-foot button')[1].click();
 
       expect(close).toHaveBeenCalled();
-      expect(hideRun).toHaveBeenCalledWith({ id: 42, followed: false });
+      expect(hideRun).toHaveBeenCalledWith(expect.objectContaining({ id: 42, followed: false }));
     });
   });
 
