@@ -27,7 +27,7 @@ afterEach(() => jest.useRealTimers());
 it('shows created and last article', () => {
   const element = mount(twoDaysAgo, threeHoursAgo);
 
-  expect(element.textContent).toMatch(/created .*·.*last article /);
+  expect(element.textContent!.replace(/\s+/g, ' ')).toMatch(/created .+ ago · last article .+ ago/);
   expect(element.querySelector('.created')!.getAttribute('title')).toBe(
     formatLongDateTime(twoDaysAgo),
   );
