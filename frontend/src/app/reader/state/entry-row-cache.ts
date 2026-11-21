@@ -1,12 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, finalize, tap } from 'rxjs';
+import { EMPTY, Observable, finalize, tap } from 'rxjs';
+import { subscribeUntilSettled } from '../../core/rx/settled';
 import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
-import { VoteValue, steppedScore } from '../vote-pill/vote';
+import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
@@ -74,37 +75,49 @@ export class EntryRowCache {
   }
 
   /** Optimistic like apart from `saveState`; dropped unless the post can be liked and no like is on the wire. */
-  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
+  setLiked(
+    entry: EntryDto,
+    isLiked: boolean,
+    onError: (problem: Problem) => void,
+  ): Observable<void> {
     const social = likeableSocial(entry);
-    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
+    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return EMPTY;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
-      next: (answer) => {
-        if (answer.likeCount === null) return;
-        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
+    return subscribeUntilSettled(
+      this.optimistic(entry, { social: { ...social, isLiked } }, request$),
+      {
+        next: (answer) => {
+          if (answer.likeCount === null) return;
+          this.patch(this.collectCopyIds(entry), (row) => ({
+            ...row,
+            likeCount: answer.likeCount,
+          }));
+        },
+        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
       },
-      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
-    });
+    );
   }
 
-  isLikeOnTheWire(entryId: number): boolean {
-    return this.inFlight.onTheWire(entryId, 'social');
-  }
-
-  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
-    const from = entry.myVote;
-    if (from === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
-      return;
-    const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
-    this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
-      next: (answer) =>
-        this.patch(this.collectCopyIds(entry), (row) => ({
-          ...row,
-          myVote: answer.myVote,
-          score: answer.score,
-        })),
-      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
-    });
+  /** The vote shows at once; its score waits for the answer. */
+  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): Observable<void> {
+    if (
+      entry.myVote === null ||
+      entry.score === null ||
+      this.inFlight.onTheWire(entry.id, 'myVote')
+    )
+      return EMPTY;
+    return subscribeUntilSettled(
+      this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)),
+      {
+        next: (answer) =>
+          this.patch(this.collectCopyIds(entry), (row) => ({
+            ...row,
+            myVote: answer.myVote,
+            score: answer.score,
+          })),
+        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+      },
+    );
   }
 
   /** The like the network reports, laid over entries still showing `from`; a click made since wins. */

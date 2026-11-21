@@ -7,8 +7,11 @@ import {
   input,
   output,
 } from '@angular/core';
+import { Observable } from 'rxjs';
+import { PendingAction } from '../../../core/rx/pending-action';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { CompactCount } from '../../../core/i18n/compact-count';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
@@ -42,7 +45,13 @@ interface ResponsePill {
  */
 @Component({
   selector: 'app-social-counts-row',
-  imports: [IconComponent, TranslocoPipe, RepostButtonComponent, VotePillComponent],
+  imports: [
+    IconComponent,
+    PendingDotsComponent,
+    TranslocoPipe,
+    RepostButtonComponent,
+    VotePillComponent,
+  ],
   templateUrl: './social-counts-row.component.html',
   styleUrl: './social-counts-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,13 +65,14 @@ export class SocialCountsRowComponent {
   /** Lemmy's score with the reader's vote; it stands where the other networks show their like. */
   readonly score = input<number | null>(null);
   readonly myVote = input<VoteValue | null>(null);
-  readonly voted = output<VoteValue>();
-  readonly likeToggled = output<void>();
+  readonly vote = input<((to: VoteValue) => Observable<unknown>) | null>(null);
+  readonly like = input<(() => Observable<unknown>) | null>(null);
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
   readonly quoteRequested = output<void>();
 
   private readonly compactCount = inject(CompactCount);
+  protected readonly liking = new PendingAction<true>();
 
   protected readonly shown = computed(
     () =>
@@ -129,5 +139,10 @@ export class SocialCountsRowComponent {
 
   protected labelKey(kind: CountKind, count: number): string {
     return pluralKey(`reader.socialCounts.${kind}`, count);
+  }
+
+  protected toggleLike(): void {
+    const like = this.like();
+    if (like !== null) this.liking.run(true, like);
   }
 }

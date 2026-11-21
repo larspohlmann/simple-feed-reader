@@ -13,7 +13,11 @@
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
     >
-      <app-icon [name]="icon" size="sm" [fill]="vote === pressedValue" aria-hidden="true" />
+      @if (voting.pending() === direction) {
+        <app-pending-dots />
+      } @else {
+        <app-icon [name]="icon" size="sm" [fill]="vote === pressedValue" aria-hidden="true" />
+      }
     </button>
   }
 </ng-template>
@@ -22,6 +26,7 @@
   [class.up]="vote === 1"
   [class.down]="vote === -1"
   [attr.role]="vote === null ? 'img' : 'group'"
+  [attr.aria-busy]="voting.pending() !== null || null"
   [attr.aria-label]="pointsKey() | transloco: { count: score() }"
 >
   <ng-container

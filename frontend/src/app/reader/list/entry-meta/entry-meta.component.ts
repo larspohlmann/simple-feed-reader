@@ -9,6 +9,8 @@ import { CompactCount } from '../../../core/i18n/compact-count';
 import { buildDiscussionCount } from '../../../core/i18n/discussion-count';
 import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { showsShortPill } from '../preview-image';
+import { VoteValue } from '../../vote-pill/vote';
+import { Observable } from 'rxjs';
 
 /**
  * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
@@ -35,6 +37,8 @@ export class EntryMetaComponent {
   readonly imageShown = input(false);
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
+    this.actions.vote(this.entry(), to);
   private readonly compactCount = inject(CompactCount);
   protected readonly comments = computed(() =>
     buildDiscussionCount(

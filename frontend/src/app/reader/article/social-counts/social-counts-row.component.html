@@ -85,9 +85,14 @@
         [attr.aria-pressed]="liked()"
         [attr.title]="'reader.actionHint.' + likeKey() | transloco"
         [attr.aria-label]="'reader.' + likeKey() | transloco"
-        (click)="likeToggled.emit()"
+        [attr.aria-busy]="liking.pending() || null"
+        (click)="toggleLike()"
       >
-        <app-icon name="thumb_up" size="sm" [fill]="liked() === true" />
+        @if (liking.pending()) {
+          <app-pending-dots />
+        } @else {
+          <app-icon name="thumb_up" size="sm" [fill]="liked() === true" />
+        }
         <span class="label">{{ 'reader.actionLabel.like' | transloco }}</span>
         @if (likeCount !== null) {
           <span class="number">{{ format(likeCount) }}</span>
@@ -96,7 +101,7 @@
     }
     @let points = score();
     @if (points !== null) {
-      <app-vote-pill [score]="points" [myVote]="myVote()" (voted)="voted.emit($event)" />
+      <app-vote-pill [score]="points" [myVote]="myVote()" [vote]="vote()" />
     }
   </div>
 }

@@ -1,3 +1,4 @@
+import { EMPTY } from 'rxjs';
 import { Component, Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -19,7 +20,6 @@ import { provideStoryActions } from '../../../../testing/story-actions-testing';
 const entryActions = {
   favorite: jest.fn(),
   like: jest.fn(),
-  isLikeOnTheWire: jest.fn(),
   vote: jest.fn(),
   keep: jest.fn(),
   unshare: jest.fn(),
@@ -30,6 +30,8 @@ const entryActions = {
 
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  entryActions.like.mockReturnValue(EMPTY);
+  entryActions.vote.mockReturnValue(EMPTY);
 });
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>

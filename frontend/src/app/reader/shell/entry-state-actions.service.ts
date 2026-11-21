@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import { Injectable, computed, effect, inject, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -73,16 +74,14 @@ export class EntryStateActions implements EntryActionHandler {
     );
   }
 
-  like(entry: EntryDto): void {
-    this.rows.setLiked(entry, !entry.social?.isLiked, (problem) => this.toast.showProblem(problem));
+  like(entry: EntryDto): Observable<void> {
+    return this.rows.setLiked(entry, !entry.social?.isLiked, (problem) =>
+      this.toast.showProblem(problem),
+    );
   }
 
-  isLikeOnTheWire(entry: EntryDto): boolean {
-    return this.rows.isLikeOnTheWire(entry.id);
-  }
-
-  vote(entry: EntryDto, to: VoteValue): void {
-    this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+  vote(entry: EntryDto, to: VoteValue): Observable<void> {
+    return this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
   }
 
   keep(entry: EntryDto): void {

@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import { Component, computed, forwardRef, inject, input, signal } from '@angular/core';
 import { CdkConnectedOverlay, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -133,16 +134,12 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.shellActions.favorite(copy);
   }
 
-  like(copy: EntryDto): void {
-    this.shellActions.like(copy);
+  like(copy: EntryDto): Observable<void> {
+    return this.shellActions.like(copy);
   }
 
-  isLikeOnTheWire(copy: EntryDto): boolean {
-    return this.shellActions.isLikeOnTheWire(copy);
-  }
-
-  vote(copy: EntryDto, to: VoteValue): void {
-    this.shellActions.vote(copy, to);
+  vote(copy: EntryDto, to: VoteValue): Observable<void> {
+    return this.shellActions.vote(copy, to);
   }
 
   keep(copy: EntryDto): void {

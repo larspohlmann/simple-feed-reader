@@ -4,7 +4,7 @@
     [counts]="counts()"
     [liked]="likeable() ? social.isLiked : null"
     [actions]="viewer()"
-    (likeToggled)="actions.like(entry())"
+    [like]="likeEntry"
     (repostToggled)="toggleRepost()"
     (replyRequested)="reply(social.network)"
     (quoteRequested)="quote(social.network)"

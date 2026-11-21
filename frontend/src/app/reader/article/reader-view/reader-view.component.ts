@@ -52,6 +52,8 @@ import { ArticlePageComponent } from '../article-page/article-page.component';
 import { ArticlePageSlotDirective } from '../article-page/article-page-slot.directive';
 import { provideArticlePage } from '../article-page/provide-article-page';
 import { EntryArticlePage } from './entry-article-page';
+import { VoteValue } from '../../vote-pill/vote';
+import { Observable } from 'rxjs';
 
 const LEMMY_ACTIONS: PostActionsView = {
   isReposted: false,
@@ -103,6 +105,8 @@ export class ReaderViewComponent implements OnChanges {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly fullscreen = input(false);
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
+    this.actions.vote(this.entry(), to);
 
   readonly openOriginal = output<void>();
   readonly back = output<void>();

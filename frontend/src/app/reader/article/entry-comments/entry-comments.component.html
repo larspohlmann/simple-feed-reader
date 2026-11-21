@@ -111,7 +111,7 @@
                   [liked]="likeable() ? post.isLiked : null"
                   [actions]="likeable() ? post : null"
                   replyLabel="reader.replyToComment"
-                  (likeToggled)="toggleLike(post)"
+                  [like]="buildLikeAction(post)"
                   (repostToggled)="toggleRepost(post)"
                   (replyRequested)="reply(social.network, post)"
                   (quoteRequested)="quote(social.network, post)"
@@ -125,7 +125,7 @@
                   replyLabel="reader.replyToComment"
                   [score]="c.score ?? 0"
                   [myVote]="lemmyVote.myVote"
-                  (voted)="vote(c, $event)"
+                  [vote]="buildVoteAction(c)"
                   (replyRequested)="replyOnLemmy(lemmyVote)"
                 />
               }

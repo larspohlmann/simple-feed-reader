@@ -1,4 +1,5 @@
 import { Component, forwardRef } from '@angular/core';
+import { EMPTY, Observable, Subject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslocoService } from '@jsverse/transloco';
@@ -26,7 +27,7 @@ class HostComponent implements EntryActionHandler {
   size: 'sm' | 'md' = 'sm';
   audio = true;
   likeShown = true;
-  likePending = false;
+  likeAnswer = new Subject<void>();
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -35,18 +36,15 @@ class HostComponent implements EntryActionHandler {
   liked: EntryDto | null = null;
   deleted: EntryDto | null = null;
 
-  readonly vote = (): void => undefined;
+  readonly vote = (): Observable<void> => EMPTY;
 
   favorite(): void {
     this.favoriteCount++;
   }
 
-  like(entry: EntryDto): void {
+  like(entry: EntryDto): Observable<void> {
     this.liked = entry;
-  }
-
-  isLikeOnTheWire(): boolean {
-    return this.likePending;
+    return this.likeAnswer;
   }
 
   keep(entry: EntryDto): void {
@@ -444,24 +442,35 @@ describe('EntryActionsComponent', () => {
       expect(like.querySelector('.count')?.textContent?.trim()).toBe('0');
     });
 
-    it('shows the pending dots in place of the thumb while the like is on the wire', () => {
-      const fixture = TestBed.createComponent(HostComponent);
-      fixture.componentInstance.entry = { ...blueskyPost(), likeCount: 4 };
-      fixture.componentInstance.likePending = true;
+    it('shows the pending dots in place of the thumb until the like settles', () => {
+      const fixture = mount({ ...blueskyPost(), likeCount: 4 });
+      const like = () => buttons(fixture)[1];
+
+      like().click();
       fixture.detectChanges();
 
-      const like = buttons(fixture)[1];
-      expect(like.querySelector('app-pending-dots')).not.toBeNull();
-      expect(like.textContent).not.toContain('thumb_up');
-      expect(like.getAttribute('aria-busy')).toBe('true');
-      expect(like.querySelector('.count')?.textContent?.trim()).toBe('4');
+      expect(like().querySelector('app-pending-dots')).not.toBeNull();
+      expect(like().textContent).not.toContain('thumb_up');
+      expect(like().getAttribute('aria-busy')).toBe('true');
+      expect(like().querySelector('.count')?.textContent?.trim()).toBe('4');
+      fixture.componentInstance.likeAnswer.complete();
+      fixture.detectChanges();
+      expect(like().querySelector('app-pending-dots')).toBeNull();
+      expect(like().textContent).toContain('thumb_up');
+      expect(like().getAttribute('aria-busy')).toBeNull();
     });
 
-    it('shows the thumb and no busy mark once nothing is on the wire', () => {
-      const like = buttons(mount(blueskyPost()))[1];
-      expect(like.querySelector('app-pending-dots')).toBeNull();
-      expect(like.textContent).toContain('thumb_up');
-      expect(like.getAttribute('aria-busy')).toBeNull();
+    it('drops the dots when the like fails and sends nothing while pending', () => {
+      const fixture = mount(blueskyPost());
+      const like = () => buttons(fixture)[1];
+      const sent = jest.spyOn(fixture.componentInstance, 'like');
+
+      like().click();
+      like().click();
+      expect(sent).toHaveBeenCalledTimes(1);
+      fixture.componentInstance.likeAnswer.error(new Error('no'));
+      fixture.detectChanges();
+      expect(like().querySelector('app-pending-dots')).toBeNull();
     });
 
     it('shows no number on the like button while the count is unknown', () => {

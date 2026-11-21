@@ -1,3 +1,4 @@
+import { EMPTY } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
@@ -48,9 +49,9 @@ describe('EntryCommentsComponent', () => {
       state: jest.fn((item: { id: number }) => stateOf(item.id)),
       load: jest.fn(),
       reload: jest.fn(),
-      toggleLike: jest.fn(),
+      toggleLike: jest.fn(() => EMPTY),
       toggleRepost: jest.fn(),
-      vote: jest.fn(),
+      vote: jest.fn(() => EMPTY),
     };
     navigation.layer.mockReset();
     TestBed.configureTestingModule({

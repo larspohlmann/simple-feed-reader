@@ -104,28 +104,30 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(2).score).toBe(40);
   });
 
-  it('holds the like on the wire on every copy until the answer lands', () => {
+  it('settles a like once its answer lands', () => {
     const answer = new Subject<{ isLiked: boolean; likeCount: number | null }>();
     socialPosts.like.mockReturnValue(answer);
-    holdEntries(buildCopy(1, 7), buildCopy(2, 7), buildCopy(3, 8));
+    holdEntries(buildCopy(1, 7));
+    const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
 
-    expect([1, 2, 3].map((id) => cache.isLikeOnTheWire(id))).toEqual([true, true, false]);
+    expect(settled).not.toHaveBeenCalled();
     answer.next({ isLiked: true, likeCount: 5 });
     answer.complete();
-    expect([1, 2].map((id) => cache.isLikeOnTheWire(id))).toEqual([false, false]);
+    expect(settled).toHaveBeenCalled();
   });
 
-  it('lets go of the like once it fails', () => {
+  it('settles a like that fails', () => {
     const failing = new Subject<never>();
     socialPosts.like.mockReturnValue(failing);
     holdEntries(buildCopy(1, 7));
+    const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
     failing.error(new Error('no'));
 
-    expect(cache.isLikeOnTheWire(1)).toBe(false);
+    expect(settled).toHaveBeenCalled();
   });
 
   it('a like leaves an unknown like count unknown', () => {
@@ -134,6 +136,44 @@ describe('EntryRowCache', () => {
     cache.setLiked(readShownEntry(1), true, jest.fn());
 
     expect(readShownEntry(1).likeCount).toBeNull();
+  });
+
+  it('settles a vote once its answer lands, and a dropped vote at once', () => {
+    const answer = new Subject<{ myVote: 1; score: number }>();
+    socialPosts.vote.mockReturnValue(answer);
+    holdEntries(buildCopy(1, 7));
+    const settled = jest.fn();
+    const dropped = jest.fn();
+
+    cache.setVote(readShownEntry(1), 1, jest.fn()).subscribe({ complete: settled });
+    cache.setVote(readShownEntry(1), -1, jest.fn()).subscribe({ complete: dropped });
+
+    expect(settled).not.toHaveBeenCalled();
+    expect(dropped).toHaveBeenCalled();
+    answer.next({ myVote: 1, score: 11 });
+    answer.complete();
+    expect(settled).toHaveBeenCalled();
+  });
+
+  it('leaves the score alone until the vote answers', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7), buildCopy(2, 7));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
+    expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
+  });
+
+  it('restores the vote when the vote fails', () => {
+    const failing = new Subject<never>();
+    socialPosts.vote.mockReturnValue(failing);
+    holdEntries(buildCopy(1, 7));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+    failing.error(new Error('no'));
+
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
   });
 
   it('a vote on the wire for one copy holds back a vote on the other', () => {

@@ -1,3 +1,4 @@
+import { Subject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -18,6 +19,7 @@ describe('SocialCountsComponent', () => {
   let states: Map<number, WritableSignal<SocialCountsState>>;
   let service: { state: jest.Mock; load: jest.Mock; toggleRepost: jest.Mock };
   let actions: { like: jest.Mock };
+  let likeAnswer: Subject<void>;
   let responses: { reply: jest.Mock; quote: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
 
@@ -28,7 +30,8 @@ describe('SocialCountsComponent', () => {
       load: jest.fn(),
       toggleRepost: jest.fn(),
     };
-    actions = { like: jest.fn() };
+    likeAnswer = new Subject<void>();
+    actions = { like: jest.fn(() => likeAnswer) };
     responses = { reply: jest.fn(), quote: jest.fn() };
     language = { lang: signal<Lang>('en') };
     TestBed.configureTestingModule({
@@ -198,6 +201,18 @@ describe('SocialCountsComponent', () => {
     button.click();
 
     expect(actions.like).toHaveBeenCalledWith(entry);
+  });
+
+  it('shows the pending dots in place of the thumb until the like settles', () => {
+    const element = show(post());
+    likeButton(element)!.click();
+    fixture.detectChanges();
+
+    expect(likeButton(element)!.querySelector('app-pending-dots')).not.toBeNull();
+    expect(likeButton(element)!.getAttribute('aria-busy')).toBe('true');
+    likeAnswer.complete();
+    fixture.detectChanges();
+    expect(likeButton(element)!.querySelector('app-pending-dots')).toBeNull();
   });
 
   it('marks a liked post pressed and filled', () => {

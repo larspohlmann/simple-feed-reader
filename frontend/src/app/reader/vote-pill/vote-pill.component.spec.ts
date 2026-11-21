@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { EMPTY, Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { Lang } from '../../core/i18n/language';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -121,14 +122,60 @@ describe('VotePillComponent', () => {
       [0, 'Upvote', 1],
       [1, 'Downvote', -1],
       [-1, 'Downvote', 0],
-    ])('emitsTheNextVote from %i pressing %s', (current, name, expected) => {
+    ])('castsTheNextVote from %i pressing %s', (current, name, expected) => {
+      const cast: VoteValue[] = [];
+      fixture.componentRef.setInput('vote', (to: VoteValue) => {
+        cast.push(to);
+        return EMPTY;
+      });
       const host = render(12, undefined, current);
-      const emitted: VoteValue[] = [];
-      fixture.componentInstance.voted.subscribe((vote) => emitted.push(vote));
 
       button(host, name).click();
 
-      expect(emitted).toEqual([expected]);
+      expect(cast).toEqual([expected]);
+    });
+
+    it('showsTheDotsOnTheTappedArrowUntilTheVoteSettles', () => {
+      const answer = new Subject<void>();
+      fixture.componentRef.setInput('vote', () => answer);
+      const host = render(12, undefined, 0);
+
+      button(host, 'Upvote').click();
+      fixture.detectChanges();
+
+      expect(button(host, 'Upvote').querySelector('app-pending-dots')).not.toBeNull();
+      expect(button(host, 'Downvote').textContent).toContain('arrow_downward');
+      expect(host.querySelector('[role="group"]')?.getAttribute('aria-busy')).toBe('true');
+      answer.complete();
+      fixture.detectChanges();
+      expect(host.querySelector('app-pending-dots')).toBeNull();
+      expect(host.querySelector('[role="group"]')?.getAttribute('aria-busy')).toBeNull();
+    });
+
+    it('showsTheDotsOnTheArrowBeingClearedAndDropsThemOnFailure', () => {
+      const answer = new Subject<void>();
+      fixture.componentRef.setInput('vote', () => answer);
+      const host = render(12, undefined, -1);
+
+      button(host, 'Downvote').click();
+      fixture.detectChanges();
+      expect(button(host, 'Downvote').querySelector('app-pending-dots')).not.toBeNull();
+
+      answer.error(new Error('no'));
+      fixture.detectChanges();
+      expect(host.querySelector('app-pending-dots')).toBeNull();
+    });
+
+    it('castsNothingWhileAVoteIsPending', () => {
+      const cast = jest.fn(() => new Subject<void>());
+      fixture.componentRef.setInput('vote', cast);
+      const host = render(12, undefined, 0);
+
+      button(host, 'Upvote').click();
+      fixture.detectChanges();
+      button(host, 'Downvote').click();
+
+      expect(cast).toHaveBeenCalledTimes(1);
     });
 
     it('keepsTheClickFromTheRow', () => {

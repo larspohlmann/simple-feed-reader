@@ -1155,12 +1155,12 @@ describe('EntriesStore', () => {
         .flush({ entries: [entry(1, { score: 10, myVote })], nextCursor: null });
     };
 
-    it('setsAVoteAndItsScoreAtOnce', () => {
+    it('setsAVoteAtOnceAndTakesTheScoreFromTheAnswer', () => {
       loadVotable();
 
       rows.setVote(store.entries()[0], 1, () => undefined);
 
-      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
       const request = ctrl.expectOne(votePath);
       expect(request.request.method).toBe('PUT');
       expect(request.request.body).toEqual({ score: 1 });
@@ -1168,13 +1168,13 @@ describe('EntriesStore', () => {
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
     });
 
-    it('moves a flipped vote by two', () => {
+    it('takes a flipped vote’s score from the answer', () => {
       loadVotable(1);
 
       rows.setVote(store.entries()[0], -1, () => undefined);
+      ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
 
       expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 8 });
-      ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
     });
 
     it('restoresTheVoteAndScoreOnFailure', () => {
@@ -1201,7 +1201,7 @@ describe('EntriesStore', () => {
       rows.setVote(store.entries()[0], -1, () => undefined);
 
       ctrl.expectNone(votePath);
-      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 11 });
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
       first.flush({ myVote: 1, score: 11 });
     });
 

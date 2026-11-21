@@ -1,5 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, of, tap } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { OptimisticToggles, steppedCounts } from '../optimistic-toggles';
@@ -8,7 +8,7 @@ import { SocialCountsDto } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 import { SocialPostApi, VoteAnswer } from '../../social-post-api';
-import { VoteValue, steppedScore } from '../../vote-pill/vote';
+import { VoteValue } from '../../vote-pill/vote';
 import { ItemRef, buildItemKey } from '../../state/item-key';
 import { withReply, withoutReply } from './thread-edits';
 
@@ -78,8 +78,8 @@ export class CommentsService {
   }
 
   /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
-  toggleLike(item: ItemRef, post: EntryCommentPostDto): void {
-    this.toggle(item, post, 'isLiked');
+  toggleLike(item: ItemRef, post: EntryCommentPostDto): Observable<void> {
+    return this.toggle(item, post, 'isLiked');
   }
 
   /** Optimistic repost of one comment; dropped while one is on the wire or the network forbids it. */
@@ -87,17 +87,18 @@ export class CommentsService {
     if (post.canRepost) this.toggle(item, post, 'isReposted');
   }
 
-  vote(item: ItemRef, comment: EntryCommentDto, to: VoteValue): void {
-    if (comment.vote === null) return;
+  /** The vote shows at once; its score waits for the answer. */
+  vote(item: ItemRef, comment: EntryCommentDto, to: VoteValue): Observable<void> {
+    if (comment.vote === null) return EMPTY;
     const { address, myVote: from } = comment.vote;
     const score = comment.score ?? 0;
     const state = this.stateFor(item);
     const show = (shown: VoteAnswer) =>
       state.update((current) => withVote(current, address, shown));
-    this.toggles.change(buildItemKey(item), {
+    return this.toggles.change(buildItemKey(item), {
       key: `vote ${address}`,
       send: () => this.socialPosts.voteComment(item.id, address, to).pipe(tap(show)),
-      apply: () => show({ myVote: to, score: steppedScore(score, from, to) }),
+      apply: () => show({ myVote: to, score }),
       revert: () => show({ myVote: from, score }),
     });
   }
@@ -121,12 +122,12 @@ export class CommentsService {
     this.stateFor(item).update((state) => withQuote(state, address));
   }
 
-  private toggle(item: ItemRef, post: EntryCommentPostDto, flag: PostFlag): void {
+  private toggle(item: ItemRef, post: EntryCommentPostDto, flag: PostFlag): Observable<void> {
     const { address } = post;
     const to = !post[flag];
     const state = this.stateFor(item);
     const { set, unset } = POST_FLAGS[flag];
-    this.toggles.run(buildItemKey(item), {
+    return this.toggles.run(buildItemKey(item), {
       key: `${flag} ${address}`,
       send: () => this.socialPosts[to ? set : unset](item.id, address),
       to,
