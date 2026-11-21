@@ -7,12 +7,16 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RequestAdjustment;
+use App\Enum\RunStatus;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Curation\Recommendation\Feed\Model\DebugLogRunModel;
 use App\Service\Curation\Recommendation\Feed\Model\RecommendationDebugLogModel;
+use App\Service\Curation\Recommendation\Feed\Model\RunCallCountersModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -113,6 +117,70 @@ final class RecommendationDebugLogJsonTest extends TestCase
         $entry = RecommendationDebugLogJson::list(new RecommendationDebugLogModel([$row], [], null, []))['entries'][0];
 
         self::assertSame(['setting' => 'output-cap', 'value' => '32768'], $entry['adjustment']);
+    }
+
+    public function testAStoryRunCarriesNullWhereItRecordsNothing(): void
+    {
+        $storyRun = new DebugLogRunModel(
+            AiRunKind::Story,
+            42,
+            null,
+            null,
+            null,
+            new \DateTimeImmutable('2026-08-09T10:00:00Z'),
+            null,
+        );
+
+        $payload = RecommendationDebugLogJson::list(new RecommendationDebugLogModel([], [], $storyRun, [$storyRun]));
+
+        self::assertSame(
+            [
+                'kind' => 'story',
+                'id' => 42,
+                'status' => null,
+                'error' => null,
+                'attempts' => null,
+                'maxAttempts' => null,
+                'transportFailures' => null,
+                'maxTransportFailures' => null,
+                'createdAt' => '2026-08-09T10:00:00+00:00',
+                'completedAt' => null,
+            ],
+            $payload['run'],
+        );
+        self::assertSame(
+            [['kind' => 'story', 'id' => 42, 'status' => null, 'createdAt' => '2026-08-09T10:00:00+00:00']],
+            $payload['runs'],
+        );
+    }
+
+    public function testACountedRunCarriesItsCountersAndTimes(): void
+    {
+        $run = new DebugLogRunModel(
+            AiRunKind::Profile,
+            7,
+            RunStatus::Failed,
+            'No usable reply.',
+            new RunCallCountersModel(2, 3, 1, 4),
+            new \DateTimeImmutable('2026-08-09T10:00:00Z'),
+            new \DateTimeImmutable('2026-08-09T10:01:00Z'),
+        );
+
+        self::assertSame(
+            [
+                'kind' => 'profile',
+                'id' => 7,
+                'status' => 'failed',
+                'error' => 'No usable reply.',
+                'attempts' => 2,
+                'maxAttempts' => 3,
+                'transportFailures' => 1,
+                'maxTransportFailures' => 4,
+                'createdAt' => '2026-08-09T10:00:00+00:00',
+                'completedAt' => '2026-08-09T10:01:00+00:00',
+            ],
+            RecommendationDebugLogJson::list(new RecommendationDebugLogModel([], [], $run, []))['run'],
+        );
     }
 
     /** @return DebugLogRow */

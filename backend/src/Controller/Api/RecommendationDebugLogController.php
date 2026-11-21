@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Curation\Recommendation\Feed\Model\DebugLogRunRequestModel;
 use App\Service\Curation\Recommendation\Feed\RecommendationDebugLogLoader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,13 +26,14 @@ final readonly class RecommendationDebugLogController
     ) {
     }
 
-    /** `?run=<id>` picks one of the retained runs; without it, the newest. */
+    /** `?kind=<kind>&run=<id>` picks one of the retained runs; without it, the newest For you run. */
     #[Route('', name: 'api_recommendations_debug_log', methods: ['GET'])]
     public function list(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        return new JsonResponse(RecommendationDebugLogJson::list(
-            $this->debugLogs->forUser($user, $request->query->getInt('run')),
-        ));
+        return new JsonResponse(RecommendationDebugLogJson::list($this->debugLogs->forUser(
+            $user,
+            DebugLogRunRequestModel::parse($request->query->getString('kind'), $request->query->getString('run')),
+        )));
     }
 
     #[Route('/{id}', name: 'api_recommendations_debug_log_entry', requirements: ['id' => '\d+'], methods: ['GET'])]

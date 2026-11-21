@@ -87,6 +87,20 @@ final class ProfileRunRepository extends ServiceEntityRepository
         return $rows[0]['fingerprint'] ?? null;
     }
 
+    /** @return list<ProfileRun> newest first */
+    public function findNewestForUser(User $user, int $limit): array
+    {
+        /** @var list<ProfileRun> $profileRuns */
+        $profileRuns = $this->createQueryBuilder('p')
+            ->andWhere('p.user = :user')->setParameter('user', $user)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $profileRuns;
+    }
+
     /** @return list<int> newest first */
     public function findNewestIdsForUser(User $user, int $limit): array
     {

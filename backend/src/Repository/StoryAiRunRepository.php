@@ -17,6 +17,21 @@ final class StoryAiRunRepository extends ServiceEntityRepository
         parent::__construct($registry, StoryAiRun::class);
     }
 
+    /** @return list<StoryAiRun> newest first */
+    public function findNewestForUser(User $user, int $limit): array
+    {
+        /** @var list<StoryAiRun> $runs */
+        $runs = $this->createQueryBuilder('run')
+            ->where('run.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('run.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $runs;
+    }
+
     /** @return list<int> */
     public function findNewestIdsForUser(User $user, int $limit): array
     {

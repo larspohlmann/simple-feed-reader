@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Curation\Recommendation\Feed\Model\DebugLogRunModel;
 use App\Service\Curation\Recommendation\Feed\Model\RecommendationDebugLogModel;
 use App\Service\Curation\Recommendation\Profile\Model\ProfileDebugLogModel;
 
@@ -81,27 +81,30 @@ final class RecommendationDebugLogJson
      *
      * @return array<string, mixed>
      */
-    private static function choice(RecommendationRun $run): array
+    private static function choice(DebugLogRunModel $run): array
     {
         return [
-            'id' => $run->getId(),
-            'status' => $run->getStatus()->value,
-            'createdAt' => $run->getCreatedAt()->format(\DATE_ATOM),
+            'kind' => $run->kind->value,
+            'id' => $run->id,
+            'status' => $run->status?->value,
+            'createdAt' => $run->createdAt->format(\DATE_ATOM),
         ];
     }
 
     /** @return array<string, mixed> */
-    private static function run(RecommendationRun $run): array
+    private static function run(DebugLogRunModel $run): array
     {
         return [
-            'status' => $run->getStatus()->value,
-            'error' => $run->getError(),
-            'attempts' => $run->getAttempts(),
-            'maxAttempts' => RecommendationRun::MAX_ATTEMPTS,
-            'transportFailures' => $run->getTransportFailures(),
-            'maxTransportFailures' => RecommendationRun::MAX_TRANSPORT_FAILURES,
-            'createdAt' => $run->getCreatedAt()->format(\DATE_ATOM),
-            'completedAt' => $run->getCompletedAt()?->format(\DATE_ATOM),
+            'kind' => $run->kind->value,
+            'id' => $run->id,
+            'status' => $run->status?->value,
+            'error' => $run->error,
+            'attempts' => $run->counters?->attempts,
+            'maxAttempts' => $run->counters?->maxAttempts,
+            'transportFailures' => $run->counters?->transportFailures,
+            'maxTransportFailures' => $run->counters?->maxTransportFailures,
+            'createdAt' => $run->createdAt->format(\DATE_ATOM),
+            'completedAt' => $run->completedAt?->format(\DATE_ATOM),
         ];
     }
 

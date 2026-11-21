@@ -98,6 +98,20 @@ final class ProfileRunRepositoryTest extends DbTestCase
         );
     }
 
+    public function testTheNewestRunsAreTheAccountsOwnUpToTheLimit(): void
+    {
+        $owner = $this->user('profile-runs-newest@example.test');
+        $this->completed($owner, 'fp-1');
+        $second = $this->completed($owner, 'fp-2');
+        $third = $this->failed($owner);
+        $this->failed($this->user('profile-runs-newest-other@example.test'));
+
+        self::assertSame(
+            [$third, $second],
+            $this->profileRuns()->findNewestForUser($owner, 2),
+        );
+    }
+
     public function testTheActiveBacklogCountsOnlyUnfinishedRuns(): void
     {
         $owner = $this->user('profile-runs-backlog@example.test');

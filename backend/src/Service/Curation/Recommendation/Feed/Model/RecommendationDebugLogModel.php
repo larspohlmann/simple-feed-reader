@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Feed\Model;
 
-use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunLogRepository;
 
 /**
@@ -13,15 +12,14 @@ use App\Repository\RecommendationRunLogRepository;
 final readonly class RecommendationDebugLogModel
 {
     /**
-     * @param list<DebugLogRow>       $rows
-     * @param array<int, string>      $streamingTextById
-     * @param list<RecommendationRun> $retainedRuns newest first, the runs the panel may switch to
+     * @param list<DebugLogRow>      $rows
+     * @param array<int, string>     $streamingTextById
+     * @param list<DebugLogRunModel> $retainedRuns newest first, the runs the panel may switch to
      */
     public function __construct(
         public array $rows,
         public array $streamingTextById,
-        /** @noinspection AutowireWrongClass Built with new, never autowired */
-        public ?RecommendationRun $selectedRun,
+        public ?DebugLogRunModel $selectedRun,
         public array $retainedRuns,
     ) {
     }
