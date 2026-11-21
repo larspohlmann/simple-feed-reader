@@ -92,10 +92,8 @@ final class ProfileRunRepository extends ServiceEntityRepository
     public function findNewestForUser(User $user, int $limit): array
     {
         /** @var list<ProfileRun> $profileRuns */
-        $profileRuns = $this->createQueryBuilder('p')
+        $profileRuns = self::restrictToRunsWithCall($this->createQueryBuilder('p'), 'p')
             ->andWhere('p.user = :user')->setParameter('user', $user)
-            ->andWhere('p.outcome IS NULL OR p.outcome NOT IN (:withoutCall)')
-            ->setParameter('withoutCall', ProfileRunOutcome::withoutCall())
             ->orderBy('p.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
@@ -128,6 +126,12 @@ final class ProfileRunRepository extends ServiceEntityRepository
             ->getSingleResult();
 
         return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
+    }
+
+    public static function restrictToRunsWithCall(QueryBuilder $qb, string $alias): QueryBuilder
+    {
+        return $qb->andWhere(sprintf('%1$s.outcome IS NULL OR %1$s.outcome NOT IN (:withoutCall)', $alias))
+            ->setParameter('withoutCall', ProfileRunOutcome::withoutCall());
     }
 
     private function activeStatusQuery(): QueryBuilder
