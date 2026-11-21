@@ -11,6 +11,7 @@ final readonly class RankedStoryModel
         public int $storyId,
         public int $outletCount,
         public \DateTimeImmutable $lastSeen,
+        public StoryLifespanModel $lifespan,
         public ?StoryHeadingModel $heading = null,
     ) {
     }

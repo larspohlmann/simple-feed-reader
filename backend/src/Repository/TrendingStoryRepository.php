@@ -13,6 +13,7 @@ use App\Service\Curation\Trending\Model\ReaderWindowModel;
 use App\Service\Curation\Trending\Model\ShownEntriesModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Support\HeadlineBody;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
@@ -49,7 +50,15 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      */
     public function rankedForUser(ReaderWindowModel $reader, int $limit): array
     {
-        /** @var list<array{story_id: int|string, outlet_count: int|string, last_seen: string}> $rows */
+        /**
+         * @var list<array{
+         *     story_id: int|string,
+         *     outlet_count: int|string,
+         *     last_seen: string,
+         *     first_joined_at: string,
+         *     last_joined_at: string,
+         * }> $rows
+         */
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             self::visibleStories($reader)
             . self::visibleCoverage()
@@ -63,6 +72,10 @@ final class TrendingStoryRepository extends ServiceEntityRepository
                 (int) $row['story_id'],
                 (int) $row['outlet_count'],
                 NaiveUtc::parse($row['last_seen']),
+                new StoryLifespanModel(
+                    NaiveUtc::parse($row['first_joined_at']),
+                    NaiveUtc::parse($row['last_joined_at']),
+                ),
             ),
             $rows,
         );
@@ -312,7 +325,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
      */
     private static function visibleStories(ReaderWindowModel $reader): string
     {
-        return 'SELECT story.id AS story_id, story.last_seen,'
+        return 'SELECT story.id AS story_id, story.last_seen, story.first_joined_at, story.last_joined_at,'
             . ' ' . TrendingSourcesSql::sources() . ' AS outlet_count'
             . TrendingSourcesSql::MEMBERS
             . ' LEFT JOIN trending_story_hide hidden ON hidden.story_id = story.id AND hidden.user_id = :user'
@@ -338,7 +351,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
     /** At least the reader's threshold of sources (the select's `outlet_count`), and two article feeds or two sites. */
     private static function visibleCoverage(): string
     {
-        return ' GROUP BY story.id, story.last_seen'
+        return ' GROUP BY story.id, story.last_seen, story.first_joined_at, story.last_joined_at'
             . ' HAVING outlet_count >= :minimum'
             . ' AND (' . TrendingSourcesSql::ARTICLE_FEEDS . ' >= :minimumArticleSources'
             . ' OR COUNT(DISTINCT story_member.article_site) >= :minimumArticleSources)';

@@ -8,7 +8,9 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\TrendingStoryEntry;
+use App\Service\Curation\Trending\Exception\TrendingStoryNotFoundException;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Model\StorySourcesModel;
 use App\Service\Curation\Trending\Model\TrendingStoryTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -55,6 +57,27 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
         }
 
         return new StoryHeadingModel($row['title'], $row['synopsis']);
+    }
+
+    public function requireLifespan(TrendingStoryListQuery $query): StoryLifespanModel
+    {
+        /** @var array{first_joined_at: string, last_joined_at: string}|false $row */
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            'SELECT story.first_joined_at, story.last_joined_at'
+            . ' FROM trending_story story WHERE story.id = ? AND story.user_id = ?',
+            [$query->storyId, $query->userId],
+            [ParameterType::INTEGER, ParameterType::INTEGER],
+        );
+        if ($row === false) {
+            throw new TrendingStoryNotFoundException(
+                \sprintf('User %d has no Trending story with id %d.', $query->userId, $query->storyId),
+            );
+        }
+
+        return new StoryLifespanModel(
+            NaiveUtc::parse($row['first_joined_at']),
+            NaiveUtc::parse($row['last_joined_at']),
+        );
     }
 
     /** @return list<EntryListRow> */

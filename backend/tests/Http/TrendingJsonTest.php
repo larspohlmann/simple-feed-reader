@@ -15,6 +15,7 @@ use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryArticleModel;
 use App\Service\Curation\Trending\Model\StoryArticlesModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
+use App\Service\Curation\Trending\Model\StoryLifespanModel;
 use App\Service\Curation\Trending\Model\TrendingPageModel;
 use App\Service\Curation\Trending\Model\TrendingStoryCardModel;
 use App\Tests\Support\JsonMappers;
@@ -29,7 +30,7 @@ final class TrendingJsonTest extends TestCase
                 new StoryArticleModel($this->row(501), [$this->row(601), $this->row(602)]),
                 [new StoryArticleModel($this->row(502), []), new StoryArticleModel($this->row(503), [$this->row(603)])],
             ),
-            new RankedStoryModel(12, 4, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(12, 4, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
             false,
             true,
         );
@@ -55,7 +56,7 @@ final class TrendingJsonTest extends TestCase
 
     public function testAStoryCarriesItsTitle(): void
     {
-        $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')))
+        $ranked = (new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()))
             ->headed(new StoryHeadingModel('Hafenstreik in Hamburg', 'Die Arbeit ruht.'));
         $story = $this->storyOf($ranked);
 
@@ -65,7 +66,7 @@ final class TrendingJsonTest extends TestCase
 
     public function testAStoryWithoutStoredTitlesShowsItsLeadHeadline(): void
     {
-        $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'));
+        $ranked = new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan());
 
         $story = $this->storyOf($ranked);
 
@@ -77,7 +78,7 @@ final class TrendingJsonTest extends TestCase
     {
         $card = new TrendingStoryCardModel(
             new StoryArticlesModel(new StoryArticleModel($this->row(501), [$this->row(601)]), []),
-            new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00')),
+            new RankedStoryModel(12, 2, new \DateTimeImmutable('2031-05-14 10:00:00'), self::lifespan()),
             false,
             false,
         );
@@ -128,6 +129,14 @@ final class TrendingJsonTest extends TestCase
             new EntryListRowSubscription(1, 'Source'),
             new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
             null,
+        );
+    }
+
+    private static function lifespan(): StoryLifespanModel
+    {
+        return new StoryLifespanModel(
+            new \DateTimeImmutable('2031-05-14 08:00:00'),
+            new \DateTimeImmutable('2031-05-14 10:00:00'),
         );
     }
 }

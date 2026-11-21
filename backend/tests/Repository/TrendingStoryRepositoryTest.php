@@ -529,6 +529,23 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         );
     }
 
+    public function testRankedStoriesCarryTheirFirstAndLastJoin(): void
+    {
+        $story = $this->storyOf([
+            [$this->articleFeed('outlet'), 'outlet.example'],
+            [$this->articleFeed('second'), 'second.example'],
+        ]);
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE trending_story SET first_joined_at = ?, last_joined_at = ? WHERE id = ?',
+            ['2031-05-14 08:00:00', '2031-05-14 11:00:00', $story->requireId()],
+        );
+
+        $lifespan = $this->ranked()[0]->lifespan;
+
+        self::assertEquals(new \DateTimeImmutable('2031-05-14 08:00:00'), $lifespan->createdAt);
+        self::assertEquals(new \DateTimeImmutable('2031-05-14 11:00:00'), $lifespan->lastAddedAt);
+    }
+
     public function testTitlesPreferTheLlmTitle(): void
     {
         $first = $this->storyOf([
