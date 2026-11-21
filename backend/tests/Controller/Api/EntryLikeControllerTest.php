@@ -19,8 +19,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
 
-    private const array ROUTED_HOSTS = ['mastodon.example', 'mastodon.social'];
-    private const string ORIGIN = 'GET https://mastodon.social/api/v1/statuses/110';
+    private const array ROUTED_HOSTS = ['mastodon.example'];
     private const string SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string FAVOURITE = 'POST https://mastodon.example/api/v1/statuses/110/favourite';
@@ -51,7 +50,7 @@ final class EntryLikeControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(
             self::ROUTED_HOSTS,
-            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted(), self::ORIGIN => self::originStatus()],
+            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted()],
         );
         $user = $this->signIn($client, 'like-put@example.test');
         $this->mastodonAccountOf($user);
@@ -60,9 +59,9 @@ final class EntryLikeControllerTest extends ApiTestCase
         $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['isLiked' => true, 'likeCount' => 5], $this->payload($client));
-        self::assertSame([self::SEARCH, self::FAVOURITE, self::ORIGIN], $this->routesAsked());
-        self::assertSame(5, $this->likeCountOf($client, $entryId));
+        self::assertSame(['isLiked' => true, 'likeCount' => 6], $this->payload($client));
+        self::assertSame([self::SEARCH, self::FAVOURITE], $this->routesAsked());
+        self::assertSame(6, $this->likeCountOf($client, $entryId));
         self::assertSame(1, $this->likeRows());
         self::assertSame(
             [
@@ -79,7 +78,7 @@ final class EntryLikeControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(
             self::ROUTED_HOSTS,
-            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted(), self::ORIGIN => self::originStatus()],
+            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted()],
         );
         $user = $this->signIn($client, 'like-twice@example.test');
         $this->mastodonAccountOf($user);
@@ -88,8 +87,8 @@ final class EntryLikeControllerTest extends ApiTestCase
         $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
         $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
 
-        self::assertSame(['isLiked' => true, 'likeCount' => 5], $this->payload($client));
-        self::assertCount(3, $this->http->requests);
+        self::assertSame(['isLiked' => true, 'likeCount' => 6], $this->payload($client));
+        self::assertCount(2, $this->http->requests);
     }
 
     public function testAnUnlikeTakesTheLikeBack(): void
@@ -98,7 +97,6 @@ final class EntryLikeControllerTest extends ApiTestCase
             self::SEARCH => self::found(),
             self::FAVOURITE => self::accepted(),
             self::UNFAVOURITE => self::accepted(),
-            self::ORIGIN => self::originStatus(),
         ]);
         $user = $this->signIn($client, 'like-delete@example.test');
         $this->mastodonAccountOf($user);
@@ -109,10 +107,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['isLiked' => false, 'likeCount' => 5], $this->payload($client));
-        self::assertSame(
-            [self::SEARCH, self::FAVOURITE, self::ORIGIN, self::UNFAVOURITE, self::ORIGIN],
-            $this->routesAsked(),
-        );
+        self::assertSame([self::SEARCH, self::FAVOURITE, self::UNFAVOURITE], $this->routesAsked());
         self::assertSame(0, $this->likeRows());
         self::assertSame(
             [
@@ -123,6 +118,22 @@ final class EntryLikeControllerTest extends ApiTestCase
             ],
             $this->socialOf($client, $entryId),
         );
+    }
+
+    public function testALikeOnAnUncountedPostAnswersNoCount(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => new MockResponse('{"statuses":[{"id":"110"}]}'),
+            self::FAVOURITE => self::accepted(),
+        ]);
+        $user = $this->signIn($client, 'like-uncounted@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('PUT', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['isLiked' => true, 'likeCount' => null], $this->payload($client));
+        self::assertSame(1, $this->likeRows());
     }
 
     public function testUnlikingAPostNeverLikedCallsNoNetwork(): void
@@ -303,36 +314,12 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     private static function found(): MockResponse
     {
-        return new MockResponse('{"statuses":[{"id":"110"}]}');
-    }
-
-    public function testALikeWhoseCountsTheNetworkWillNotGiveStillSucceeds(): void
-    {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::SEARCH => self::found(),
-            self::FAVOURITE => self::accepted(),
-            self::ORIGIN => new MockResponse('{}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
-        ]);
-        $user = $this->signIn($client, 'like-uncounted@example.test');
-        $this->mastodonAccountOf($user);
-
-        $client->request('PUT', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(['isLiked' => true, 'likeCount' => null], $this->payload($client));
-        self::assertSame(1, $this->likeRows());
-    }
-
-    private static function originStatus(): MockResponse
-    {
-        return new MockResponse(json_encode([
+        return new MockResponse(json_encode(['statuses' => [[
             'id' => '110',
-            'uri' => 'https://mastodon.social/users/Gargron/statuses/110',
-            'url' => self::MASTODON_POST_URL,
             'favourites_count' => 5,
             'reblogs_count' => 2,
             'replies_count' => 1,
-        ], \JSON_THROW_ON_ERROR));
+        ]]], \JSON_THROW_ON_ERROR));
     }
 
     private function likeCountOf(KernelBrowser $client, int $entryId): mixed

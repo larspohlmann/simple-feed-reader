@@ -1,0 +1,51 @@
+:host {
+  --dots-box: var(--icon-sm);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--dots-box) / 8);
+  width: var(--dots-box);
+  height: var(--dots-box);
+  color: var(--accent);
+}
+
+:host(.md) {
+  --dots-box: var(--icon-md);
+}
+
+i {
+  width: calc(var(--dots-box) / 5);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentcolor;
+  animation: pending-wave 1s ease-in-out infinite;
+}
+
+i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pending-wave {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-40%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  i {
+    animation: none;
+    opacity: 0.6;
+  }
+}

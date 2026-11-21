@@ -1,7 +1,7 @@
+import { signal } from '@angular/core';
 import { EntryDto, EntryStatePatch } from '../models';
 
-export type RowPatch = EntryStatePatch &
-  Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score' | 'likeCount'>;
+export type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
 
 interface InFlightPatch {
   entryId: number;
@@ -12,19 +12,27 @@ interface InFlightPatch {
  *  can lay the row's optimistic state back over the server's stale copy. */
 export class InFlightPatches {
   private readonly patches = new Set<InFlightPatch>();
+  /** Bumped on every change, so `onTheWire` read in a template or computed follows the ledger. */
+  private readonly changes = signal(0);
 
   /** Returns the call that takes the patch off the ledger once its request has settled. */
   add(entryId: number, patch: RowPatch): () => void {
     const inFlight: InFlightPatch = { entryId, patch };
     this.patches.add(inFlight);
-    return () => this.patches.delete(inFlight);
+    this.changes.update((count) => count + 1);
+    return () => {
+      this.patches.delete(inFlight);
+      this.changes.update((count) => count + 1);
+    };
   }
 
   clear(): void {
     this.patches.clear();
+    this.changes.update((count) => count + 1);
   }
 
   onTheWire(entryId: number, field: keyof RowPatch): boolean {
+    this.changes();
     for (const inFlight of this.patches) {
       if (inFlight.entryId === entryId && inFlight.patch[field] !== undefined) return true;
     }

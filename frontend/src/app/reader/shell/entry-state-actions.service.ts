@@ -77,6 +77,10 @@ export class EntryStateActions implements EntryActionHandler {
     this.rows.setLiked(entry, !entry.social?.isLiked, (problem) => this.toast.showProblem(problem));
   }
 
+  isLikeOnTheWire(entry: EntryDto): boolean {
+    return this.rows.isLikeOnTheWire(entry.id);
+  }
+
   vote(entry: EntryDto, to: VoteValue): void {
     this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
   }

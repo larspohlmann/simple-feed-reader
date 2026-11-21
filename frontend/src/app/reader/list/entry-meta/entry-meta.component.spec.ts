@@ -107,14 +107,6 @@ describe('EntryMetaComponent', () => {
       ).toBeNull();
     });
 
-    it('leaves the like count to the like button', () => {
-      expect(
-        discussionMeta({ score: null, commentCount: 3, likeCount: 4 }).querySelector(
-          '.discussion .likes',
-        ),
-      ).toBeNull();
-    });
-
     it('shows a zero score', () => {
       expect(discussionMeta({ score: 0 }).querySelector('app-vote-pill')).not.toBeNull();
     });

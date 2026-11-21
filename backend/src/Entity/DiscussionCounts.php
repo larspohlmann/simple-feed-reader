@@ -23,6 +23,11 @@ final readonly class DiscussionCounts
         return new self($score, $commentCount, null);
     }
 
+    public static function fromLikes(int $likeCount): self
+    {
+        return new self(null, null, $likeCount);
+    }
+
     public static function fromCommentsAndLikes(?int $commentCount, ?int $likeCount): self
     {
         return new self(null, $commentCount, $likeCount);
