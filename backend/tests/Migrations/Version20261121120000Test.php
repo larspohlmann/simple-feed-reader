@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Migrations;
 
+use App\Entity\CanonicalItem;
+use App\Entity\Headline;
+use App\Enum\CanonicalItemKind;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Ingestion\Ingest\CrossPostKeyRule\LemmyCrossPostKeyRule;
+use App\Service\Ingestion\Ingest\Support\LemmyLinkedUrl;
+use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\ParameterType;
@@ -55,6 +64,31 @@ final class Version20261121120000Test extends TestCase
         self::assertSame($hashes[0], $hashes[1]);
         self::assertNotNull($hashes[2]);
         self::assertNotSame($hashes[0], $hashes[2]);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function provideIngestedBodies(): iterable
+    {
+        yield 'link post' => ['<p><a href="' . self::LINK . '">' . self::LINK . '</a></p>'];
+        yield 'text post' => ['<p>Body <b>one</b></p><ul><li>two</li></ul>'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('provideIngestedBodies')]
+    public function testTheMigratedHashEqualsTheOneIngestionBuilds(string $ingestedBody): void
+    {
+        $storedBody = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($ingestedBody);
+        $this->insertItem(1, 'lemmy', self::AUTHOR, 'A  Title', (string) $storedBody);
+        $parsed = new ParsedEntryModel(
+            'guid', null, Headline::fromFeed('A  Title'), 'PerfectDark', null, $ingestedBody, null,
+            authorUrl: self::AUTHOR,
+        )->withLinkedUrl(LemmyLinkedUrl::parse($ingestedBody));
+        $item = new CanonicalItem(CanonicalItemKind::Lemmy, 'key', new \DateTimeImmutable());
+
+        $this->migrate('up');
+
+        $ingested = new LemmyCrossPostKeyRule(new UrlNormalizer())->findHash($item, $parsed);
+        self::assertNotNull($ingested);
+        self::assertSame($ingested, $this->readHashes()[1]);
     }
 
     public function testAMastodonItemStaysUnkeyed(): void
