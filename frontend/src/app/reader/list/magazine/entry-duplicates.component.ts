@@ -15,7 +15,6 @@ import { SubscriptionRows } from '../../state/subscription-rows';
 import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { alsoFootOf, isCrossPost } from './also-foot';
 import { formatCommunityLabel, sourceNameOf } from '../../entry/entry-source/source-name';
-import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
 import { injectStory, StoryContextDirective } from '../../trending/story-context';
 import { CommentTotals } from '../../state/comment-totals';
@@ -49,7 +48,6 @@ export const ALSO_FOOT_NAMES = 4;
     TranslocoPipe,
     IconComponent,
     CdkConnectedOverlay,
-    StoryActionsComponent,
     StoryContextDirective,
     forwardRef(() => EntryRowComponent),
   ],

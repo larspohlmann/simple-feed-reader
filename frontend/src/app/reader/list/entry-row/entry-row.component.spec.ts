@@ -142,13 +142,13 @@ describe('EntryRowComponent', () => {
         articles: [aStoryArticle(entry()), ...others],
       });
 
-    it('names how many feeds covered the story in its meta line', () => {
+    it("leaves the story's counts to its title card", () => {
       const element = mount(lead()).nativeElement as HTMLElement;
 
-      expect(element.querySelector('.meta .sources')?.textContent?.trim()).toBe('7 sources');
+      expect(element.querySelector('app-story-source-count')).toBeNull();
     });
 
-    it('names who shared the lead article and how often the story was shared', () => {
+    it('names who shared the lead article', () => {
       const element = mount(
         aStory({
           outletCount: 7,
@@ -166,7 +166,6 @@ describe('EntryRowComponent', () => {
         }),
       ).nativeElement as HTMLElement;
 
-      expect(element.querySelector('.meta')!.textContent).toContain('2 shares');
       const sharers = element.querySelectorAll('app-story-sharers .sharer .name');
       expect(Array.from(sharers).map((sharer) => sharer.textContent!.trim())).toEqual([
         'Ann',

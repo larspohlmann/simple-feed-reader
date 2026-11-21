@@ -74,31 +74,20 @@ it('renders nothing without duplicates', () => {
 });
 
 describe("a Trending story's footer in the list layout (#2128)", () => {
-  const footOf = (row: ListItem, storyActions = provideStoryActions()) =>
-    (mount(row, undefined, storyActions).nativeElement as HTMLElement).querySelector('.also-foot');
+  const footOf = (row: ListItem) =>
+    (mount(row, undefined, provideStoryActions()).nativeElement as HTMLElement).querySelector(
+      '.also-foot',
+    );
 
-  it('leads with the story actions, before the other outlets', () => {
+  it('lists the other outlets and leaves the story actions to its title card (#2435)', () => {
     const foot = footOf(aStory({ articles: [article(), article({ id: 2 })] }))!;
 
-    expect(foot.firstElementChild!.localName).toBe('app-story-actions');
-    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
+    expect(foot.querySelector('app-story-actions')).toBeNull();
     expect(foot.querySelectorAll('.also-entry').length).toBe(1);
   });
 
-  it('still shows for a story with no other articles, holding only its actions', () => {
-    const foot = footOf(aStory({ articles: [article()] }))!;
-
-    expect(foot.querySelector('.lead')).toBeNull();
-    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
-  });
-
-  it('offers no story actions off Trending', () => {
-    const foot = footOf(
-      aStory({ articles: [article(), article({ id: 2 })] }),
-      provideStoryActions('all'),
-    )!;
-
-    expect(foot.querySelector('.story-actions')).toBeNull();
+  it('shows nothing for a story with no other articles', () => {
+    expect(footOf(aStory({ articles: [article()] }))).toBeNull();
   });
 });
 
@@ -447,10 +436,7 @@ it("shows a copy's row in the popover without the story's pieces", () => {
     .getContainerElement()
     .querySelector('.dup-popover')!;
   expect(panel.querySelector('app-entry-row')).not.toBeNull();
-  expect(fixture.nativeElement.querySelector('app-story-actions')).not.toBeNull();
-  expect(panel.querySelector('app-story-source-count')).toBeNull();
   expect(panel.querySelector('app-story-sharers')).toBeNull();
-  expect(panel.querySelector('app-story-actions')).toBeNull();
 });
 
 describe('a Lemmy cross-post chip (#2420)', () => {

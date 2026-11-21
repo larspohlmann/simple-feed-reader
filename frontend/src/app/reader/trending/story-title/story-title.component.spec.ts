@@ -2,6 +2,10 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { aStory } from '../../../../testing/entry-testing';
+import { provideStoryActions } from '../../../../testing/story-actions-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { SelectionKind } from '../../query/query';
+import { TrendingStoryDto } from '../trending.models';
 import { STORY_ICON } from '../story';
 import { StoryTitleComponent } from './story-title.component';
 
@@ -9,14 +13,19 @@ import { StoryTitleComponent } from './story-title.component';
 class StoryListStubComponent {}
 
 function mount(title: string, id = 12, synopsis: string | null = null): HTMLElement {
+  return mountStory(aStory({ id, title, synopsis }));
+}
+
+function mountStory(story: TrendingStoryDto, kind: SelectionKind = 'trending'): HTMLElement {
   TestBed.configureTestingModule({
-    imports: [StoryTitleComponent],
+    imports: [StoryTitleComponent, provideTranslocoTesting()],
     providers: [
       provideRouter([{ path: 'trending/stories/:story', component: StoryListStubComponent }]),
+      ...provideStoryActions(kind),
     ],
   });
   const fixture = TestBed.createComponent(StoryTitleComponent);
-  fixture.componentRef.setInput('story', aStory({ id, title, synopsis }));
+  fixture.componentRef.setInput('story', story);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -80,4 +89,37 @@ it("links to the story's list and opens it when clicked", async () => {
   await new Promise((resolve) => setTimeout(resolve));
 
   expect(TestBed.inject(Router).url).toBe('/trending/stories/12');
+});
+
+describe("the card's foot (#2435)", () => {
+  it('names how many feeds covered the story and how often it was shared', () => {
+    const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector(
+      '.story-foot .counts',
+    )!;
+
+    expect(counts.textContent).toContain('7 sources');
+    expect(counts.textContent).toContain('2 shares');
+  });
+
+  it('names no shares on a story no post shares', () => {
+    const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector(
+      '.story-foot .counts',
+    )!;
+
+    expect(counts.textContent).not.toContain('share');
+  });
+
+  it('offers Follow and Hide beside the counts, outside the link', () => {
+    const element = mountStory(aStory());
+
+    expect(element.querySelectorAll('.story-foot .story-actions button')).toHaveLength(2);
+    expect(element.querySelector('a.story-link button')).toBeNull();
+  });
+
+  it('offers no story actions off Trending', () => {
+    const element = mountStory(aStory(), 'all');
+
+    expect(element.querySelector('.story-actions')).toBeNull();
+    expect(element.querySelector('.story-foot .counts')).not.toBeNull();
+  });
 });

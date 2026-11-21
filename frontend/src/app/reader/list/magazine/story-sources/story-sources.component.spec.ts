@@ -65,48 +65,25 @@ const copies = [
   aStoryArticle({ id: 3, source: 'taz', title: 'Coast braces for storm', imageUrl: null }),
 ];
 
-describe("a Trending story's line (#2128)", () => {
-  const lineOf = (element: HTMLElement) => element.querySelector('.more-sources .story-line')!;
+describe("a Trending story's sources (#2128)", () => {
   const onTrending = (story: TrendingStoryDto) => mount(story, navigation, provideStoryActions());
 
-  it('holds the story actions first, the counts beside them and the toggle last', () => {
-    const line = lineOf(onTrending(storyWith(copies)));
+  it('holds only the toggle, leaving counts and actions to the title card (#2435)', () => {
+    const sources = onTrending(storyWith(copies)).querySelector('.more-sources')!;
 
-    expect([...line.children].map((child) => child.localName)).toEqual([
-      'app-story-actions',
-      'span',
-      'button',
-    ]);
-    expect(line.children[1].classList.contains('counts')).toBe(true);
-    expect(line.querySelector('app-story-actions .story-actions')).not.toBeNull();
-    expect(line.lastElementChild!.classList.contains('toggle')).toBe(true);
-  });
-
-  it('names the story counts between the actions and the toggle (#2291)', () => {
-    const story = aStory({ outletCount: 7, viewed: false, shareCount: 2 });
-    const counts = lineOf(onTrending(story)).querySelector('.counts')!;
-
-    expect(counts.textContent).toContain('7 sources');
-    expect(counts.textContent).toContain('2 shares');
+    expect(sources.firstElementChild!.classList.contains('toggle')).toBe(true);
+    expect(sources.querySelector('app-story-actions')).toBeNull();
+    expect(sources.querySelector('app-story-source-count')).toBeNull();
   });
 
   it('marks the toggle with the Trending icon', () => {
-    const toggle = lineOf(onTrending(storyWith(copies))).querySelector('.toggle')!;
+    const toggle = onTrending(storyWith(copies)).querySelector('.more-sources .toggle')!;
 
     expect(toggle.querySelector('app-icon')!.textContent!.trim()).toBe('trending_up');
   });
 
-  it('still shows for a story with no other articles, holding only its actions', () => {
-    const line = lineOf(onTrending(storyWith([])));
-
-    expect(line.querySelector('.toggle')).toBeNull();
-    expect(line.querySelectorAll('.story-actions button').length).toBe(2);
-  });
-
-  it('offers no story actions off Trending', () => {
-    const element = mount(storyWith(copies), navigation, provideStoryActions('all'));
-
-    expect(element.querySelector('.story-actions')).toBeNull();
+  it('shows no sources line for a story with no other articles', () => {
+    expect(onTrending(storyWith([])).querySelector('.more-sources')).toBeNull();
   });
 });
 
