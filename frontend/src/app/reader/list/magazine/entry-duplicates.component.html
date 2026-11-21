@@ -1,12 +1,7 @@
-@if (copies().length || story()) {
+@if (copies().length) {
   <div class="also-foot">
-    @if (story(); as story) {
-      <app-story-actions [story]="story" />
-    }
-    @if (copies().length) {
-      <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
-      <span class="lead">{{ label() | transloco }}</span>
-    }
+    <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
+    <span class="lead">{{ label() | transloco }}</span>
     @for (item of shown(); track item.copy.id) {
       @if (item.crossPost) {
         <button

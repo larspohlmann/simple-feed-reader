@@ -6,7 +6,7 @@ import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.dir
 import { TrendingStoryDto } from '../trending.models';
 import { STORY_ACTIONS } from './story-actions';
 
-/** Follow and Hide for a Trending card's story (#2017, #2128), on the story's own line, apart from the post's actions. */
+/** Follow and Hide for a Trending card's story (#2017, #2128), on the story's title card, apart from the post's actions. */
 @Component({
   selector: 'app-story-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,

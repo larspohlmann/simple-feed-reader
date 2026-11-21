@@ -78,7 +78,9 @@ describe('MagazineBlockComponent', () => {
 
     const element = mount({ kind: 'hero', entry: lead, story });
 
-    expect(element.querySelector('app-entry-hero app-story-source-count')).not.toBeNull();
+    expect(
+      element.querySelector('app-entry-hero app-more-sources app-story-sources'),
+    ).not.toBeNull();
   });
 
   describe("a story's title (#2329)", () => {

@@ -1,8 +1,15 @@
 @use '../../../theme/breakpoints' as bp;
 
-/* Its spans join the host line directly: flex items on a magazine card's story line, inline text in a list row. */
+/* Its own container (#2291): too narrow for the words, it shows the glyphs. */
 :host {
-  display: contents;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
 }
 
 .sources,
@@ -18,7 +25,6 @@
   gap: var(--space-1);
 }
 
-/* A story line's `.counts` is the only container (#2291): too narrow for the words, it shows the glyphs. */
 @container (width < #{bp.$container-story-counts-narrow}) {
   .sources {
     position: absolute;
