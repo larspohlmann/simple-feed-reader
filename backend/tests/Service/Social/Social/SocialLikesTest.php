@@ -107,7 +107,7 @@ final class SocialLikesTest extends DbTestCase
 
         $this->likes()->unlike($this->owner, $entry);
 
-        self::assertSame('unlike 110', $this->mastodon->calls[2]);
+        self::assertSame('unlike 110', end($this->mastodon->calls));
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
     }
 
@@ -156,7 +156,7 @@ final class SocialLikesTest extends DbTestCase
         self::assertSame(7, $this->likes()->like($this->owner, $entry));
     }
 
-    public function testALikeOnAPostTheNetworkCountsNothingForKeepsTheStoredCount(): void
+    public function testALikeOnAnUncountedPostKeepsTheStoredCount(): void
     {
         $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
@@ -223,7 +223,6 @@ final class SocialLikesTest extends DbTestCase
     {
         yield 'post not found' => [new SocialPostNotFoundException('gone')];
         yield 'account needs reconnecting' => [new SocialAccountNeedsReconnectException('reconnect')];
-        yield 'credentials rejected' => [new SocialCredentialsRejectedException('rejected')];
         yield 'network unreachable' => [new SocialNetworkUnreachableException('down')];
     }
 
@@ -237,6 +236,20 @@ final class SocialLikesTest extends DbTestCase
 
         self::assertNull($this->likes()->unlike($this->owner, $entry));
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
+    }
+
+    public function testAnUnlikeWhoseReadIsRejectedLeavesTheAccountToReconnect(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($account, '110');
+        $this->mastodon->onResolve(static fn () => throw new SocialCredentialsRejectedException('rejected'));
+
+        $this->assertRefused(
+            fn () => $this->likes()->unlike($this->owner, $entry),
+            SocialAccountNeedsReconnectException::class,
+            'A rejected read must leave the unlike to a reconnected account.',
+        );
     }
 
     public function testALikeAlreadyMadeAnswersTheStoredCountWithoutAsking(): void
@@ -649,7 +662,6 @@ final class SocialLikesTest extends DbTestCase
             $this->postFinder(),
             SocialRuleWiring::postAddresses(),
             $this->countsCache,
-            $this->entityManager,
         );
     }
 

@@ -120,6 +120,22 @@ final class EntryLikeControllerTest extends ApiTestCase
         );
     }
 
+    public function testALikeOnAnUncountedPostAnswersNoCount(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => new MockResponse('{"statuses":[{"id":"110"}]}'),
+            self::FAVOURITE => self::accepted(),
+        ]);
+        $user = $this->signIn($client, 'like-uncounted@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('PUT', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['isLiked' => true, 'likeCount' => null], $this->payload($client));
+        self::assertSame(1, $this->likeRows());
+    }
+
     public function testUnlikingAPostNeverLikedCallsNoNetwork(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
@@ -304,22 +320,6 @@ final class EntryLikeControllerTest extends ApiTestCase
             'reblogs_count' => 2,
             'replies_count' => 1,
         ]]], \JSON_THROW_ON_ERROR));
-    }
-
-    public function testALikeOnAPostTheNetworkCountsNothingForAnswersNoCount(): void
-    {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, [
-            self::SEARCH => new MockResponse('{"statuses":[{"id":"110"}]}'),
-            self::FAVOURITE => self::accepted(),
-        ]);
-        $user = $this->signIn($client, 'like-uncounted@example.test');
-        $this->mastodonAccountOf($user);
-
-        $client->request('PUT', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(['isLiked' => true, 'likeCount' => null], $this->payload($client));
-        self::assertSame(1, $this->likeRows());
     }
 
     private function likeCountOf(KernelBrowser $client, int $entryId): mixed

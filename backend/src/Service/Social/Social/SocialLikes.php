@@ -33,11 +33,7 @@ final readonly class SocialLikes
     ) {
     }
 
-    /**
-     * Likes the post and answers its like count with the like in it.
-     *
-     * @throws NotASocialPostException
-     */
+    /** @throws NotASocialPostException */
     public function like(User $user, Entry $entry): ?int
     {
         $item = $this->postAddresses->requireItem($entry);
@@ -46,17 +42,14 @@ final readonly class SocialLikes
         }
         $post = $this->posts->find($user, $entry);
         $result = $this->liking->like($post);
+        $likeCount = $this->likeCounts->recordLiked($entry, $item, $post);
 
         $this->store($user, $item, $post->account, $result->likeId);
 
-        return $this->likeCounts->recordLiked($entry, $item, $post);
+        return $likeCount;
     }
 
-    /**
-     * Takes the like back and answers the post's like count without it.
-     *
-     * @throws NotASocialPostException
-     */
+    /** @throws NotASocialPostException */
     public function unlike(User $user, Entry $entry): ?int
     {
         $item = $this->postAddresses->requireItem($entry);
@@ -64,11 +57,12 @@ final readonly class SocialLikes
         if (null === $like) {
             return $item->getLikeCount();
         }
+        $likeCount = $this->likeCounts->recordUnliked($entry, $item, $like->getSocialAccount());
         $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
         $this->drop($like);
 
-        return $this->likeCounts->recordUnliked($entry, $item, $like->getSocialAccount());
+        return $likeCount;
     }
 
     /**

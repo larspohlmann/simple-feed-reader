@@ -32,13 +32,9 @@ export class EntryRowCache {
   private readonly records = new Map<number, WritableSignal<EntryDto>>();
   private readonly holds = new Map<object, ReadonlySet<number>>();
   private readonly inFlight = new InFlightPatches();
-  private readonly likesOnTheWire = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
-    onIdentityChange(() => {
-      this.inFlight.clear();
-      this.likesOnTheWire.set(new Set());
-    });
+    onIdentityChange(() => this.inFlight.clear());
   }
 
   /** The items with their entries written over the cached ones, each change still on the wire laid back over them,
@@ -82,10 +78,7 @@ export class EntryRowCache {
     const social = likeableSocial(entry);
     if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    const pendingIds = this.collectCopyIds(entry);
-    this.markLikesOnTheWire(pendingIds, true);
-    const settled$ = request$.pipe(finalize(() => this.markLikesOnTheWire(pendingIds, false)));
-    this.optimistic(entry, { social: { ...social, isLiked } }, settled$).subscribe({
+    this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
       next: (answer) => {
         if (answer.likeCount === null) return;
         this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
@@ -95,7 +88,7 @@ export class EntryRowCache {
   }
 
   isLikeOnTheWire(entryId: number): boolean {
-    return this.likesOnTheWire().has(entryId);
+    return this.inFlight.onTheWire(entryId, 'social');
   }
 
   setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
@@ -213,14 +206,6 @@ export class EntryRowCache {
     return [...this.records.values()]
       .map((record) => record())
       .filter((row) => row.id !== entry.id && row.canonicalItemId === entry.canonicalItemId);
-  }
-
-  private markLikesOnTheWire(entryIds: number[], onTheWire: boolean): void {
-    this.likesOnTheWire.update((held) => {
-      const next = new Set(held);
-      entryIds.forEach((id) => (onTheWire ? next.add(id) : next.delete(id)));
-      return next;
-    });
   }
 
   private collectCopyIds(entry: EntryDto): number[] {
