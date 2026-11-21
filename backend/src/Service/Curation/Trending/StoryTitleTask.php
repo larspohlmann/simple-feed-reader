@@ -18,16 +18,19 @@ use App\Service\Curation\StoryAi\StorySettingsProvider;
 use App\Service\Curation\Trending\Model\RankedStoryModel;
 use App\Service\Curation\Trending\Model\StoryHeadingModel;
 use App\Service\Curation\Trending\Model\StoryHeadlineModel;
+use App\Service\Curation\Trending\Model\StoryTitleCutoffsModel;
 use App\Service\Curation\Trending\Support\StoryTitlePrompt;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
-/** Writes each shown story's title and synopsis, at most once an hour and again once it grew by half. */
+/** Titles each shown story, retries a miss after an hour, and re-titles a doubled story at most every six hours. */
 final readonly class StoryTitleTask implements StoryAiTaskInterface
 {
     private const int HEADLINES = 12;
 
     private const string RETRY_AFTER = '-1 hour';
+
+    private const string RETITLE_AFTER = '-6 hours';
 
     public function __construct(
         private StorySettingsProvider $storySettings,
@@ -56,7 +59,7 @@ final readonly class StoryTitleTask implements StoryAiTaskInterface
     {
         $due = $this->stories->findStoriesDueForTitle(
             $user->requireId(),
-            $now->modify(self::RETRY_AFTER),
+            new StoryTitleCutoffsModel($now->modify(self::RETRY_AFTER), $now->modify(self::RETITLE_AFTER)),
             self::earliestWindowStart($now),
         );
         if ($due === []) {
