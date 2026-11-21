@@ -1,7 +1,7 @@
 // The demo account's 19 feeds rarely cover the same story, so Trending stays nearly empty. This
 // borrows news feeds into its News tag, whose stories overlap with what it follows.
-// Their backlog older than a day is marked read, so the sidebar counts stay the demo's own. Shoot
-// only the Trending shots with them borrowed; they crowd every other list.
+// Their backlog older than a day is marked read, so the sidebar counts stay the demo's own, and
+// they show in Trending only: All items, For you and the saved searches stay the demo's.
 // The demo's active AI connection is a scorer, which writes no story titles: while the feeds are
 // borrowed, its first connection that can write is picked for them, and unpicked on teardown.
 //
@@ -13,10 +13,23 @@ import { openApiSession } from './lib.mjs';
 import { TRENDING_FEEDS, TRENDING_FLOOR } from './trending-feeds.mjs';
 
 const TAG_NAME = 'News';
+const TRENDING_ONLY = {
+  includeInAllItems: false,
+  includeInForYou: false,
+  includeInSavedSearches: false,
+  includeInTrending: true,
+};
 const mode = process.argv[2] ?? 'subscribe';
 
 const browser = await chromium.launch();
 const api = await openApiSession(browser);
+
+async function borrowedSubscriptionIds() {
+  const { json: subscriptions } = await api('GET', '/api/subscriptions');
+  return subscriptions.subscriptions
+    .filter((subscription) => TRENDING_FEEDS.includes(subscription.feedUrl))
+    .map((subscription) => subscription.id);
+}
 
 async function subscribe() {
   const { json: tagList } = await api('GET', '/api/tags');
@@ -30,6 +43,9 @@ async function subscribe() {
     if (subscriptionId === undefined) continue;
     await api('POST', '/api/entries/mark-read', { scope: 'feed', id: subscriptionId, until: dayAgo });
   }
+  const subscriptionIds = await borrowedSubscriptionIds();
+  const kept = await api('PATCH', '/api/subscriptions/bulk', { subscriptionIds, ...TRENDING_ONLY });
+  console.log(`${subscriptionIds.length} feeds borrowed, shown in Trending only: ${kept.status}`);
 }
 
 const STORY_SETTINGS = '/api/me/ai/stories';
@@ -45,10 +61,7 @@ const unpickStoryWriter = () =>
   api('PUT', STORY_SETTINGS, { writingConnectionId: null, titlesEnabled: true });
 
 async function unsubscribe() {
-  const { json: subscriptions } = await api('GET', '/api/subscriptions');
-  const subscriptionIds = subscriptions.subscriptions
-    .filter((subscription) => TRENDING_FEEDS.includes(subscription.feedUrl))
-    .map((subscription) => subscription.id);
+  const subscriptionIds = await borrowedSubscriptionIds();
   if (subscriptionIds.length === 0) return console.log('nothing borrowed');
   const removed = await api('POST', '/api/subscriptions/bulk-unsubscribe', { subscriptionIds });
   console.log(`unsubscribed ${removed.json?.removed ?? 0}`);

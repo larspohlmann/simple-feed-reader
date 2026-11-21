@@ -1,11 +1,13 @@
-// Records the homepage phone tour against the dev stack: five scenes on a 390×760 phone at 2x,
+// Records the homepage phone tour against the dev stack: six scenes on a 390×760 phone at 2x,
 // once per theme, encoded to MP4 with a poster; the scene start times go into the homepage's
 // scene list. Run from `frontend/`:
 //
 //   node --env-file=.env.screenshots scripts/screenshots/tour.mjs [light|dark ...]   default: both
 //
 // Needs the demo account in .env.screenshots, ffmpeg and cwebp on the PATH, and nothing else:
-// the podcasts the tour plays are borrowed through podcast-setup.mjs and returned afterwards.
+// the podcasts it plays and the news feeds its Trending scene needs are borrowed through
+// podcast-setup.mjs and trending-setup.mjs and returned afterwards. It refuses to record while
+// Trending is below its floor; a run right after borrowing waits for the stories to be built.
 // TOUR_OUT overrides the output folder (default docs/homepage); the page there, if any, gets the
 // start times.
 import { chromium } from '@playwright/test';
@@ -20,6 +22,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(process.env.TOUR_OUT ?? join(HERE, '..', '..', '..', 'docs', 'homepage'));
 const RAW = join(tmpdir(), 'sfr-tour');
 const PODCAST_SETUP = join(HERE, 'podcast-setup.mjs');
+const TRENDING_SETUP = join(HERE, 'trending-setup.mjs');
+const TRENDING_WAIT_MINUTES = 20;
 const VIEWPORT = PHONE.viewport;
 const TOUR_PHONE = { ...PHONE, reducedMotion: 'no-preference' };
 const VIDEO_SIZE = {
@@ -306,6 +310,36 @@ async function readerScene({ page, finger, readable }) {
   await finger.hold(1500);
 }
 
+const storyCards = (page) => page.locator('app-story-title');
+async function trendingScene({ page, finger }) {
+  await finger.tap(sidebarButton(page));
+  await waitForDrawer(page, true);
+  await finger.hold(900);
+  await finger.tap(drawer(page).getByRole('link', { name: /^Trending/ }).first());
+  await page.waitForURL(/view=trending/, { timeout: 10000 });
+  await waitForDrawer(page, false);
+  await storyCards(page).first().waitFor();
+  await finger.hold(2200);
+  await finger.swipeUp();
+  await finger.hold(1400);
+  await finger.swipeUp();
+  await finger.hold(1200);
+  const story = storyCards(page).locator('a.story-link');
+  let onScreen = null;
+  for (const link of await story.all()) {
+    if (await comfortablyOnScreen(link)) onScreen = onScreen ?? link;
+  }
+  if (onScreen === null) throw new Error('No Trending story is on screen to open');
+  await finger.tap(onScreen);
+  await page.locator('app-story-layer').waitFor();
+  await finger.hold(2200);
+  await finger.swipeUp();
+  await finger.hold(1600);
+  await finger.tap(page.locator('app-story-layer button.story-back'));
+  await page.locator('app-story-layer').waitFor({ state: 'hidden' });
+  await finger.hold(1200);
+}
+
 async function sidebarScene({ page, finger }) {
   await finger.tap(sidebarButton(page));
   await waitForDrawer(page, true);
@@ -363,6 +397,7 @@ async function themeScene({ page, finger, theme }) {
 const SCENES = [
   ['magazine', magazineScene],
   ['reader', readerScene],
+  ['trending', trendingScene],
   ['sidebar', sidebarScene],
   ['podcast', podcastScene],
   ['theme', themeScene],
@@ -466,8 +501,27 @@ rmSync(RAW, { recursive: true, force: true });
 mkdirSync(RAW, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 
+// Stories are built on the worker's schedule and titled within five minutes of that.
+async function waitForTrending() {
+  for (let minute = 0; ; minute++) {
+    try {
+      execFileSync('node', [TRENDING_SETUP, 'status'], { stdio: 'inherit' });
+      return;
+    } catch {
+      if (minute >= TRENDING_WAIT_MINUTES) throw new Error('Trending stayed below its floor');
+      await new Promise((resolve) => setTimeout(resolve, 60_000));
+    }
+  }
+}
+
 execFileSync('node', [PODCAST_SETUP], { stdio: 'inherit' });
 try {
+  try {
+    execFileSync('node', [TRENDING_SETUP], { stdio: 'inherit' });
+  } catch {
+    // Exits 1 while the stories are not built yet; waitForTrending decides.
+  }
+  await waitForTrending();
   const browser = await chromium.launch({
     args: [`--force-device-scale-factor=${PHONE.deviceScaleFactor}`],
   });
@@ -486,4 +540,5 @@ try {
   }
 } finally {
   execFileSync('node', [PODCAST_SETUP, 'teardown'], { stdio: 'inherit' });
+  execFileSync('node', [TRENDING_SETUP, 'teardown'], { stdio: 'inherit' });
 }
