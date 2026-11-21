@@ -51,7 +51,7 @@ const card = `<!doctype html>
   <div class="text">
     <div class="brand"><svg viewBox="0 -960 960 960"><path fill="currentColor" d="${glyph}"/></svg><span>simple feed reader</span></div>
     <h1>An RSS reader that lays feeds out <em>like a magazine.</em></h1>
-    <p>Self-hosted, for one or several users. Articles, podcasts, YouTube, Bluesky and Mastodon in one reading column.</p>
+    <p>Self-hosted, for one or several users. Articles, podcasts, YouTube, Bluesky, Mastodon and Lemmy in one reading column.</p>
   </div>
   <div class="facts">Open source · MIT · Docker</div>
   <div class="shot"><img src="data:image/webp;base64,${screenshot}" alt=""></div>
