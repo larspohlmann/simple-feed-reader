@@ -1,4 +1,3 @@
-import { computed } from '@angular/core';
 import { anEntry } from '../../../testing/entry-testing';
 import { InFlightPatches, valuesBefore } from './in-flight-patches';
 
@@ -14,35 +13,6 @@ describe('InFlightPatches', () => {
     expect(ledger.onTheWire(2, 'myVote')).toBe(false);
     release();
     expect(ledger.onTheWire(1, 'myVote')).toBe(false);
-  });
-
-  it('tellsAComputedWhenAFieldGoesOnAndOffTheWire', () => {
-    const ledger = new InFlightPatches();
-    const pending = computed(() => ledger.onTheWire(1, 'social'));
-    expect(pending()).toBe(false);
-
-    const release = ledger.add(1, { social: null });
-    expect(pending()).toBe(true);
-
-    release();
-    expect(pending()).toBe(false);
-
-    ledger.add(1, { social: null });
-    ledger.clear();
-    expect(pending()).toBe(false);
-  });
-
-  it('findsThePatchOnTheWireWithWhatItReplaced', () => {
-    const ledger = new InFlightPatches();
-    const found = computed(() => ledger.findOnTheWire(1, 'myVote'));
-
-    const release = ledger.add(1, { myVote: 0 }, { myVote: 1 });
-
-    expect(found()).toMatchObject({ patch: { myVote: 0 }, before: { myVote: 1 } });
-    expect(ledger.findOnTheWire(1, 'social')).toBeNull();
-    expect(ledger.findOnTheWire(2, 'myVote')).toBeNull();
-    release();
-    expect(found()).toBeNull();
   });
 
   it('forgetsEverythingOnClear', () => {

@@ -23,7 +23,6 @@ const entryActions = {
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
-  isLikeOnTheWire: jest.fn(),
 };
 const navigation = { layer: jest.fn(), openAlone: jest.fn() };
 

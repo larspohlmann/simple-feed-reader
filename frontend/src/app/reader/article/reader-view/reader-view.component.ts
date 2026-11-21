@@ -1,3 +1,5 @@
+import { VoteValue } from '../../vote-pill/vote';
+import { Observable } from 'rxjs';
 import {
   Component,
   ElementRef,
@@ -103,6 +105,8 @@ export class ReaderViewComponent implements OnChanges {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly fullscreen = input(false);
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
+    this.actions.vote(this.entry(), to);
 
   readonly openOriginal = output<void>();
   readonly back = output<void>();

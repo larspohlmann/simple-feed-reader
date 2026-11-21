@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -70,6 +71,11 @@ export class EntryCommentsComponent {
 
   protected readonly links = inject(OwnInstanceLinks);
   private readonly service = inject(CommentsService);
+  private readonly likeActions = new WeakMap<EntryCommentPostDto, () => Observable<void>>();
+  private readonly voteActions = new WeakMap<
+    EntryCommentDto,
+    (to: VoteValue) => Observable<void>
+  >();
   private readonly responses = inject(PostActions);
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
@@ -119,8 +125,13 @@ export class EntryCommentsComponent {
     this.refreshed.emit();
   }
 
-  toggleLike(post: EntryCommentPostDto): void {
-    this.service.toggleLike(this.entry(), post);
+  /** One function per post, so the counts row's input holds still between change detections. */
+  buildLikeAction(post: EntryCommentPostDto): () => Observable<void> {
+    const built = this.likeActions.get(post);
+    if (built) return built;
+    const action = () => this.service.toggleLike(this.entry(), post);
+    this.likeActions.set(post, action);
+    return action;
   }
 
   toggleRepost(post: EntryCommentPostDto): void {
@@ -131,8 +142,13 @@ export class EntryCommentsComponent {
     this.responses.reply(this.entry(), network, post.address);
   }
 
-  vote(comment: EntryCommentDto, to: VoteValue): void {
-    this.service.vote(this.entry(), comment, to);
+  /** One function per comment, so the vote pill's input holds still between change detections. */
+  buildVoteAction(comment: EntryCommentDto): (to: VoteValue) => Observable<void> {
+    const built = this.voteActions.get(comment);
+    if (built) return built;
+    const action = (to: VoteValue) => this.service.vote(this.entry(), comment, to);
+    this.voteActions.set(comment, action);
+    return action;
   }
 
   lemmyActionsOf(vote: EntryCommentVoteDto): PostActionsView {

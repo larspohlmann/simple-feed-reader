@@ -1,3 +1,4 @@
+import { EMPTY } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -21,6 +22,7 @@ const entryActions = {
 
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  entryActions.vote.mockReturnValue(EMPTY);
 });
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({

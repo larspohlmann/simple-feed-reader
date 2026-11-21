@@ -116,7 +116,7 @@
         [actions]="lemmyActions()"
         [score]="e.score ?? 0"
         [myVote]="e.myVote"
-        (voted)="actions.vote(e, $event)"
+        [vote]="voteOnEntry"
         (replyRequested)="replyToPost(e)"
       />
     }

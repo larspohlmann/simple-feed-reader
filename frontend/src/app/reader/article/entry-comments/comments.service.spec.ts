@@ -136,12 +136,23 @@ describe('CommentsService', () => {
       return state.status === 'ok' ? state.comments[0] : undefined;
     };
 
-    it('votesOnACommentAtOnce', () => {
+    it('showsTheVoteAtOnceAndKeepsTheScoreUntilTheAnswer', () => {
       service.vote(buildItemRef(1), shown()!, 1);
 
       expect(voteComment).toHaveBeenCalledWith(1, address, 1);
-      expect(shown()?.score).toBe(5);
+      expect(shown()?.score).toBe(3);
       expect(shown()?.vote?.myVote).toBe(1);
+    });
+
+    it('settlesTheVoteWithItsAnswer', () => {
+      const settled = jest.fn();
+
+      service.vote(buildItemRef(1), shown()!, 1).subscribe({ complete: settled });
+      expect(settled).not.toHaveBeenCalled();
+      answer.next({ myVote: 1, score: 9 });
+      answer.complete();
+
+      expect(settled).toHaveBeenCalled();
     });
 
     it('adoptsTheAnswerScore', () => {

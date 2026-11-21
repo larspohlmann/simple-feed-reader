@@ -1309,8 +1309,9 @@ mark only animates while a refresh is actually running.
 
 Three accent dots in a wave, sized to an icon slot. It stands in for a row
 action's icon while that action waits on its answer: the like button's thumb
-until the live like count lands (#2427). Hidden from assistive tech; the
-button carries `aria-busy` instead. Still under reduced motion.
+until its count lands (#2427), and the tapped arrow of a vote pill until the
+score lands (#2429). Hidden from assistive tech; the button or pill carries
+`aria-busy` instead. Still under reduced motion.
 
 | Input | Type | Default |
 |---|---|---|

@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, finalize, tap } from 'rxjs';
+import { EMPTY, Observable, finalize, tap } from 'rxjs';
+import { subscribeUntilSettled } from '../../core/rx/settled';
 import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
@@ -73,43 +74,51 @@ export class EntryRowCache {
     });
   }
 
-  /** Optimistic like apart from `saveState`; dropped unless the post can be liked and no like is on the wire. */
-  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
+  /** Optimistic like apart from `saveState`, settling when its answer lands; dropped unless the post can be liked
+   *  and no like is on the wire. */
+  setLiked(
+    entry: EntryDto,
+    isLiked: boolean,
+    onError: (problem: Problem) => void,
+  ): Observable<void> {
     const social = likeableSocial(entry);
-    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
+    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return EMPTY;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
-      next: (answer) => {
-        if (answer.likeCount === null) return;
-        this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
+    return subscribeUntilSettled(
+      this.optimistic(entry, { social: { ...social, isLiked } }, request$),
+      {
+        next: (answer) => {
+          if (answer.likeCount === null) return;
+          this.patch(this.collectCopyIds(entry), (row) => ({
+            ...row,
+            likeCount: answer.likeCount,
+          }));
+        },
+        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
       },
-      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
-    });
+    );
   }
 
-  isLikeOnTheWire(entryId: number): boolean {
-    return this.inFlight.onTheWire(entryId, 'social');
-  }
-
-  /** The arrow a vote on the wire was pressed on: the new vote's, or for a cleared vote the old one's. */
-  findVoteOnTheWire(entryId: number): 'up' | 'down' | null {
-    const vote = this.inFlight.findOnTheWire(entryId, 'myVote');
-    if (vote === null) return null;
-    return arrowOf(vote.patch.myVote === 0 ? vote.before.myVote : vote.patch.myVote);
-  }
-
-  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
-    if (entry.myVote === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
-      return;
-    this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)).subscribe({
-      next: (answer) =>
-        this.patch(this.collectCopyIds(entry), (row) => ({
-          ...row,
-          myVote: answer.myVote,
-          score: answer.score,
-        })),
-      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
-    });
+  /** The vote shown at once, its score once the answer lands; settles with the answer. */
+  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): Observable<void> {
+    if (
+      entry.myVote === null ||
+      entry.score === null ||
+      this.inFlight.onTheWire(entry.id, 'myVote')
+    )
+      return EMPTY;
+    return subscribeUntilSettled(
+      this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)),
+      {
+        next: (answer) =>
+          this.patch(this.collectCopyIds(entry), (row) => ({
+            ...row,
+            myVote: answer.myVote,
+            score: answer.score,
+          })),
+        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+      },
+    );
   }
 
   /** The like the network reports, laid over entries still showing `from`; a click made since wins. */
@@ -191,9 +200,7 @@ export class EntryRowCache {
       patch: entry === target ? patch : buildSharedPatch(entry, patch),
     }));
     const befores = changes.map((change) => valuesBefore(change.entry, change.patch));
-    const releases = changes.map((change, index) =>
-      this.inFlight.add(change.entry.id, change.patch, befores[index]),
-    );
+    const releases = changes.map((change) => this.inFlight.add(change.entry.id, change.patch));
     changes.forEach((change) =>
       this.patch([change.entry.id], (row) => ({ ...row, ...change.patch })),
     );
@@ -267,9 +274,4 @@ export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
   if (patch.isViewed === true) return { ...patch, isHidden: true };
   if (patch.isHidden === false) return { ...patch, isViewed: false };
   return patch;
-}
-
-function arrowOf(vote: VoteValue | null | undefined): 'up' | 'down' | null {
-  if (vote === 1) return 'up';
-  return vote === -1 ? 'down' : null;
 }

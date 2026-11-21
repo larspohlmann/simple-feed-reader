@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, finalize } from 'rxjs';
+import { EMPTY, Observable, finalize } from 'rxjs';
+import { subscribeUntilSettled } from '../../core/rx/settled';
 import { parseProblem } from '../../core/problem';
 import { ToastService } from '../../shared/toast/toast.service';
 import { SocialCountsDto } from '../entry-social';
@@ -33,8 +34,8 @@ export class OptimisticToggles {
     return this.inFlight.has(itemKey);
   }
 
-  run(itemKey: string, toggle: OptimisticToggle): void {
-    this.change(itemKey, {
+  run(itemKey: string, toggle: OptimisticToggle): Observable<void> {
+    return this.change(itemKey, {
       key: toggle.key,
       apply: () => toggle.show(toggle.to),
       revert: () => toggle.show(!toggle.to),
@@ -42,21 +43,22 @@ export class OptimisticToggles {
     });
   }
 
-  change(itemKey: string, change: OptimisticChange): void {
+  /** Settles once the change's answer lands, failed or not; at once when the change is dropped. */
+  change(itemKey: string, change: OptimisticChange): Observable<void> {
     const keys = this.inFlight.get(itemKey) ?? new Set<string>();
-    if (keys.has(change.key)) return;
+    if (keys.has(change.key)) return EMPTY;
     keys.add(change.key);
     this.inFlight.set(itemKey, keys);
     change.apply();
-    change
-      .send()
-      .pipe(finalize(() => this.settle(itemKey, change.key)))
-      .subscribe({
+    return subscribeUntilSettled(
+      change.send().pipe(finalize(() => this.settle(itemKey, change.key))),
+      {
         error: (error: HttpErrorResponse) => {
           change.revert();
           this.toast.showProblem(parseProblem(error));
         },
-      });
+      },
+    );
   }
 
   clear(): void {

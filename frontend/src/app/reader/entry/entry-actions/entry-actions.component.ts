@@ -1,4 +1,5 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -57,5 +58,14 @@ export class EntryActionsComponent {
     inject(ListenLauncher),
   );
   protected readonly actions = inject(EntryActionHandler);
-  protected readonly likePending = computed(() => this.actions.isLikeOnTheWire(this.entry()));
+  protected readonly likePending = signal(false);
+
+  protected toggleLike(): void {
+    if (this.likePending()) return;
+    this.likePending.set(true);
+    this.actions
+      .like(this.entry())
+      .pipe(finalize(() => this.likePending.set(false)))
+      .subscribe({ error: () => undefined });
+  }
 }

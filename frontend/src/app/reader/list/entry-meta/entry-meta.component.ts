@@ -1,3 +1,5 @@
+import { VoteValue } from '../../vote-pill/vote';
+import { Observable } from 'rxjs';
 import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
@@ -35,6 +37,8 @@ export class EntryMetaComponent {
   readonly imageShown = input(false);
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
+    this.actions.vote(this.entry(), to);
   private readonly compactCount = inject(CompactCount);
   protected readonly comments = computed(() =>
     buildDiscussionCount(

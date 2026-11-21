@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,6 +28,7 @@ export class SocialCountsComponent {
   readonly entry = input.required<EntryDto>();
 
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly likeEntry = (): Observable<void> => this.actions.like(this.entry());
   private readonly service = inject(SocialCountsService);
   private readonly responses = inject(PostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);

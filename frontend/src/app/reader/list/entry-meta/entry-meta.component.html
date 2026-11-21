@@ -3,11 +3,7 @@
 @if (score !== null || commentBubble !== null) {
   <span class="discussion">
     @if (score !== null) {
-      <app-vote-pill
-        [score]="score"
-        [myVote]="entry().myVote"
-        (voted)="actions.vote(entry(), $event)"
-      />
+      <app-vote-pill [score]="score" [myVote]="entry().myVote" [vote]="voteOnEntry" />
     }
     @if (commentBubble !== null) {
       <span

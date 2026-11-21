@@ -56,7 +56,7 @@
     [attr.aria-label]="likeCountLabel === null ? likeLabel : likeLabel + ', ' + likeCountLabel"
     [appFlagToggle]="social.isLiked"
     [attr.aria-busy]="likePending() || null"
-    (click)="$event.stopPropagation(); actions.like(entry())"
+    (click)="$event.stopPropagation(); toggleLike()"
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"
   >
