@@ -33,6 +33,9 @@ final class Version20261121120000 extends AbstractMigration
         $this->addSql('ALTER TABLE canonical_item ADD ' . self::COLUMN . ' VARCHAR(64) DEFAULT NULL');
         $this->addSql('CREATE INDEX ' . self::INDEX . ' ON canonical_item (' . self::COLUMN . ')');
         $this->queueBackfill();
+        if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            $this->addSql('ANALYZE TABLE canonical_item');
+        }
     }
 
     public function down(Schema $schema): void
