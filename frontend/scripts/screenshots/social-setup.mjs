@@ -26,6 +26,15 @@ const NETWORKS = {
     optional: { totpToken: 'LEMMY_TOTP' },
   },
 };
+// A home timeline or a discovery feed is the account owner's own reading: it shows in its
+// network's section only, never in All items, For you, a saved search or Trending.
+const ONE_ACCOUNT = 'profile';
+const SECTION_ONLY = {
+  includeInAllItems: false,
+  includeInForYou: false,
+  includeInSavedSearches: false,
+  includeInTrending: false,
+};
 const UNPICKED_FEEDS = 8;
 const UNPICKED_COLLECTIONS = 2;
 
@@ -131,6 +140,17 @@ async function importPicked(account, candidates) {
   console.log(`import ${result.status}: ${subscribe.length} feeds, ${collections.length} collections`);
 }
 
+async function keepTimelinesInTheirSection() {
+  const { json: subscriptions } = await api('GET', '/api/subscriptions');
+  const subscriptionIds = subscriptions.subscriptions
+    .filter((subscription) => subscription.social?.network === network)
+    .filter((subscription) => subscription.social.kind !== ONE_ACCOUNT)
+    .map((subscription) => subscription.id);
+  if (subscriptionIds.length === 0) return;
+  const kept = await api('PATCH', '/api/subscriptions/bulk', { subscriptionIds, ...SECTION_ONLY });
+  console.log(`${subscriptionIds.length} timelines kept to the ${network} section: ${kept.status}`);
+}
+
 if (mode === 'teardown') {
   await teardown();
 } else {
@@ -140,6 +160,9 @@ if (mode === 'teardown') {
     `/api/me/social-accounts/${account.id}/import-candidates`,
   );
   if (mode === 'candidates') listCandidates(candidates);
-  else await importPicked(account, candidates);
+  else {
+    await importPicked(account, candidates);
+    await keepTimelinesInTheirSection();
+  }
 }
 await browser.close();

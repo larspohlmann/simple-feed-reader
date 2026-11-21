@@ -51,6 +51,16 @@ PODCAST_TAG=<id> node --env-file=.env.screenshots scripts/screenshots/shots.mjs 
 node --env-file=.env.screenshots scripts/screenshots/podcast-setup.mjs teardown
 ```
 
+Before a retake, `backlog-setup.mjs` marks everything older than two days read, so the sidebar
+counts read like an account in use (the demo is opened only for screenshots).
+
+No shot and no tour scene shows violence: every list and Trending leave out entries and stories
+whose title or summary matches the word list in `lib.mjs` (killing, war, abuse, disaster). Look at
+every shot all the same; `SHOT_SKIP='pattern'` leaves out more for one run. The shots differ on
+purpose: the desktop reading shots each open another tag and another article, and shots of the
+same list start further down (`startAt`). A connected account's home timeline and discovery feeds
+stay in their network's section, out of All items, For you, saved searches and Trending.
+
 The notifications shot shows invented people: its list and the bell's count are stubbed, since a
 connected account's real notifications name real ones. The Lemmy shots open the most discussed
 post near the top of the Lemmy list; `lemmy-votes-light` and `lemmy-comment-votes-light` are

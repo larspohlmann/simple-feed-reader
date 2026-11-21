@@ -81,6 +81,10 @@ Top nav gains "Changelog" (`changelog.html`), as the footer has it.
   gitignored env file Lars writes. This adds a `mastodon-light` shot.
 - A zoomed-in `lemmy-votes-light` shows the vote pill and the comment votes up close (Lars,
   2026-11-21); the Social section carries it beside the full shot.
+- No shot and no tour scene shows a violent or distressing story, and the shots vary instead
+  of repeating one lead article (Lars, 2026-11-21): lists and Trending leave such entries out by
+  a word list, each desktop reading shot opens another tag and article, and shots of the same
+  list start further down. Every image is still looked at before it is committed.
 - The notifications list is stubbed with invented actors, the way the admin user list is, even
   with real accounts connected.
 - Trending must show something (Lars, 2026-11-21): `trending-setup.mjs` borrows a wider set of

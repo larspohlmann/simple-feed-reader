@@ -16,7 +16,16 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { articles, BASE, PHONE, seedSettings, settle, signIn, stubAiryStyle } from './lib.mjs';
+import {
+  articles,
+  BASE,
+  leaveOutDistressingNews,
+  PHONE,
+  seedSettings,
+  settle,
+  signIn,
+  stubAiryStyle,
+} from './lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(process.env.TOUR_OUT ?? join(HERE, '..', '..', '..', 'docs', 'homepage'));
@@ -319,11 +328,9 @@ async function trendingScene({ page, finger }) {
   await page.waitForURL(/view=trending/, { timeout: 10000 });
   await waitForDrawer(page, false);
   await storyCards(page).first().waitFor();
-  await finger.hold(2200);
-  await finger.swipeUp();
-  await finger.hold(1400);
-  await finger.swipeUp();
-  await finger.hold(1200);
+  await finger.hold(1900);
+  await finger.swipeUp({ distance: 300 });
+  await finger.hold(1300);
   const story = storyCards(page).locator('a.story-link');
   let onScreen = null;
   for (const link of await story.all()) {
@@ -332,12 +339,12 @@ async function trendingScene({ page, finger }) {
   if (onScreen === null) throw new Error('No Trending story is on screen to open');
   await finger.tap(onScreen);
   await page.locator('app-story-layer').waitFor();
-  await finger.hold(2200);
+  await finger.hold(1900);
   await finger.swipeUp();
-  await finger.hold(1600);
+  await finger.hold(1400);
   await finger.tap(page.locator('app-story-layer button.story-back'));
   await page.locator('app-story-layer').waitFor({ state: 'hidden' });
-  await finger.hold(1200);
+  await finger.hold(900);
 }
 
 async function sidebarScene({ page, finger }) {
@@ -407,6 +414,7 @@ const SCENES = [
 async function prepare(browser) {
   const session = await browser.newContext(TOUR_PHONE);
   await session.addInitScript(seedSettings, { theme: 'light', layout: 'magazine' });
+  await leaveOutDistressingNews(session);
   const page = await session.newPage();
   await signIn(page);
   const readable = await warmReadableTitles(page);
@@ -424,6 +432,7 @@ async function recordTheme(browser, theme, { readable, storageState }) {
   await recording.addInitScript(seedSettings, { theme, layout: 'magazine' });
   await recording.addInitScript(installTouchOverlay);
   await stubAiryStyle(recording);
+  await leaveOutDistressingNews(recording);
   const videoStart = Date.now();
   const elapsed = () => (Date.now() - videoStart) / 1000;
   const page = await recording.newPage();

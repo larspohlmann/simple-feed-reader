@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   articles,
   BASE,
+  leaveOutDistressingNews,
   PHONE,
   seedSettings,
   settle,
@@ -222,14 +223,17 @@ async function scrollEverythingToTop(page) {
   await settle(page, 1200);
 }
 
-// A Guardian article: its reader extract starts with the text, not a share toast or an author bio.
-const guardianArticle = (page) => articles(page).filter({ hasText: 'The Guardian' }).first();
-
-async function openArticle(page) {
-  await guardianArticle(page).click();
+// Sources whose reader extract starts with the text, not a share toast or an author bio. Each
+// reader shot opens another one, so no two shots show the same article.
+const openArticleFrom = (source) => async (page) => {
+  await articles(page).filter({ hasText: source }).first().locator('.title, .dek').first().click();
   await page.locator('app-reader-view').waitFor();
   await settle(page, 2500);
-}
+};
+const openArticleInPaneFrom = (source) => async (page) => {
+  await openArticleFrom(source)(page);
+  await scrollEverythingToTop(page);
+};
 // Opens the newest post of one followed account (BLUESKY_POST_ACCOUNT, a title substring) by its
 // title: a click on a post's middle lands on the embedded link card instead.
 async function openPost(page) {
@@ -309,10 +313,6 @@ async function openLeadStory(page) {
   if (storyId === null) throw new Error('Trending has no story to open');
   await page.goto(`${BASE}/trending/stories/${storyId}`);
   await settle(page, 2500);
-}
-async function openArticleInPane(page) {
-  await openArticle(page);
-  await scrollEverythingToTop(page);
 }
 async function openSidebarDrawer(page) {
   await page.getByRole('button', { name: 'Toggle sidebar' }).click();
@@ -396,12 +396,31 @@ const SETS = {
   ],
   library: [
     desktop('magazine-light', '/', magazine),
-    desktop('magazine-dark', '/', { ...magazine, theme: 'dark' }),
-    desktop('magazine-airy-dark', '/', { ...magazine, theme: 'dark', stub: stubAiryStyle }),
-    desktop('pane-light', '/', { layout: 'pane', before: openArticleInPane }),
-    desktop('pane-dark', '/', { layout: 'pane', theme: 'dark', before: openArticleInPane }),
-    desktop('list-light', '/', { layout: 'list' }),
-    desktop('reader-dark', '/', { ...magazine, theme: 'dark', before: openArticle }),
+    desktop('magazine-dark', '/', { ...magazine, theme: 'dark', tag: 'Science' }),
+    desktop('magazine-airy-dark', '/', {
+      ...magazine,
+      theme: 'dark',
+      stub: stubAiryStyle,
+      tag: 'Culture',
+    }),
+    desktop('pane-light', '/', {
+      layout: 'pane',
+      tag: 'Tech',
+      before: openArticleInPaneFrom('Ars Technica'),
+    }),
+    desktop('pane-dark', '/', {
+      layout: 'pane',
+      theme: 'dark',
+      tag: 'Science',
+      before: openArticleInPaneFrom('Quanta Magazine'),
+    }),
+    desktop('list-light', '/', { layout: 'list', startAt: 9 }),
+    desktop('reader-dark', '/', {
+      ...magazine,
+      theme: 'dark',
+      tag: 'Culture',
+      before: openArticleFrom('Dezeen'),
+    }),
     desktop('search-light', '/?q=climate', magazine),
     desktop('kept-light', '/?view=kept', magazine),
     desktop('for-you-light', '/?view=for-you', magazine),
@@ -416,14 +435,20 @@ const SETS = {
     desktop('settings-import-light', '/settings/import'),
     desktop('settings-ai-dark', '/settings/ai', { theme: 'dark' }),
     phone('mobile-settings-light', '/settings'),
-    phone('mobile-magazine-light', '/', magazine),
-    phone('mobile-magazine-dark', '/', { ...magazine, theme: 'dark' }),
-    phone('mobile-list-light', '/', { layout: 'list' }),
+    // A phone's list header leaves a tag's name three letters, so the phone lists stay on All items.
+    phone('mobile-magazine-light', '/', { ...magazine, startAt: 3 }),
+    phone('mobile-magazine-dark', '/', { ...magazine, theme: 'dark', startAt: 6 }),
+    phone('mobile-list-light', '/', { layout: 'list', startAt: 14 }),
     phone('mobile-sidebar-light', '/', { ...magazine, before: openSidebarDrawer }),
-    phone('mobile-reader-light', '/', { ...magazine, before: openArticle }),
-    phone('mobile-reader-dark', '/', { ...magazine, theme: 'dark', before: openArticle }),
+    phone('mobile-reader-light', '/', { ...magazine, before: openArticleFrom('The Guardian') }),
+    phone('mobile-reader-dark', '/', {
+      ...magazine,
+      theme: 'dark',
+      tag: 'Science',
+      before: openArticleFrom('Science News'),
+    }),
     phone('mobile-for-you-light', '/?view=for-you', magazine),
-    phone('mobile-search-dark', '/?q=climate', { ...magazine, theme: 'dark' }),
+    phone('mobile-search-dark', '/?q=ocean', { ...magazine, theme: 'dark' }),
   ],
   // Shot with the Trending feeds borrowed (trending-setup.mjs); they crowd every other list.
   trending: [
@@ -501,6 +526,18 @@ function selectShots(arguments_) {
   });
 }
 
+// Shots differ by what they show: a shot with a tag opens that tag of the demo account.
+async function tagPath(page, name) {
+  const tagId = await page.evaluate(async (wanted) => {
+    const token = localStorage.getItem('sfr.jwt');
+    const response = await fetch('/api/tags', { headers: { Authorization: `Bearer ${token}` } });
+    const { tags } = await response.json();
+    return tags.find((tag) => tag.name === wanted)?.id ?? null;
+  }, name);
+  if (tagId === null) throw new Error(`The demo account has no ${name} tag`);
+  return `/?tag=${tagId}`;
+}
+
 // One box around every locator, with room around it, kept inside the viewport and under a height.
 async function clipAround(locators, maxHeight = Number.POSITIVE_INFINITY) {
   const boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
@@ -525,9 +562,10 @@ async function capture(browser, shot) {
   );
   const page = await context.newPage();
   await page.addInitScript(seedSettings, { theme: shot.theme, layout: shot.layout });
+  await leaveOutDistressingNews(page, { startAt: shot.startAt });
   if (shot.stub) await shot.stub(page);
   if (shot.auth !== false) await signIn(page);
-  await page.goto(`${BASE}${shot.path}`);
+  await page.goto(`${BASE}${shot.tag ? await tagPath(page, shot.tag) : shot.path}`);
   await settle(page, 2500);
   if (shot.before) await shot.before(page);
   await page.mouse.move(0, 0);
