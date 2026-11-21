@@ -81,6 +81,10 @@ export class EntryStateActions implements EntryActionHandler {
     return this.rows.isLikeOnTheWire(entry.id);
   }
 
+  findVoteOnTheWire(entry: EntryDto): 'up' | 'down' | null {
+    return this.rows.findVoteOnTheWire(entry.id);
+  }
+
   vote(entry: EntryDto, to: VoteValue): void {
     this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
   }

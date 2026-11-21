@@ -32,6 +32,19 @@ describe('InFlightPatches', () => {
     expect(pending()).toBe(false);
   });
 
+  it('findsThePatchOnTheWireWithWhatItReplaced', () => {
+    const ledger = new InFlightPatches();
+    const found = computed(() => ledger.findOnTheWire(1, 'myVote'));
+
+    const release = ledger.add(1, { myVote: 0 }, { myVote: 1 });
+
+    expect(found()).toMatchObject({ patch: { myVote: 0 }, before: { myVote: 1 } });
+    expect(ledger.findOnTheWire(1, 'social')).toBeNull();
+    expect(ledger.findOnTheWire(2, 'myVote')).toBeNull();
+    release();
+    expect(found()).toBeNull();
+  });
+
   it('forgetsEverythingOnClear', () => {
     const ledger = new InFlightPatches();
     ledger.add(1, { myVote: 1 });

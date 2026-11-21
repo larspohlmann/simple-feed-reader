@@ -8,6 +8,7 @@ export abstract class EntryActionHandler {
   abstract like(entry: EntryDto): void;
   abstract isLikeOnTheWire(entry: EntryDto): boolean;
   abstract vote(entry: EntryDto, to: VoteValue): void;
+  abstract findVoteOnTheWire(entry: EntryDto): 'up' | 'down' | null;
   abstract keep(entry: EntryDto): void;
   abstract unshare(entry: EntryDto): void;
   abstract toggleRead(entry: EntryDto): void;
@@ -20,6 +21,7 @@ const IGNORED_ENTRY_ACTIONS: EntryActionHandler = {
   like: () => undefined,
   isLikeOnTheWire: () => false,
   vote: () => undefined,
+  findVoteOnTheWire: () => null,
   keep: () => undefined,
   unshare: () => undefined,
   toggleRead: () => undefined,

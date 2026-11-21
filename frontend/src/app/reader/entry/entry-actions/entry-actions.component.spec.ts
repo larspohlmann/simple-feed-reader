@@ -36,6 +36,7 @@ class HostComponent implements EntryActionHandler {
   deleted: EntryDto | null = null;
 
   readonly vote = (): void => undefined;
+  readonly findVoteOnTheWire = (): null => null;
 
   favorite(): void {
     this.favoriteCount++;

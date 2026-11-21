@@ -6,7 +6,7 @@ import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
-import { VoteValue, steppedScore } from '../vote-pill/vote';
+import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
@@ -91,12 +91,17 @@ export class EntryRowCache {
     return this.inFlight.onTheWire(entryId, 'social');
   }
 
+  /** The arrow a vote on the wire was pressed on: the new vote's, or for a cleared vote the old one's. */
+  findVoteOnTheWire(entryId: number): 'up' | 'down' | null {
+    const vote = this.inFlight.findOnTheWire(entryId, 'myVote');
+    if (vote === null) return null;
+    return arrowOf(vote.patch.myVote === 0 ? vote.before.myVote : vote.patch.myVote);
+  }
+
   setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
-    const from = entry.myVote;
-    if (from === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
+    if (entry.myVote === null || entry.score === null || this.inFlight.onTheWire(entry.id, 'myVote'))
       return;
-    const patch = { myVote: to, score: steppedScore(entry.score, from, to) };
-    this.optimistic(entry, patch, this.socialPosts.vote(entry.id, to)).subscribe({
+    this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)).subscribe({
       next: (answer) =>
         this.patch(this.collectCopyIds(entry), (row) => ({
           ...row,
@@ -186,7 +191,9 @@ export class EntryRowCache {
       patch: entry === target ? patch : buildSharedPatch(entry, patch),
     }));
     const befores = changes.map((change) => valuesBefore(change.entry, change.patch));
-    const releases = changes.map((change) => this.inFlight.add(change.entry.id, change.patch));
+    const releases = changes.map((change, index) =>
+      this.inFlight.add(change.entry.id, change.patch, befores[index]),
+    );
     changes.forEach((change) =>
       this.patch([change.entry.id], (row) => ({ ...row, ...change.patch })),
     );
@@ -260,4 +267,9 @@ export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
   if (patch.isViewed === true) return { ...patch, isHidden: true };
   if (patch.isHidden === false) return { ...patch, isViewed: false };
   return patch;
+}
+
+function arrowOf(vote: VoteValue | null | undefined): 'up' | 'down' | null {
+  if (vote === 1) return 'up';
+  return vote === -1 ? 'down' : null;
 }

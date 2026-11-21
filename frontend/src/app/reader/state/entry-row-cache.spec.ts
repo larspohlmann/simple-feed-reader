@@ -136,6 +136,55 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(1).likeCount).toBeNull();
   });
 
+  it('names the up arrow on every copy while an upvote is on the wire', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7), buildCopy(2, 7), buildCopy(3, 8));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+
+    expect([1, 2, 3].map((id) => cache.findVoteOnTheWire(id))).toEqual(['up', 'up', null]);
+  });
+
+  it('names the down arrow while a downvote is on the wire', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7));
+
+    cache.setVote(readShownEntry(1), -1, jest.fn());
+
+    expect(cache.findVoteOnTheWire(1)).toBe('down');
+  });
+
+  it('names the arrow a vote is being cleared from', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7, { myVote: 1 }));
+
+    cache.setVote(readShownEntry(1), 0, jest.fn());
+
+    expect(cache.findVoteOnTheWire(1)).toBe('up');
+  });
+
+  it('leaves the score alone until the vote answers', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7), buildCopy(2, 7));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
+    expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
+  });
+
+  it('lets go of the arrow and restores the vote when the vote fails', () => {
+    const failing = new Subject<never>();
+    socialPosts.vote.mockReturnValue(failing);
+    holdEntries(buildCopy(1, 7));
+
+    cache.setVote(readShownEntry(1), 1, jest.fn());
+    failing.error(new Error('no'));
+
+    expect(cache.findVoteOnTheWire(1)).toBeNull();
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
+  });
+
   it('a vote on the wire for one copy holds back a vote on the other', () => {
     socialPosts.vote.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));

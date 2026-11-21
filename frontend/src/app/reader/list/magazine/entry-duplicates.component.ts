@@ -141,6 +141,10 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     return this.shellActions.isLikeOnTheWire(copy);
   }
 
+  findVoteOnTheWire(copy: EntryDto): 'up' | 'down' | null {
+    return this.shellActions.findVoteOnTheWire(copy);
+  }
+
   vote(copy: EntryDto, to: VoteValue): void {
     this.shellActions.vote(copy, to);
   }
