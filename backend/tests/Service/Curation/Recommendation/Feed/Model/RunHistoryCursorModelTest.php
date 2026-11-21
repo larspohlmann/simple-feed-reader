@@ -43,12 +43,16 @@ final class RunHistoryCursorModelTest extends TestCase
 
     public function testAcceptsAnEighteenDigitId(): void
     {
-        self::assertSame(123456789012345678, RunHistoryCursorModel::parse('1795168800-story-123456789012345678')?->id);
+        $parsed = RunHistoryCursorModel::parse('1795168800-story-123456789012345678');
+
+        self::assertSame(123456789012345678, $parsed?->id);
     }
 
     public function testParsesATwelveDigitTimestamp(): void
     {
-        self::assertSame(100000000000, RunHistoryCursorModel::parse('100000000000-story-1')?->createdAt->getTimestamp());
+        $parsed = RunHistoryCursorModel::parse('100000000000-story-1');
+
+        self::assertSame(100000000000, $parsed?->createdAt->getTimestamp());
     }
 
     #[DataProvider('malformedCursors')]
