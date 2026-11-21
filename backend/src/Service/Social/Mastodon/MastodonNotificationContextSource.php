@@ -38,7 +38,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
 
         $subjects = [];
         foreach ($fresh as $row) {
-            $subject = self::answered($row, $statuses);
+            $subject = self::findAnsweredSubject($row, $statuses);
             if ($subject !== null) {
                 $subjects[$row->remoteId] = $subject;
             }
@@ -87,7 +87,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     }
 
     /** @param array<string, JsonNodeModel> $statuses */
-    private static function answered(FetchedNotificationModel $row, array $statuses): ?NotificationSubject
+    private static function findAnsweredSubject(FetchedNotificationModel $row, array $statuses): ?NotificationSubject
     {
         $answeredId = $row->references->answeredId;
         if ($answeredId === null || !isset($statuses[$answeredId])) {
