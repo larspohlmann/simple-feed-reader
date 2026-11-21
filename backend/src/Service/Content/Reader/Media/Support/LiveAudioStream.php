@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Reader\Media\Support;
 
+use App\Entity\PlayableMediaFile;
+
 final class LiveAudioStream
 {
     private const array STREAM_STEMS = ['stream', 'live', 'livestream'];
-    private const array AUDIO_EXTENSIONS = ['', 'mp3', 'aac', 'm4a', 'ogg', 'oga', 'opus'];
     private const array PLAYLIST_EXTENSIONS = ['pls', 'm3u'];
 
     private function __construct()
@@ -33,7 +34,12 @@ final class LiveAudioStream
 
         $stem = strtolower(pathinfo($path, \PATHINFO_FILENAME));
 
-        return \in_array($stem, self::STREAM_STEMS, true) && \in_array($extension, self::AUDIO_EXTENSIONS, true);
+        return \in_array($stem, self::STREAM_STEMS, true) && self::isAudioOrBare($extension);
+    }
+
+    private static function isAudioOrBare(string $extension): bool
+    {
+        return $extension === '' || PlayableMediaFile::isAudioExtension($extension);
     }
 
     private static function isStationHost(string $host): bool
