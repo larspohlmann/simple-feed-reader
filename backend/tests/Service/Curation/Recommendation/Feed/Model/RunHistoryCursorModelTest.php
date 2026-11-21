@@ -49,5 +49,7 @@ final class RunHistoryCursorModelTest extends TestCase
         yield 'non numeric id' => ['1795168800-story-x'];
         yield 'zero id' => ['1795168800-story-0'];
         yield 'non numeric timestamp' => ['x-story-1'];
+        yield 'out of range timestamp' => ['99999999999999999999-story-1'];
+        yield 'out of range id' => ['1795168800-story-99999999999999999999'];
     }
 }

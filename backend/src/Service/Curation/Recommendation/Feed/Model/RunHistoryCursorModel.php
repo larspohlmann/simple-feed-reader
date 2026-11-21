@@ -26,11 +26,16 @@ final readonly class RunHistoryCursorModel
         $seconds = substr($cursor, 0, $firstDash);
         $kind = AiRunKind::tryFrom(substr($cursor, $firstDash + 1, $lastDash - $firstDash - 1));
         $id = substr($cursor, $lastDash + 1);
-        if (null === $kind || !ctype_digit($seconds) || !ctype_digit($id) || (int) $id < 1) {
+        if (null === $kind || !self::isNumber($seconds, 12) || !self::isNumber($id, 18) || (int) $id < 1) {
             return null;
         }
 
         return new self(new \DateTimeImmutable('@' . $seconds), $kind, (int) $id);
+    }
+
+    private static function isNumber(string $digits, int $maxLength): bool
+    {
+        return ctype_digit($digits) && strlen($digits) <= $maxLength;
     }
 
     public function toCursor(): string
