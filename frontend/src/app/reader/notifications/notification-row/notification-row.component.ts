@@ -1,8 +1,11 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { entryChangeParams } from '../../query/link-param';
 import { relativeTimeNarrow } from '../../format';
 import { NotificationGroupDto } from '../notification.models';
 import { notificationContext } from '../notification-context';
@@ -13,7 +16,7 @@ const MAX_AVATARS = 3;
 @Component({
   selector: 'app-notification-row',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AvatarComponent, IconComponent, TranslocoPipe],
+  imports: [AvatarComponent, IconComponent, NgTemplateOutlet, RouterLink, TranslocoPipe],
   templateUrl: './notification-row.component.html',
   styleUrl: './notification-row.component.scss',
 })
@@ -24,6 +27,10 @@ export class NotificationRowComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
 
+  protected readonly entryLink = computed(() => {
+    const entryId = this.group().entryId;
+    return entryId === null ? null : entryChangeParams(String(entryId));
+  });
   protected readonly glyph = computed(() => NOTIFICATION_GLYPH[this.group().kind]);
   protected readonly context = computed(() => notificationContext(this.group()));
   protected readonly avatars = computed(() => this.group().actors.slice(0, MAX_AVATARS));

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
@@ -29,6 +30,7 @@ function group(overrides: Partial<NotificationGroupDto> = {}): NotificationGroup
     threadBy: null,
     onComment: false,
     linkUrl: 'https://social.example/p/1',
+    entryId: null,
     latestAt: '2026-11-16T10:00:00Z',
     seen: true,
     ...overrides,
@@ -49,6 +51,7 @@ describe('NotificationRowComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [NotificationRowComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
     });
   });
 
@@ -57,6 +60,18 @@ describe('NotificationRowComponent', () => {
     expect(link.getAttribute('href')).toBe('https://social.example/p/1');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('opens a resolved row in the reader, same tab', () => {
+    const link = render(group({ entryId: 514 })).querySelector('a.row') as HTMLAnchorElement;
+    expect(link.getAttribute('target')).toBeNull();
+    expect(link.getAttribute('href')).toContain('entry=514');
+  });
+
+  it('keeps an unresolved row as an external link', () => {
+    const link = render(group({ entryId: null })).querySelector('a.row') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('https://social.example/p/1');
+    expect(link.getAttribute('target')).toBe('_blank');
   });
 
   it("draws the kind glyph filled in the kind's tone", () => {
