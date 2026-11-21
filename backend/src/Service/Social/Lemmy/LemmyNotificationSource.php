@@ -117,12 +117,23 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
                 $this->buildExcerpt($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
                 $answeredId === null ? $context : $context->withOnComment(),
-                new NotificationPostKeys(LemmyPostKey::parseKey($entry->node('post')->string('ap_id'))?->keyHash()),
+                new NotificationPostKeys(self::parsePostKeyHash($account, $entry->node('post'))),
             ),
             $createdAt,
             $item->isTrue('read'),
             new ContextReferenceModel(answeredId: $answeredId),
         );
+    }
+
+    private static function parsePostKeyHash(SocialAccount $account, JsonNodeModel $post): ?string
+    {
+        $key = LemmyPostKey::parseKey($post->string('ap_id'));
+        $postId = $post->int('id');
+        if ($key === null && $postId !== null) {
+            $key = LemmyPostKey::parseKey(rtrim($account->getServiceUrl(), '/') . '/post/' . $postId);
+        }
+
+        return $key?->keyHash();
     }
 
     private function buildExcerpt(?string $markdown): ?string

@@ -116,14 +116,21 @@ final class LemmyNotificationSourceTest extends TestCase
         );
     }
 
-    public function testAPostWithoutAnApIdLeavesTheKeyEmpty(): void
+    public function testANonLemmyPostIsKeyedByTheHomeInstancePostPage(): void
     {
-        $withApId = $this->fixture(self::REPLIES_FIXTURE);
-        $replies = str_replace('"ap_id": "https://lemmy.other/post/26906", ', '', $withApId);
+        $fixture = $this->fixture(self::REPLIES_FIXTURE);
+        $replies = str_replace(
+            '"post": {"id": 9, "ap_id": "https://lemmy.other/post/26906",',
+            '"post": {"id": 77, "ap_id": "https://mbin.example/m/php/t/123",',
+            $fixture,
+        );
 
         $page = $this->source($this->http($replies))->fetch(SocialApiWiring::lemmyAccount());
 
-        self::assertNull($page->notifications[0]->subject->keys->postHash);
+        self::assertSame(
+            LemmyPostKey::parseKey(self::INSTANCE . '/post/77')?->keyHash(),
+            $page->notifications[0]->subject->keys->postHash,
+        );
     }
 
     public function testAReplyToYourCommentKeepsTheReplyRemoteId(): void
