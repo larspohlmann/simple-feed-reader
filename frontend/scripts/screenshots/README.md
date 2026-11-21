@@ -25,11 +25,16 @@ SHOT_EMAIL=… SHOT_PASSWORD=… node --env-file=.env.screenshots scripts/screen
 # in the env file. The handles show in the shots. Connect each, import a curated set of follows,
 # communities and feeds, shoot everything with a sidebar, then disconnect; the demo keeps nothing.
 node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky candidates   # what could be imported
-BLUESKY_IMPORT_HANDLES=heise.de,ct.de,npr.org,hankgreen.bsky.social,lhn.bsky.social,agreenberg.bsky.social,mattburgess1.bsky.social,macandi.bsky.social \
+BLUESKY_IMPORT_HANDLES=npr.org,hankgreen.bsky.social,lhn.bsky.social,agreenberg.bsky.social,mattburgess1.bsky.social,levarburton.bsky.social \
   BLUESKY_IMPORT_COLLECTIONS=Discover \
   node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky
-node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs mastodon   # MASTODON_IMPORT_HANDLES, …_COLLECTIONS
-node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs lemmy      # LEMMY_IMPORT_HANDLES, …_COLLECTIONS
+MASTODON_IMPORT_HANDLES=eff@mastodon.social,pluralistic@mamot.fr,historyofpunkrock@sfba.social,madrobotblog@mastodon.social,inthehands@hachyderm.io \
+  MASTODON_IMPORT_COLLECTIONS='#rss' \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs mastodon
+# A Lemmy community keeps its leading "!"; a collection name nothing carries imports no collection.
+LEMMY_IMPORT_HANDLES='!selfhosted@lemmy.world,!dataisbeautiful@lemmy.world,!apple_enthusiast@lemmy.world,!rssfeeds@lemmy.world,!transit@lemmy.world' \
+  LEMMY_IMPORT_COLLECTIONS=none \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs lemmy
 node --env-file=.env.screenshots scripts/screenshots/shots.mjs library social
 for network in bluesky mastodon lemmy; do
   node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs "$network" teardown
@@ -62,9 +67,11 @@ same list start further down (`startAt`). A connected account's home timeline an
 stay in their network's section, out of All items, For you, saved searches and Trending.
 
 The notifications shot shows invented people: its list and the bell's count are stubbed, since a
-connected account's real notifications name real ones. The Lemmy shots open the most discussed
-post near the top of the Lemmy list; `lemmy-votes-light` and `lemmy-comment-votes-light` are
-close-ups, cut to the post's head and to the first comments at twice the pixels.
+connected account's real notifications name real ones. The Lemmy shots show the followed
+communities, not the home timeline, and open the most discussed post near the top of that list;
+`LEMMY_POST='title words'` names another when that thread does not suit a public page.
+`lemmy-votes-light` and `lemmy-comment-votes-light` are close-ups at twice the pixels, cut to the
+end of the post with its votes and to the first comments.
 
 The post shots open the newest post of one followed account, `BLUESKY_POST_ACCOUNT` (a title
 substring, default "Lily Hay Newman"), by its title; check that the post suits a public README.

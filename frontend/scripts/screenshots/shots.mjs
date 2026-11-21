@@ -274,51 +274,64 @@ async function openNewestPostFrom(page, wanted) {
   await page.locator('app-reader-view').waitFor();
   await settle(page, 3000);
 }
-// The most discussed Lemmy post near the top of the list, open beside it.
+// The most discussed Lemmy post near the top of the list, open beside it. LEMMY_POST (a title
+// substring) names one instead, when the most discussed thread does not suit a public page.
 const ROWS_WITHOUT_SCROLLING = 8;
-async function openDiscussedLemmyPost(page) {
-  const commentCounts = await articles(page).evaluateAll((rows, limit) =>
-    rows.slice(0, limit).map((row) => {
-      const bubble = row.querySelector('.discussion .comments');
-      return bubble ? Number.parseInt(bubble.textContent.replace(/\D/g, ''), 10) || 0 : 0;
-    }),
+async function discussedLemmyPost(page) {
+  if (process.env.LEMMY_POST)
+    return articles(page).filter({ hasText: process.env.LEMMY_POST }).first();
+  const commentCounts = await articles(page).evaluateAll(
+    (rows, limit) =>
+      rows.slice(0, limit).map((row) => {
+        const bubble = row.querySelector('.discussion .comments');
+        return bubble ? Number.parseInt(bubble.textContent.replace(/\D/g, ''), 10) || 0 : 0;
+      }),
     ROWS_WITHOUT_SCROLLING,
   );
   const mostDiscussed = commentCounts.indexOf(Math.max(...commentCounts));
-  if (commentCounts[mostDiscussed] === 0) throw new Error('No Lemmy post near the top has comments');
-  await articles(page).nth(mostDiscussed).locator('.title, .dek').first().click();
+  if (commentCounts[mostDiscussed] === 0)
+    throw new Error('No Lemmy post near the top has comments');
+  return articles(page).nth(mostDiscussed);
+}
+async function openDiscussedLemmyPost(page) {
+  const post = await discussedLemmyPost(page);
+  await post.locator('.title, .dek').first().click();
   await page.locator('app-reader-view').waitFor();
   await page.locator('app-entry-comments app-vote-pill').first().waitFor({ timeout: 20000 });
   await scrollEverythingToTop(page);
 }
 // Leaves the Comments heading clear of the reader's sticky bar.
 const ROOM_ABOVE_COMMENTS = 96;
-async function openDiscussedLemmyPostAtItsComments(page) {
+// The end of the post's text, kept above its votes in the close-up.
+const POST_TEXT_ABOVE_VOTES = 190;
+const openDiscussedLemmyPostWithRoomAboveComments = (room) => async (page) => {
   await openDiscussedLemmyPost(page);
-  await page.locator('app-entry-comments .head').evaluate((head, room) => {
+  await page.locator('app-entry-comments .head').evaluate((head, roomAbove) => {
     head.scrollIntoView({ block: 'start' });
     let scroller = head.parentElement;
-    while (scroller && scroller.scrollHeight <= scroller.clientHeight) scroller = scroller.parentElement;
-    (scroller ?? document.scrollingElement).scrollBy(0, -room);
-  }, ROOM_ABOVE_COMMENTS);
+    while (scroller && scroller.scrollHeight <= scroller.clientHeight)
+      scroller = scroller.parentElement;
+    (scroller ?? document.scrollingElement).scrollBy(0, -roomAbove);
+  }, room);
   await settle(page, 800);
-}
-// The post's own votes sit under its title; every comment carries its own.
-const lemmyPostVotes = (page) =>
-  clipAround([
-    page.locator('app-reader-view h1').first(),
-    page.locator('app-reader-view app-vote-pill').first(),
-    page.locator('app-reader-view app-entry-actions').first(),
+};
+// With an account connected the post's votes sit under its text, beside Add comment; every
+// comment carries its own.
+async function lemmyPostVotes(page) {
+  const clip = await clipAround([
+    page.locator('app-reader-view app-social-counts-row').first(),
+    page.locator('app-entry-comments .head'),
   ]);
-const COMMENT_VOTES_HEIGHT = 520;
-const lemmyCommentVotes = (page) =>
-  clipAround(
-    [
-      page.locator('app-entry-comments .head'),
-      page.locator('app-entry-comments .list > li').nth(2),
-    ],
-    COMMENT_VOTES_HEIGHT,
-  );
+  const textAbove = Math.min(POST_TEXT_ABOVE_VOTES, clip.y);
+  return { ...clip, y: clip.y - textAbove, height: clip.height + textAbove };
+}
+const COMMENT_VOTES_HEIGHT = 420;
+// Starts at the first comment's own edge: the padding above it would show the heading's foot.
+async function lemmyCommentVotes(page) {
+  const comments = page.locator('app-entry-comments .list > li');
+  const clip = await clipAround([comments.first(), comments.nth(2)], COMMENT_VOTES_HEIGHT);
+  return { ...clip, y: clip.y + CLIP_PADDING, height: clip.height - CLIP_PADDING };
+}
 async function openLeadStory(page) {
   const storyId = await page.evaluate(async () => {
     const token = localStorage.getItem('sfr.jwt');
@@ -358,14 +371,13 @@ async function expandAll(page) {
 }
 async function queueEpisodes(page) {
   const rows = articles(page);
-  const picks = [
-    rows.nth(1),
-    rows.filter({ hasText: 'Planet Money' }).first(),
-    rows.filter({ hasText: 'This American Life' }).first(),
-  ];
+  const addToPlaylist = page.getByRole('button', { name: 'Add to playlist', exact: true });
+  // The second row may itself be one of the named shows: each pick is a row not yet queued.
+  const notYetQueued = (source) => rows.filter({ hasText: source, has: addToPlaylist }).first();
+  const picks = [rows.nth(1), notYetQueued('Planet Money'), notYetQueued('This American Life')];
   for (const row of picks) {
     await row.scrollIntoViewIfNeeded();
-    await row.getByRole('button', { name: 'Add to playlist', exact: true }).click();
+    await row.locator(addToPlaylist).click();
     await page.waitForTimeout(300);
   }
   await rows.nth(0).scrollIntoViewIfNeeded();
@@ -394,7 +406,14 @@ const podcastTag = () => {
   return `/?tag=${process.env.PODCAST_TAG}`;
 };
 const magazine = { layout: 'magazine' };
-const detail = (name, path, extra = {}) => ({ name, device: 'detail', theme: 'light', path, ...extra });
+const LEMMY_COMMUNITIES = '/?network=lemmy&feedKind=profile';
+const detail = (name, path, extra = {}) => ({
+  name,
+  device: 'detail',
+  theme: 'light',
+  path,
+  ...extra,
+});
 const desktop = (name, path, extra = {}) => ({
   name,
   device: 'desktop',
@@ -431,23 +450,25 @@ const SETS = {
     desktop('admin-proxy-light', '/settings/admin/proxy', { stub: stubProxy }),
   ],
   library: [
-    desktop('magazine-light', '/', magazine),
-    desktop('magazine-dark', '/', { ...magazine, theme: 'dark', tag: 'Science' }),
+    desktop('magazine-light', '/', { ...magazine, tag: 'Science' }),
+    desktop('magazine-dark', '/', { ...magazine, theme: 'dark', tag: 'Tech' }),
     desktop('magazine-airy-dark', '/', {
       ...magazine,
       theme: 'dark',
       stub: stubAiryStyle,
-      tag: 'Culture',
+      tag: 'Food',
     }),
     desktop('pane-light', '/', {
       layout: 'pane',
       tag: 'Tech',
+      startAt: 4,
       before: openArticleInPaneFrom('Ars Technica'),
     }),
     desktop('pane-dark', '/', {
       layout: 'pane',
       theme: 'dark',
       tag: 'Science',
+      startAt: 3,
       before: openArticleInPaneFrom('Quanta Magazine'),
     }),
     desktop('list-light', '/', { layout: 'list', startAt: 9 }),
@@ -478,7 +499,11 @@ const SETS = {
     phone('mobile-magazine-dark', '/', { ...magazine, theme: 'dark', startAt: 6 }),
     phone('mobile-list-light', '/', { layout: 'list', startAt: 14 }),
     phone('mobile-sidebar-light', '/', { ...magazine, before: openSidebarDrawer }),
-    phone('mobile-reader-light', '/', { ...magazine, before: openArticleFrom('The Guardian') }),
+    phone('mobile-reader-light', '/', {
+      ...magazine,
+      tag: 'Food',
+      before: openArticleFrom('Budget Bytes'),
+    }),
     phone('mobile-reader-dark', '/', {
       ...magazine,
       theme: 'dark',
@@ -497,15 +522,18 @@ const SETS = {
   social: [
     desktop('settings-social-light', '/settings/social'),
     desktop('mastodon-light', '/?network=mastodon&feedKind=profile', magazine),
-    desktop('lemmy-light', '/?network=lemmy', { layout: 'pane', before: openDiscussedLemmyPost }),
-    detail('lemmy-votes-light', '/?network=lemmy', {
+    // The followed communities only: the home timeline is the account owner's own reading.
+    desktop('lemmy-light', LEMMY_COMMUNITIES, { layout: 'pane', before: openDiscussedLemmyPost }),
+    detail('lemmy-votes-light', LEMMY_COMMUNITIES, {
       layout: 'pane',
-      before: openDiscussedLemmyPost,
+      before: openDiscussedLemmyPostWithRoomAboveComments(
+        ROOM_ABOVE_COMMENTS + POST_TEXT_ABOVE_VOTES + ROOM_ABOVE_COMMENTS,
+      ),
       clip: lemmyPostVotes,
     }),
-    detail('lemmy-comment-votes-light', '/?network=lemmy', {
+    detail('lemmy-comment-votes-light', LEMMY_COMMUNITIES, {
       layout: 'pane',
-      before: openDiscussedLemmyPostAtItsComments,
+      before: openDiscussedLemmyPostWithRoomAboveComments(ROOM_ABOVE_COMMENTS),
       clip: lemmyCommentVotes,
     }),
     desktop('notifications-light', '/?view=notifications&network=bluesky', {
@@ -548,13 +576,7 @@ function selectShots(arguments_) {
   if (arguments_.length === 0 || arguments_.includes('all')) {
     return Object.keys(SETS).flatMap((set) => SETS[set]);
   }
-  const known = [
-    ...SETS.public,
-    ...SETS.admin,
-    ...SETS.library,
-    ...SETS.trending,
-    ...SETS.social,
-  ];
+  const known = [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.trending, ...SETS.social];
   if (process.env.PODCAST_TAG) known.push(...SETS.listening);
   return arguments_.flatMap((key) => {
     if (key in SETS) return SETS[key];

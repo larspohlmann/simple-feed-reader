@@ -52,6 +52,7 @@ const DISTRESSING = new RegExp(
       'massacre\\w*|violen\\w*|attack\\w*|assault\\w*|stabb\\w*|bomb\\w*|missile\\w*|airstrike\\w*|war|wars',
       'terror\\w*|hostage\\w*|kidnap\\w*|rape\\w*|abus\\w*|suicid\\w*|genocid\\w*|executed|execution\\w*',
       'victim\\w*|crash\\w*|arson|cartel\\w*|trafficking|overdose\\w*|famine|corpse\\w*|bod(y|ies) found',
+      'own li(fe|ves)|rifle\\w*|weapon\\w*',
     ].join('|') +
     ')\\b',
   'i',

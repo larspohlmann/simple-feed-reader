@@ -42,7 +42,8 @@ const [network, mode = 'connect'] = process.argv.slice(2);
 if (!(network in NETWORKS)) {
   throw new Error(`Name the network first: ${Object.keys(NETWORKS).join(', ')}`);
 }
-if (!['connect', 'candidates', 'teardown'].includes(mode)) throw new Error(`Unknown mode "${mode}"`);
+if (!['connect', 'candidates', 'teardown'].includes(mode))
+  throw new Error(`Unknown mode "${mode}"`);
 
 const picks = (suffix) =>
   (process.env[`${network.toUpperCase()}_IMPORT_${suffix}`] ?? '')
@@ -137,7 +138,9 @@ async function importPicked(account, candidates) {
     unsubscribe: [],
     collections,
   });
-  console.log(`import ${result.status}: ${subscribe.length} feeds, ${collections.length} collections`);
+  console.log(
+    `import ${result.status}: ${subscribe.length} feeds, ${collections.length} collections`,
+  );
 }
 
 async function keepTimelinesInTheirSection() {

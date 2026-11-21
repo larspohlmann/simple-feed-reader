@@ -362,9 +362,21 @@ const opensOnAPicture = (entry) =>
   entry.imageUrl !== null &&
   entry.imageWidth >= LEAD_PICTURE_WIDTH &&
   entry.imageWidth > entry.imageHeight;
+// The magazine folds a run of one source into a group as tall as several cards, which pushed the
+// video out of reach on a match day: the tour's list takes each source's newest entry first,
+// then each one's next.
+function oneSourceAfterAnother(entries) {
+  const bySource = [...Map.groupBy(entries, (entry) => entry.subscriptionId).values()];
+  const rounds = Math.max(0, ...bySource.map((own) => own.length));
+  return Array.from({ length: rounds }, (_, round) =>
+    bySource.flatMap((own) => own[round] ?? []),
+  ).flat();
+}
+const withMixedSources = (entries, address) =>
+  isAllItems(address) ? oneSourceAfterAnother(entries) : entries;
 const placedInTheMagazine = (videoPost) => (entries, address) => {
   if (!isAllItems(address)) return entries;
-  const others = entries.filter((entry) => entry.id !== videoPost.id);
+  const others = oneSourceAfterAnother(entries.filter((entry) => entry.id !== videoPost.id));
   const opener = others.findIndex(opensOnAPicture);
   if (opener > 0) others.unshift(...others.splice(opener, 1));
   return [...others.slice(0, VIDEO_POSITION), videoPost, ...others.slice(VIDEO_POSITION)];
@@ -404,7 +416,11 @@ async function trendingScene({ page, finger }) {
   await finger.tap(sidebarButton(page));
   await waitForDrawer(page, true);
   await finger.hold(900);
-  await finger.tap(drawer(page).getByRole('link', { name: /^Trending/ }).first());
+  await finger.tap(
+    drawer(page)
+      .getByRole('link', { name: /^Trending/ })
+      .first(),
+  );
   await page.waitForURL(/view=trending/, { timeout: 10000 });
   await waitForDrawer(page, false);
   await storyCards(page).first().waitFor();
@@ -489,7 +505,7 @@ const SCENES = [
 async function prepare(browser) {
   const session = await browser.newContext(TOUR_PHONE);
   await session.addInitScript(seedSettings, { theme: 'light', layout: 'magazine' });
-  await leaveOutDistressingNews(session);
+  await leaveOutDistressingNews(session, { arrange: withMixedSources });
   const page = await session.newPage();
   await signIn(page);
   const readable = await warmReadableTitles(page);

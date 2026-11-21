@@ -46,7 +46,11 @@ async function subscribe() {
     if (storedUrl !== url) {
       throw new Error(`${url} is stored as ${storedUrl}: list that address in trending-feeds.mjs`);
     }
-    await api('POST', '/api/entries/mark-read', { scope: 'feed', id: subscriptionId, until: dayAgo });
+    await api('POST', '/api/entries/mark-read', {
+      scope: 'feed',
+      id: subscriptionId,
+      until: dayAgo,
+    });
   }
   const subscriptionIds = await borrowedSubscriptionIds();
   const kept = await api('PATCH', '/api/subscriptions/bulk', { subscriptionIds, ...TRENDING_ONLY });
