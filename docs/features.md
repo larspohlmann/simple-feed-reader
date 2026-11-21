@@ -21,6 +21,11 @@ screenshots; the [gallery](screenshots.md) has more.
   searches you choose.
 - Reading-time estimates, a progress bar, and an optional reading focus that
   dims everything but the passage in front of you.
+- Comments in the reader: a Reddit or Lemmy post shows its threaded discussion
+  below it, a Bluesky or Mastodon post its replies, and the heading carries the
+  count. Other feeds that publish a comments feed get a "Load comments" button.
+- Article links lose their tracking parameters, so the same article arriving
+  through two feeds or a shared post is recognised as one.
 
 ## Listening
 
@@ -31,6 +36,10 @@ screenshots; the [gallery](screenshots.md) has more.
   two-pane views; the reader offers the same beside Listen.
 - Episodes show the artwork their podcast declares, and fall back to the
   show's.
+- Episodes and videos with chapters list them under the player; a tap jumps to
+  one.
+- An episode that publishes a transcript shows it in the reader. A tap on a
+  line plays from there, and search finds what was said.
 - Paste a SoundCloud profile link into "Add feed" and the reader offers that
   account's RSS feed.
 - Paste a Mixcloud profile link (e.g. `https://www.mixcloud.com/johndigweed/`)
@@ -62,12 +71,27 @@ screenshots; the [gallery](screenshots.md) has more.
   finds the feed for you. A show link from Apple Podcasts, a SoundCloud
   profile link, a YouTube channel, playlist or video link works too, and a
   GitHub repository link subscribes to the repository's releases.
+- Connect a Bluesky, Mastodon or Lemmy account in Settings → Social Media. Its
+  home timeline, lists, custom feeds and follows arrive as feeds, on Lemmy your
+  communities and timelines, each network in its own sidebar section.
 - Mastodon and Bluesky profiles show as posts: the post's own text stands in
   for the missing headline, and the reader shows it without loading a page.
+- A Lemmy community or user feed (`https://lemmy.world/feeds/c/technology.xml`)
+  works without an account: posts render from the feed with their link cards,
+  score and threaded comments, sorted by interest.
+- Like, reply, repost (boost on Mastodon) or quote a post from the reader, and
+  delete your own posts again. On Lemmy, vote a post or a comment up or down
+  and reply.
+- Rows show a post's like and reply counts. A Lemmy post names its community,
+  and when the same post went to several communities, they share one row with
+  the others as pills.
+- Share a page's link to Bluesky, Mastodon or a Lemmy community from one
+  composer. A passage you select in an article goes out as a quote with a link
+  that jumps to it.
 - A Bluesky post shows what it embeds — images, video, a link card or the
   post it quotes — fetched from Bluesky's public AppView once the post
   arrives, and retried on later refreshes for three days.
-- Save a Bluesky or Mastodon search as a feed: new posts that match the query
+- Save a Bluesky, Mastodon or Lemmy search as a feed: new posts that match the query
   appear under Searches in the sidebar. Preview what it finds before you
   subscribe, and edit the query later in the feed dialog.
   - The query takes exact phrases in quotes, `||` for either word, `-word` to
@@ -75,8 +99,14 @@ screenshots; the [gallery](screenshots.md) has more.
     parentheses to group terms.
   - Mastodon has no `||`, so each alternative runs as its own search, at most 8
     per query. Mastodon search needs full-text search on your instance.
-- Notifications from connected accounts: Bluesky, Mastodon and Lemmy likes, reposts, replies, mentions, quotes,
-  ended polls and follows are fetched and counted, and each row links out to the network. Backend only for now; the list follows.
+- Notifications from connected accounts: each network's sidebar section
+  carries a bell with the unseen count. The list groups likes, reposts,
+  replies, mentions, quotes, ended polls and follows, and a row opens the post
+  in the reader.
+- A feed directory in Settings: about 50,000 news sites and podcasts from the
+  InfoBubble sources catalog, narrowed to the countries and languages you
+  choose. Filter by category, article length and language, search sites and
+  summaries, and subscribe straight from a row.
 - Preview every feed before you subscribe: Add shows the feeds it finds at an
   address with their recent items, whether entries carry images, and whether
   the feed delivers full text or only summaries.
@@ -86,6 +116,9 @@ screenshots; the [gallery](screenshots.md) has more.
 - An Organise page gathers every feed and tag in one place: reorder them by
   drag, select several at once to tag them or change their visibility in bulk,
   and retry or unsubscribe feeds that are erroring or gone.
+- Choose what shows where: every feed, tag and network has checkboxes for All
+  items, For you, saved searches and Trending, and Settings → Visibility shows
+  them all in one table.
 - For sites without any feed, an opt-in experimental mode scrapes the
   article list into a pseudo-feed.
 - When a WordPress site's feed carries only summaries, the app detects its
@@ -97,14 +130,23 @@ screenshots; the [gallery](screenshots.md) has more.
 - Group feeds with tags; each tag has a name, a color, and an icon.
 - Assign tags in the feed dialog, or drag a feed onto a tag.
 - Unread counts per feed and per tag.
+- A tag can hold child tags, two levels deep. Selecting a parent lists, counts
+  and marks read everything below it; OPML export and import keep the nesting.
 
 ## Trending
 
 - The stories several of your feeds are covering, from the last 24 hours or
-  the last 7 days, ranked by how many sources ran them. No AI is involved.
-- Each story is one card; expand it to see every outlet that covered it.
-- Hide a story you don't care about, or turn Trending off in Settings →
-  Preferences.
+  the last 7 days, ranked by how many sources ran them.
+- Stories are grouped without AI, in English, German, French and Spanish. An
+  article counts once however many feeds and posts carry it, and the links
+  that social posts share count too.
+- Each story is one card with its sources and shares, when it started and when
+  its last article joined. Open it to read everything that covered it as a
+  list of its own.
+- With an LLM connection, each story gets its own headline and a short
+  synopsis; without one, its most representative headline stands.
+- Follow a story to keep it in the sidebar, hide one you don't care about, or
+  turn Trending off in Settings → Preferences.
 
 ## "For you" — AI recommendations (optional)
 
@@ -121,8 +163,10 @@ screenshots; the [gallery](screenshots.md) has more.
   runs start manually or on a schedule.
 - Runs execute on the server: close the tab and come back later, stop a run,
   or resume a failed one.
+- Social posts are judged by the article their link card points to.
 - A cost overview shows token usage and cost per run, spend per month, and
-  the total spent — so there are no surprises with paid providers.
+  the total spent — so there are no surprises with paid providers. Every AI
+  call is in it: recommendations, the reading profile and story titles.
 
 ## Accounts
 
@@ -145,10 +189,13 @@ screenshots; the [gallery](screenshots.md) has more.
   tested from the admin settings.
 - A feed catalog suggests feeds to new users; edit it or import the bundled
   one.
+- Update from the app: with the optional updater container, the admin sees
+  when a new release is out and starts the update from the settings.
 
 ## Interface
 
 - Special effort went into mobile: a collapsible sidebar with swipe gestures,
-  pull-to-refresh, and touch-friendly controls.
+  pull-to-refresh, and touch-friendly controls. The floating buttons sit
+  together in one bottom corner, on the side you choose.
 - Light and dark themes, following your system setting if you want.
 - The interface is available in English, German, French and Spanish.
