@@ -60,4 +60,9 @@ final class PlayableMediaFileTest extends TestCase
         self::assertSame('mp3', PlayableMediaFile::extractExtension('https://x.test/a/Ep.MP3?v=1'));
         self::assertSame('', PlayableMediaFile::extractExtension('https://x.test/episode'));
     }
+
+    public function testIgnoresWhitespaceAroundTheUrl(): void
+    {
+        self::assertSame('mp3', PlayableMediaFile::extractExtension(" https://x.test/episode.mp3 \n"));
+    }
 }
