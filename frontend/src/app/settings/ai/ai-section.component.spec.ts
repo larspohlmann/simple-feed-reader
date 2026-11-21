@@ -981,7 +981,9 @@ describe('AiSectionComponent', () => {
     // below.
     flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
-    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne('/api/recommendations/runs/debug-log')
+      .flush({ run: null, runs: [], entries: [] });
     // `tz` is a query param, so match the URL alone: `url` excludes the query
     // string, unlike `urlWithParams`.
     http
@@ -1258,7 +1260,9 @@ describe('AiSectionComponent', () => {
 
     flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
-    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne('/api/recommendations/runs/debug-log')
+      .flush({ run: null, runs: [], entries: [] });
     // `tz` is a query param, so match the URL alone: `url` excludes the query
     // string, unlike `urlWithParams`.
     http
@@ -1275,7 +1279,9 @@ describe('AiSectionComponent', () => {
   const flushReady = (): void => {
     flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
-    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne('/api/recommendations/runs/debug-log')
+      .flush({ run: null, runs: [], entries: [] });
     http
       .expectOne((request) => request.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
