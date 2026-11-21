@@ -55,6 +55,31 @@ final class RunHistoryCursorModelTest extends TestCase
         self::assertSame(100000000000, $parsed?->createdAt->getTimestamp());
     }
 
+    public function testOrdersNewestFirstThenByKindRankThenById(): void
+    {
+        $second = new \DateTimeImmutable('2026-11-20 10:00:00');
+        $older = new RunHistoryCursorModel($second->modify('-1 second'), AiRunKind::ForYou, 9);
+        $story = new RunHistoryCursorModel($second, AiRunKind::Story, 8);
+        $lowerForYou = new RunHistoryCursorModel($second, AiRunKind::ForYou, 3);
+        $higherForYou = new RunHistoryCursorModel($second, AiRunKind::ForYou, 4);
+        $cursors = [$older, $story, $lowerForYou, $higherForYou];
+
+        usort(
+            $cursors,
+            static fn (RunHistoryCursorModel $left, RunHistoryCursorModel $right): int
+                => $left->compareNewestFirst($right),
+        );
+
+        self::assertSame([$higherForYou, $lowerForYou, $story, $older], $cursors);
+    }
+
+    public function testComparesARunEqualToItself(): void
+    {
+        $cursor = new RunHistoryCursorModel(new \DateTimeImmutable('2026-11-20 10:00:00'), AiRunKind::Profile, 5);
+
+        self::assertSame(0, $cursor->compareNewestFirst($cursor));
+    }
+
     #[DataProvider('malformedCursors')]
     public function testParseRejectsMalformedCursor(string $cursor): void
     {

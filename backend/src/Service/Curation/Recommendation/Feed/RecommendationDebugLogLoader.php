@@ -69,8 +69,7 @@ final readonly class RecommendationDebugLogLoader
         usort(
             $runs,
             static fn (DebugLogRunModel $left, DebugLogRunModel $right): int
-                => [$right->createdAt, $right->kind->tieRank(), $right->id]
-                <=> [$left->createdAt, $left->kind->tieRank(), $left->id],
+                => $left->toHistoryCursor()->compareNewestFirst($right->toHistoryCursor()),
         );
 
         return $runs;

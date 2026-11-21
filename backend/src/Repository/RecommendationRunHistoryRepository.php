@@ -208,7 +208,12 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      */
     private static function compareNewestFirst(array $left, array $right): int
     {
-        return [$right['createdAt'], $right['kind']->tieRank(), $right['id']]
-            <=> [$left['createdAt'], $left['kind']->tieRank(), $left['id']];
+        return self::toHistoryCursor($left)->compareNewestFirst(self::toHistoryCursor($right));
+    }
+
+    /** @param HistoryRow $row */
+    private static function toHistoryCursor(array $row): RunHistoryCursorModel
+    {
+        return new RunHistoryCursorModel($row['createdAt'], $row['kind'], $row['id']);
     }
 }

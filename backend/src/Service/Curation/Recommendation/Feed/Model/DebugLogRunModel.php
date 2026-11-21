@@ -64,4 +64,9 @@ final readonly class DebugLogRunModel
     {
         return new self(AiRunKind::Story, $run->requireId(), null, null, null, $run->getCreatedAt(), null);
     }
+
+    public function toHistoryCursor(): RunHistoryCursorModel
+    {
+        return new RunHistoryCursorModel($this->createdAt, $this->kind, $this->id);
+    }
 }

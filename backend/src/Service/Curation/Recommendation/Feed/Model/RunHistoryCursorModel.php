@@ -40,4 +40,11 @@ final readonly class RunHistoryCursorModel
     {
         return sprintf('%d-%s-%d', $this->createdAt->getTimestamp(), $this->kind->value, $this->id);
     }
+
+    /** Within one second the kind rank, then the id, orders the runs. */
+    public function compareNewestFirst(self $other): int
+    {
+        return [$other->createdAt, $other->kind->tieRank(), $other->id]
+            <=> [$this->createdAt, $this->kind->tieRank(), $this->id];
+    }
 }
