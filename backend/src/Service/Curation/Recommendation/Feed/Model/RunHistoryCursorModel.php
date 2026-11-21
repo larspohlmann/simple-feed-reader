@@ -26,14 +26,16 @@ final readonly class RunHistoryCursorModel
             return null;
         }
 
-        $seconds = $parts[0];
         $kind = AiRunKind::tryFrom($parts[1]);
         $id = RunIdText::parse($parts[2]);
-        if (null === $kind || null === $id || !ctype_digit($seconds) || (int) $seconds > self::LAST_DATETIME_SECOND) {
+        if (null === $kind || null === $id || !ctype_digit($parts[0])) {
             return null;
         }
+        $timestamp = (int) $parts[0];
 
-        return new self(\DateTimeImmutable::createFromTimestamp((int) $seconds), $kind, $id);
+        return $timestamp > self::LAST_DATETIME_SECOND
+            ? null
+            : new self(\DateTimeImmutable::createFromTimestamp($timestamp), $kind, $id);
     }
 
     public function toCursor(): string
