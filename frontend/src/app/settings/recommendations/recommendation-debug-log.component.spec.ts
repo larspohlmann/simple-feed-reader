@@ -487,7 +487,7 @@ describe('RecommendationDebugLogComponent', () => {
     expect(debugLog).toHaveBeenLastCalledWith({ kind: 'story', id: 12 });
   });
 
-  it('hides the attempts line for a run without counters', () => {
+  it('shows no summary strip for a story run, whose group header already gives its time', () => {
     debugLog.mockReturnValue(
       of({
         run: {
@@ -508,11 +508,9 @@ describe('RecommendationDebugLogComponent', () => {
     );
     const fixture = mount();
 
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector(
-        '.debug-panel__meta:not(.debug-panel__timeline)',
-      ),
-    ).toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.debug-panel__summary')).toBeNull();
+    expect(element.querySelector('.debug-panel__group-head')).not.toBeNull();
   });
 
   it('reports bytes streamed without an answer', () => {
@@ -632,27 +630,6 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = mount();
     const timeline = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
     expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → …$/);
-  });
-
-  it('shows only the start time for a story run, which never completes', () => {
-    debugLog.mockReturnValue(
-      of({
-        run: {
-          ...RUNNING_RUN_SUMMARY,
-          kind: 'story',
-          status: null,
-          attempts: null,
-          maxAttempts: null,
-          transportFailures: null,
-          maxTransportFailures: null,
-        },
-        runs: [],
-        entries: [BATCH_ENTRY],
-      }),
-    );
-    const fixture = mount();
-    const timeline = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
-    expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2}$/);
   });
 
   it("renders a transport-failed row's errorDetail as a full-width danger line", () => {

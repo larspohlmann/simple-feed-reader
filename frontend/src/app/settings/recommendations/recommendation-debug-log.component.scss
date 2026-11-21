@@ -101,13 +101,22 @@
 
 .debug-panel__runs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+
+  > .debug-panel__meta {
+    flex: none;
+    white-space: nowrap;
+  }
 }
 
 .debug-panel__runs-select {
   --select-inset: var(--space-2);
 
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   height: auto;
   border-radius: var(--radius-sm);
   padding-block: var(--space-1);
