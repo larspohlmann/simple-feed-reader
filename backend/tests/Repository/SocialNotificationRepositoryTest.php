@@ -16,6 +16,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;
 use App\Tests\Support\UserFactory;
+use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialNotificationRepositoryTest extends DbTestCase
@@ -148,6 +149,64 @@ final class SocialNotificationRepositoryTest extends DbTestCase
         );
     }
 
+    public function testNewestOfGroupsCostsTwoStatementsWhateverTheNumberOfGroups(): void
+    {
+        foreach (['at://x/1', 'at://x/2', 'at://x/3', 'at://x/4', 'at://x/5'] as $groupKey) {
+            $this->like($groupKey);
+            $this->like($groupKey);
+        }
+        $groups = $this->groupsOfPage();
+
+        self::assertSame(2, $this->statementsFor(fn () => $this->notifications->findNewestPerGroup($groups, 3)));
+        self::assertSame(
+            2,
+            $this->statementsFor(fn () => $this->notifications->findNewestPerGroup([$groups[0]], 3)),
+        );
+    }
+
+    public function testNewestOfNoGroupsRunsNoStatement(): void
+    {
+        $newest = null;
+        $statements = $this->statementsFor(function () use (&$newest): void {
+            $newest = $this->notifications->findNewestPerGroup([], 3);
+        });
+
+        self::assertSame([], $newest);
+        self::assertSame(0, $statements);
+    }
+
+    public function testNewestOfAGroupIgnoresRowsAboveItsLatestId(): void
+    {
+        $first = $this->like('at://x/1');
+        $second = $this->like('at://x/1');
+        $third = $this->like('at://x/1');
+        $groups = $this->groupsOfPage();
+        $this->like('at://x/1');
+
+        $newest = $this->notifications->findNewestPerGroup($groups, 3);
+
+        self::assertSame(
+            [$third->requireId(), $second->requireId(), $first->requireId()],
+            $this->ids($newest[$third->requireId()]),
+        );
+    }
+
+    public function testNewestOfSeenAndUnseenGroupsOnOneKeyStayApart(): void
+    {
+        $seenFirst = $this->like('at://x/1', true);
+        $seenSecond = $this->like('at://x/1', true);
+        $unseen = $this->like('at://x/1');
+        $groups = $this->groupsOfPage();
+
+        $newest = $this->notifications->findNewestPerGroup($groups, 3);
+
+        self::assertSame([$unseen->requireId()], $this->ids($newest[$unseen->requireId()]));
+        self::assertSame(
+            [$seenSecond->requireId(), $seenFirst->requireId()],
+            $this->ids($newest[$seenSecond->requireId()]),
+        );
+    }
+
     public function testContextSurvivesAFlushAndReload(): void
     {
         $context = (new NotificationContext('my comment', 'Post title', 'c/php', 'Ann'))->withOnComment();
@@ -180,6 +239,18 @@ final class SocialNotificationRepositoryTest extends DbTestCase
     private function groupsOfPage(?int $before = null, int $limit = 30): array
     {
         return $this->notifications->findGroupPage([$this->bluesky->requireId()], $before, $limit);
+    }
+
+    private function statementsFor(\Closure $act): int
+    {
+        /** @var DebugDataHolder $queries */
+        $queries = self::getContainer()->get('doctrine.debug_data_holder');
+        $queries->reset();
+        $act();
+        /** @var list<array{sql: string}> $statements */
+        $statements = $queries->getData()['default'] ?? [];
+
+        return count($statements);
     }
 
     private function persisted(SocialAccount $account): SocialAccount
