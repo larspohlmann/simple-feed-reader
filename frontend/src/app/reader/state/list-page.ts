@@ -7,6 +7,7 @@ export interface ListPage extends Partial<
     StoryPageDto,
     | 'title'
     | 'synopsis'
+    | 'story'
     | 'memberCount'
     | 'unreadCount'
     | 'outletCount'

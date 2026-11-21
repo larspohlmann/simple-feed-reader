@@ -26,6 +26,7 @@ import { TrendingWindowService } from '../trending/trending-window.service';
 import { ListHeading } from './list-heading.service';
 import { ListContext } from '../state/list-context';
 import { OpenStory } from '../state/open-story';
+import { StoryCard } from '../trending/trending.models';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { TestListContext } from '../../../testing/list-context-testing';
 
@@ -530,33 +531,46 @@ describe("ListHeading over a Trending story's list (#2329)", () => {
   }
 
   const tally = { memberCount: 31, unreadCount: 12 };
+  const aCard = (title: string): StoryCard => ({
+    id: 42,
+    title,
+    synopsis: null,
+    outletCount: 1,
+    shareCount: 0,
+    followed: false,
+    createdAt: '2026-11-20T08:00:00+00:00',
+    lastAddedAt: '2026-11-21T08:00:00+00:00',
+  });
 
   it("titles the list with the story's page title, else its followed headline, else Story", () => {
     expect(
-      storyHeading(story(false), { titleOf: () => 'Harbour strike', tallyOf: () => tally }).title(),
+      storyHeading(story(false), {
+        cardOf: () => aCard('Harbour strike'),
+        tallyOf: () => tally,
+      }).title(),
     ).toBe('Harbour strike');
     TestBed.resetTestingModule();
     expect(
       storyHeading(
         story(false),
-        { titleOf: () => null, tallyOf: () => tally },
+        { cardOf: () => null, tallyOf: () => tally },
         { headline: 'Port closed' },
       ).title(),
     ).toBe('Port closed');
     TestBed.resetTestingModule();
-    expect(storyHeading(story(false), { titleOf: () => null, tallyOf: () => null }).title()).toBe(
+    expect(storyHeading(story(false), { cardOf: () => null, tallyOf: () => null }).title()).toBe(
       'Story',
     );
   });
 
   it("counts every row of the story from the server's tally, not the page loaded", () => {
-    const heading = storyHeading(story(false), { titleOf: () => null, tallyOf: () => tally });
+    const heading = storyHeading(story(false), { cardOf: () => null, tallyOf: () => tally });
 
     expect(heading.titleCount()).toEqual({ value: 31, counts: 'items' });
   });
 
   it('counts the unread rows under Only unread', () => {
-    const heading = storyHeading(story(true), { titleOf: () => null, tallyOf: () => tally });
+    const heading = storyHeading(story(true), { cardOf: () => null, tallyOf: () => tally });
 
     expect(heading.titleCount()).toEqual({ value: 12, counts: 'unread' });
   });

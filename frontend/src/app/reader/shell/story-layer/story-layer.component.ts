@@ -91,13 +91,13 @@ export class StoryLayerComponent {
   protected readonly markRead = inject(MarkReadActions);
   protected readonly gestures = inject(ArticleGestures);
   private readonly openStory = inject(OpenStory);
-  protected readonly title = computed(() => this.openStory.titleOf(this.context.selection().id));
-  protected readonly synopsis = computed(() =>
-    this.openStory.synopsisOf(this.context.selection().id),
+  protected readonly title = computed(
+    () => this.openStory.cardOf(this.context.selection().id)?.title ?? null,
   );
-  protected readonly sources = computed(() =>
-    this.openStory.sourcesOf(this.context.selection().id),
+  protected readonly synopsis = computed(
+    () => this.openStory.cardOf(this.context.selection().id)?.synopsis ?? null,
   );
+  protected readonly sources = computed(() => this.openStory.cardOf(this.context.selection().id));
   protected readonly storyRef = computed(() => {
     const id = this.context.selection().id;
     return { id, followed: this.openStory.followedOnServer(id) };

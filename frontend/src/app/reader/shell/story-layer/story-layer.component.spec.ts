@@ -164,9 +164,19 @@ describe('StoryLayerComponent (#2329)', () => {
           {
             provide: OpenStory,
             useValue: {
-              titleOf: (id: number) => (id === story.id ? title() : null),
-              synopsisOf: (id: number) => (id === story.id ? synopsis() : null),
-              sourcesOf: (id: number) => (id === story.id ? sources() : null),
+              cardOf: (id: number) =>
+                id === story.id && title() !== null
+                  ? {
+                      id,
+                      title: title(),
+                      synopsis: synopsis(),
+                      outletCount: sources()?.outletCount ?? 0,
+                      shareCount: sources()?.shareCount ?? 0,
+                      followed: false,
+                      createdAt: '2026-11-20T08:00:00+00:00',
+                      lastAddedAt: '2026-11-21T08:00:00+00:00',
+                    }
+                  : null,
               followedOnServer: () => false,
             },
           },
@@ -314,16 +324,6 @@ describe('StoryLayerComponent (#2329)', () => {
 
       expect(close).toHaveBeenCalled();
       expect(hideRun).toHaveBeenCalledWith({ id: 42, followed: false });
-    });
-
-    it('shows no counts before the page carries them', () => {
-      const fixture = mountFixture();
-      title.set('Dockers strike at the harbour');
-      fixture.detectChanges();
-
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector('app-story-source-count'),
-      ).toBeNull();
     });
   });
 

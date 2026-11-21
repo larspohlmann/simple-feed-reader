@@ -7,9 +7,20 @@ import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
 import { ListPage } from './list-page';
 import { OpenStory } from './open-story';
+import { StoryCard } from '../trending/trending.models';
 
 describe('OpenStory (#2329)', () => {
   const storyList = (storyId: number): EntryQuery => ({ view: 'all', storyId });
+  const aCard: StoryCard = {
+    id: 7,
+    title: 'Harbour strike',
+    synopsis: 'Dockers walked out at dawn.',
+    outletCount: 9,
+    shareCount: 4,
+    followed: false,
+    createdAt: '2026-11-20T08:00:00+00:00',
+    lastAddedAt: '2026-11-21T08:00:00+00:00',
+  };
   const storyPage = (title: string | null, lastOpenedAt: string | null): ListPage => ({
     items: [],
     nextCursor: null,
@@ -18,6 +29,7 @@ describe('OpenStory (#2329)', () => {
     unreadCount: 12,
     outletCount: 9,
     shareCount: 4,
+    story: aCard,
     lastOpenedAt,
     newEntryIds: [],
   });
@@ -40,24 +52,14 @@ describe('OpenStory (#2329)', () => {
     open = TestBed.inject(OpenStory);
   });
 
-  it("keeps the title the story's page carries", () => {
-    listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
+  it("returns the landed page's story card", () => {
+    listLanded.next({ query: storyList(7), page: storyPage('Harbour strike', null) });
 
-    expect(open.titleOf(42)).toBe('Harbour strike');
-    expect(open.titleOf(7)).toBeNull();
-  });
+    expect(open.cardOf(7)).toEqual(aCard);
+    expect(open.cardOf(8)).toBeNull();
 
-  it("keeps the landed page's synopsis", () => {
-    listLanded.next({
-      query: storyList(42),
-      page: { ...storyPage('Harbour strike', null), synopsis: 'Dockers walked out at dawn.' },
-    });
-
-    expect(open.synopsisOf(42)).toBe('Dockers walked out at dawn.');
-    expect(open.synopsisOf(7)).toBeNull();
-
-    listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
-    expect(open.synopsisOf(42)).toBeNull();
+    listLanded.next({ query: storyList(7), page: { ...storyPage('x', null), story: null } });
+    expect(open.cardOf(7)).toBeNull();
   });
 
   it("keeps the tally the story's page carries", () => {
@@ -65,13 +67,6 @@ describe('OpenStory (#2329)', () => {
 
     expect(open.tallyOf(42)).toEqual({ memberCount: 31, unreadCount: 12 });
     expect(open.tallyOf(7)).toBeNull();
-  });
-
-  it("keeps the sources and shares the story's page carries (#2442)", () => {
-    listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
-
-    expect(open.sourcesOf(42)).toEqual({ outletCount: 9, shareCount: 4 });
-    expect(open.sourcesOf(7)).toBeNull();
   });
 
   it('counts a story followed when its page carries a last visit', () => {
@@ -88,10 +83,10 @@ describe('OpenStory (#2329)', () => {
   it('forgets the story once another list lands or the story fails to load', () => {
     listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
     listLanded.next({ query: { view: 'all' }, page: { items: [], nextCursor: null } });
-    expect(open.titleOf(42)).toBeNull();
+    expect(open.cardOf(42)).toBeNull();
 
     listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
     listLanded.next({ query: storyList(42), page: null });
-    expect(open.titleOf(42)).toBeNull();
+    expect(open.cardOf(42)).toBeNull();
   });
 });

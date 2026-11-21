@@ -69,6 +69,8 @@ export function aStory(overrides: Partial<TrendingStoryDto> = {}): TrendingStory
     outletCount: 2,
     viewed: false,
     shareCount: 0,
+    createdAt: '2026-11-20T08:00:00+00:00',
+    lastAddedAt: '2026-11-21T08:00:00+00:00',
     leadEntryId: articles[0].id,
     articles,
     ...overrides,

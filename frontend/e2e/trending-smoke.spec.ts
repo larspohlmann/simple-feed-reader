@@ -33,6 +33,8 @@ const story = (
   outletCount,
   viewed,
   shareCount: 0,
+  createdAt: '2026-11-03T08:00:00Z',
+  lastAddedAt: '2026-11-04T07:00:00Z',
   leadEntryId,
   articles: [
     { ...entryWire({ id: leadEntryId, title, source: 'Fixture lead' }), shares: [] },
