@@ -4,6 +4,7 @@
 }
 
 .story-actions {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: var(--space-1);

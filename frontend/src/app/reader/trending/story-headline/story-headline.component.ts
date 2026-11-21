@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { STORY_ICON, storySynopsisId, storyTitleId } from '../story';
 
-/** A Trending story's glyph, event headline and synopsis: the Trending card's face, and the story page's lead. */
+/** A Trending story's glyph, event headline, projected content and synopsis: the Trending card's face, and the story page's lead. */
 @Component({
   selector: 'app-story-headline',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -7,6 +7,7 @@
 
   @include story-card.card;
 
+  position: relative;
   display: block;
   min-width: 0;
   margin-bottom: var(--space-2);
@@ -19,27 +20,26 @@
   border-end-end-radius: 0;
 }
 
+/* An empty link stretched over the card, so the actions between title and synopsis are
+   buttons beside it, never inside it: a button never nests in an anchor. */
 .story-link {
-  @include story-card.card-padding;
-
-  display: block;
-  padding-bottom: var(--space-1);
+  position: absolute;
+  inset: 0;
   border-radius: inherit;
-  color: inherit;
-  text-decoration: none;
 }
 
-/* Inside the link: the card tucked under the title covers its bottom edge. */
 .story-link:focus-visible {
   outline-offset: -2px;
 }
 
-/* Outside the link: the actions are buttons, and a button never nests in an anchor. */
-.story-foot {
+app-story-headline {
+  @include story-card.card-padding;
+}
+
+.story-line {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-3) var(--space-2);
   font-size: var(--fs-xs);
 }
 

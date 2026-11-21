@@ -53,17 +53,17 @@ it('shows the synopsis beneath the title', () => {
     'Any event',
     12,
     'Dockers walked out at dawn. The port is shut.',
-  ).querySelector('h3.title + p.synopsis');
+  ).querySelector('h3.title ~ p.synopsis');
 
   expect(synopsis?.textContent?.trim()).toBe('Dockers walked out at dawn. The port is shut.');
 });
 
 it('names the link by the title and describes it by the synopsis, unique per story', () => {
-  const link = mount('Any event', 12, 'Dockers walked out.').querySelector('a.story-link')!;
-  const heading = link.querySelector('h3.title')!;
-  const synopsis = link.querySelector('p.synopsis')!;
+  const element = mount('Any event', 12, 'Dockers walked out.');
+  const link = element.querySelector('a.story-link')!;
+  const synopsis = element.querySelector('p.synopsis')!;
 
-  expect(link.getAttribute('aria-labelledby')).toBe(heading.id);
+  expect(link.getAttribute('aria-label')).toBe('Any event');
   expect(link.getAttribute('aria-describedby')).toBe(synopsis.id);
   expect(synopsis.id).toBe('story-synopsis-12');
 });
@@ -82,7 +82,6 @@ it("links to the story's list and opens it when clicked", async () => {
   const link = mount('Any event', 12).querySelector<HTMLAnchorElement>('a.story-link')!;
 
   expect(link.getAttribute('href')).toBe('/trending/stories/12');
-  expect(link.querySelector('h3.title')).not.toBeNull();
 
   link.click();
   await TestBed.inject(Router).navigated;
@@ -91,10 +90,10 @@ it("links to the story's list and opens it when clicked", async () => {
   expect(TestBed.inject(Router).url).toBe('/trending/stories/12');
 });
 
-describe("the card's foot (#2435)", () => {
+describe("the card's story line (#2435)", () => {
   it('names how many feeds covered the story and how often it was shared', () => {
     const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector(
-      '.story-foot .counts',
+      '.story-line .counts',
     )!;
 
     expect(counts.textContent).toContain('7 sources');
@@ -103,16 +102,22 @@ describe("the card's foot (#2435)", () => {
 
   it('names no shares on a story no post shares', () => {
     const counts = mountStory(aStory({ outletCount: 2, shareCount: 0 })).querySelector(
-      '.story-foot .counts',
+      '.story-line .counts',
     )!;
 
     expect(counts.textContent).not.toContain('share');
   });
 
+  it('sits between the title and the synopsis', () => {
+    const element = mountStory(aStory({ synopsis: 'Dockers walked out.' }));
+
+    expect(element.querySelector('h3.title + .story-line + p.synopsis')).not.toBeNull();
+  });
+
   it('offers Follow and Hide beside the counts, outside the link', () => {
     const element = mountStory(aStory());
 
-    expect(element.querySelectorAll('.story-foot .story-actions button')).toHaveLength(2);
+    expect(element.querySelectorAll('.story-line .story-actions button')).toHaveLength(2);
     expect(element.querySelector('a.story-link button')).toBeNull();
   });
 
@@ -120,6 +125,6 @@ describe("the card's foot (#2435)", () => {
     const element = mountStory(aStory(), 'all');
 
     expect(element.querySelector('.story-actions')).toBeNull();
-    expect(element.querySelector('.story-foot .counts')).not.toBeNull();
+    expect(element.querySelector('.story-line .counts')).not.toBeNull();
   });
 });
