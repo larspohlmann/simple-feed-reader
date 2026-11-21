@@ -25,6 +25,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
+import { runKey } from './run-key';
 import {
   RUN_HISTORY_STATUSES,
   runHistoryStatusIcon,
@@ -303,13 +304,12 @@ export class RecommendationRunHistoryComponent {
 
   /** The prior rows the fresh first page does not already carry. The page is
    *  a prefix of the month's order, so what it lacks is exactly the tail --
-   *  which makes the concatenation above ordered and duplicate-free. Ids
-   *  restart per kind, so a row is told apart by kind and id together. */
+   *  which makes the concatenation above ordered and duplicate-free. */
   private carriedTail(fresh: RunHistoryRow[], prior: RunHistoryRow[] | null): RunHistoryRow[] {
     if (prior === null) return [];
 
-    const freshKeys = new Set(fresh.map((run) => `${run.kind}:${run.id}`));
-    return prior.filter((run) => !freshKeys.has(`${run.kind}:${run.id}`));
+    const freshKeys = new Set(fresh.map(runKey));
+    return prior.filter((run) => !freshKeys.has(runKey(run)));
   }
 
   private staleSection(month: RunHistoryMonth, prior: MonthSection | undefined): MonthSection {

@@ -23,6 +23,7 @@ import {
   DebugLogRunSummary,
 } from '../settings.models';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
+import { runKey } from './run-key';
 
 const POLL_MS = 2000;
 
@@ -134,15 +135,14 @@ export class RecommendationDebugLogComponent implements OnInit {
    *  rather than pinning it — otherwise the panel would stop tracking the next
    *  run that starts. */
   selectRun(run: { kind: AiRunKind; id: number }): void {
-    const isDefault = run.kind === this.defaultRun()?.kind && run.id === this.defaultRun()?.id;
+    const defaultRun = this.defaultRun();
+    const isDefault = defaultRun !== null && runKey(run) === runKey(defaultRun);
     this.selectedRun.set(isDefault ? null : { kind: run.kind, id: run.id });
     this.details.clear();
     this.fetch();
   }
 
-  optionValue(run: { kind: AiRunKind; id: number }): string {
-    return `${run.kind}:${run.id}`;
-  }
+  readonly optionValue = runKey;
 
   protected onRunPicked(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
