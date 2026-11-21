@@ -38,7 +38,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         parent::__construct($registry, RecommendationRunLog::class);
     }
 
-    /** @return list<DebugLogRow> `runId` carries the id of the run of that kind */
+    /** @return list<DebugLogRow> */
     public function listForRun(User $user, AiRunKind $kind, int $runId): array
     {
         return $this->findListRows($user, self::resolveOwner($kind), $runId);
