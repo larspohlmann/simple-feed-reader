@@ -27,19 +27,15 @@ final class LiveAudioStream
             return true;
         }
 
-        $extension = strtolower(pathinfo($path, \PATHINFO_EXTENSION));
+        $extension = PlayableMediaFile::extractExtension($url);
         if (\in_array($extension, self::PLAYLIST_EXTENSIONS, true)) {
             return true;
         }
 
         $stem = strtolower(pathinfo($path, \PATHINFO_FILENAME));
 
-        return \in_array($stem, self::STREAM_STEMS, true) && self::isAudioOrBare($extension);
-    }
-
-    private static function isAudioOrBare(string $extension): bool
-    {
-        return $extension === '' || PlayableMediaFile::isAudioExtension($extension);
+        return \in_array($stem, self::STREAM_STEMS, true)
+            && ($extension === '' || PlayableMediaFile::isAudioExtension($extension));
     }
 
     private static function isStationHost(string $host): bool

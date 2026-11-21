@@ -63,19 +63,14 @@ final class FeedMediaClassifier
     public static function classifyUrl(string $url): FeedMediaKind
     {
         $extension = PlayableMediaFile::extractExtension($url);
-        if (PlayableMediaFile::isAudioExtension($extension)) {
-            return FeedMediaKind::Audio;
-        }
-        if (PlayableMediaFile::isVideoExtension($extension)) {
-            return FeedMediaKind::Video;
-        }
-        if (\in_array($extension, self::IMAGE_EXTENSIONS, true)) {
-            return FeedMediaKind::Image;
-        }
 
-        return \in_array($extension, self::UNPLAYABLE_MEDIA_EXTENSIONS, true)
-            ? FeedMediaKind::Other
-            : FeedMediaKind::Unknown;
+        return match (true) {
+            PlayableMediaFile::isAudioExtension($extension) => FeedMediaKind::Audio,
+            PlayableMediaFile::isVideoExtension($extension) => FeedMediaKind::Video,
+            \in_array($extension, self::IMAGE_EXTENSIONS, true) => FeedMediaKind::Image,
+            \in_array($extension, self::UNPLAYABLE_MEDIA_EXTENSIONS, true) => FeedMediaKind::Other,
+            default => FeedMediaKind::Unknown,
+        };
     }
 
     private function __construct()
