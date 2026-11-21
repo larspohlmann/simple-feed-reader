@@ -78,3 +78,44 @@ test('the scene list matches the tour', () => {
     }
   }
 });
+
+const DESCRIPTION =
+  'A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, ' +
+  'Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. ' +
+  'Free and open source.';
+
+test('the description names Trending and the three networks', () => {
+  assert.equal(metaContent('description'), DESCRIPTION);
+});
+
+test('the sections follow the order of the page plan', () => {
+  const sections = [...page.matchAll(/<section id="([a-z]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(sections, [
+    'tour',
+    'layouts',
+    'trending',
+    'features',
+    'social',
+    'mobile',
+    'organise',
+    'yours',
+    'digest',
+    'install',
+  ]);
+});
+
+test('the header and the footer link the changelog', () => {
+  const navigations = [...page.matchAll(/<nav>[\s\S]*?<\/nav>/g)].map((match) => match[0]);
+  assert.equal(navigations.length, 2);
+  for (const navigation of navigations) assert.ok(navigation.includes('href="changelog.html"'));
+});
+
+test('the feature list names what v1.8 to v1.10 added', () => {
+  const features = structuredData().featureList;
+  for (const feature of ['Trending', 'Lemmy', 'Notifications', 'Feed directory']) {
+    assert.ok(
+      features.some((entry) => entry.includes(feature)),
+      `no feature names ${feature}`,
+    );
+  }
+});
