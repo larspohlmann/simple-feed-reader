@@ -85,6 +85,18 @@ final class LemmyEntryRuleTest extends TestCase
         self::assertSame(self::LINK_POST, $result->guid);
     }
 
+    public function testALinkPostCarriesItsLinkedUrl(): void
+    {
+        $link = (new LemmyEntryRule())->apply($this->post(self::LINK_POST));
+        $text = (new LemmyEntryRule())->apply($this->post(self::TEXT_POST));
+
+        self::assertSame(
+            'https://www.businessinsider.com/dhs-demands-50-billion-to-prevent-another-huge-faa-fiasco-2026-11',
+            $link->linkedUrl,
+        );
+        self::assertNull($text->linkedUrl);
+    }
+
     public function testCarriesTheCountsOntoTheEntry(): void
     {
         $result = (new LemmyEntryRule())->apply($this->post(self::LINK_POST));
