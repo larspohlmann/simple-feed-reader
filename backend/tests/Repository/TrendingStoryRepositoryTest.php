@@ -706,12 +706,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             [$this->articleFeed('outlet'), 'outlet.example'],
             [$this->articleFeed('second'), 'second.example'],
         ]);
-        $this->entityManager->flush();
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 0, llm_title_attempted_at = ?'
-            . ' WHERE id = ?',
-            ['Hafenstreik', '2031-05-14 05:00:00', $story->requireId()],
-        );
+        $this->recordTitle($story, 'Hafenstreik', 0, '2031-05-14 05:00:00');
 
         $due = $this->findDueAtNoon();
 
@@ -789,11 +784,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
             '2031-05-14 10:00:00',
             ...[...$this->persistLemmyCopies(), $this->member($this->articleFeed('outlet'))],
         );
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE trending_story SET llm_title = ?, llm_title_member_count = 2, llm_title_attempted_at = ?'
-            . ' WHERE id = ?',
-            ['Hafenstreik', '2031-05-14 05:00:00', $story->requireId()],
-        );
+        $this->recordTitle($story, 'Hafenstreik', 2, '2031-05-14 05:00:00');
 
         $due = $this->findDueAtNoon();
 
