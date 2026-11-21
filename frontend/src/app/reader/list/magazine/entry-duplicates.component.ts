@@ -5,7 +5,7 @@ import { EntryDto } from '../../models';
 import { VoteValue } from '../../vote-pill/vote';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { CompactCount } from '../../../core/i18n/compact-count';
-import { pluralKey } from '../../../core/i18n/plural-key';
+import { buildDiscussionCount, DiscussionCount } from '../../../core/i18n/discussion-count';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
@@ -13,7 +13,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
 import { alsoFootOf, isCrossPost } from './also-foot';
-import { sourceNameOf } from '../../entry/entry-source/source-name';
+import { formatCommunityLabel, sourceNameOf } from '../../entry/entry-source/source-name';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
 import { injectStory, StoryContextDirective } from '../../trending/story-context';
@@ -26,6 +26,14 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
   { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
   { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
 ];
+
+interface ChipCount extends DiscussionCount {
+  icon: 'arrow_upward' | 'chat_bubble';
+}
+
+type AlsoChip =
+  | { crossPost: true; copy: EntryDto; feed: string; counts: ChipCount[] }
+  | { crossPost: false; copy: EntryDto; feed: string; when: string };
 
 /** The footer's chip limit: a capped footer keeps a card's height predictable for the planner (#2017). */
 export const ALSO_FOOT_NAMES = 4;
@@ -63,21 +71,22 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
   private readonly compactCount = inject(CompactCount);
-  private readonly named = computed(() =>
+  private readonly named = computed((): AlsoChip[] =>
     this.copies().map((copy) => {
       const community = isCrossPost(this.entry(), copy) ? copy.community : null;
-      return {
-        copy,
-        crossPost: community !== null,
-        feed: community
-          ? `c/${community.name}`
-          : this.story()
-            ? sourceNameOf(copy, this.rows)
-            : (this.rows.find(copy.subscriptionId)?.title ?? copy.source),
-        when: entryRelativeTime(copy, this.language.lang()),
-        score: community ? this.countOf(copy.score, 'points') : null,
-        comments: community ? this.countOf(copy.commentCount, 'comments') : null,
-      };
+      return community
+        ? {
+            crossPost: true,
+            copy,
+            feed: formatCommunityLabel(community),
+            counts: this.buildCounts(copy),
+          }
+        : {
+            crossPost: false,
+            copy,
+            feed: this.formatFeedName(copy),
+            when: entryRelativeTime(copy, this.language.lang()),
+          };
     }),
   );
   private readonly expanded = signal(false);
@@ -153,12 +162,18 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.displayedId.set(null);
   }
 
-  private countOf(count: number | null, kind: 'points' | 'comments') {
-    if (count === null) return null;
-    return {
-      text: this.compactCount.format(count),
-      count,
-      labelKey: pluralKey(`reader.discussionCounts.${kind}`, count),
-    };
+  private formatFeedName(copy: EntryDto): string {
+    return this.story()
+      ? sourceNameOf(copy, this.rows)
+      : (this.rows.find(copy.subscriptionId)?.title ?? copy.source);
+  }
+
+  private buildCounts(copy: EntryDto): ChipCount[] {
+    const counts: ChipCount[] = [];
+    const score = buildDiscussionCount(this.compactCount, copy.score, 'points');
+    if (score) counts.push({ ...score, icon: 'arrow_upward' });
+    const comments = buildDiscussionCount(this.compactCount, copy.commentCount, 'comments');
+    if (comments) counts.push({ ...comments, icon: 'chat_bubble' });
+    return counts;
   }
 }

@@ -8,41 +8,42 @@
       <span class="lead">{{ label() | transloco }}</span>
     }
     @for (item of shown(); track item.copy.id) {
-      <button
-        type="button"
-        class="also-entry reads-as-text"
-        [attr.aria-expanded]="item.crossPost ? null : displayed()?.id === item.copy.id"
-        [attr.aria-controls]="!item.crossPost && displayed()?.id === item.copy.id ? panelId : null"
-        [attr.title]="item.feed"
-        (click)="item.crossPost ? openCrossPost(item.copy, $event) : toggle(item.copy, $event)"
-        (keydown.enter)="$event.stopPropagation()"
-        (keydown.space)="$event.stopPropagation()"
-      >
-        <span class="feed">{{ item.feed }}</span>
-        @if (item.crossPost) {
-          @if (item.score; as score) {
+      @if (item.crossPost) {
+        <button
+          type="button"
+          class="also-entry reads-as-text"
+          [attr.title]="item.feed"
+          (click)="openCrossPost(item.copy, $event)"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        >
+          <span class="feed">{{ item.feed }}</span>
+          @for (count of item.counts; track count.icon) {
             <span
               class="count"
               role="img"
-              [attr.aria-label]="score.labelKey | transloco: { count: score.count }"
+              [attr.aria-label]="count.labelKey | transloco: { count: count.count }"
             >
-              <app-icon name="arrow_upward" size="sm" aria-hidden="true" />{{ score.text }}
+              <app-icon [name]="count.icon" size="sm" aria-hidden="true" />{{ count.text }}
             </span>
           }
-          @if (item.comments; as comments) {
-            <span
-              class="count"
-              role="img"
-              [attr.aria-label]="comments.labelKey | transloco: { count: comments.count }"
-            >
-              <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ comments.text }}
-            </span>
-          }
-        } @else {
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="also-entry reads-as-text"
+          [attr.aria-expanded]="displayed()?.id === item.copy.id"
+          [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
+          [attr.title]="item.feed"
+          (click)="toggle(item.copy, $event)"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        >
+          <span class="feed">{{ item.feed }}</span>
           <span class="sep">·</span>
           <span class="t">{{ item.when }}</span>
-        }
-      </button>
+        </button>
+      }
     }
     @if (hiddenCount() > 0) {
       <button
