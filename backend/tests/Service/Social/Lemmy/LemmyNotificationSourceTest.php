@@ -6,11 +6,13 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Lemmy\LemmyNotificationSource;
+use App\Service\Social\Lemmy\Support\LemmyPostKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
@@ -67,6 +69,7 @@ final class LemmyNotificationSourceTest extends TestCase
                     threadPlace: 'c/selfhosted',
                     onComment: true,
                 ),
+                new NotificationPostKeys(LemmyPostKey::parseKey('https://lemmy.other/post/26906')?->keyHash()),
             ),
             $reply->subject,
         );
@@ -91,6 +94,36 @@ final class LemmyNotificationSourceTest extends TestCase
         self::assertSame('dave@lemmy.example', $mention->actor->handle);
         self::assertNull($mention->actor->avatarUrl);
         self::assertEquals(self::utc('2026-11-16 07:30:00'), $mention->createdAt);
+    }
+
+    public function testAReplyCarriesThePostApIdKey(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::lemmyAccount());
+
+        $keys = $page->notifications[0]->subject->keys;
+        self::assertSame(LemmyPostKey::parseKey('https://lemmy.other/post/26906')?->keyHash(), $keys->postHash);
+        self::assertNull($keys->answeredHash);
+        self::assertNull($keys->rootHash);
+    }
+
+    public function testAMentionCarriesThePostApIdKey(): void
+    {
+        $page = $this->source($this->http())->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertSame(
+            LemmyPostKey::parseKey('https://lemmy.example/post/12')?->keyHash(),
+            $page->notifications[2]->subject->keys->postHash,
+        );
+    }
+
+    public function testAPostWithoutAnApIdLeavesTheKeyEmpty(): void
+    {
+        $withApId = $this->fixture(self::REPLIES_FIXTURE);
+        $replies = str_replace('"ap_id": "https://lemmy.other/post/26906", ', '', $withApId);
+
+        $page = $this->source($this->http($replies))->fetch(SocialApiWiring::lemmyAccount());
+
+        self::assertNull($page->notifications[0]->subject->keys->postHash);
     }
 
     public function testAReplyToYourCommentKeepsTheReplyRemoteId(): void

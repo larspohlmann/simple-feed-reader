@@ -6,6 +6,7 @@ namespace App\Service\Social\Lemmy;
 
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -17,6 +18,7 @@ use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\Support\LemmyCommentPath;
+use App\Service\Social\Lemmy\Support\LemmyPostKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
@@ -115,6 +117,7 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
                 $this->buildExcerpt($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
                 $answeredId === null ? $context : $context->withOnComment(),
+                new NotificationPostKeys(LemmyPostKey::parseKey($entry->node('post')->string('ap_id'))?->keyHash()),
             ),
             $createdAt,
             $item->isTrue('read'),

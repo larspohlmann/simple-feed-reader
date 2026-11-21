@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Mastodon;
 use App\Entity\NotificationContext;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Mastodon\MastodonNotificationContextSource;
+use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Tests\Support\NotificationRows;
@@ -38,6 +39,53 @@ final class MastodonNotificationContextSourceTest extends TestCase
         self::assertSame('My own post', $subjects['1']->context->answeredExcerpt);
         self::assertSame('My own post', $subjects['2']->context->answeredExcerpt);
         self::assertFalse($subjects['1']->context->onComment);
+    }
+
+    public function testAReplyGainsTheAnsweredStatusKey(): void
+    {
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $this->statuses()]);
+
+        $subjects = $this->source($http)->findSubjects(
+            SocialApiWiring::mastodonAccount(),
+            [self::row('1', '4000')],
+        );
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/@alice/4000')?->keyHash(),
+            $subjects['1']->keys->answeredHash,
+        );
+    }
+
+    public function testTheAnsweredKeyIsStoredEvenWhenTheExcerptIsUnchanged(): void
+    {
+        $answer = new MockResponse((string) json_encode([
+            ['id' => '4000', 'uri' => 'https://mastodon.example/users/alice/statuses/4000'],
+        ]));
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $answer]);
+        $row = NotificationRows::fetched(
+            '1',
+            SocialNotificationKind::Reply,
+            new ContextReferenceModel(answeredId: '4000'),
+            new NotificationContext(answeredExcerpt: 'Kept'),
+        );
+
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::mastodonAccount(), [$row]);
+
+        self::assertSame('Kept', $subjects['1']->context->answeredExcerpt);
+        self::assertNotNull($subjects['1']->keys->answeredHash);
+    }
+
+    public function testAnAnsweredStatusWithoutAnAddressLeavesTheKeyEmpty(): void
+    {
+        $answer = new MockResponse((string) json_encode([['id' => '4000', 'content' => '<p>Mine</p>']]));
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $answer]);
+
+        $subjects = $this->source($http)->findSubjects(
+            SocialApiWiring::mastodonAccount(),
+            [self::row('1', '4000')],
+        );
+
+        self::assertNull($subjects['1']->keys->answeredHash);
     }
 
     public function testAPostMissingFromTheAnswerFindsNoContextForItsRow(): void

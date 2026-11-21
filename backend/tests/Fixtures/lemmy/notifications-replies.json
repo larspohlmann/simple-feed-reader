@@ -3,14 +3,14 @@
     {
       "comment_reply": {"id": 7, "recipient_id": 1, "comment_id": 41, "read": false, "published": "2026-11-16T09:00:00.123456Z"},
       "comment": {"id": 41, "creator_id": 20, "post_id": 9, "content": "Thanks, **that** helped a lot", "path": "0.26906403.41", "published": "2026-11-16T09:00:00Z"},
-      "post": {"id": 9, "name": "Which self-hosted reader do you use?"},
+      "post": {"id": 9, "ap_id": "https://lemmy.other/post/26906", "name": "Which self-hosted reader do you use?"},
       "community": {"id": 4, "name": "selfhosted"},
       "creator": {"id": 20, "name": "carol", "display_name": "Carol", "avatar": "https://lemmy.other/pictrs/image/carol.png", "actor_id": "https://lemmy.other/u/carol"}
     },
     {
       "comment_reply": {"id": 6, "recipient_id": 1, "comment_id": 38, "read": true, "published": "2026-11-16T08:00:00"},
       "comment": {"id": 38, "creator_id": 21, "post_id": 9, "content": "  ", "path": "0.38", "published": "2026-11-16T08:00:00"},
-      "post": {"id": 9, "name": "Which self-hosted reader do you use?"},
+      "post": {"id": 9, "ap_id": "https://lemmy.other/post/26906", "name": "Which self-hosted reader do you use?"},
       "community": {"id": 4, "name": "selfhosted"},
       "creator": {"id": 21, "name": "erin", "actor_id": "https://lemmy.example/u/erin"}
     }
