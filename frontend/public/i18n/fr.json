@@ -1329,6 +1329,8 @@
     "trendingSources": "{{count}} sources",
     "trendingShares": "{{count}} partages",
     "trendingSharesOne": "1 partage",
+    "storyCreated": "créée {{time}}",
+    "storyLastAdded": "dernier article {{time}}",
     "trendingWindow": {
       "label": "Période",
       "day": "24 h",

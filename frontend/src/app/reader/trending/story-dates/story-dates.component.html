@@ -1,0 +1,9 @@
+<span class="created" [title]="created().title">{{
+  'reader.storyCreated' | transloco: { time: created().time }
+}}</span>
+@if (hasGrown()) {
+  <span class="separator" aria-hidden="true">·</span
+  ><span class="last-added" [title]="lastAdded().title">{{
+    'reader.storyLastAdded' | transloco: { time: lastAdded().time }
+  }}</span>
+}

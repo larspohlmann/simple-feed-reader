@@ -1329,6 +1329,8 @@
     "trendingSources": "{{count}} Quellen",
     "trendingShares": "{{count}}-mal geteilt",
     "trendingSharesOne": "einmal geteilt",
+    "storyCreated": "erstellt {{time}}",
+    "storyLastAdded": "letzter Artikel {{time}}",
     "trendingWindow": { "label": "Zeitraum", "day": "24 Std.", "week": "7 Tage" },
     "trendingEmptyDay": "Eine Story erscheint hier, sobald mehrere deiner Feeds innerhalb von 24 Stunden darüber berichten.",
     "trendingEmptyWeek": "Eine Story erscheint hier, sobald mehrere deiner Feeds innerhalb von 7 Tagen darüber berichten. Was in deiner 24-Stunden-Liste steht, kommt hier nicht noch einmal.",
