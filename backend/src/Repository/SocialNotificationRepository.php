@@ -209,8 +209,20 @@ final class SocialNotificationRepository extends ServiceEntityRepository
     private function findRankedRowIds(array $groups, int $perGroup): array
     {
         $inGroup = '(social_account_id = ? AND kind = ? AND seen = ? AND subject_group_key = ? AND id <= ?)';
-        $tagged = implode(' ', array_fill(0, count($groups), "WHEN $inGroup THEN ?"));
-        $inAnyGroup = implode(' OR ', array_fill(0, count($groups), $inGroup));
+        $tags = [];
+        $filters = [];
+        $tagParameters = [];
+        $filterParameters = [];
+        foreach ($groups as $group) {
+            $matching = [$group['accountId'], $group['kind'], $group['seen'], $group['groupKey'], $group['latestId']];
+            $tags[] = "WHEN $inGroup THEN ?";
+            array_push($tagParameters, ...$matching);
+            $tagParameters[] = $group['latestId'];
+            $filters[] = $inGroup;
+            array_push($filterParameters, ...$matching);
+        }
+        $tagged = implode(' ', $tags);
+        $inAnyGroup = implode(' OR ', $filters);
         $sql = "SELECT id, group_latest_id FROM (
                 SELECT id, group_latest_id,
                     ROW_NUMBER() OVER (PARTITION BY group_latest_id ORDER BY id DESC) AS position
@@ -221,15 +233,6 @@ final class SocialNotificationRepository extends ServiceEntityRepository
                 ) matched
             ) ranked
             WHERE position <= ?";
-
-        $tagParameters = [];
-        $filterParameters = [];
-        foreach ($groups as $group) {
-            $matching = [$group['accountId'], $group['kind'], $group['seen'], $group['groupKey'], $group['latestId']];
-            array_push($tagParameters, ...$matching);
-            $tagParameters[] = $group['latestId'];
-            array_push($filterParameters, ...$matching);
-        }
         $parameters = [...$tagParameters, ...$filterParameters, $perGroup];
 
         /** @var array<int|string, int|string> $rows */
