@@ -1592,6 +1592,8 @@ mini card (its link, its padding, Enter or Space) reaches the story card around 
 
 Any other entry with duplicates — the same post in several feeds — renders
 `<app-entry-duplicates>` instead: the "Also in" pills that open the copy's row in a popover (#2053).
+A Lemmy cross-post (another item of the same canonical group) is a pill too, labelled `c/<community>` with that post's own
+score and comment count (muted, `arrow_upward` and `chat_bubble` icons); it opens that post in the reader, with no popover (#2420).
 
 **Not for:** the list view, whose `entry-row` renders `<app-entry-duplicates>` directly.
 

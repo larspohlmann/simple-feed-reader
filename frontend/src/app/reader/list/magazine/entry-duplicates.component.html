@@ -11,15 +11,37 @@
       <button
         type="button"
         class="also-entry reads-as-text"
-        [attr.aria-expanded]="displayed()?.id === item.copy.id"
-        [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
+        [attr.aria-expanded]="item.crossPost ? null : displayed()?.id === item.copy.id"
+        [attr.aria-controls]="!item.crossPost && displayed()?.id === item.copy.id ? panelId : null"
         [attr.title]="item.feed"
-        (click)="toggle(item.copy, $event)"
+        (click)="item.crossPost ? openCrossPost(item.copy, $event) : toggle(item.copy, $event)"
         (keydown.enter)="$event.stopPropagation()"
         (keydown.space)="$event.stopPropagation()"
       >
-        <span class="feed">{{ item.feed }}</span> <span class="sep">·</span>
-        <span class="t">{{ item.when }}</span>
+        <span class="feed">{{ item.feed }}</span>
+        @if (item.crossPost) {
+          @if (item.score; as score) {
+            <span
+              class="count"
+              role="img"
+              [attr.aria-label]="score.labelKey | transloco: { count: score.count }"
+            >
+              <app-icon name="arrow_upward" size="sm" aria-hidden="true" />{{ score.text }}
+            </span>
+          }
+          @if (item.comments; as comments) {
+            <span
+              class="count"
+              role="img"
+              [attr.aria-label]="comments.labelKey | transloco: { count: comments.count }"
+            >
+              <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ comments.text }}
+            </span>
+          }
+        } @else {
+          <span class="sep">·</span>
+          <span class="t">{{ item.when }}</span>
+        }
       </button>
     }
     @if (hiddenCount() > 0) {

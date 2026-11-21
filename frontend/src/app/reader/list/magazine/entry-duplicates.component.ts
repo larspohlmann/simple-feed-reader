@@ -4,13 +4,15 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { VoteValue } from '../../vote-pill/vote';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { CompactCount } from '../../../core/i18n/compact-count';
+import { pluralKey } from '../../../core/i18n/plural-key';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { entryRelativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { MENU_VIEWPORT_MARGIN } from '../../../shared/menu-keys';
-import { alsoFootOf } from './also-foot';
+import { alsoFootOf, isCrossPost } from './also-foot';
 import { sourceNameOf } from '../../entry/entry-source/source-name';
 import { StoryActionsComponent } from '../../trending/story-actions/story-actions.component';
 import { STORY_ICON } from '../../trending/story';
@@ -60,14 +62,23 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
 
   private readonly language = inject(LanguageService);
   private readonly rows = inject(SubscriptionRows);
+  private readonly compactCount = inject(CompactCount);
   private readonly named = computed(() =>
-    this.copies().map((copy) => ({
-      copy,
-      feed: this.story()
-        ? sourceNameOf(copy, this.rows)
-        : (this.rows.find(copy.subscriptionId)?.title ?? copy.source),
-      when: entryRelativeTime(copy, this.language.lang()),
-    })),
+    this.copies().map((copy) => {
+      const community = isCrossPost(this.entry(), copy) ? copy.community : null;
+      return {
+        copy,
+        crossPost: community !== null,
+        feed: community
+          ? `c/${community.name}`
+          : this.story()
+            ? sourceNameOf(copy, this.rows)
+            : (this.rows.find(copy.subscriptionId)?.title ?? copy.source),
+        when: entryRelativeTime(copy, this.language.lang()),
+        score: community ? this.countOf(copy.score, 'points') : null,
+        comments: community ? this.countOf(copy.commentCount, 'comments') : null,
+      };
+    }),
   );
   private readonly expanded = signal(false);
   protected readonly shown = computed(() =>
@@ -97,6 +108,11 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     }
     this.origin.set(event.currentTarget as HTMLElement);
     this.displayedId.set(copy.id);
+  }
+
+  openCrossPost(copy: EntryDto, event: Event): void {
+    event.stopPropagation();
+    this.open(copy);
   }
 
   open(copy: EntryDto): void {
@@ -135,5 +151,14 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
 
   close(): void {
     this.displayedId.set(null);
+  }
+
+  private countOf(count: number | null, kind: 'points' | 'comments') {
+    if (count === null) return null;
+    return {
+      text: this.compactCount.format(count),
+      count,
+      labelKey: pluralKey(`reader.discussionCounts.${kind}`, count),
+    };
   }
 }

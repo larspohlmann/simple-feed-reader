@@ -14,3 +14,12 @@ export function alsoFootOf(entry: EntryDto, story: TrendingStoryDto | null): Als
   if (story) return { copies: otherArticlesOf(story), label: 'reader.alsoCoveredBy' };
   return { copies: entry.duplicates ?? NO_COPIES, label: 'reader.alsoIn' };
 }
+
+export function isCrossPost(lead: EntryDto, copy: EntryDto): boolean {
+  return (
+    lead.canonicalItemId !== null &&
+    copy.canonicalItemId !== null &&
+    copy.canonicalItemId !== lead.canonicalItemId &&
+    copy.community !== null
+  );
+}
