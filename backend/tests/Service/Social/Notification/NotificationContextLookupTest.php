@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Notification;
 
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -82,10 +83,11 @@ final class NotificationContextLookupTest extends DbTestCase
     public function testContextKeepsTheSeenFlagOfADuplicate(): void
     {
         $source = new RecordingContextSource(new NotificationContext('You said'));
+        $keys = new NotificationPostKeys('post-hash', 'answered-hash', 'root-hash');
 
         $completed = $this->lookup($source)->completing($this->account, $this->page([
-            $this->fetched('r1'),
-            $this->fetched('r1', seen: true),
+            $this->fetched('r1', keys: $keys),
+            $this->fetched('r1', seen: true, keys: $keys),
         ]));
         $this->store->record($this->account, $completed);
 
@@ -94,6 +96,7 @@ final class NotificationContextLookupTest extends DbTestCase
         self::assertCount(1, $stored);
         self::assertTrue($stored[0]->isSeen());
         self::assertSame('You said', $stored[0]->getSubject()->context->answeredExcerpt);
+        self::assertEquals($keys, $stored[0]->getSubject()->keys);
     }
 
     #[DataProvider('networks')]
@@ -160,12 +163,18 @@ final class NotificationContextLookupTest extends DbTestCase
         string $remoteId,
         string $createdAt = '2026-11-17 11:00:00',
         bool $seen = false,
+        NotificationPostKeys $keys = new NotificationPostKeys(),
     ): FetchedNotificationModel {
         return new FetchedNotificationModel(
             $remoteId,
             SocialNotificationKind::Reply,
             new NotificationActor('@bob', null, null, 'https://bsky.app/profile/bob'),
-            new NotificationSubject($remoteId, 'Their reply', 'https://bsky.app/post/' . $remoteId),
+            new NotificationSubject(
+                $remoteId,
+                'Their reply',
+                'https://bsky.app/post/' . $remoteId,
+                keys: $keys,
+            ),
             new \DateTimeImmutable($createdAt),
             $seen,
         );

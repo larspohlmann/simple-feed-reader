@@ -186,7 +186,7 @@ final class CanonicalItemRepositoryTest extends DbTestCase
         );
     }
 
-    public function testAnEmptyAskMakesNoQuery(): void
+    public function testAnEmptyAskFindsNothing(): void
     {
         self::assertSame([], $this->items->findReadableEntryIds(1, CanonicalItemKind::Lemmy, []));
     }

@@ -11,13 +11,10 @@ final class MastodonStatusKeyTest extends TestCase
 {
     public function testStatusPageAndUriShareOneKey(): void
     {
-        self::assertSame(
-            'https://mastodon.example/users/alice/statuses/123',
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/123')?->key,
-        );
         $page = MastodonStatusKey::parseKey('https://mastodon.example/@alice/123');
         $uri = MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/123');
 
+        self::assertSame('https://mastodon.example/users/alice/statuses/123', $page?->key);
         self::assertNotNull($uri);
         self::assertSame($uri->keyHash(), $page->keyHash());
     }
