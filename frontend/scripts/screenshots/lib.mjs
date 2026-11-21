@@ -27,18 +27,20 @@ export async function settle(page, milliseconds = 1500) {
   await page.waitForTimeout(milliseconds);
 }
 
-// The magazine style is a server preference; answer the profile with airy instead of saving it.
-export async function stubAiryStyle(pageOrContext) {
+// Answers the profile with other preferences instead of saving them on the demo account.
+export async function stubPreferences(pageOrContext, preferences) {
   await pageOrContext.route(/\/api\/me$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     const response = await route.fetch();
     const profile = await response.json();
     await route.fulfill({
       response,
-      json: { ...profile, preferences: { ...profile.preferences, magazineStyle: 'airy' } },
+      json: { ...profile, preferences: { ...profile.preferences, ...preferences } },
     });
   });
 }
+export const stubAiryStyle = (pageOrContext) =>
+  stubPreferences(pageOrContext, { magazineStyle: 'airy' });
 
 async function dismissPasskeyOffer(page) {
   const offer = page.getByRole('dialog', { name: 'Set up a passkey?' });

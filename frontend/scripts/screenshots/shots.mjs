@@ -1,13 +1,23 @@
 // Captures the docs/screenshots set against the dev stack. See README.md next to this file.
 //
-//   node --env-file=.env.screenshots shots.mjs [set|shot ...]   sets: public, admin, library, social, listening, all
+//   node --env-file=.env.screenshots shots.mjs [set|shot ...]
+//   sets: public, admin, library, trending, social, listening, all
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { articles, BASE, PHONE, seedSettings, settle, signIn, stubAiryStyle } from './lib.mjs';
+import {
+  articles,
+  BASE,
+  PHONE,
+  seedSettings,
+  settle,
+  signIn,
+  stubAiryStyle,
+  stubPreferences,
+} from './lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(HERE, '..', '..', '..', 'docs', 'screenshots');
@@ -15,6 +25,9 @@ const RAW = join(tmpdir(), 'sfr-screenshots');
 mkdirSync(RAW, { recursive: true });
 
 const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 4 / 3 };
+// A close-up of one control: the desktop page at twice the pixels, cut to the shot's clip.
+const DETAIL = { ...DESKTOP, deviceScaleFactor: 2 };
+const CLIP_PADDING = 16;
 
 const day = (daysAgo) => {
   const date = new Date();
@@ -116,6 +129,89 @@ async function stubProxy(page) {
   );
 }
 
+// Invented people: a connected account's real notifications name real ones.
+const fakeActor = (displayName, handle) => ({
+  handle,
+  displayName,
+  avatarUrl: null,
+  profileUrl: `https://bsky.app/profile/${handle}`,
+});
+const fakeNotification = (id, kind, hoursAgo, extra = {}) => ({
+  id,
+  kind,
+  account: `@${process.env.BLUESKY_HANDLE ?? 'jamie.example'}`,
+  actors: [fakeActor('Morgan Lee', 'morgan.example')],
+  actorCount: 1,
+  excerpt: null,
+  answeredExcerpt: null,
+  threadTitle: null,
+  threadPlace: null,
+  threadBy: null,
+  onComment: false,
+  linkUrl: `https://bsky.app/post/${id}`,
+  entryId: null,
+  latestAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString(),
+  seen: true,
+  ...extra,
+});
+const FAKE_NOTIFICATIONS = [
+  fakeNotification(60, 'like', 1, {
+    actors: [
+      fakeActor('Priya Nair', 'priya.example'),
+      fakeActor('Sam Rivera', 'sam.example'),
+      fakeActor('Alex Kim', 'alex.example'),
+    ],
+    actorCount: 12,
+    answeredExcerpt: 'Three feeds, one story: how Trending groups what the papers ran today.',
+    seen: false,
+  }),
+  fakeNotification(59, 'reply', 2, {
+    actors: [fakeActor('Chris Weber', 'chris.example')],
+    excerpt: 'Does it count a wire story once when five outlets reprint it?',
+    answeredExcerpt: 'Three feeds, one story: how Trending groups what the papers ran today.',
+    seen: false,
+  }),
+  fakeNotification(58, 'repost', 5, {
+    actors: [fakeActor('Morgan Lee', 'morgan.example'), fakeActor('Sam Rivera', 'sam.example')],
+    actorCount: 4,
+    answeredExcerpt: 'A reader that lays feeds out like a magazine.',
+  }),
+  fakeNotification(57, 'mention', 9, {
+    actors: [fakeActor('Priya Nair', 'priya.example')],
+    excerpt: 'Worth a look if you still read feeds: @jamie wrote up a week with the two-pane view.',
+  }),
+  fakeNotification(56, 'quote', 20, {
+    actors: [fakeActor('Alex Kim', 'alex.example')],
+    excerpt: 'This is the part most readers skip.',
+    answeredExcerpt: 'Podcast chapters now sit under the player; a tap jumps to one.',
+  }),
+  fakeNotification(55, 'follow', 26, {
+    actors: [fakeActor('Chris Weber', 'chris.example'), fakeActor('Dana Okafor', 'dana.example')],
+    actorCount: 3,
+  }),
+];
+const UNSEEN_NOTIFICATIONS = 2;
+
+// The list and the bell's count are invented; nothing is marked seen on the real account.
+async function stubNotifications(page) {
+  await page.route(/\/api\/me\/notifications(?:[?#]|$)/, (route) =>
+    route.fulfill({
+      json: { groups: FAKE_NOTIFICATIONS, nextCursor: null, scopeMissing: [], needsReconnect: [] },
+    }),
+  );
+  await page.route('**/api/me/notifications/seen', (route) => route.fulfill({ status: 204 }));
+  await page.route(/\/api\/subscriptions\/counts(?:[?#]|$)/, async (route) => {
+    const response = await route.fetch();
+    const counts = await response.json();
+    const notifications = [{ network: 'bluesky', unseenCount: UNSEEN_NOTIFICATIONS }];
+    await route.fulfill({ response, json: { ...counts, notifications } });
+  });
+}
+
+// The demo account has picked no countries; without a pick the page shows only the picker.
+const stubDirectoryScope = (page) =>
+  stubPreferences(page, { feedDirectoryScope: { countries: ['US', 'GB'], languages: ['en'] } });
+
 async function scrollEverythingToTop(page) {
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) {
@@ -138,6 +234,9 @@ async function openArticle(page) {
 // title: a click on a post's middle lands on the embedded link card instead.
 async function openPost(page) {
   const wanted = process.env.BLUESKY_POST_ACCOUNT ?? 'Lily Hay Newman';
+  await openNewestPostFrom(page, wanted);
+}
+async function openNewestPostFrom(page, wanted) {
   const subscriptionId = await page.evaluate(async (title) => {
     const token = localStorage.getItem('sfr.jwt');
     const response = await fetch('/api/subscriptions', {
@@ -152,6 +251,64 @@ async function openPost(page) {
   await articles(page).first().locator('.title, .dek').first().click();
   await page.locator('app-reader-view').waitFor();
   await settle(page, 3000);
+}
+// The most discussed Lemmy post near the top of the list, open beside it.
+const ROWS_WITHOUT_SCROLLING = 8;
+async function openDiscussedLemmyPost(page) {
+  const commentCounts = await articles(page).evaluateAll((rows, limit) =>
+    rows.slice(0, limit).map((row) => {
+      const bubble = row.querySelector('.discussion .comments');
+      return bubble ? Number.parseInt(bubble.textContent.replace(/\D/g, ''), 10) || 0 : 0;
+    }),
+    ROWS_WITHOUT_SCROLLING,
+  );
+  const mostDiscussed = commentCounts.indexOf(Math.max(...commentCounts));
+  if (commentCounts[mostDiscussed] === 0) throw new Error('No Lemmy post near the top has comments');
+  await articles(page).nth(mostDiscussed).locator('.title, .dek').first().click();
+  await page.locator('app-reader-view').waitFor();
+  await page.locator('app-entry-comments app-vote-pill').first().waitFor({ timeout: 20000 });
+  await scrollEverythingToTop(page);
+}
+// Leaves the Comments heading clear of the reader's sticky bar.
+const ROOM_ABOVE_COMMENTS = 96;
+async function openDiscussedLemmyPostAtItsComments(page) {
+  await openDiscussedLemmyPost(page);
+  await page.locator('app-entry-comments .head').evaluate((head, room) => {
+    head.scrollIntoView({ block: 'start' });
+    let scroller = head.parentElement;
+    while (scroller && scroller.scrollHeight <= scroller.clientHeight) scroller = scroller.parentElement;
+    (scroller ?? document.scrollingElement).scrollBy(0, -room);
+  }, ROOM_ABOVE_COMMENTS);
+  await settle(page, 800);
+}
+// The post's own votes sit under its title; every comment carries its own.
+const lemmyPostVotes = (page) =>
+  clipAround([
+    page.locator('app-reader-view h1').first(),
+    page.locator('app-reader-view app-vote-pill').first(),
+    page.locator('app-reader-view app-entry-actions').first(),
+  ]);
+const COMMENT_VOTES_HEIGHT = 520;
+const lemmyCommentVotes = (page) =>
+  clipAround(
+    [
+      page.locator('app-entry-comments .head'),
+      page.locator('app-entry-comments .list > li').nth(2),
+    ],
+    COMMENT_VOTES_HEIGHT,
+  );
+async function openLeadStory(page) {
+  const storyId = await page.evaluate(async () => {
+    const token = localStorage.getItem('sfr.jwt');
+    const response = await fetch('/api/trending?window=day', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { stories } = await response.json();
+    return stories[0]?.id ?? null;
+  });
+  if (storyId === null) throw new Error('Trending has no story to open');
+  await page.goto(`${BASE}/trending/stories/${storyId}`);
+  await settle(page, 2500);
 }
 async function openArticleInPane(page) {
   await openArticle(page);
@@ -204,6 +361,7 @@ const podcastTag = () => {
   return `/?tag=${process.env.PODCAST_TAG}`;
 };
 const magazine = { layout: 'magazine' };
+const detail = (name, path, extra = {}) => ({ name, device: 'detail', theme: 'light', path, ...extra });
 const desktop = (name, path, extra = {}) => ({
   name,
   device: 'desktop',
@@ -247,10 +405,11 @@ const SETS = {
     desktop('search-light', '/?q=climate', magazine),
     desktop('kept-light', '/?view=kept', magazine),
     desktop('for-you-light', '/?view=for-you', magazine),
-    desktop('trending-light', '/?view=trending&window=day', magazine),
     desktop('onboarding-light', '/discover'),
     phone('mobile-onboarding-light', '/discover'),
     desktop('organise-light', '/settings/organise', { before: expandAll }),
+    desktop('settings-visibility-light', '/settings/visibility', { before: expandAll }),
+    desktop('settings-directory-light', '/settings/feed-directory', { stub: stubDirectoryScope }),
     desktop('settings-preferences-light', '/settings/preferences'),
     desktop('settings-email-light', '/settings/email'),
     desktop('settings-account-light', '/settings/account'),
@@ -264,11 +423,32 @@ const SETS = {
     phone('mobile-reader-light', '/', { ...magazine, before: openArticle }),
     phone('mobile-reader-dark', '/', { ...magazine, theme: 'dark', before: openArticle }),
     phone('mobile-for-you-light', '/?view=for-you', magazine),
-    phone('mobile-trending-light', '/?view=trending&window=day', magazine),
     phone('mobile-search-dark', '/?q=climate', { ...magazine, theme: 'dark' }),
+  ],
+  // Shot with the Trending feeds borrowed (trending-setup.mjs); they crowd every other list.
+  trending: [
+    desktop('trending-light', '/?view=trending&window=day', magazine),
+    desktop('story-light', '/?view=trending&window=day', { ...magazine, before: openLeadStory }),
+    phone('mobile-trending-light', '/?view=trending&window=day', magazine),
   ],
   social: [
     desktop('settings-social-light', '/settings/social'),
+    desktop('mastodon-light', '/?network=mastodon&feedKind=profile', magazine),
+    desktop('lemmy-light', '/?network=lemmy', { layout: 'pane', before: openDiscussedLemmyPost }),
+    detail('lemmy-votes-light', '/?network=lemmy', {
+      layout: 'pane',
+      before: openDiscussedLemmyPost,
+      clip: lemmyPostVotes,
+    }),
+    detail('lemmy-comment-votes-light', '/?network=lemmy', {
+      layout: 'pane',
+      before: openDiscussedLemmyPostAtItsComments,
+      clip: lemmyCommentVotes,
+    }),
+    desktop('notifications-light', '/?view=notifications&network=bluesky', {
+      ...magazine,
+      stub: stubNotifications,
+    }),
     desktop('bluesky-light', '/?network=bluesky&feedKind=profile', magazine),
     desktop('bluesky-post-dark', '/?network=bluesky&feedKind=profile', {
       ...magazine,
@@ -303,9 +483,15 @@ const SETS = {
 
 function selectShots(arguments_) {
   if (arguments_.length === 0 || arguments_.includes('all')) {
-    return [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social, ...SETS.listening];
+    return Object.keys(SETS).flatMap((set) => SETS[set]);
   }
-  const known = [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social];
+  const known = [
+    ...SETS.public,
+    ...SETS.admin,
+    ...SETS.library,
+    ...SETS.trending,
+    ...SETS.social,
+  ];
   if (process.env.PODCAST_TAG) known.push(...SETS.listening);
   return arguments_.flatMap((key) => {
     if (key in SETS) return SETS[key];
@@ -315,9 +501,28 @@ function selectShots(arguments_) {
   });
 }
 
+// One box around every locator, with room around it, kept inside the viewport and under a height.
+async function clipAround(locators, maxHeight = Number.POSITIVE_INFINITY) {
+  const boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
+  if (boxes.some((box) => box === null)) throw new Error('A clipped element is not on the page');
+  const viewport = locators[0].page().viewportSize();
+  const left = Math.max(0, Math.min(...boxes.map((box) => box.x)) - CLIP_PADDING);
+  const top = Math.max(0, Math.min(...boxes.map((box) => box.y)) - CLIP_PADDING);
+  const right = Math.max(...boxes.map((box) => box.x + box.width)) + CLIP_PADDING;
+  const bottom = Math.max(...boxes.map((box) => box.y + box.height)) + CLIP_PADDING;
+  return {
+    x: left,
+    y: top,
+    width: Math.min(viewport.width, right) - left,
+    height: Math.min(viewport.height, bottom, top + maxHeight) - top,
+  };
+}
+
 async function capture(browser, shot) {
   const isPhone = shot.device === 'phone';
-  const context = await browser.newContext(isPhone ? PHONE : DESKTOP);
+  const context = await browser.newContext(
+    isPhone ? PHONE : shot.device === 'detail' ? DETAIL : DESKTOP,
+  );
   const page = await context.newPage();
   await page.addInitScript(seedSettings, { theme: shot.theme, layout: shot.layout });
   if (shot.stub) await shot.stub(page);
@@ -328,7 +533,7 @@ async function capture(browser, shot) {
   await page.mouse.move(0, 0);
   await page.waitForTimeout(300);
   const raw = join(RAW, `${shot.name}.png`);
-  await page.screenshot({ path: raw });
+  await page.screenshot({ path: raw, clip: shot.clip ? await shot.clip(page) : undefined });
   await context.close();
 
   let source = raw;

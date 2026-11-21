@@ -9,25 +9,40 @@ SHOT_EMAIL=jamie.park@example.com
 SHOT_PASSWORD=…
 BLUESKY_HANDLE=…
 BLUESKY_APP_PASSWORD=…
+MASTODON_INSTANCE_URL=…
+MASTODON_ACCESS_TOKEN=…
+LEMMY_INSTANCE_URL=…
+LEMMY_USERNAME=…
+LEMMY_PASSWORD=…
 EOF
 
-# Sign-in and admin pages: any admin account works (the user list and proxy page are stubbed).
-# Everything else: the demo account.
-node --env-file=.env.screenshots scripts/screenshots/shots.mjs public admin library
+# Sign-in and admin pages: any admin account works (the user list and proxy page are stubbed);
+# override SHOT_EMAIL and SHOT_PASSWORD for this one run. Everything else: the demo account.
+SHOT_EMAIL=… SHOT_PASSWORD=… node --env-file=.env.screenshots scripts/screenshots/shots.mjs public admin
 
-# The Social shots, and the Bluesky section every sidebar shows, need a connected account:
-# BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (an app password, never the account password) in the env
-# file. The handle shows in the shots. Connect, import a curated set of follows and feeds, shoot
-# everything with a sidebar, then disconnect; the demo keeps nothing.
-node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs candidates   # what could be imported
-BLUESKY_IMPORT_HANDLES=heise.de,hankgreen.bsky.social BLUESKY_IMPORT_COLLECTIONS=Discover \
-  node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs
+# The Social shots, and the network sections every sidebar shows, need connected accounts: a
+# Bluesky app password (never the account password), a Mastodon access token and a Lemmy sign-in
+# in the env file. The handles show in the shots. Connect each, import a curated set of follows,
+# communities and feeds, shoot everything with a sidebar, then disconnect; the demo keeps nothing.
+node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky candidates   # what could be imported
+BLUESKY_IMPORT_HANDLES=heise.de,ct.de,npr.org,hankgreen.bsky.social,lhn.bsky.social,agreenberg.bsky.social,mattburgess1.bsky.social,macandi.bsky.social \
+  BLUESKY_IMPORT_COLLECTIONS=Discover \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky
+node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs mastodon   # MASTODON_IMPORT_HANDLES, …_COLLECTIONS
+node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs lemmy      # LEMMY_IMPORT_HANDLES, …_COLLECTIONS
 node --env-file=.env.screenshots scripts/screenshots/shots.mjs library social
-node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs teardown
+for network in bluesky mastodon lemmy; do
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs "$network" teardown
+done
 
-# The Trending shots need news feeds whose stories overlap: borrow some, shoot, give them back.
+# The Trending shots need news feeds whose stories overlap (trending-feeds.mjs): borrow them, wait
+# until `status` exits 0, shoot, give them back. Below its floor (8 stories in the day window, 4
+# sources on the lead, a synopsis on the first five) the list is too thin to show. A rebuild runs
+# on the worker's schedule and titles follow within five minutes;
+# `docker compose exec php bin/console app:trending:rebuild --user=<id> day` builds at once.
 node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs
-node --env-file=.env.screenshots scripts/screenshots/shots.mjs trending-light mobile-trending-light
+node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs status
+node --env-file=.env.screenshots scripts/screenshots/shots.mjs trending
 node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs teardown
 
 # The Listening shots need podcasts the demo does not follow: borrow some, shoot, give them back.
@@ -36,10 +51,15 @@ PODCAST_TAG=<id> node --env-file=.env.screenshots scripts/screenshots/shots.mjs 
 node --env-file=.env.screenshots scripts/screenshots/podcast-setup.mjs teardown
 ```
 
+The notifications shot shows invented people: its list and the bell's count are stubbed, since a
+connected account's real notifications name real ones. The Lemmy shots open the most discussed
+post near the top of the Lemmy list; `lemmy-votes-light` and `lemmy-comment-votes-light` are
+close-ups, cut to the post's head and to the first comments at twice the pixels.
+
 The post shots open the newest post of one followed account, `BLUESKY_POST_ACCOUNT` (a title
 substring, default "Lily Hay Newman"), by its title; check that the post suits a public README.
 
-`shots.mjs` takes set names (`public`, `admin`, `library`, `social`, `listening`, `all`) or individual
+`shots.mjs` takes set names (`public`, `admin`, `library`, `trending`, `social`, `listening`, `all`) or individual
 shot names, writes the WebP files straight into `docs/screenshots/`, and keeps the raw PNGs
 under the system temp directory. It needs `cwebp` on the PATH (`brew install webp`).
 
