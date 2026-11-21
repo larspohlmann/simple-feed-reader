@@ -25,9 +25,9 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
     {
     }
 
-    public function findContexts(SocialAccount $account, array $fresh): array
+    public function findSubjects(SocialAccount $account, array $fresh): array
     {
-        $contexts = [];
+        $subjects = [];
         $excerpts = [];
         foreach ($fresh as $row) {
             $answeredId = $row->references->answeredId;
@@ -44,11 +44,13 @@ final readonly class LemmyNotificationContextSource implements NotificationConte
                 }
             }
             if ($excerpts[$answeredId] !== null) {
-                $contexts[$row->remoteId] = $row->subject->context->withAnsweredExcerpt($excerpts[$answeredId]);
+                $subjects[$row->remoteId] = $row->subject->withContext(
+                    $row->subject->context->withAnsweredExcerpt($excerpts[$answeredId]),
+                );
             }
         }
 
-        return $contexts;
+        return $subjects;
     }
 
     private function fetchExcerpt(SocialAccount $account, string $answeredId): ?string

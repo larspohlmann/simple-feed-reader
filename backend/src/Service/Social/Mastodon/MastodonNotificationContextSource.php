@@ -27,22 +27,22 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
     {
     }
 
-    public function findContexts(SocialAccount $account, array $fresh): array
+    public function findSubjects(SocialAccount $account, array $fresh): array
     {
         $statuses = [];
         foreach (array_chunk(self::answeredIds($fresh), self::STATUSES_PER_CALL) as $ids) {
             $statuses += $this->findStatuses($account, $ids);
         }
 
-        $contexts = [];
+        $subjects = [];
         foreach ($fresh as $row) {
             $context = self::answered($row, $statuses);
             if ($context !== null) {
-                $contexts[$row->remoteId] = $context;
+                $subjects[$row->remoteId] = $row->subject->withContext($context);
             }
         }
 
-        return $contexts;
+        return $subjects;
     }
 
     /**

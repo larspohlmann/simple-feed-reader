@@ -18,7 +18,7 @@ final class RecordingContextSource implements NotificationContextSourceInterface
     {
     }
 
-    public function findContexts(SocialAccount $account, array $fresh): array
+    public function findSubjects(SocialAccount $account, array $fresh): array
     {
         $remoteIds = array_map(static fn (FetchedNotificationModel $fetched): string => $fetched->remoteId, $fresh);
         $this->asked[] = $remoteIds;
@@ -26,6 +26,11 @@ final class RecordingContextSource implements NotificationContextSourceInterface
             return [];
         }
 
-        return array_fill_keys($remoteIds, $this->adds);
+        $subjects = [];
+        foreach ($fresh as $row) {
+            $subjects[$row->remoteId] = $row->subject->withContext($this->adds);
+        }
+
+        return $subjects;
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\Notification\Model;
 
 use App\Entity\NotificationActor;
-use App\Entity\NotificationContext;
 use App\Entity\NotificationSubject;
 use App\Enum\SocialNotificationKind;
 
@@ -23,8 +22,8 @@ final readonly class FetchedNotificationModel
     }
 
     #[\NoDiscard]
-    public function withContext(NotificationContext $context): self
+    public function withSubject(NotificationSubject $subject): self
     {
-        return clone($this, ['subject' => $this->subject->withContext($context)]);
+        return clone($this, ['subject' => $subject]);
     }
 }
