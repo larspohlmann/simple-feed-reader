@@ -196,6 +196,48 @@ final class CrossPostCollapseTest extends DbTestCase
         self::assertSame(array_unique($hashes), $hashes);
     }
 
+    public function testTheLeaderCarriesEachCrossPostOnce(): void
+    {
+        $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
+        $latest = $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/3', 'h1', '2026-11-14T11:00:00Z');
+        $middle = $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
+        $this->entityManager->flush();
+
+        self::assertSame([$middle->getId(), $latest->getId()], $this->listDuplicateIds(EntryView::All));
+    }
+
+    public function testEachOtherItemGetsOnePillHoweverManyCopiesItHas(): void
+    {
+        $leader = $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
+        $leaderCopy = $this->persistCopy($leader, $this->feedB);
+        $member = $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
+        $this->persistCopy($member, $this->feedB);
+        $this->entityManager->flush();
+
+        self::assertSame([$leaderCopy->getId(), $member->getId()], $this->listDuplicateIds(EntryView::All));
+    }
+
+    public function testUnreadViewPillsIncludeAReadMember(): void
+    {
+        $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
+        $member = $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
+        $this->persistRead($member);
+        $this->entityManager->flush();
+
+        self::assertSame([$member->getId()], $this->listDuplicateIds(EntryView::Unread));
+    }
+
+    /**
+     * @return list<int|null>
+     */
+    private function listDuplicateIds(EntryView $view): array
+    {
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), $view));
+        self::assertCount(1, $rows);
+
+        return self::collectIds($rows[0]->duplicates);
+    }
+
     /**
      * @return list<int|null>
      */
