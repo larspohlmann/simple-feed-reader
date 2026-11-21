@@ -13,6 +13,7 @@ final readonly class CanonicalItemWriter
 {
     public function __construct(
         private CanonicalItemLinker $linker,
+        private CrossPostKeys $crossPostKeys,
     ) {
     }
 
@@ -22,6 +23,16 @@ final readonly class CanonicalItemWriter
         foreach ($this->linker->linkClaimed(array_column($pairs, 0)) as $position) {
             [$entry, $parsed] = $pairs[$position];
             $entry->selectDiscussionCounts()->recordCounts($parsed->discussionCounts);
+            $this->recordCrossPostHash($entry, $parsed);
+        }
+    }
+
+    private function recordCrossPostHash(Entry $entry, ParsedEntryModel $parsed): void
+    {
+        $item = $entry->getCanonicalItem();
+        $hash = $item === null ? null : $this->crossPostKeys->findHash($item, $parsed);
+        if ($item !== null && $hash !== null) {
+            $item->recordCrossPostHash($hash);
         }
     }
 }

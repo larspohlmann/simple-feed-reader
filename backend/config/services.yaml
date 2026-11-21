@@ -342,6 +342,10 @@ services:
         arguments:
             $rules: !tagged_iterator app.canonical_key_rule
 
+    App\Service\Ingestion\Ingest\CrossPostKeys:
+        arguments:
+            $rules: !tagged_iterator app.cross_post_key_rule
+
     App\Service\Operations\Logging\Loki\LokiPushHandler:
         arguments:
             $appLabel: 'simple-feed-reader'
