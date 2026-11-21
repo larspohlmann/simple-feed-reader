@@ -44,11 +44,7 @@
 }
 
 .story-foot {
-  @include story-card.card-padding;
+  @include story-card.foot;
 
   position: relative;
-  display: flex;
-  justify-content: flex-end;
-  padding-top: var(--space-1);
-  font-size: var(--fs-xs);
 }

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { STORY_ICON } from '../story';
-import { TrendingStoryDto } from '../trending.models';
+import { StorySources } from '../trending.models';
 
 /** "7 sources · 3 shares" on a Trending story (#2017, #2229). */
 @Component({
@@ -13,6 +13,6 @@ import { TrendingStoryDto } from '../trending.models';
   styleUrl: './story-source-count.component.scss',
 })
 export class StorySourceCountComponent {
-  readonly story = input.required<TrendingStoryDto>();
+  readonly story = input.required<StorySources>();
   protected readonly storyIcon = STORY_ICON;
 }

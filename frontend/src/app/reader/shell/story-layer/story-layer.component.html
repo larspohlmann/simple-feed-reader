@@ -14,29 +14,21 @@
   }
 </ng-template>
 
-<ng-template #actions>
-  @let followLabel = following.following() ? 'reader.unfollowStory' : 'reader.followStory';
-  <button
-    appListAction
-    class="follow-story"
-    type="button"
-    [attr.aria-label]="followLabel | transloco"
-    [attr.title]="followLabel | transloco"
-    (click)="following.toggleOpen()"
-  >
-    <app-icon [name]="following.following() ? 'notifications_off' : 'notification_add'" size="sm" />
-    <span class="txt">{{ followLabel | transloco }}</span>
-  </button>
-</ng-template>
-
 <ng-template #headlineTemplate>
   @if (title(); as title) {
-    <app-story-headline
-      class="story-headline"
-      [storyId]="context.selection().id"
-      [title]="title"
-      [synopsis]="synopsis()"
-    />
+    <div class="story-card">
+      <app-story-headline
+        class="story-headline"
+        [storyId]="storyRef().id"
+        [title]="title"
+        [synopsis]="synopsis()"
+      >
+        @if (sources(); as sources) {
+          <app-story-source-count storyMeta [story]="sources" />
+        }
+      </app-story-headline>
+      <div class="story-foot"><app-story-actions [story]="storyRef()" /></div>
+    </div>
   }
 </ng-template>
 
@@ -57,7 +49,6 @@
   [newSinceVisitIds]="visit.newSinceVisitIds()"
   [feedTags]="feedTags()"
   [headerLeading]="leading"
-  [headerActions]="actions"
   [cornerTrailing]="cornerTrailing()"
   [topBlock]="topBlock()"
   (loadMore)="context.entries.loadMore()"

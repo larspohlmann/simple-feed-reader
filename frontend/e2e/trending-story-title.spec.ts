@@ -62,6 +62,8 @@ function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = 
     synopsis: synopsisOf(id),
     memberCount: 1,
     unreadCount: 1,
+    outletCount: 2,
+    shareCount: 0,
     lastOpenedAt: followed ? '2026-11-18T06:00:00Z' : null,
     newEntryIds: [],
     ...over,

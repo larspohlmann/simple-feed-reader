@@ -30,6 +30,12 @@ export interface TrendingStoryDto {
   articles: StoryArticleDto[];
 }
 
+/** A story's counts as its card shows them. */
+export type StorySources = Pick<TrendingStoryDto, 'outletCount' | 'shareCount'>;
+
+/** What Follow and Hide need of a story. */
+export type StoryRef = Pick<TrendingStoryDto, 'id' | 'followed'>;
+
 /** A story the reader follows, as the sidebar lists it (#2128). */
 export interface FollowedStoryDto {
   id: number;
@@ -53,6 +59,9 @@ export interface StoryPageDto extends EntriesPage {
   /** The rows the story's list holds whichever page it is, and the unread ones among them (#2329). */
   memberCount: number;
   unreadCount: number;
+  /** As a Trending card counts them, over all the story's members (#2442). */
+  outletCount: number;
+  shareCount: number;
   lastOpenedAt: string | null;
   /** Kept for other clients such as iOS; the web client derives its marks from `lastOpenedAt`. */
   newEntryIds: number[];
