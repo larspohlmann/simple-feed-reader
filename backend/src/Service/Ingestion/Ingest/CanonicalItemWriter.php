@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 
-/** Links each entry a key rule claims to its canonical item, then records the fetched counts there. The caller flushes. */
+/** Links each entry a key rule claims to its canonical item, then records the fetched counts and the cross-post hash there. The caller flushes. */
 final readonly class CanonicalItemWriter
 {
     public function __construct(
@@ -30,8 +30,11 @@ final readonly class CanonicalItemWriter
     private function recordCrossPostHash(Entry $entry, ParsedEntryModel $parsed): void
     {
         $item = $entry->getCanonicalItem();
-        $hash = $item === null ? null : $this->crossPostKeys->findHash($item, $parsed);
-        if ($item !== null && $hash !== null) {
+        if ($item === null || $item->getCrossPostHash() !== null) {
+            return;
+        }
+        $hash = $this->crossPostKeys->findHash($item, $parsed);
+        if ($hash !== null) {
             $item->recordCrossPostHash($hash);
         }
     }

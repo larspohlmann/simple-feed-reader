@@ -390,7 +390,7 @@ final class TrendingStoryRepository extends ServiceEntityRepository
         );
     }
 
-    /** Only the lowest-id member of a cross-post group counts: its posts sit in different feeds, one per community. */
+    /** Only the lowest-id member of a cross-post group counts. */
     private static function buildNoEarlierCrossPost(TrendingWindow $window): string
     {
         return self::buildNoEarlierCopy(

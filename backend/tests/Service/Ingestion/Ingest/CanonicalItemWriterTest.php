@@ -11,6 +11,10 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Enum\SocialNetwork;
+use App\Service\Foundation\CanonicalItem\CanonicalItemLinker;
+use App\Service\Ingestion\Ingest\CanonicalItemWriter;
+use App\Service\Ingestion\Ingest\CrossPostKeyRule\CrossPostKeyRuleInterface;
+use App\Service\Ingestion\Ingest\CrossPostKeys;
 use App\Service\Ingestion\Ingest\EntryIngestor;
 use App\Service\Ingestion\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingestion\Ingest\StoredEntryRefresher;
@@ -223,6 +227,36 @@ final class CanonicalItemWriterTest extends DbTestCase
         self::assertNotNull($hash);
         self::assertSame($copyA->getCanonicalItem(), $copyB->getCanonicalItem());
         self::assertSame($hash, $copyB->getCanonicalItem()->getCrossPostHash());
+    }
+
+    public function testAnItemThatAlreadyHasAHashIsNotAskedForOneAgain(): void
+    {
+        $post = self::buildLinkPost(self::POST, 'https://x.example/a');
+        [$first] = $this->requireIngestor()->ingest(
+            $this->buildFeed('https://example.com/a.xml'),
+            self::buildParsedFeed($post),
+            self::buildContext(),
+        );
+        $now = new \DateTimeImmutable('2026-11-20T12:00:00Z');
+        $laterCopy = new Entry($this->buildFeed('https://example.com/b.xml'), self::POST, null, 'Post', $now, $now);
+        $laterCopy->setDiscussion(Discussion::platformThread(self::POST));
+        $rule = new class implements CrossPostKeyRuleInterface {
+            public int $asked = 0;
+
+            public function findHash(CanonicalItem $item, ParsedEntryModel $parsed): string
+            {
+                ++$this->asked;
+
+                return 'other';
+            }
+        };
+        $linker = self::getContainer()->get(CanonicalItemLinker::class);
+        self::assertInstanceOf(CanonicalItemLinker::class, $linker);
+
+        new CanonicalItemWriter($linker, new CrossPostKeys([$rule]))->attach([[$laterCopy, $post]]);
+
+        self::assertSame($first->getCanonicalItem(), $laterCopy->getCanonicalItem());
+        self::assertSame(0, $rule->asked);
     }
 
     public function testAMastodonItemGetsNoHash(): void
