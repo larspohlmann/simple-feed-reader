@@ -30,4 +30,24 @@ final class LemmyPostKeyTest extends TestCase
 
         self::assertSame($fromPage->keyHash(), $fromAddress?->keyHash());
     }
+
+    public function testAPostAddressStaysTheResolvedPage(): void
+    {
+        self::assertSame(
+            'https://lemmy.other/post/9',
+            LemmyPostKey::resolvePostPage('https://lemmy.other/post/9', 'https://lemmy.example', 3),
+        );
+    }
+
+    public function testANonLemmyAddressResolvesToTheHomeInstancePostPage(): void
+    {
+        self::assertSame(
+            'https://lemmy.example/post/3',
+            LemmyPostKey::resolvePostPage('https://mbin.example/m/php/t/1', 'https://lemmy.example/', 3),
+        );
+        self::assertSame(
+            'https://lemmy.example/post/3',
+            LemmyPostKey::resolvePostPage(null, 'https://lemmy.example/', 3),
+        );
+    }
 }

@@ -28,4 +28,13 @@ final class LemmyPostKey
 
         return null === $page ? null : self::fromPage($page);
     }
+
+    public static function resolvePostPage(?string $address, string $homeInstance, int $postId): string
+    {
+        if (null !== $address && null !== LemmyPostUrl::parse($address)) {
+            return $address;
+        }
+
+        return rtrim($homeInstance, '/') . '/post/' . $postId;
+    }
 }

@@ -127,13 +127,13 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
 
     private static function parsePostKeyHash(SocialAccount $account, JsonNodeModel $post): ?string
     {
-        $key = LemmyPostKey::parseKey($post->string('ap_id'));
+        $address = $post->string('ap_id');
         $postId = $post->int('id');
-        if ($key === null && $postId !== null) {
-            $key = LemmyPostKey::parseKey(rtrim($account->getServiceUrl(), '/') . '/post/' . $postId);
+        if ($postId !== null) {
+            $address = LemmyPostKey::resolvePostPage($address, $account->getServiceUrl(), $postId);
         }
 
-        return $key?->keyHash();
+        return LemmyPostKey::parseKey($address)?->keyHash();
     }
 
     private function buildExcerpt(?string $markdown): ?string
