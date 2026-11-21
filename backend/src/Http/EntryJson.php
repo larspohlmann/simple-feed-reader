@@ -53,7 +53,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   myVote: int|null, community: array{name: string, url: string}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
- *   score: int|null, commentCount: int|null,
+ *   score: int|null, commentCount: int|null, likeCount: int|null,
  * }
  * @phpstan-type CompletedEntryRow array{
  *   id: int|null, pending: bool, summary: string|null, excerpt: string,
@@ -156,17 +156,19 @@ final readonly class EntryJson
         ];
     }
 
-    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null} */
+    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null, likeCount: int|null} */
     private static function buildDiscussionRow(EntryListRow $row): array
     {
         $discussion = $row->enrichment->discussion
             ?? EntryListRowDiscussion::fromDiscussion($row->entry->getDiscussion());
+        $counts = $row->entry->selectDiscussionCounts();
 
         return [
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
             'score' => $row->enrichment->lemmy?->score,
-            'commentCount' => $row->entry->selectDiscussionCounts()->getCommentCount(),
+            'commentCount' => $counts->getCommentCount(),
+            'likeCount' => $counts->getLikeCount(),
         ];
     }
 
