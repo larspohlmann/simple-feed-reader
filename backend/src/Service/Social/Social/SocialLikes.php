@@ -34,7 +34,7 @@ final readonly class SocialLikes
     }
 
     /**
-     * Likes the post and answers its like count, read live once the like is made.
+     * Likes the post and answers its like count with the like in it.
      *
      * @throws NotASocialPostException
      */
@@ -49,11 +49,11 @@ final readonly class SocialLikes
 
         $this->store($user, $item, $post->account, $result->likeId);
 
-        return $this->likeCounts->refreshLikeCount($user, $entry, $item);
+        return $this->likeCounts->recordLiked($entry, $item, $post);
     }
 
     /**
-     * Takes the like back and answers the post's like count, read live once the like is gone.
+     * Takes the like back and answers the post's like count without it.
      *
      * @throws NotASocialPostException
      */
@@ -68,7 +68,7 @@ final readonly class SocialLikes
 
         $this->drop($like);
 
-        return $this->likeCounts->refreshLikeCount($user, $entry, $item);
+        return $this->likeCounts->recordUnliked($entry, $item, $like->getSocialAccount());
     }
 
     /**

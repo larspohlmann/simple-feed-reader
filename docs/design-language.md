@@ -1305,6 +1305,21 @@ mark only animates while a refresh is actually running.
 
 ---
 
+### `<app-pending-dots>`
+
+Three accent dots in a wave, sized to an icon slot. It stands in for a row
+action's icon while that action waits on its answer: the like button's thumb
+until the live like count lands (#2427). Hidden from assistive tech; the
+button carries `aria-busy` instead. Still under reduced motion.
+
+| Input | Type | Default |
+|---|---|---|
+| `size` | `'sm' \| 'md'` | `'sm'` — the `--icon-sm` or `--icon-md` slot |
+
+**Not for:** a page or panel load. Use `<app-spinner>`.
+
+---
+
 ### `<app-skeleton>`
 
 Placeholder rows for a list that is still loading. Sized from the comfortable

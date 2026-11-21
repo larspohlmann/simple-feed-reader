@@ -57,11 +57,16 @@
         : likeLabel + ', ' + (likeCount.labelKey | transloco: { count: likeCount.count })
     "
     [appFlagToggle]="social.isLiked"
+    [attr.aria-busy]="likePending() || null"
     (click)="$event.stopPropagation(); actions.like(entry())"
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"
   >
-    <app-icon name="thumb_up" [size]="size()" [fill]="social.isLiked" />
+    @if (likePending()) {
+      <app-pending-dots [size]="size()" />
+    } @else {
+      <app-icon name="thumb_up" [size]="size()" [fill]="social.isLiked" />
+    }
     @if (likeCount !== null) {
       <span class="count">{{ likeCount.text }}</span>
     }

@@ -26,6 +26,7 @@ class HostComponent implements EntryActionHandler {
   size: 'sm' | 'md' = 'sm';
   audio = true;
   likeShown = true;
+  likePending = false;
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -42,6 +43,10 @@ class HostComponent implements EntryActionHandler {
 
   like(entry: EntryDto): void {
     this.liked = entry;
+  }
+
+  isLikeOnTheWire(): boolean {
+    return this.likePending;
   }
 
   keep(entry: EntryDto): void {
@@ -437,6 +442,26 @@ describe('EntryActionsComponent', () => {
     it('shows a zero like count on the like button', () => {
       const like = buttons(mount({ ...blueskyPost(), likeCount: 0 }))[1];
       expect(like.querySelector('.count')?.textContent?.trim()).toBe('0');
+    });
+
+    it('shows the pending dots in place of the thumb while the like is on the wire', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = { ...blueskyPost(), likeCount: 4 };
+      fixture.componentInstance.likePending = true;
+      fixture.detectChanges();
+
+      const like = buttons(fixture)[1];
+      expect(like.querySelector('app-pending-dots')).not.toBeNull();
+      expect(like.textContent).not.toContain('thumb_up');
+      expect(like.getAttribute('aria-busy')).toBe('true');
+      expect(like.querySelector('.count')?.textContent?.trim()).toBe('4');
+    });
+
+    it('shows the thumb and no busy mark once nothing is on the wire', () => {
+      const like = buttons(mount(blueskyPost()))[1];
+      expect(like.querySelector('app-pending-dots')).toBeNull();
+      expect(like.textContent).toContain('thumb_up');
+      expect(like.getAttribute('aria-busy')).toBeNull();
     });
 
     it('shows no number on the like button while the count is unknown', () => {

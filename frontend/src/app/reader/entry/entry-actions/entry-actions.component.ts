@@ -2,6 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
+import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../../models';
 import { likeableSocial } from '../../entry-social';
@@ -26,7 +27,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
  */
 @Component({
   selector: 'app-entry-actions',
-  imports: [IconComponent, TranslocoPipe, FlagToggleDirective],
+  imports: [IconComponent, PendingDotsComponent, TranslocoPipe, FlagToggleDirective],
   templateUrl: './entry-actions.component.html',
   styleUrl: './entry-actions.component.scss',
   host: { '[class.glyph-md]': "size() === 'md'" },
@@ -56,4 +57,5 @@ export class EntryActionsComponent {
     inject(ListenLauncher),
   );
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly likePending = computed(() => this.actions.isLikeOnTheWire(this.entry()));
 }

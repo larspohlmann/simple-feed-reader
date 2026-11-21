@@ -5,7 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
-import { likeableSocial, steppedLikeCount } from '../entry-social';
+import { likeableSocial } from '../entry-social';
 import { VoteValue, steppedScore } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
@@ -32,9 +32,13 @@ export class EntryRowCache {
   private readonly records = new Map<number, WritableSignal<EntryDto>>();
   private readonly holds = new Map<object, ReadonlySet<number>>();
   private readonly inFlight = new InFlightPatches();
+  private readonly likesOnTheWire = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
-    onIdentityChange(() => this.inFlight.clear());
+    onIdentityChange(() => {
+      this.inFlight.clear();
+      this.likesOnTheWire.set(new Set());
+    });
   }
 
   /** The items with their entries written over the cached ones, each change still on the wire laid back over them,
@@ -78,14 +82,20 @@ export class EntryRowCache {
     const social = likeableSocial(entry);
     if (!social || this.inFlight.onTheWire(entry.id, 'social')) return;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    const likeCount = steppedLikeCount(entry.likeCount, isLiked);
-    this.optimistic(entry, { social: { ...social, isLiked }, likeCount }, request$).subscribe({
+    const pendingIds = this.collectCopyIds(entry);
+    this.markLikesOnTheWire(pendingIds, true);
+    const settled$ = request$.pipe(finalize(() => this.markLikesOnTheWire(pendingIds, false)));
+    this.optimistic(entry, { social: { ...social, isLiked } }, settled$).subscribe({
       next: (answer) => {
         if (answer.likeCount === null) return;
         this.patch(this.collectCopyIds(entry), (row) => ({ ...row, likeCount: answer.likeCount }));
       },
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
     });
+  }
+
+  isLikeOnTheWire(entryId: number): boolean {
+    return this.likesOnTheWire().has(entryId);
   }
 
   setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): void {
@@ -205,6 +215,14 @@ export class EntryRowCache {
       .filter((row) => row.id !== entry.id && row.canonicalItemId === entry.canonicalItemId);
   }
 
+  private markLikesOnTheWire(entryIds: number[], onTheWire: boolean): void {
+    this.likesOnTheWire.update((held) => {
+      const next = new Set(held);
+      entryIds.forEach((id) => (onTheWire ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  }
+
   private collectCopyIds(entry: EntryDto): number[] {
     return [entry.id, ...this.findCopies(entry).map((copy) => copy.id)];
   }
@@ -236,9 +254,9 @@ export class EntryRowCache {
   }
 }
 
-const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score', 'likeCount'] as const;
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
 
-/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like and its count. */
+/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
   const shared: RowPatch = {};
   for (const key of SHARED_KEYS) {

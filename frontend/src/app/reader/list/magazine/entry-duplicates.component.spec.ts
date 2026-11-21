@@ -19,6 +19,7 @@ import { provideStoryActions } from '../../../../testing/story-actions-testing';
 const entryActions = {
   favorite: jest.fn(),
   like: jest.fn(),
+  isLikeOnTheWire: jest.fn(),
   vote: jest.fn(),
   keep: jest.fn(),
   unshare: jest.fn(),

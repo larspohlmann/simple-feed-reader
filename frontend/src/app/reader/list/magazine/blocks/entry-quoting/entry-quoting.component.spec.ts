@@ -13,7 +13,7 @@ import {
 } from '../../../../../../testing/social-accounts-testing';
 import { SubscriptionsStore } from '../../../../state/subscriptions.store';
 
-const entryActions = { open: jest.fn() };
+const entryActions = { open: jest.fn(), isLikeOnTheWire: jest.fn() };
 
 beforeEach(() => entryActions.open.mockReset());
 
