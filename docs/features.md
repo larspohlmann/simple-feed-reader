@@ -104,8 +104,8 @@ screenshots; the [gallery](screenshots.md) has more.
     per query. Mastodon search needs full-text search on your instance.
 - Notifications from connected accounts: each network's sidebar section
   carries a bell with the unseen count. The list groups likes, reposts,
-  replies, mentions, quotes, ended polls and follows, and a row opens the post
-  in the reader.
+  replies, mentions, quotes, ended polls and follows; a row opens its post in
+  the reader when the reader holds it, and on the network otherwise.
 - A feed directory in Settings: about 50,000 news sites and podcasts from the
   InfoBubble sources catalog, narrowed to the countries and languages you
   choose. Filter by category, article length and language, search sites and

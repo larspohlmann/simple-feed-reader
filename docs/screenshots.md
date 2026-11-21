@@ -79,7 +79,7 @@ sidebar counts them like any other feed.
 
 ![The Bluesky section with the home timeline, a custom feed and followed accounts](screenshots/bluesky-light.webp)
 
-![The Mastodon section with its timeline and followed accounts](screenshots/mastodon-light.webp)
+![Posts from followed Mastodon accounts in the magazine](screenshots/mastodon-light.webp)
 
 A post shows what it embeds — images, video, a link card or the post it
 quotes — with its likes and replies in the reader.

@@ -47,9 +47,9 @@ Podcasts.
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
 </p>
 
-Connect a Bluesky or Mastodon account and its home timeline, lists, custom
-feeds and follows arrive as feeds; a post shows what it embeds, and its likes
-and replies stay in the reader.
+Connect a Bluesky, Mastodon or Lemmy account and its home timeline, lists,
+custom feeds, follows and communities arrive as feeds; a post shows what it
+embeds, and its likes and replies stay in the reader.
 
 <p>
   <img src="docs/screenshots/bluesky-light.webp" alt="The Bluesky section: home timeline, a custom feed and followed accounts, with posts in the magazine" width="74%">
