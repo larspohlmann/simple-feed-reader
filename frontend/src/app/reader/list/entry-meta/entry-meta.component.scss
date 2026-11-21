@@ -39,7 +39,8 @@ app-vote-pill {
   --vote-pill-arrow-padding: var(--space-0);
 }
 
-.comments {
+.comments,
+.likes {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

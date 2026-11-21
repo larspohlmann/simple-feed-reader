@@ -289,8 +289,10 @@ export interface EntryDto {
   score: number | null;
   /** The linked Lemmy account's vote on this post; null when it is not a Lemmy post or no account is linked */
   myVote: VoteValue | null;
-  /** A Lemmy post's comment count; null on every other source (#2217). */
+  /** A Lemmy, Bluesky or Mastodon post's comment count; null on every other source (#2217, #2348). */
   commentCount: number | null;
+  /** A Bluesky or Mastodon post's like count as last fetched; null on every other source (#2362). */
+  likeCount: number | null;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
   /** The model's 0-1000 score for this entry (0-100 before #403); present on

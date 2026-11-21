@@ -10,7 +10,7 @@ export interface DiscussionCount {
 export function buildDiscussionCount(
   compactCount: CompactCount,
   count: number | null,
-  kind: 'points' | 'comments',
+  kind: 'points' | 'comments' | 'likes',
 ): DiscussionCount | null {
   if (count === null) return null;
   return {

@@ -1,6 +1,7 @@
 @let score = entry().score;
 @let commentBubble = comments();
-@if (score !== null || commentBubble !== null) {
+@let likeCount = likes();
+@if (score !== null || commentBubble !== null || likeCount !== null) {
   <span class="discussion">
     @if (score !== null) {
       <app-vote-pill
@@ -16,6 +17,15 @@
         [attr.aria-label]="commentBubble.labelKey | transloco: { count: commentBubble.count }"
       >
         <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ commentBubble.text }}
+      </span>
+    }
+    @if (likeCount !== null) {
+      <span
+        class="likes"
+        role="img"
+        [attr.aria-label]="likeCount.labelKey | transloco: { count: likeCount.count }"
+      >
+        <app-icon name="thumb_up" size="sm" aria-hidden="true" />{{ likeCount.text }}
       </span>
     }
   </span>

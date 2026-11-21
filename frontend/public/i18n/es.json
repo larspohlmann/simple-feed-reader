@@ -1680,7 +1680,9 @@
       "pointsOne": "{{count}} punto",
       "pointsOther": "{{count}} puntos",
       "commentsOne": "{{count}} comentario",
-      "commentsOther": "{{count}} comentarios"
+      "commentsOther": "{{count}} comentarios",
+      "likesOne": "{{count}} me gusta",
+      "likesOther": "{{count}} me gusta"
     },
     "socialCounts": {
       "likesOne": "{{count}} me gusta",
