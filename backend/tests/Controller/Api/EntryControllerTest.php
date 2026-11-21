@@ -466,9 +466,7 @@ final class EntryControllerTest extends ApiTestCase
         $page = 'https://lemmy.example/post/' . $community;
         $entry = LemmyPostEntries::buildEntry($feed, $page, publishedAt: $publishedAt);
         $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
-        $item = LemmyPostEntries::linkItem($entry, $page);
-        $item->recordCrossPostHash('cross-post-hash');
-        $entityManager->persist($item);
+        $item = LemmyPostEntries::linkCrossPost($entityManager, $entry, $page, 'cross-post-hash');
         $entityManager->persist($entry);
         LemmyPostEntries::storeCommunity(
             $entityManager,

@@ -63,6 +63,20 @@ final class LemmyPostEntries
         return $item;
     }
 
+    /** Links the entry to a Lemmy item keyed into a cross-post group and persists the item. */
+    public static function linkCrossPost(
+        EntityManagerInterface $entityManager,
+        Entry $entry,
+        string $page,
+        string $crossPostHash,
+    ): CanonicalItem {
+        $item = self::linkItem($entry, $page);
+        $item->recordCrossPostHash($crossPostHash);
+        $entityManager->persist($item);
+
+        return $item;
+    }
+
     /** Flushes, then stores the community on the item's row through the repository. */
     public static function storeCommunity(
         EntityManagerInterface $entityManager,

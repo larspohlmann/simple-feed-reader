@@ -270,8 +270,10 @@ final class CrossPostCollapseTest extends DbTestCase
 
     private function persistCrossPost(Feed $feed, string $page, string $hash, string $publishedAt): Entry
     {
-        $entry = $this->persistPost($feed, $page, $publishedAt);
-        $entry->getCanonicalItem()?->recordCrossPostHash($hash);
+        $entry = LemmyPostEntries::buildEntry($feed, $page, publishedAt: $publishedAt);
+        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
+        LemmyPostEntries::linkCrossPost($this->entityManager, $entry, $page, $hash);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

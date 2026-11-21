@@ -240,9 +240,7 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
         $page = 'https://lemmy.example/post/' . $community;
         $post = LemmyPostEntries::buildEntry($fixtures->feed($community, SocialNetwork::Lemmy), $page);
         $post->setPublishedAt(new \DateTimeImmutable($publishedAt));
-        $item = LemmyPostEntries::linkItem($post, $page);
-        $item->recordCrossPostHash('cross-post-hash');
-        $this->entityManager->persist($item);
+        LemmyPostEntries::linkCrossPost($this->entityManager, $post, $page, 'cross-post-hash');
         $this->entityManager->persist($post);
 
         return $post;

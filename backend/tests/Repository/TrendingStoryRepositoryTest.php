@@ -850,9 +850,7 @@ final class TrendingStoryRepositoryTest extends DbTestCase
                 $page = 'https://lemmy.example/post/' . $crossPostHash . '-' . $community;
                 $post = $this->fixtures->article($this->articleFeed($community), 'Post', '2031-05-14 09:00:00', $page);
                 $post->setAuthor(new EntryAuthor('Poster', 'https://lemmy.example/u/poster'));
-                $item = LemmyPostEntries::linkItem($post, $page);
-                $item->recordCrossPostHash($crossPostHash);
-                $this->entityManager->persist($item);
+                LemmyPostEntries::linkCrossPost($this->entityManager, $post, $page, $crossPostHash);
 
                 return [$post, 'shared.example'];
             },
