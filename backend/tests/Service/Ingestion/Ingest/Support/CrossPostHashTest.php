@@ -70,4 +70,49 @@ final class CrossPostHashTest extends TestCase
     {
         self::assertNull(CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, '', '<p> </p>')));
     }
+
+    public function testBlockElementsSeparateTheTextOfAnApiAndAnRssBody(): void
+    {
+        $fromApi = CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', "a\nb"));
+        $fromParagraphs = CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', '<p>a</p><p>b</p>'));
+        $fromDivisions = CrossPostHash::build(
+            new CrossPostModel(self::AUTHOR, null, 'Title', '<div>a</div> <div>b</div>'),
+        );
+
+        self::assertNotNull($fromApi);
+        self::assertSame($fromApi, $fromParagraphs);
+        self::assertSame($fromApi, $fromDivisions);
+    }
+
+    public function testInlineElementsDoNotSplitAWord(): void
+    {
+        $split = CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', 'Hel<b>lo</b>'));
+        $whole = CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', 'Hello'));
+
+        self::assertSame($whole, $split);
+    }
+
+    public function testATitleAloneKeysATextPost(): void
+    {
+        self::assertNotNull(CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', null)));
+    }
+
+    public function testABodyAloneKeysATextPost(): void
+    {
+        self::assertNotNull(CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, '', '<p>Body</p>')));
+    }
+
+    public function testAnEmptyAuthorIsNoAuthor(): void
+    {
+        self::assertNull(CrossPostHash::build(new CrossPostModel('', self::LINK, 'Title', null)));
+    }
+
+    public function testAnEmptyLinkedUrlIsNoLink(): void
+    {
+        $emptyLink = CrossPostHash::build(new CrossPostModel(self::AUTHOR, '', 'Title', null));
+        $noLink = CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Title', null));
+
+        self::assertNotNull($emptyLink);
+        self::assertSame($noLink, $emptyLink);
+    }
 }
