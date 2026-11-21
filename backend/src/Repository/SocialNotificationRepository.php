@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -132,9 +133,14 @@ final class SocialNotificationRepository extends ServiceEntityRepository
      */
     public function findNewestPerGroup(array $groups, int $perGroup): array
     {
-        $newest = [];
-        foreach ($groups as $group) {
-            $newest[$group['latestId']] = $this->findNewestInGroup($group, $perGroup);
+        if ($groups === []) {
+            return [];
+        }
+
+        $latestIdByRowId = $this->findRankedRowIds($groups, $perGroup);
+        $newest = array_fill_keys(array_column($groups, 'latestId'), []);
+        foreach ($this->findNewestFirst(array_keys($latestIdByRowId)) as $row) {
+            $newest[$latestIdByRowId[$row->requireId()]][] = $row;
         }
 
         return $newest;
@@ -194,27 +200,79 @@ final class SocialNotificationRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param Group $group
+     * The database, not PHP, assigns each row to its group: the key columns compare under the
+     * column collation, which is case- and accent-insensitive on MySQL.
+     *
+     * @param non-empty-list<Group> $groups
+     * @return array<int, int> row id => latestId of the group it ranks in, at most $perGroup rows per group
+     */
+    private function findRankedRowIds(array $groups, int $perGroup): array
+    {
+        $inGroup = '(social_account_id = ? AND kind = ? AND seen = ? AND subject_group_key = ? AND id <= ?)';
+        $tagged = implode(' ', array_fill(0, count($groups), "WHEN $inGroup THEN ?"));
+        $inAnyGroup = implode(' OR ', array_fill(0, count($groups), $inGroup));
+        $sql = "SELECT id, group_latest_id FROM (
+                SELECT id, group_latest_id,
+                    ROW_NUMBER() OVER (PARTITION BY group_latest_id ORDER BY id DESC) AS position
+                FROM (
+                    SELECT id, CASE $tagged END AS group_latest_id
+                    FROM social_notification
+                    WHERE $inAnyGroup
+                ) matched
+            ) ranked
+            WHERE position <= ?";
+
+        $tagParameters = [];
+        $filterParameters = [];
+        foreach ($groups as $group) {
+            $matching = [$group['accountId'], $group['kind'], $group['seen'], $group['groupKey'], $group['latestId']];
+            array_push($tagParameters, ...$matching);
+            $tagParameters[] = $group['latestId'];
+            array_push($filterParameters, ...$matching);
+        }
+        $parameters = [...$tagParameters, ...$filterParameters, $perGroup];
+
+        /** @var array<int|string, int|string> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllKeyValue(
+            $sql,
+            $parameters,
+            array_map(self::parameterType(...), $parameters),
+        );
+
+        $latestIdByRowId = [];
+        foreach ($rows as $rowId => $latestId) {
+            $latestIdByRowId[(int) $rowId] = (int) $latestId;
+        }
+
+        return $latestIdByRowId;
+    }
+
+    private static function parameterType(int|string|bool $parameter): ParameterType
+    {
+        return match (true) {
+            is_bool($parameter) => ParameterType::BOOLEAN,
+            is_int($parameter) => ParameterType::INTEGER,
+            default => ParameterType::STRING,
+        };
+    }
+
+    /**
+     * @param list<int> $ids
      * @return list<SocialNotification>
      */
-    private function findNewestInGroup(array $group, int $perGroup): array
+    private function findNewestFirst(array $ids): array
     {
-        $qb = $this->createQueryBuilder('notification')
-            ->andWhere('notification.socialAccount = :account')
-            ->andWhere('notification.kind = :kind')
-            ->andWhere('notification.seen = :seen')
-            ->andWhere('notification.subject.groupKey = :groupKey')
-            ->andWhere('notification.id <= :latestId')
-            ->setParameter('account', $group['accountId'])
-            ->setParameter('kind', SocialNotificationKind::from($group['kind']))
-            ->setParameter('seen', $group['seen'])
-            ->setParameter('latestId', $group['latestId'])
-            ->setParameter('groupKey', $group['groupKey'])
-            ->orderBy('notification.id', 'DESC')
-            ->setMaxResults($perGroup);
+        if ($ids === []) {
+            return [];
+        }
 
         /** @var list<SocialNotification> $rows */
-        $rows = $qb->getQuery()->getResult();
+        $rows = $this->createQueryBuilder('notification')
+            ->andWhere('notification.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('notification.id', 'DESC')
+            ->getQuery()
+            ->getResult();
 
         return $rows;
     }
