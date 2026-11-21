@@ -104,6 +104,24 @@ final class SocialNotificationControllerTest extends ApiTestCase
         self::assertSame($entry->requireId(), $this->listPayload($client)['groups'][0]['entryId']);
     }
 
+    public function testThePostsEntryBeatsTheAnsweredPostsWhenBothResolve(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-order@example.test');
+        $account = $this->persisted(SocialAccounts::blueskyOf($user));
+        $post = 'at://did:plc:bob/app.bsky.feed.post/2';
+        $answered = 'at://did:plc:me/app.bsky.feed.post/1';
+        $this->persistSubscribedEntry($user, CanonicalItemKind::Bluesky, $answered);
+        $postEntry = $this->persistSubscribedEntry($user, CanonicalItemKind::Bluesky, $post);
+        $keys = new NotificationPostKeys(CanonicalItem::hashKey($post), CanonicalItem::hashKey($answered));
+        $this->persistNotification($account, SocialNotificationKind::Reply, $keys);
+
+        $client->request('GET', '/api/me/notifications?network=bluesky');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($postEntry->requireId(), $this->listPayload($client)['groups'][0]['entryId']);
+    }
+
     public function testALemmyReplyAnswersThePostsEntryId(): void
     {
         $client = self::createClient();
