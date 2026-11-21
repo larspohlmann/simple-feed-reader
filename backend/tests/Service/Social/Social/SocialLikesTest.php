@@ -20,12 +20,14 @@ use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Social\Social\ActingAccountGuard;
+use App\Service\Social\Social\ConfirmedDeletion;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRemovedException;
 use App\Service\Social\Social\LiveLikeCounts;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\PostLiking;
@@ -44,6 +46,7 @@ use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\SocialRuleWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -152,6 +155,29 @@ final class SocialLikesTest extends DbTestCase
 
         self::assertSame(3, $likeCount);
         self::assertNotNull($this->likeRepository()->findOneFor($this->owner, $this->ensureItem()));
+    }
+
+    /** @return iterable<string, array{\RuntimeException}> */
+    public static function unreadableCounts(): iterable
+    {
+        yield 'post not found' => [new SocialPostNotFoundException('gone')];
+        yield 'post removed' => [new SocialPostRemovedException('removed')];
+        yield 'account needs reconnecting' => [new SocialAccountNeedsReconnectException('reconnect')];
+        yield 'credentials rejected' => [new SocialCredentialsRejectedException('rejected')];
+        yield 'network unreachable' => [new SocialNetworkUnreachableException('down')];
+    }
+
+    #[DataProvider('unreadableCounts')]
+    public function testACountTheNetworkWillNotGiveLeavesTheStoredOne(\RuntimeException $failure): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->ensureItem()->recordCounts(DiscussionCounts::fromCommentsAndLikes(null, 3));
+        $this->entityManager->flush();
+        $this->publicSource->failWith($failure);
+        $this->mastodon->failWith($failure);
+
+        self::assertSame(3, $this->liveLikeCounts()->refreshLikeCount($this->owner, $entry, $this->ensureItem()));
     }
 
     public function testALikeAlreadyMadeAnswersTheStoredCountWithoutAsking(): void
@@ -539,37 +565,55 @@ final class SocialLikesTest extends DbTestCase
     {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
-        $guard = new ActingAccountGuard($this->entityManager);
         $mastodon = $this->mastodon;
 
-        $publicSource = $this->publicSource;
-        $chooser = SocialFeeds::actingAccountChooser($this->entityManager, $accounts);
-        $posts = new SocialPostFinder(
-            $chooser,
-            $guard,
-            new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+        return new SocialLikes(
+            $this->likeRepository(),
+            $this->postFinder(),
+            SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
             SocialRuleWiring::postAddresses(),
+            new PostLiking(
+                new ActingAccountGuard($this->entityManager),
+                new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+            ),
+            $this->entityManager,
+            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
+            $this->liveLikeCounts(),
+            $this->deletions(),
         );
-        $deletions = ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck());
+    }
+
+    private function liveLikeCounts(): LiveLikeCounts
+    {
+        $publicSource = $this->publicSource;
         $counts = new SocialCounts(
             $this->countsCache,
-            $posts,
-            $deletions,
+            $this->postFinder(),
+            $this->deletions(),
             new ServiceLocator(['mastodon' => static fn (): FakePostCountsSource => $publicSource]),
             SocialRuleWiring::postAddresses(),
         );
 
-        return new SocialLikes(
-            $this->likeRepository(),
-            $posts,
-            $chooser,
+        return new LiveLikeCounts($counts, $this->entityManager);
+    }
+
+    private function postFinder(): SocialPostFinder
+    {
+        /** @var SocialAccountRepository $accounts */
+        $accounts = $this->entityManager->getRepository(SocialAccount::class);
+        $mastodon = $this->mastodon;
+
+        return new SocialPostFinder(
+            SocialFeeds::actingAccountChooser($this->entityManager, $accounts),
+            new ActingAccountGuard($this->entityManager),
+            new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             SocialRuleWiring::postAddresses(),
-            new PostLiking($guard, new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon])),
-            $this->entityManager,
-            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
-            new LiveLikeCounts($counts, $this->entityManager),
-            $deletions,
         );
+    }
+
+    private function deletions(): ConfirmedDeletion
+    {
+        return ConfirmedDeletions::askingOf($this->entityManager, new FakeHomeServerCheck());
     }
 
     private function likeRepository(): SocialLikeRepository
