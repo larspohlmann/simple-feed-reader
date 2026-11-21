@@ -60,8 +60,6 @@ export interface FollowedStoriesResponseDto {
 /** A Trending story's page (#2128, #2329): `newEntryIds` are its rows whose `joinedAt` is after `lastOpenedAt`,
  *  which is null for a story the reader does not follow. */
 export interface StoryPageDto extends EntriesPage {
-  title: string | null;
-  synopsis: string | null;
   /** Null when the story has no title. */
   story: StoryCard | null;
   /** The rows the story's list holds whichever page it is, and the unread ones among them (#2329). */

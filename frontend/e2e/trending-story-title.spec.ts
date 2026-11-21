@@ -60,8 +60,6 @@ function storyPage(id: number, followed: boolean, over: Partial<StoryPageDto> = 
   return {
     entries: [leadOf(id)],
     nextCursor: null,
-    title: titleOf(id),
-    synopsis: synopsisOf(id),
     story: {
       id,
       title: titleOf(id),
