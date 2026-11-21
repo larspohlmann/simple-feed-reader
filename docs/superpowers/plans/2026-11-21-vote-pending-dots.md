@@ -69,3 +69,18 @@ Real votes through `PUT /api/entries/{id}/vote` (up, clear, down, clear, up, cle
 ### Task 3: Live check
 
 - [ ] On :4200, a Lemmy feed row: tap up, capture the dots on the up arrow and the unchanged score, then the answered score; clear the vote again so the post is left as found.
+
+---
+
+## Revision (Lars, 2026-11-21): the controls own their pending dots
+
+Tasks 1–2 above wired the pending state from the row cache into each parent. Lars chose instead (option A):
+
+- **The control owns it.** `app-vote-pill` takes `vote: ((to: VoteValue) => Observable<unknown>) | null` in place of the `voted` output; it shows `app-pending-dots` on the tapped arrow until that observable settles and ignores taps meanwhile. The like buttons do the same: `app-entry-actions` keeps a local pending flag around `actions.like(entry)`, and `app-social-counts-row` takes `like: (() => Observable<unknown>) | null` in place of the `likeToggled` output.
+- **Settling observables.** `EntryActionHandler.like` and `.vote` return `Observable<void>` that completes once the request settles (error included; errors stay reported where they are today). `EntryRowCache.setLiked/setVote` return it; `OptimisticToggles.change` (and `run`) return it, so `CommentsService.vote/toggleLike` do too.
+- **Comment votes wait for the server:** `CommentsService.vote` applies only `myVote` at once; the score comes from the answer. `steppedScore` goes.
+- **Removed:** `isLikeOnTheWire` and `findVoteOnTheWire` (handler, cache, implementers, doubles), `InFlightPatches.findOnTheWire`/`before`, and the `changes` signal added in #2427 (nothing reads `onTheWire` reactively any more).
+- **Trade-off accepted:** only the tapped control shows the dots, not other copies of the post.
+- Comment like counts keep their current optimistic step (their answer carries no count); they get the dots like every like button.
+
+Tests: per control, the dots appear on tap and go when the observable completes or errors; a second tap while pending sends nothing; post and comment votes keep the score until the answer.
