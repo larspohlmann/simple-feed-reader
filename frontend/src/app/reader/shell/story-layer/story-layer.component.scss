@@ -9,9 +9,18 @@
   padding-top: var(--page-lead, 0);
 }
 
-.story-headline {
+.story-card {
   @include story-card.card;
-  @include story-card.card-padding;
 
   margin: var(--list-card-inset, 0);
+}
+
+.story-headline {
+  @include story-card.card-padding;
+
+  padding-bottom: 0;
+}
+
+.story-foot {
+  @include story-card.foot;
 }

@@ -16,6 +16,8 @@ describe('OpenStory (#2329)', () => {
     title,
     memberCount: 31,
     unreadCount: 12,
+    outletCount: 9,
+    shareCount: 4,
     lastOpenedAt,
     newEntryIds: [],
   });
@@ -63,6 +65,13 @@ describe('OpenStory (#2329)', () => {
 
     expect(open.tallyOf(42)).toEqual({ memberCount: 31, unreadCount: 12 });
     expect(open.tallyOf(7)).toBeNull();
+  });
+
+  it("keeps the sources and shares the story's page carries (#2442)", () => {
+    listLanded.next({ query: storyList(42), page: storyPage('Harbour strike', null) });
+
+    expect(open.sourcesOf(42)).toEqual({ outletCount: 9, shareCount: 4 });
+    expect(open.sourcesOf(7)).toBeNull();
   });
 
   it('counts a story followed when its page carries a last visit', () => {

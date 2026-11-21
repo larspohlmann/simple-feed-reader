@@ -10,6 +10,7 @@ use App\Entity\InclusionChange;
 use App\Entity\Subscription;
 use App\Entity\TrendingStory;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Enum\TrendingWindow;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\Support\ApiTestCase;
@@ -426,6 +427,23 @@ final class TrendingStoryEntriesControllerTest extends ApiTestCase
 
         self::assertSame(3, $page['memberCount']);
         self::assertSame(2, $page['unreadCount']);
+    }
+
+    public function testThePageCountsTheStorysSourcesAndShares(): void
+    {
+        $reader = $this->signInAsOwner('story-list-sources@example.com');
+        [$alpha, $beta] = $this->followedFeeds($reader);
+        $timeline = $this->fixtures->feed('home', SocialNetwork::Mastodon);
+        $this->fixtures->subscribe($reader, $timeline);
+        $story = $this->fixtures->storyOfSites(TrendingWindow::Day, '2031-05-14 09:00:00', [
+            [$this->fixtures->entry($alpha, 'Article', '2031-05-14 08:00:00'), 'alpha.example'],
+            [$this->fixtures->entry($beta, 'Other article', '2031-05-14 08:30:00'), 'beta.example'],
+            [$this->fixtures->entry($timeline, 'Post', '2031-05-14 09:00:00'), 'alpha.example'],
+        ]);
+
+        $page = $this->page($story);
+
+        self::assertSame([3, 1], [$page['outletCount'], $page['shareCount']]);
     }
 
     public function testACollapsedArticleCountsOnce(): void

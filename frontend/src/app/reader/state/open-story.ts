@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { accountSignal } from '../../core/auth/session-identity';
 import { ListContext } from './list-context';
 import { LandedList } from './landed-list';
+import { StorySources } from '../trending/trending.models';
 
 /** How many rows a story's list holds, and how many of them are unread. */
 export interface StoryTally {
@@ -16,10 +17,11 @@ interface LandedStory {
   readonly synopsis: string | null;
   readonly followed: boolean;
   readonly tally: StoryTally;
+  readonly sources: StorySources;
 }
 
-/** What the last story page its host's list landed said of its story (#2329): its title, synopsis, tally and
- *  whether the reader follows it. */
+/** What the last story page its host's list landed said of its story (#2329): its title, synopsis, tally,
+ *  sources and shares, and whether the reader follows it. */
 @Injectable()
 export class OpenStory {
   private readonly landedStory = accountSignal<LandedStory | null>(null);
@@ -42,6 +44,10 @@ export class OpenStory {
     return this.storyOf(id)?.tally ?? null;
   }
 
+  sourcesOf(id: number): StorySources | null {
+    return this.storyOf(id)?.sources ?? null;
+  }
+
   followedOnServer(id: number): boolean {
     return this.storyOf(id)?.followed ?? false;
   }
@@ -62,6 +68,7 @@ export class OpenStory {
       synopsis: page.synopsis ?? null,
       followed: typeof page.lastOpenedAt === 'string',
       tally: { memberCount: page.memberCount ?? 0, unreadCount: page.unreadCount ?? 0 },
+      sources: { outletCount: page.outletCount ?? 0, shareCount: page.shareCount ?? 0 },
     });
   }
 }

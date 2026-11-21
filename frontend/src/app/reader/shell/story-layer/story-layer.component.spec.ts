@@ -22,6 +22,8 @@ import { ListContext } from '../../state/list-context';
 import { ListItem } from '../../state/list-item';
 import { OpenStory } from '../../state/open-story';
 import { TrendingFollowAction } from '../../trending/trending-follow-action';
+import { TrendingHideAction } from '../../trending/trending-hide-action';
+import { StorySources } from '../../trending/trending.models';
 import { TestListContext } from '../../../../testing/list-context-testing';
 import { ListCover } from '../list-cover';
 import { ListHeading } from '../list-heading.service';
@@ -91,6 +93,7 @@ describe('StoryLayerComponent (#2329)', () => {
   let close: jest.Mock;
   let overlayOpen: ReturnType<typeof signal<boolean>>;
   let toggleOpen: jest.Mock;
+  let hideRun: jest.Mock;
   let setOrder: jest.Mock;
   let setUnreadOnly: jest.Mock;
   let confirmMarkAllRead: jest.Mock;
@@ -107,6 +110,7 @@ describe('StoryLayerComponent (#2329)', () => {
   };
   const title = signal<string | null>(null);
   const synopsis = signal<string | null>(null);
+  const sources = signal<StorySources | null>(null);
   const heading = {
     title: signal('Harbour strike'),
     titleCount: signal<TitleCount>({ value: 31, counts: 'items' }),
@@ -117,6 +121,7 @@ describe('StoryLayerComponent (#2329)', () => {
     close = jest.fn();
     overlayOpen = signal(true);
     toggleOpen = jest.fn();
+    hideRun = jest.fn();
     setOrder = jest.fn();
     setUnreadOnly = jest.fn();
     confirmMarkAllRead = jest.fn();
@@ -127,6 +132,7 @@ describe('StoryLayerComponent (#2329)', () => {
       providers: [
         ListCover,
         { provide: StoryOverlay, useValue: { close, open: overlayOpen } },
+        { provide: TrendingHideAction, useValue: { run: hideRun } },
         { provide: ListOrderService, useValue: { set: setOrder } },
         { provide: ListPreferences, useValue: { setUnreadOnly } },
         {
@@ -160,6 +166,8 @@ describe('StoryLayerComponent (#2329)', () => {
             useValue: {
               titleOf: (id: number) => (id === story.id ? title() : null),
               synopsisOf: (id: number) => (id === story.id ? synopsis() : null),
+              sourcesOf: (id: number) => (id === story.id ? sources() : null),
+              followedOnServer: () => false,
             },
           },
         ],
@@ -178,6 +186,7 @@ describe('StoryLayerComponent (#2329)', () => {
   afterEach(() => {
     title.set(null);
     synopsis.set(null);
+    sources.set(null);
     TestBed.resetTestingModule();
   });
 
@@ -265,12 +274,57 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(close).toHaveBeenCalled();
   });
 
-  it("offers Follow among the list's actions, and follows the story", () => {
-    const follow = mount().element.querySelector<HTMLButtonElement>('.actions .follow-story')!;
+  describe("the story's title card (#2442)", () => {
+    function mountCard(): HTMLElement {
+      const fixture = mountFixture();
+      title.set('Dockers strike at the harbour');
+      synopsis.set('Dockers walked out at dawn.');
+      sources.set({ outletCount: 14, shareCount: 8 });
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).querySelector('.top .story-card')!;
+    }
 
-    expect(follow.getAttribute('aria-label')).toBe('Follow story');
-    follow.click();
-    expect(toggleOpen).toHaveBeenCalled();
+    it('counts the sources and shares between the title and the synopsis', () => {
+      const card = mountCard();
+
+      expect(card.querySelector('h3.title + app-story-source-count + p.synopsis')).not.toBeNull();
+      expect(card.querySelector('app-story-source-count')?.textContent).toContain('14 sources');
+      expect(card.querySelector('app-story-source-count')?.textContent).toContain('8 shares');
+    });
+
+    it('ends with Follow and Hide, and the bar above it holds no Follow', () => {
+      const card = mountCard();
+
+      expect(card.lastElementChild?.matches('.story-foot')).toBe(true);
+      const labels = [...card.querySelectorAll('.story-foot button')].map((button) =>
+        button.getAttribute('aria-label'),
+      );
+      expect(labels).toEqual(['Follow story', 'Hide story']);
+      expect(card.ownerDocument.querySelector('.actions .follow-story')).toBeNull();
+    });
+
+    it('follows the open story', () => {
+      mountCard().querySelector<HTMLButtonElement>('.story-foot button')!.click();
+
+      expect(toggleOpen).toHaveBeenCalled();
+    });
+
+    it('hides the story on the list beneath and closes the layer', () => {
+      mountCard().querySelectorAll<HTMLButtonElement>('.story-foot button')[1].click();
+
+      expect(close).toHaveBeenCalled();
+      expect(hideRun).toHaveBeenCalledWith({ id: 42, followed: false });
+    });
+
+    it('shows no counts before the page carries them', () => {
+      const fixture = mountFixture();
+      title.set('Dockers strike at the harbour');
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('app-story-source-count'),
+      ).toBeNull();
+    });
   });
 
   it("hands the list's order, unread switch and mark-read on for the story's list", () => {

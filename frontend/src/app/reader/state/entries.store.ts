@@ -8,7 +8,7 @@ import { TrendingApi } from '../trending/trending-api';
 import { EntryDetailDto, EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { ExclusionSurface, SURFACE_DESCRIPTOR } from '../feed-exclusions';
 import { articlesOf } from './list-item';
-import { TrendingStoryDto } from '../trending/trending.models';
+import { StoryRef } from '../trending/trending.models';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
@@ -187,7 +187,7 @@ export class EntriesStore {
 
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
    *  place (#2066). A failure shows the banner and its retry. */
-  hideTrendingStory(story: TrendingStoryDto, outcome: StateSaveOutcome = {}): void {
+  hideTrendingStory(story: StoryRef, outcome: StateSaveOutcome = {}): void {
     this.runReported(
       this.trendingApi.hideStory(story.id),
       () => this.hideTrendingStory(story, outcome),

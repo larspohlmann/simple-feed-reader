@@ -1,20 +1,27 @@
 import { inject, Injectable } from '@angular/core';
 import { ListContext } from '../state/list-context';
-import { leadOf } from '../state/list-item';
+import { isStory, leadOf } from '../state/list-item';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { TrendingStoryDto } from './trending.models';
+import { StoryRef } from './trending.models';
 
-/** Hide on a Trending card (#2017): the card leaves in place (#2066), comes back if the hide fails. */
+/** Hide on a Trending story (#2017): its card, when the list holds it, leaves in place (#2066) and comes back if
+ *  the hide fails. */
 @Injectable()
 export class TrendingHideAction {
   private readonly list = inject(ListContext);
   private readonly subscriptions = inject(SubscriptionsStore);
 
-  run(story: TrendingStoryDto): void {
+  run(story: StoryRef): void {
+    const card = this.list.entries.items().find((item) => isStory(item) && item.id === story.id);
+    const cardId = card ? leadOf(card).id : null;
     this.list.entries.hideTrendingStory(story, {
-      onStarted: () => this.list.markLeaving(leadOf(story).id),
+      onStarted: () => {
+        if (cardId !== null) this.list.markLeaving(cardId);
+      },
       onSaved: () => this.subscriptions.reloadCountsQuietly(),
-      onFailed: () => this.list.stayInList(leadOf(story).id),
+      onFailed: () => {
+        if (cardId !== null) this.list.stayInList(cardId);
+      },
     });
   }
 }

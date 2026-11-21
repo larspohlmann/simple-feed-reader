@@ -35,6 +35,7 @@ final readonly class TrendingStoryEntries
             $rows,
             $heading,
             $this->entries->countMembersAndUnread($query),
+            $this->entries->countSourcesAndShares($query),
             $lastOpenedAt,
             $this->entries->joinedAtByEntry($query, $rowIds),
         );

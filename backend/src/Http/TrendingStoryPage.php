@@ -8,7 +8,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
 use App\Service\Curation\Trending\Model\TrendingStoryEntriesModel;
 
-/** A story's page of entries and its tally; `lastOpenedAt` is null for a story the reader does not follow. */
+/** A story's page of entries, its tally and its sources and shares; `lastOpenedAt` is null for a story the reader does not follow. */
 final readonly class TrendingStoryPage
 {
     public function __construct(
@@ -24,6 +24,8 @@ final readonly class TrendingStoryPage
      *   synopsis: string|null,
      *   memberCount: int,
      *   unreadCount: int,
+     *   outletCount: int,
+     *   shareCount: int,
      *   lastOpenedAt: string|null,
      *   newEntryIds: list<int>,
      * }
@@ -44,6 +46,8 @@ final readonly class TrendingStoryPage
             'synopsis' => $result->heading?->synopsis,
             'memberCount' => $result->tally->memberCount,
             'unreadCount' => $result->tally->unreadCount,
+            'outletCount' => $result->sources->outletCount,
+            'shareCount' => $result->sources->shareCount,
             'lastOpenedAt' => $result->lastOpenedAt?->format(\DateTimeInterface::ATOM),
             'newEntryIds' => $result->newEntryIds(),
         ];

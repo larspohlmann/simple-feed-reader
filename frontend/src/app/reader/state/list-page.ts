@@ -5,7 +5,14 @@ import { ListItem } from './list-item';
 export interface ListPage extends Partial<
   Pick<
     StoryPageDto,
-    'title' | 'synopsis' | 'memberCount' | 'unreadCount' | 'lastOpenedAt' | 'newEntryIds'
+    | 'title'
+    | 'synopsis'
+    | 'memberCount'
+    | 'unreadCount'
+    | 'outletCount'
+    | 'shareCount'
+    | 'lastOpenedAt'
+    | 'newEntryIds'
   >
 > {
   items: ListItem[];
