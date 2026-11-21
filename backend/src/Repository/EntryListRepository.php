@@ -294,7 +294,7 @@ final class EntryListRepository extends ServiceEntityRepository
         $copiesByItem = $itemIds === [] ? [] : $this->findCopiesByItem($buildCopiesQuery($scope->copies), $itemIds);
         $crossPostsByHash = $crossPostHashes === []
             ? []
-            : $this->findCopiesByCrossPostHash($buildCopiesQuery($scope->crossPosts), $crossPostHashes);
+            : $this->findCrossPosts($buildCopiesQuery($scope->crossPosts), $crossPostHashes, $itemIds);
 
         return array_map(
             static fn (EntryListRow $row): EntryListRow => self::attachCrossPosts(
@@ -332,13 +332,16 @@ final class EntryListRepository extends ServiceEntityRepository
 
     /**
      * @param list<string> $hashes
+     * @param list<int>    $survivorItemIds
      *
      * @return array<string, list<EntryListRow>>
      */
-    private function findCopiesByCrossPostHash(QueryBuilder $qb, array $hashes): array
+    private function findCrossPosts(QueryBuilder $qb, array $hashes, array $survivorItemIds): array
     {
         $query = $qb->andWhere('ci.crossPostHash IN (:crossPostHashes)')
+            ->andWhere('e.canonicalItem NOT IN (:survivorItemIds)')
             ->setParameter('crossPostHashes', $hashes)
+            ->setParameter('survivorItemIds', $survivorItemIds)
             ->orderBy('e.dates.publishedAt', 'ASC')
             ->addOrderBy('e.id', 'ASC')
             ->getQuery();
@@ -408,16 +411,18 @@ final class EntryListRepository extends ServiceEntityRepository
     private static function attachCrossPosts(EntryListRow $row, array $crossPostsByHash): EntryListRow
     {
         $hash = $row->entry->getCanonicalItem()?->getCrossPostHash();
-        $ownItemId = $row->entry->getCanonicalItemId();
+        if ($hash === null || !isset($crossPostsByHash[$hash])) {
+            return $row;
+        }
         $pills = [];
-        foreach ($hash === null ? [] : $crossPostsByHash[$hash] ?? [] as $crossPost) {
+        foreach ($crossPostsByHash[$hash] as $crossPost) {
             $itemId = $crossPost->entry->getCanonicalItemId();
-            if ($itemId !== null && $itemId !== $ownItemId) {
+            if ($itemId !== null) {
                 $pills[$itemId] ??= $crossPost;
             }
         }
 
-        return $pills === [] ? $row : $row->withDuplicates([...$row->duplicates, ...array_values($pills)]);
+        return $row->withDuplicates([...$row->duplicates, ...array_values($pills)]);
     }
 
     /**
