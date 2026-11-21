@@ -30,7 +30,7 @@ final class SocialNotificationPollRepository extends ServiceEntityRepository
             ->addSelect('COALESCE(poll.checkedAt, :epoch) AS HIDDEN checkOrder')
             ->from(SocialAccount::class, 'sa')
             ->join('sa.user', 'owner')
-            ->leftJoin(SocialNotificationPoll::class, 'poll', 'WITH', 'poll.socialAccount = sa')
+            ->leftJoin(SocialNotificationPoll::class, 'poll', 'ON', 'poll.socialAccount = sa')
             ->andWhere('sa.status = :connected')
             ->andWhere('poll.checkedAt IS NULL OR poll.checkedAt < :checkedBefore')
             ->setParameter('connected', SocialAccountStatus::Connected)
