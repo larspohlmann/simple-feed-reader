@@ -72,17 +72,37 @@ Play and Add to playlist sit on every audio entry.
 
 ## Social
 
-Connect a Bluesky or Mastodon account in Settings → Social Media. Its home
-timeline, lists and custom feeds arrive as private feeds, followed accounts as
-feeds under the network's own section, and the sidebar counts them like any
-other feed.
+Connect a Bluesky, Mastodon or Lemmy account in Settings → Social Media. Its
+home timeline, lists and custom feeds arrive as private feeds, followed
+accounts and communities as feeds under the network's own section, and the
+sidebar counts them like any other feed.
 
 ![The Bluesky section with the home timeline, a custom feed and followed accounts](screenshots/bluesky-light.webp)
+
+![The Mastodon section with its timeline and followed accounts](screenshots/mastodon-light.webp)
 
 A post shows what it embeds — images, video, a link card or the post it
 quotes — with its likes and replies in the reader.
 
 ![A Bluesky post in the reader, dark theme](screenshots/bluesky-post-dark.webp)
+
+A Lemmy post shows its score and its community, with the threaded comments
+below it.
+
+![A Lemmy post beside the Lemmy list](screenshots/lemmy-light.webp)
+
+The arrows vote, on the post and on every comment.
+
+<p>
+  <img src="screenshots/lemmy-votes-light.webp" alt="Close-up of the end of a Lemmy post, with Add comment and its vote pill" width="49%">
+  <img src="screenshots/lemmy-comment-votes-light.webp" alt="Close-up of threaded Lemmy comments with their scores and vote arrows" width="49%">
+</p>
+
+Each network's section carries a bell with the unseen count; the list groups
+likes, replies, reposts, mentions and follows. The people in this shot are
+invented.
+
+![The notifications of a connected Bluesky account](screenshots/notifications-light.webp)
 
 <p>
   <img src="screenshots/mobile-bluesky-light.webp" alt="The Bluesky section on a phone" width="24%">
@@ -95,6 +115,11 @@ The stories several of your feeds are covering, one card per story, ranked by
 how many sources ran it, over the last 24 hours or the last 7 days.
 
 ![Trending stories over the last 24 hours](screenshots/trending-light.webp)
+
+A story opens as a list of its own, headed by its card: sources, shares, when
+it started, Follow and Hide.
+
+![A Trending story's own list](screenshots/story-light.webp)
 
 <p>
   <img src="screenshots/mobile-trending-light.webp" alt="Trending on a phone" width="24%">
@@ -110,10 +135,12 @@ against what you favorite, keep and read.
 ## On a phone
 
 The same reader fills a phone screen: the magazine, the compact list, the
-article, and the sidebar as a drawer.
+article, and the sidebar as a drawer. Once a list scrolls, the app bar, the tag
+strip and the list header fold into one title line.
 
 <p>
   <img src="screenshots/mobile-magazine-light.webp" alt="Magazine layout on mobile, light theme" width="24%">
+  <img src="screenshots/mobile-scrolled-light.webp" alt="The same list scrolled: the bars have folded into one title line" width="24%">
   <img src="screenshots/mobile-magazine-dark.webp" alt="Magazine layout on mobile, dark theme" width="24%">
   <img src="screenshots/mobile-list-light.webp" alt="Compact list on mobile" width="24%">
   <img src="screenshots/mobile-sidebar-light.webp" alt="The sidebar drawer on mobile" width="24%">
@@ -156,6 +183,20 @@ change their visibility in bulk.
 
 ![Organise feeds](screenshots/organise-light.webp)
 
+### Visibility
+
+Where each network, tag and feed shows up: All items, For you, saved searches
+and Trending, in one table.
+
+![The Visibility table](screenshots/settings-visibility-light.webp)
+
+### Feed directory
+
+About 50,000 news sites and podcasts, narrowed to the countries and languages
+you choose, with filters and a subscribe button on every row.
+
+![The feed directory](screenshots/settings-directory-light.webp)
+
 ### Preferences, email, account
 
 Reading preferences; the email digest with its cadence and format; your
@@ -173,8 +214,8 @@ account and passkeys.
 
 ### Social Media
 
-Connected Bluesky and Mastodon accounts, and which of their follows, lists and
-feeds to bring in.
+Connected Bluesky, Mastodon and Lemmy accounts, and which of their follows,
+communities, lists and feeds to bring in.
 
 ![Social Media settings](screenshots/settings-social-light.webp)
 
