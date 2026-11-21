@@ -36,7 +36,7 @@ export interface DebugLogRunGroup {
 /** The #309 debug log: what each provider call sent and what streamed
  *  back, ~2 s fresh while a run is in flight. Server-side truth only -- the
  *  panel re-reads the run log rather than talking to the provider.
- *  Self-hiding: no log rows (debug off, or no run yet) means no panel.
+ *  Self-hiding: no run and no log rows means no panel.
  *  Sits under AI settings, below the switch that produces it -- so the
  *  common case is no run in flight, and the initial fetch on creation
  *  (not gated on `running()`) is what renders the previous run's log. */

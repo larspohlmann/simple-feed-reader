@@ -374,6 +374,7 @@
         "debugAdjustedReasoning": "Ajusté pour la prochaine tentative : le raisonnement n'est plus supprimé",
         "debugRunGroup": "Cycle · {{ start }} → {{ end }}",
         "debugRunPicker": "Cycle à examiner",
+        "debugRunNoCalls": "Aucun appel n'est journalisé pour ce cycle.",
         "debugRunSummary": "tentatives {{ a }}/{{ am }} · transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Détails",

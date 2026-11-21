@@ -374,6 +374,7 @@
         "debugAdjustedReasoning": "Ajustado para el siguiente intento: ya no se suprime el razonamiento",
         "debugRunGroup": "Ejecución · {{ start }} → {{ end }}",
         "debugRunPicker": "Ejecución que examinar",
+        "debugRunNoCalls": "No hay llamadas registradas para esta ejecución.",
         "debugRunSummary": "intentos {{ a }}/{{ am }} · transporte {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Detalles",

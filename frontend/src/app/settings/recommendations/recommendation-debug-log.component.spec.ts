@@ -165,9 +165,9 @@ describe('RecommendationDebugLogComponent', () => {
     jest.useRealTimers();
   });
 
-  it('renders nothing when debugLog answers no entries', () => {
+  it('renders nothing when debugLog answers no run and no entries', () => {
     const fixture = mount();
-    expect((fixture.nativeElement as HTMLElement).querySelector('details')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel')).toBeNull();
   });
 
   it('renders one row per entry with the composed label', () => {
@@ -380,6 +380,37 @@ describe('RecommendationDebugLogComponent', () => {
 
       expect(debugLog).toHaveBeenLastCalledWith(undefined);
     });
+  });
+
+  it('keeps the picker when the picked run has no calls, so another run can be picked', () => {
+    const runs = [
+      { kind: 'for_you', id: 9, status: 'completed', createdAt: '2026-08-08T10:00:00Z' },
+      { kind: 'profile', id: 5, status: 'failed', createdAt: '2026-08-08T09:00:00Z' },
+    ];
+    debugLog.mockReturnValue(of({ run: null, runs, entries: [BATCH_ENTRY] }));
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    const select = () =>
+      element.querySelector('.debug-panel__runs-select') as HTMLSelectElement | null;
+
+    debugLog.mockReturnValue(of({ run: null, runs, entries: [] }));
+    select()!.value = 'profile:5';
+    select()!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(select()).not.toBeNull();
+    expect(element.querySelector('.debug-panel__empty')?.textContent?.trim()).toBe(
+      'No calls are logged for this run.',
+    );
+
+    debugLog.mockReturnValue(of({ run: null, runs, entries: [BATCH_ENTRY] }));
+    select()!.value = 'for_you:9';
+    select()!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(debugLog).toHaveBeenLastCalledWith(undefined);
+    expect(element.querySelector('.debug-panel__empty')).toBeNull();
+    expect(element.querySelectorAll('app-debug-log-entry')).toHaveLength(1);
   });
 
   it('follows the newest run rather than pinning it when the newest is picked', () => {

@@ -374,6 +374,7 @@
         "debugAdjustedReasoning": "Adjusted for the next attempt: reasoning no longer suppressed",
         "debugRunGroup": "Run · {{ start }} → {{ end }}",
         "debugRunPicker": "Run to inspect",
+        "debugRunNoCalls": "No calls are logged for this run.",
         "debugRunSummary": "attempts {{ a }}/{{ am }} · transport {{ t }}/{{ tm }}",
         "debugDuration": "{{ s }} s",
         "debugDetails": "Details",

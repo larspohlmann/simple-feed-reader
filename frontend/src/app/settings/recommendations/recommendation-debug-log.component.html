@@ -1,4 +1,4 @@
-@if (entries().length > 0) {
+@if (runs().length > 0 || entries().length > 0) {
   <!-- No card wrapper: this panel already sits inside the Diagnostics group's
        "Debug log" drill-in (#541); the drill-in label names it, so a card with
        its own heading would nest a card in a card. -->
@@ -53,6 +53,12 @@
           }
         </select>
       </label>
+    }
+
+    @if (entries().length === 0) {
+      <p class="debug-panel__empty">
+        {{ 'settings.ai.recommendations.debugRunNoCalls' | transloco }}
+      </p>
     }
 
     <div class="debug-panel__grid-wrap">
