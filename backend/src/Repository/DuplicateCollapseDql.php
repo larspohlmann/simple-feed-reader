@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 
 /**
@@ -26,19 +26,42 @@ final readonly class DuplicateCollapseDql
 
     public function apply(QueryBuilder $qb, CollapseScope $scope, int $userId): void
     {
-        $qb->andWhere(\sprintf(
-            'e.location.urlHash IS NULL OR NOT EXISTS (%s)',
+        self::hideWhenEarlierExists(
+            $qb,
+            'e.location.urlHash',
             $this->buildEarlierCopyDql('location.urlHash', EntryAliases::collapse(), $scope->copies),
-        ));
-        $qb->andWhere(\sprintf(
-            'e.canonicalItem IS NULL OR NOT EXISTS (%s)',
+        );
+        self::hideWhenEarlierExists(
+            $qb,
+            'e.canonicalItem',
             $this->buildEarlierCopyDql('canonicalItem', EntryAliases::itemCollapse(), $scope->copies),
-        ));
-        $qb->andWhere(\sprintf(
-            'e.canonicalItem IS NULL OR NOT EXISTS (%s)',
-            $this->buildEarlierCrossPostDql($scope->crossPosts),
-        ));
+        );
+        $item = self::resolveItemAlias($qb);
+        self::hideWhenEarlierExists(
+            $qb,
+            $item . '.crossPostHash',
+            $this->buildEarlierCrossPostDql($item, $scope->crossPosts),
+        );
         $qb->setParameter('user', $userId);
+    }
+
+    private static function hideWhenEarlierExists(QueryBuilder $qb, string $key, string $earlierDql): void
+    {
+        $qb->andWhere(\sprintf('%s IS NULL OR NOT EXISTS (%s)', $key, $earlierDql));
+    }
+
+    private static function resolveItemAlias(QueryBuilder $qb): string
+    {
+        /** @var array<string, list<Join>> $joins */
+        $joins = $qb->getDQLPart('join');
+        foreach ($joins['e'] ?? [] as $join) {
+            if ($join->getJoin() === 'e.canonicalItem' && $join->getAlias() !== null) {
+                return $join->getAlias();
+            }
+        }
+        $qb->leftJoin('e.canonicalItem', 'collapseItem');
+
+        return 'collapseItem';
     }
 
     /**
@@ -58,16 +81,14 @@ final readonly class DuplicateCollapseDql
     /**
      * @param \Closure(QueryBuilder, EntryAliases): void $applyScope
      */
-    private function buildEarlierCrossPostDql(\Closure $applyScope): string
+    private function buildEarlierCrossPostDql(string $item, \Closure $applyScope): string
     {
         $aliases = EntryAliases::crossPostCollapse();
         $earlier = $aliases->entry;
         $inner = $this->buildSubscribedEntryQuery($aliases)
             ->join(\sprintf('%s.canonicalItem', $earlier), 'crossPostItem')
-            ->join(CanonicalItem::class, 'leadItem', 'ON', 'leadItem = e.canonicalItem')
-            ->andWhere('leadItem.crossPostHash IS NOT NULL')
-            ->andWhere('crossPostItem.crossPostHash = leadItem.crossPostHash')
-            ->andWhere('crossPostItem <> leadItem')
+            ->andWhere(\sprintf('crossPostItem.crossPostHash = %s.crossPostHash', $item))
+            ->andWhere(\sprintf('crossPostItem <> %s', $item))
             // Hole-free only while every copy of an item shares publishedAt; a kind whose copies diverge loses groups.
             ->andWhere(\sprintf(
                 '%1$s.dates.publishedAt < e.dates.publishedAt'
