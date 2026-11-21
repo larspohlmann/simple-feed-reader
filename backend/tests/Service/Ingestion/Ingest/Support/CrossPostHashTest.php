@@ -115,4 +115,29 @@ final class CrossPostHashTest extends TestCase
         self::assertNotNull($emptyLink);
         self::assertSame($noLink, $emptyLink);
     }
+
+    public function testALinkPostKeyIsPinned(): void
+    {
+        self::assertSame(
+            'ba3bd457115a89ad702acf3104ad4c713751d8d90c43d436da9ecf8d8e810f7d',
+            CrossPostHash::build(new CrossPostModel(self::AUTHOR, self::LINK, 'Title', null)),
+        );
+    }
+
+    public function testATextPostKeyIsPinned(): void
+    {
+        self::assertSame(
+            '44e7fb07dd5c3e1d53631e80de691b19af4b49fa78f47b773b1288531803ce83',
+            CrossPostHash::build(new CrossPostModel(self::AUTHOR, null, 'Ask Lemmy', '<p>Hello world</p>')),
+        );
+    }
+
+    public function testNonAsciiCaseDoesNotSplitAKey(): void
+    {
+        $upper = CrossPostHash::build(new CrossPostModel('https://lemmy.world/u/ÄRGER', null, 'ÄPFEL', '<p>ÖL</p>'));
+        $lower = CrossPostHash::build(new CrossPostModel('https://lemmy.world/u/ärger', null, 'äpfel', '<p>öl</p>'));
+
+        self::assertNotNull($upper);
+        self::assertSame($upper, $lower);
+    }
 }

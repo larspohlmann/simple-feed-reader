@@ -65,4 +65,29 @@ final class LemmyLinkedUrlTest extends TestCase
 
         self::assertNull(LemmyLinkedUrl::parse($body));
     }
+
+    public function testTextBeforeTheAnchorIsNotTheLink(): void
+    {
+        self::assertNull(LemmyLinkedUrl::parse('See <a href="https://x.example/a">https://x.example/a</a>'));
+    }
+
+    public function testWhitespaceAroundTheAnchorLabelOrInsideTheParagraphIsIgnored(): void
+    {
+        self::assertSame(
+            'https://x.example/a',
+            LemmyLinkedUrl::parse('<a href="https://x.example/a"> https://x.example/a </a>'),
+        );
+        self::assertSame(
+            'https://x.example/a',
+            LemmyLinkedUrl::parse('<p> <a href="https://x.example/a">https://x.example/a</a> </p>'),
+        );
+    }
+
+    public function testAnUppercaseSchemeIsTheLink(): void
+    {
+        self::assertSame(
+            'HTTPS://x.example/a',
+            LemmyLinkedUrl::parse('<a href="HTTPS://x.example/a">HTTPS://x.example/a</a>'),
+        );
+    }
 }
