@@ -57,7 +57,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      */
     public function pageForMonth(User $user, MonthWindowModel $window, RunHistoryFilterModel $filter): array
     {
-        $rows = [];
+        $perKind = [];
         foreach (self::resolveKinds($filter->kind) as $kind) {
             $query = $this->buildHistoryRowsQuery($kind, $user)
                 ->andWhere('r.createdAt >= :start')->setParameter('start', $window->startUtc)
@@ -71,9 +71,10 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 
             /** @var list<array<string, mixed>> $kindRows */
             $kindRows = $query->getQuery()->getArrayResult();
-            $rows = [...$rows, ...self::tagRows($kind, $kindRows)];
+            $perKind[] = self::tagRows($kind, $kindRows);
         }
 
+        $rows = array_merge(...$perKind);
         usort($rows, self::compareNewestFirst(...));
 
         return $rows;
@@ -87,16 +88,17 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      */
     public function spendTimeline(User $user, ?AiRunKind $kind): array
     {
-        $rows = [];
+        $perKind = [];
         foreach (self::resolveKinds($kind) as $runKind) {
             /** @var list<SpendRow> $kindRows */
             $kindRows = $this->buildRunQuery($runKind, $user)
                 ->select('r.createdAt AS createdAt', 'r.providerUsage.costNanoCredits AS costNanoCredits')
                 ->getQuery()
                 ->getArrayResult();
-            $rows = [...$rows, ...$kindRows];
+            $perKind[] = $kindRows;
         }
 
+        $rows = array_merge(...$perKind);
         usort($rows, static fn (array $left, array $right): int => $right['createdAt'] <=> $left['createdAt']);
 
         return $rows;
