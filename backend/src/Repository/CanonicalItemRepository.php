@@ -159,11 +159,11 @@ final class CanonicalItemRepository extends ServiceEntityRepository
         /** @var list<array{keyHash: string, entryId: int|string}> $rows */
         $rows = $this->createQueryBuilder('item')
             ->select('item.keyHash AS keyHash', 'MIN(entry.id) AS entryId')
-            ->join(Entry::class, 'entry', 'WITH', 'entry.canonicalItem = item')
+            ->join(Entry::class, 'entry', 'ON', 'entry.canonicalItem = item')
             ->join(
                 Subscription::class,
                 'subscription',
-                'WITH',
+                'ON',
                 'subscription.feed = entry.feed AND subscription.user = :user',
             )
             ->andWhere('item.kind = :kind')
