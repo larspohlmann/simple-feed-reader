@@ -343,6 +343,45 @@ describe('RecommendationDebugLogComponent', () => {
     expect(debugLog).toHaveBeenLastCalledWith({ kind: 'for_you', id: 7 });
   });
 
+  describe('without a For you run', () => {
+    const RUNS = [
+      { kind: 'story', id: 12, status: null, createdAt: '2026-08-08T10:00:00Z' },
+      { kind: 'profile', id: 5, status: 'completed', createdAt: '2026-08-08T09:00:00Z' },
+    ];
+
+    function mountWithRuns() {
+      debugLog.mockReturnValue(of({ run: null, runs: RUNS, entries: [BATCH_ENTRY] }));
+      const fixture = mount();
+      const select = (fixture.nativeElement as HTMLElement).querySelector(
+        '.debug-panel__runs-select',
+      ) as HTMLSelectElement;
+      return { fixture, select };
+    }
+
+    it('shows the newest run of any kind as selected', () => {
+      const { select } = mountWithRuns();
+
+      expect(select.value).toBe('story:12');
+      expect(select.value).toBe(select.options[0].value);
+    });
+
+    it('shows a pinned run as selected and follows the default when it is picked', () => {
+      const { fixture, select } = mountWithRuns();
+
+      select.value = 'profile:5';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(debugLog).toHaveBeenLastCalledWith({ kind: 'profile', id: 5 });
+      expect(select.value).toBe('profile:5');
+
+      select.value = 'story:12';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(debugLog).toHaveBeenLastCalledWith(undefined);
+    });
+  });
+
   it('follows the newest run rather than pinning it when the newest is picked', () => {
     debugLog.mockReturnValue(
       of({

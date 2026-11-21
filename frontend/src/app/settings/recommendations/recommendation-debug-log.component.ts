@@ -83,14 +83,15 @@ export class RecommendationDebugLogComponent implements OnInit {
    *  start; an explicit one stays where the user put it. */
   readonly selectedRun = signal<{ kind: AiRunKind; id: number } | null>(null);
   readonly selectedOptionValue = computed(() => {
-    const selected = this.selectedRun() ?? this.newestForYouRun();
+    const selected = this.selectedRun() ?? this.defaultRun();
     return selected === null ? '' : this.optionValue(selected);
   });
   /** The picker is worth showing only once there is somewhere else to go. */
   readonly hasOlderRuns = computed(() => this.runs().length > 1);
 
-  private readonly newestForYouRun = computed(
-    () => this.runs().find((choice) => choice.kind === 'for_you') ?? null,
+  /** What the server answers with when no run is asked for. */
+  private readonly defaultRun = computed(
+    () => this.runs().find((choice) => choice.kind === 'for_you') ?? this.runs()[0] ?? null,
   );
 
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -128,14 +129,13 @@ export class RecommendationDebugLogComponent implements OnInit {
     return finishedAt === null ? null : this.time(finishedAt);
   }
 
-  /** Switches the panel to another retained run. Selecting the newest For you
+  /** Switches the panel to another retained run. Selecting the server's default
    *  run is the same as following the default, so it clears the selection
    *  rather than pinning it — otherwise the panel would stop tracking the next
    *  run that starts. */
   selectRun(run: { kind: AiRunKind; id: number }): void {
-    const newest = this.newestForYouRun();
-    const isNewest = run.kind === 'for_you' && run.id === newest?.id;
-    this.selectedRun.set(isNewest ? null : { kind: run.kind, id: run.id });
+    const isDefault = run.kind === this.defaultRun()?.kind && run.id === this.defaultRun()?.id;
+    this.selectedRun.set(isDefault ? null : { kind: run.kind, id: run.id });
     this.details.clear();
     this.fetch();
   }
