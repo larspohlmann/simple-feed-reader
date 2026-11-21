@@ -208,6 +208,10 @@
     @include visually-hidden;
   }
 
+  &__kind {
+    color: var(--text-primary);
+  }
+
   &__provider {
     /* Row 2: the full grid width, not one of row 1's six tracks -- see the
        file banner. Grid auto-placement (default `grid-auto-flow: row`)

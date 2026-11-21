@@ -96,7 +96,9 @@ export interface DebugLogDetail {
  *  account's current (editable) config, which would otherwise rename past runs. */
 export interface RunHistoryRow {
   id: number;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  kind: AiRunKind;
+  /** Null for a Trending story run, which has no lifecycle of its own. */
+  status: DebugLogRunStatus | null;
   /** Null on runs that predate the column, and on one that failed before it
    *  was ever stamped. */
   providerHost: string | null;
@@ -131,7 +133,8 @@ export interface RunHistoryMonth {
 export interface RunHistoryMonthPage {
   month: string;
   runs: RunHistoryRow[];
-  nextCursor: number | null;
+  /** Opaque: the server's own position in the month's order, sent back as `before`. */
+  nextCursor: string | null;
 }
 
 /** What the history route answers with: every month the account has runs in,

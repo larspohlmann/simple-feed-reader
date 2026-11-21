@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -8,10 +9,12 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import { TranslocoModule } from '@jsverse/transloco';
 import { SettingsApi } from '../settings-api';
 import { formatCost } from '../../reader/format';
 import {
+  AiRunKind,
   RunHistoryMonth,
   RunHistoryMonthPage,
   RunHistoryOverview,
@@ -20,6 +23,7 @@ import {
 import { RecommendationsService } from '../../reader/state/recommendations.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
 import {
   RUN_HISTORY_STATUSES,
@@ -40,12 +44,22 @@ interface MonthSection {
   runCount: number;
   costNanoCredits: number | null;
   runs: RunHistoryRow[] | null;
-  nextCursor: number | null;
+  nextCursor: string | null;
   loading: boolean;
   failed: boolean;
 }
 
-/** What every for-you run has cost (#409): one collapsible section per month
+/** The filter's options as `app-segmented-choice` labels them: each is the
+ *  translation key under `settings.ai.` that names it, so the kind labels the
+ *  rows already use serve the filter too. */
+const KIND_FILTERS: readonly { option: string; kind: AiRunKind | null }[] = [
+  { option: 'recommendations.historyKindAll', kind: null },
+  { option: 'runKind.for_you', kind: 'for_you' },
+  { option: 'runKind.profile', kind: 'profile' },
+  { option: 'runKind.story', kind: 'story' },
+];
+
+/** What every AI run has cost (#409, #2355): one collapsible section per month
  *  with its own run count and spend, under the account's all-time total. The
  *  newest month arrives expanded (rows come free with the overview); older
  *  months fetch their first page once opened, and "show more" pages the rest.
@@ -58,7 +72,12 @@ interface MonthSection {
 @Component({
   selector: 'app-recommendation-run-history',
   standalone: true,
-  imports: [RecommendationRunHistoryMonthComponent, IconComponent, TranslocoModule],
+  imports: [
+    RecommendationRunHistoryMonthComponent,
+    SegmentedChoiceComponent,
+    IconComponent,
+    TranslocoModule,
+  ],
   templateUrl: './recommendation-run-history.component.html',
   styleUrl: './recommendation-run-history.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +94,19 @@ export class RecommendationRunHistoryComponent {
   readonly sections = signal<MonthSection[]>([]);
   readonly totalCostNanoCredits = signal<number | null>(null);
 
+  /** Null means every kind. */
+  readonly kind = signal<AiRunKind | null>(null);
+  /** Keeps the card, and the filter in it, on screen once the reader has used
+   *  the filter -- a kind with no runs, or the moment between two kinds, would
+   *  otherwise empty `sections` and take the control away. */
+  readonly filterUsed = signal(false);
+  readonly kindOptions: readonly string[] = KIND_FILTERS.map((filter) => filter.option);
+  readonly selectedKindOption = computed(
+    () => KIND_FILTERS.find((filter) => filter.kind === this.kind())!.option,
+  );
+
+  private overviewRequest: Subscription | null = null;
+
   /** The five statuses the mobile legend spells out, in a fixed order --
    *  read once here rather than re-derived per render. */
   readonly legendStatuses: readonly RunHistoryStatus[] = RUN_HISTORY_STATUSES;
@@ -83,8 +115,19 @@ export class RecommendationRunHistoryComponent {
    *  that adds a row or moves the total. */
   private readonly refetchOnCompletion = effect(() => {
     this.recs.completedStamp();
-    this.fetchOverview();
+    this.fetchOverview(this.kind());
   });
+
+  /** A different kind is a different list: every loaded month goes, and the
+   *  effect above refetches the overview for it. */
+  pickKind(option: string): void {
+    const picked = KIND_FILTERS.find((filter) => filter.option === option)!.kind;
+    if (picked === this.kind()) return;
+
+    this.filterUsed.set(true);
+    this.sections.set([]);
+    this.kind.set(picked);
+  }
 
   /** The account's spend, and each month's, as the provider writes it. The
    *  formatting itself lives in `format.ts` -- each month section renders the
@@ -108,12 +151,15 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.runs !== null || section.loading) return;
 
+    const kind = this.kind();
     this.startFetch(month);
     this.api
-      .runHistoryMonth(month, this.timeZone)
+      .runHistoryMonth(month, this.timeZone, { kind: kind ?? undefined })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (page) => this.replaceRows(month, page.runs, page.nextCursor),
+        next: (page) => {
+          if (this.kind() === kind) this.replaceRows(month, page.runs, page.nextCursor);
+        },
         // Without a message this reads as a month with no runs, not a failed
         // fetch -- and closing and re-opening retries, but only if the
         // reader knows there's something to retry.
@@ -127,12 +173,18 @@ export class RecommendationRunHistoryComponent {
     const section = this.findSection(month);
     if (!section || section.nextCursor === null || section.loading) return;
 
+    const kind = this.kind();
     this.startFetch(month);
     this.api
-      .runHistoryMonth(month, this.timeZone, section.nextCursor)
+      .runHistoryMonth(month, this.timeZone, {
+        kind: kind ?? undefined,
+        before: section.nextCursor,
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (page) => this.appendRows(month, page.runs, page.nextCursor),
+        next: (page) => {
+          if (this.kind() === kind) this.appendRows(month, page.runs, page.nextCursor);
+        },
         // Unlike a first page, this one has rows on screen already: they stay,
         // and the button comes back enabled so the reader can try again.
         error: () => this.stopFetch(month),
@@ -161,11 +213,11 @@ export class RecommendationRunHistoryComponent {
     this.updateSection(month, (section) => ({ ...section, loading: false, failed: true }));
   }
 
-  private replaceRows(month: string, runs: RunHistoryRow[], nextCursor: number | null): void {
+  private replaceRows(month: string, runs: RunHistoryRow[], nextCursor: string | null): void {
     this.updateSection(month, (section) => ({ ...section, runs, nextCursor, loading: false }));
   }
 
-  private appendRows(month: string, runs: RunHistoryRow[], nextCursor: number | null): void {
+  private appendRows(month: string, runs: RunHistoryRow[], nextCursor: string | null): void {
     this.updateSection(month, (section) => ({
       ...section,
       runs: [...(section.runs ?? []), ...runs],
@@ -180,9 +232,12 @@ export class RecommendationRunHistoryComponent {
     );
   }
 
-  private fetchOverview(): void {
-    this.api
-      .runHistory(this.timeZone)
+  /** Replaces any overview still in flight: a late answer for the previous
+   *  kind would otherwise overwrite the list the reader just switched to. */
+  private fetchOverview(kind: AiRunKind | null): void {
+    this.overviewRequest?.unsubscribe();
+    this.overviewRequest = this.api
+      .runHistory(this.timeZone, kind ?? undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (overview) => this.applyOverview(overview),
@@ -243,17 +298,15 @@ export class RecommendationRunHistoryComponent {
     };
   }
 
-  /** The prior rows the fresh first page does not already carry. Ids ascend
-   *  with creation time and the page is newest-first, so "older than the
-   *  page's last row" is exactly the tail -- which makes the concatenation
-   *  above ordered and duplicate-free without comparing whole rows. */
+  /** The prior rows the fresh first page does not already carry. The page is
+   *  a prefix of the month's order, so what it lacks is exactly the tail --
+   *  which makes the concatenation above ordered and duplicate-free. Ids
+   *  restart per kind, so a row is told apart by kind and id together. */
   private carriedTail(fresh: RunHistoryRow[], prior: RunHistoryRow[] | null): RunHistoryRow[] {
     if (prior === null) return [];
 
-    const oldestFresh = fresh.at(-1);
-    if (oldestFresh === undefined) return prior;
-
-    return prior.filter((run) => run.id < oldestFresh.id);
+    const freshKeys = new Set(fresh.map((run) => `${run.kind}:${run.id}`));
+    return prior.filter((run) => !freshKeys.has(`${run.kind}:${run.id}`));
   }
 
   private staleSection(month: RunHistoryMonth, prior: MonthSection | undefined): MonthSection {

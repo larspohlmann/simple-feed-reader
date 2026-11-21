@@ -18,6 +18,7 @@ const BROWSER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const PRICED_RUN: RunHistoryRow = {
   id: 42,
+  kind: 'for_you',
   status: 'completed',
   providerHost: 'openrouter.ai',
   model: 'x-ai/grok-4-fast',
@@ -156,7 +157,7 @@ describe('RecommendationRunHistoryComponent', () => {
   it('sends the browser timezone on the overview fetch', () => {
     mount(OVERVIEW);
 
-    expect(runHistory).toHaveBeenCalledWith(BROWSER_TZ);
+    expect(runHistory).toHaveBeenCalledWith(BROWSER_TZ, undefined);
   });
 
   it('renders the newest month expanded with its rows, and older months collapsed with none', () => {
@@ -192,7 +193,7 @@ describe('RecommendationRunHistoryComponent', () => {
 
     openMonth(months(element)[1]);
 
-    expect(runHistoryMonth).toHaveBeenCalledWith('2026-07', BROWSER_TZ);
+    expect(runHistoryMonth).toHaveBeenCalledWith('2026-07', BROWSER_TZ, { kind: undefined });
     expect(rows(months(element)[1])).toHaveLength(1);
   });
 
@@ -211,7 +212,7 @@ describe('RecommendationRunHistoryComponent', () => {
   it('"show more" fetches with the section\'s nextCursor and appends rather than replaces', () => {
     const overviewWithMore: RunHistoryOverview = {
       ...OVERVIEW,
-      latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: 41 },
+      latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: '41' },
     };
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-08', runs: [UNPRICED_RUN], nextCursor: null }),
@@ -222,8 +223,112 @@ describe('RecommendationRunHistoryComponent', () => {
     (newest.querySelector('.run-history-month__more') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(runHistoryMonth).toHaveBeenCalledWith('2026-08', BROWSER_TZ, 41);
+    expect(runHistoryMonth).toHaveBeenCalledWith('2026-08', BROWSER_TZ, {
+      kind: undefined,
+      before: '41',
+    });
     expect(rows(newest)).toHaveLength(2);
+  });
+
+  describe('kind filter', () => {
+    function pickKind(element: HTMLElement, label: string): void {
+      const button = Array.from(element.querySelectorAll('.run-history__filter button')).find(
+        (candidate) => candidate.textContent?.trim() === label,
+      ) as HTMLButtonElement;
+      button.click();
+      fixture.detectChanges();
+    }
+
+    it('offers All, For you, Profile and Trending stories, with All selected', () => {
+      const element = mount(OVERVIEW);
+
+      const buttons = Array.from(element.querySelectorAll('.run-history__filter button'));
+      expect(buttons.map((button) => button.textContent?.trim())).toEqual([
+        'All',
+        'For you',
+        'Profile',
+        'Trending stories',
+      ]);
+      expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('refetches the overview with the picked kind and sends it on month fetches', () => {
+      runHistoryMonth.mockReturnValue(
+        of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
+      );
+      const element = mount(OVERVIEW);
+
+      pickKind(element, 'Profile');
+
+      expect(runHistory).toHaveBeenLastCalledWith(BROWSER_TZ, 'profile');
+      openMonth(months(element)[1]);
+      expect(runHistoryMonth).toHaveBeenLastCalledWith('2026-07', BROWSER_TZ, { kind: 'profile' });
+    });
+
+    it('drops every loaded month section while the new kind loads', () => {
+      const element = mount(OVERVIEW);
+      expect(rows(months(element)[0])).toHaveLength(1);
+      runHistory.mockReturnValue(new Subject<RunHistoryOverview>());
+
+      pickKind(element, 'For you');
+
+      expect(months(element)).toHaveLength(0);
+      expect(element.querySelector('.run-history__filter')).not.toBeNull();
+    });
+
+    it('keeps the card and the filter when the picked kind has no runs, and when All is picked again', () => {
+      const element = mount(OVERVIEW);
+      runHistory.mockReturnValue(of(EMPTY_OVERVIEW));
+
+      pickKind(element, 'Trending stories');
+
+      expect(months(element)).toHaveLength(0);
+      expect(element.querySelector('.run-history__filter')).not.toBeNull();
+
+      runHistory.mockReturnValue(of(OVERVIEW));
+      pickKind(element, 'All');
+      expect(months(element)).toHaveLength(2);
+    });
+
+    it('ignores a late overview for the kind the reader has since left', () => {
+      const late = new Subject<RunHistoryOverview>();
+      const element = mount(OVERVIEW);
+      runHistory.mockReturnValueOnce(late);
+      pickKind(element, 'Profile');
+      runHistory.mockReturnValue(of({ ...OVERVIEW, months: [JULY], latest: null }));
+      pickKind(element, 'Trending stories');
+
+      late.next(OVERVIEW);
+
+      expect(months(element)).toHaveLength(1);
+    });
+  });
+
+  it('on completion, rows of different kinds that share an id are carried and kept apart', () => {
+    const profileRun: RunHistoryRow = { ...runWithId(42), kind: 'profile' };
+    const forYouRun: RunHistoryRow = { ...runWithId(42), kind: 'for_you' };
+    const overviewWithMore: RunHistoryOverview = {
+      ...OVERVIEW,
+      latest: { month: '2026-08', runs: [profileRun], nextCursor: 'cursor-1' },
+    };
+    runHistoryMonth.mockReturnValue(of({ month: '2026-08', runs: [forYouRun], nextCursor: null }));
+    const element = mount(overviewWithMore);
+    showMore(months(element)[0]);
+    expect(rows(months(element)[0])).toHaveLength(2);
+
+    runHistory.mockReturnValue(
+      of({
+        ...OVERVIEW,
+        latest: { month: '2026-08', runs: [runWithId(43), profileRun], nextCursor: 'cursor-1' },
+      }),
+    );
+    completedStamp.set(1);
+    fixture.detectChanges();
+
+    const labels = Array.from(rows(months(element)[0]), (row) =>
+      row.querySelector('.run-history-month__kind')?.textContent?.trim(),
+    );
+    expect(labels).toEqual(['For you', 'Profile', 'For you']);
   });
 
   it('re-fetches when a run completes', () => {
@@ -272,11 +377,11 @@ describe('RecommendationRunHistoryComponent', () => {
   it('on completion, the newest month keeps the pages the reader had loaded, and its cursor', () => {
     const overviewWithMore: RunHistoryOverview = {
       ...OVERVIEW,
-      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: 42 },
+      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: '42' },
     };
     runHistoryMonth
-      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(42)], nextCursor: 41 }))
-      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(41)], nextCursor: 40 }));
+      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(42)], nextCursor: '41' }))
+      .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(41)], nextCursor: '40' }));
     const element = mount(overviewWithMore);
 
     showMore(months(element)[0]);
@@ -286,7 +391,7 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistory.mockReturnValue(
       of({
         ...OVERVIEW,
-        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: 42 },
+        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: '42' },
       }),
     );
     completedStamp.set(1);
@@ -300,13 +405,16 @@ describe('RecommendationRunHistoryComponent', () => {
     // the end of the first page.
     runHistoryMonth.mockReturnValue(of({ month: '2026-08', runs: [], nextCursor: null }));
     showMore(newest);
-    expect(runHistoryMonth).toHaveBeenLastCalledWith('2026-08', BROWSER_TZ, 40);
+    expect(runHistoryMonth).toHaveBeenLastCalledWith('2026-08', BROWSER_TZ, {
+      kind: undefined,
+      before: '40',
+    });
   });
 
   it('on completion, a newest month the reader had paged to the end of offers no more pages', () => {
     const overviewWithMore: RunHistoryOverview = {
       ...OVERVIEW,
-      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: 42 },
+      latest: { month: '2026-08', runs: [runWithId(43)], nextCursor: '42' },
     };
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-08', runs: [runWithId(42)], nextCursor: null }),
@@ -319,7 +427,7 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistory.mockReturnValue(
       of({
         ...OVERVIEW,
-        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: 42 },
+        latest: { month: '2026-08', runs: [runWithId(44), runWithId(43)], nextCursor: '42' },
       }),
     );
     completedStamp.set(1);
@@ -397,7 +505,7 @@ describe('RecommendationRunHistoryComponent', () => {
     jest.useFakeTimers();
     const overviewWithMore: RunHistoryOverview = {
       ...OVERVIEW,
-      latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: 41 },
+      latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: '41' },
     };
     runHistoryMonth.mockReturnValue(throwError(() => new Error('the endpoint is down')));
     const element = mount(overviewWithMore);

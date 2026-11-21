@@ -200,4 +200,32 @@ describe('SettingsApi', () => {
       finishReason: 'stop',
     });
   });
+
+  it('GETs the run history overview with the timezone, and the kind only when set', () => {
+    api.runHistory('Europe/Berlin').subscribe();
+    const unfiltered = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/recommendations/runs/history',
+    );
+    expect(unfiltered.request.params.get('tz')).toBe('Europe/Berlin');
+    expect(unfiltered.request.params.has('kind')).toBe(false);
+    unfiltered.flush({ totalCostNanoCredits: null, months: [], latest: null });
+
+    api.runHistory('Europe/Berlin', 'story').subscribe();
+    const filtered = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/recommendations/runs/history',
+    );
+    expect(filtered.request.params.get('kind')).toBe('story');
+    filtered.flush({ totalCostNanoCredits: null, months: [], latest: null });
+  });
+
+  it('GETs one history month with the kind and the opaque cursor as strings', () => {
+    api.runHistoryMonth('2026-08', 'UTC', { kind: 'profile', before: 'abc.def' }).subscribe();
+    const testRequest = ctrl.expectOne(
+      (request) => request.url === 'https://api.test/api/recommendations/runs/history/2026-08',
+    );
+    expect(testRequest.request.params.get('tz')).toBe('UTC');
+    expect(testRequest.request.params.get('kind')).toBe('profile');
+    expect(testRequest.request.params.get('before')).toBe('abc.def');
+    testRequest.flush({ month: '2026-08', runs: [], nextCursor: null });
+  });
 });

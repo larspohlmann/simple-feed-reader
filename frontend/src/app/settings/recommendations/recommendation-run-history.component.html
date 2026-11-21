@@ -1,4 +1,4 @@
-@if (sections().length > 0) {
+@if (sections().length > 0 || filterUsed()) {
   <!-- No card wrapper: this panel already sits inside the Diagnostics group's
        "Run history" drill-in (#541), so a heading and surface of its own would
        nest a card in a card. The drill-in label names it; the hint stays. -->
@@ -10,6 +10,16 @@
       </span>
       <span class="run-history__total-value">{{ cost(totalCostNanoCredits()) }}</span>
     </p>
+
+    <div class="run-history__filter">
+      <app-segmented-choice
+        [options]="kindOptions"
+        [selected]="selectedKindOption()"
+        ariaLabelKey="settings.ai.recommendations.historyKindFilterLabel"
+        labelPrefix="settings.ai."
+        (pick)="pickKind($event)"
+      />
+    </div>
 
     <ul class="run-history__months">
       @for (section of sections(); track section.month) {

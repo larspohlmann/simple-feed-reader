@@ -53,7 +53,7 @@
       </div>
 
       <ul class="run-history-month__list">
-        @for (run of rows; track run.id) {
+        @for (run of rows; track run.kind + run.id) {
           <li class="run-history-month__row">
             <span class="run-history-month__when">
               <span class="run-history-month__cell-label">
@@ -65,11 +65,19 @@
               <span class="run-history-month__cell-label">
                 {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
               </span>
-              <!-- Decorative on both sides of the breakpoint (`<app-icon>`
-                   marks its own glyph aria-hidden) -- the word beside it, not
-                   the icon, is what a screen reader announces either way. -->
-              <app-icon class="run-history-month__status-icon" [name]="statusIcon(run)" size="sm" />
-              <span class="run-history-month__status-word">{{ run.status }}</span>
+              @if (run.status !== null) {
+                <!-- Decorative on both sides of the breakpoint (`<app-icon>`
+                     marks its own glyph aria-hidden) -- the word beside it, not
+                     the icon, is what a screen reader announces either way. -->
+                <app-icon
+                  class="run-history-month__status-icon"
+                  [name]="statusIcon(run.status)"
+                  size="sm"
+                />
+                <span class="run-history-month__status-word">{{ run.status }}</span>
+              } @else {
+                —
+              }
             </span>
             <span class="run-history-month__duration">
               <span class="run-history-month__cell-label">
@@ -104,7 +112,8 @@
               <span class="run-history-month__cell-label">
                 {{ 'settings.ai.recommendations.historyColProvider' | transloco }}
               </span>
-              {{ provider(run) }}
+              <span class="run-history-month__kind">{{ kindLabel(run) }}</span>
+              · {{ provider(run) }}
             </span>
           </li>
         }

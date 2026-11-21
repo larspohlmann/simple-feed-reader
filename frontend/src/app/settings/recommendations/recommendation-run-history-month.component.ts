@@ -34,7 +34,7 @@ export class RecommendationRunHistoryMonthComponent {
   readonly costNanoCredits = input.required<number | null>();
   /** Null until this month has been opened and its first page has arrived. */
   readonly runs = input<RunHistoryRow[] | null>(null);
-  readonly nextCursor = input<number | null>(null);
+  readonly nextCursor = input<string | null>(null);
   readonly loading = input(false);
   /** Set when this month's first page could not be fetched. Needed on top of
    *  `runs === null`, which a month nobody has opened yet also has: without
@@ -70,6 +70,12 @@ export class RecommendationRunHistoryMonthComponent {
     return formatCost(nanoCredits, this.language.lang());
   }
 
+  /** What the run was for, in the active language -- ids restart per kind, so
+   *  the kind is part of what names a row. */
+  kindLabel(run: RunHistoryRow): string {
+    return this.i18n.translate(`settings.ai.runKind.${run.kind}`);
+  }
+
   /** The provider and model the run called, as one line. Falls back to the
    *  translated "unknown" for a run that was never stamped. */
   provider(run: RunHistoryRow): string {
@@ -96,8 +102,8 @@ export class RecommendationRunHistoryMonthComponent {
 
   /** The Material Symbol standing in for the raw status word on mobile --
    *  shared with the legend's own icon so the two cannot disagree (#409). */
-  statusIcon(run: RunHistoryRow): string {
-    return runHistoryStatusIcon(run.status);
+  statusIcon(status: NonNullable<RunHistoryRow['status']>): string {
+    return runHistoryStatusIcon(status);
   }
 
   showMoreLabel(): string {
