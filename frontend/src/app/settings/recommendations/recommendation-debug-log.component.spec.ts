@@ -634,6 +634,27 @@ describe('RecommendationDebugLogComponent', () => {
     expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → …$/);
   });
 
+  it('shows only the start time for a story run, which never completes', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: {
+          ...RUNNING_RUN_SUMMARY,
+          kind: 'story',
+          status: null,
+          attempts: null,
+          maxAttempts: null,
+          transportFailures: null,
+          maxTransportFailures: null,
+        },
+        runs: [],
+        entries: [BATCH_ENTRY],
+      }),
+    );
+    const fixture = mount();
+    const timeline = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
+    expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2}$/);
+  });
+
   it("renders a transport-failed row's errorDetail as a full-width danger line", () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }));
     const fixture = mount();

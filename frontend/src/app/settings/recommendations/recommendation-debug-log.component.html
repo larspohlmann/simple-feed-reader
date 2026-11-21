@@ -27,7 +27,11 @@
           </span>
         }
         <span class="debug-panel__meta debug-panel__timeline">
-          {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+          @if (r.status === null) {
+            {{ time(r.createdAt) }}
+          } @else {
+            {{ time(r.createdAt) }} → {{ r.completedAt ? time(r.completedAt) : '…' }}
+          }
         </span>
         @if (r.error; as runError) {
           <p class="debug-panel__run-error">{{ runError }}</p>
