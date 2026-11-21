@@ -7,6 +7,7 @@ namespace App\Service\Curation\StoryAi;
 use App\Entity\StoryAiRun;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\StoryAiRunRepository;
+use App\Service\Curation\Ai\Support\ProviderHost;
 use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -32,6 +33,7 @@ final readonly class StoryAiRuns
         }
 
         $run = new StoryAiRun($pass->user, $pass->task, $this->clock->now());
+        $run->stampProvider(ProviderHost::parseHost($pass->connection), $pass->connection->getModel());
         $this->entityManager->persist($run);
         $this->entityManager->flush();
         $pass->billTo($run);
