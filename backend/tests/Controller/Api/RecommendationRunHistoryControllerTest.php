@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
+use App\Entity\StoryAiRun;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\StoryAiTask;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
@@ -327,5 +331,151 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
         $runs = $payload['runs'];
         self::assertSame([$oldest->getId()], array_column($runs, 'id'));
         self::assertNull($payload['nextCursor']);
+    }
+
+    public function testOverviewListsEveryKind(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-kinds@example.test');
+        $this->seedOneRunOfEveryKind($user);
+
+        $client->request('GET', self::HISTORY_ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $latest['runs'];
+        self::assertSame(['story', 'profile', 'for_you'], array_column($runs, 'kind'));
+        self::assertNull($runs[0]['status']);
+        self::assertSame(1_230, $payload['totalCostNanoCredits']);
+    }
+
+    public function testKindFilterNarrowsMonthsAndRows(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-kind-filter@example.test');
+        $this->seedOneRunOfEveryKind($user);
+
+        $client->request('GET', self::HISTORY_ROUTE . '?kind=story', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        /** @var list<array<string, mixed>> $months */
+        $months = $payload['months'];
+        self::assertSame(1, $months[0]['runCount']);
+        self::assertSame(30, $months[0]['costNanoCredits']);
+        /** @var array<string, mixed> $latest */
+        $latest = $payload['latest'];
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $latest['runs'];
+        self::assertSame(['story'], array_column($runs, 'kind'));
+        self::assertSame(1_230, $payload['totalCostNanoCredits']);
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-08?kind=profile', server: $headers);
+
+        /** @var list<array<string, mixed>> $profileRuns */
+        $profileRuns = $this->payload($client)['runs'];
+        self::assertSame(['profile'], array_column($profileRuns, 'kind'));
+    }
+
+    public function testKindFilterWithoutRunsKeepsTotal(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-kind-empty@example.test');
+        $forYouRun = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-03 10:00:00'));
+        $this->priceRow('recommendation_run', $forYouRun->requireId(), 1_000);
+
+        $client->request('GET', self::HISTORY_ROUTE . '?kind=story', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame([], $payload['months']);
+        self::assertNull($payload['latest']);
+        self::assertSame(1_000, $payload['totalCostNanoCredits']);
+    }
+
+    public function testAnUnknownKindMeansEveryKind(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-kind-unknown@example.test');
+        $this->seedOneRunOfEveryKind($user);
+
+        $client->request('GET', self::HISTORY_ROUTE . '?kind=bogus', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var list<array<string, mixed>> $months */
+        $months = $this->payload($client)['months'];
+        self::assertSame(3, $months[0]['runCount']);
+    }
+
+    public function testMonthPagesWithStringCursor(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-string-cursor@example.test');
+        $createdAt = new \DateTimeImmutable('2026-08-03 10:00:00');
+        for ($index = 0; $index < RecommendationRunHistoryRepository::HISTORY_LIMIT + 1; $index++) {
+            $this->persistStoryRunAt($user, $createdAt);
+        }
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-08', server: $headers);
+
+        $firstPage = $this->payload($client);
+        self::assertIsString($firstPage['nextCursor']);
+
+        $client->request(
+            'GET',
+            self::HISTORY_ROUTE . '/2026-08?before=' . $firstPage['nextCursor'],
+            server: $headers,
+        );
+
+        self::assertResponseIsSuccessful();
+        /** @var list<array<string, mixed>> $secondRuns */
+        $secondRuns = $this->payload($client)['runs'];
+        self::assertCount(1, $secondRuns);
+    }
+
+    public function testMonthWithMalformedCursorAnswersFirstPage(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('run-history-bad-cursor@example.test');
+        $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-03 10:00:00'));
+
+        $client->request('GET', self::HISTORY_ROUTE . '/2026-08?before=42', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        /** @var list<array<string, mixed>> $runs */
+        $runs = $this->payload($client)['runs'];
+        self::assertCount(1, $runs);
+    }
+
+    private function seedOneRunOfEveryKind(User $user): void
+    {
+        $forYouRun = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-03 10:00:00'));
+        $profileRun = new ProfileRun($user, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-08-03 10:01:00'));
+        $this->entityManager()->persist($profileRun);
+        $storyRun = $this->persistStoryRunAt($user, new \DateTimeImmutable('2026-08-03 10:02:00'));
+        $this->entityManager()->flush();
+        $this->priceRow('recommendation_run', $forYouRun->requireId(), 1_000);
+        $this->priceRow('profile_run', $profileRun->requireId(), 200);
+        $this->priceRow('story_ai_run', $storyRun->requireId(), 30);
+    }
+
+    private function persistStoryRunAt(User $user, \DateTimeImmutable $createdAt): StoryAiRun
+    {
+        $run = new StoryAiRun($user, StoryAiTask::Title, $createdAt);
+        $this->entityManager()->persist($run);
+        $this->entityManager()->flush();
+
+        return $run;
+    }
+
+    private function priceRow(string $table, int $id, int $costNanoCredits): void
+    {
+        $this->entityManager()->getConnection()->executeStatement(
+            sprintf('UPDATE %s SET cost_nano_credits = :cost WHERE id = :id', $table),
+            ['cost' => $costNanoCredits, 'id' => $id],
+        );
     }
 }

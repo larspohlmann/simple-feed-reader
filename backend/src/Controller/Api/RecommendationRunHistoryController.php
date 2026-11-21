@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Http\RecommendationRunHistoryJson;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
@@ -17,7 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * What every for-you run has cost this account. No rate limiter: scoped, indexed reads of the current user, with no
+ * What every AI run has cost this account. No rate limiter: scoped, indexed reads of the current user, with no
  * id in the route to forge.
  */
 #[Route('/api/recommendations/runs/history')]
@@ -33,6 +34,7 @@ final readonly class RecommendationRunHistoryController
         return new JsonResponse(RecommendationRunHistoryJson::overview($this->history->overview(
             $user,
             ViewerTimeZoneModel::fromIdentifier($request->query->get('tz')),
+            AiRunKind::tryFrom($request->query->getString('kind')),
         )));
     }
 
@@ -47,7 +49,10 @@ final readonly class RecommendationRunHistoryController
         return new JsonResponse(RecommendationRunHistoryJson::monthPage($this->history->month(
             $user,
             MonthWindowModel::fromMonth($month, ViewerTimeZoneModel::fromIdentifier($request->query->get('tz'))),
-            new RunHistoryFilterModel(null, RunHistoryCursorModel::parse($request->query->getString('before'))),
+            new RunHistoryFilterModel(
+                AiRunKind::tryFrom($request->query->getString('kind')),
+                RunHistoryCursorModel::parse($request->query->getString('before')),
+            ),
         )));
     }
 }

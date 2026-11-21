@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Feed;
 
 use App\Entity\User;
+use App\Enum\AiRunKind;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Curation\Recommendation\Feed\Model\HistoryMonthModel;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
@@ -28,17 +29,17 @@ final readonly class RecommendationRunHistory
     }
 
     /**
-     * The total is summed by the database, not derived from the timeline, so it stays whole if the timeline is ever
-     * capped.
+     * The total is summed by the database over every kind, not derived from the timeline, so it stays whole when the
+     * timeline is capped or a kind filter narrows it.
      */
-    public function overview(User $user, ViewerTimeZoneModel $viewer): RunHistoryOverviewModel
+    public function overview(User $user, ViewerTimeZoneModel $viewer, ?AiRunKind $kind): RunHistoryOverviewModel
     {
-        $months = $this->summariser->summarise($this->runs->spendTimeline($user, null), $viewer);
+        $months = $this->summariser->summarise($this->runs->spendTimeline($user, $kind), $viewer);
 
         return new RunHistoryOverviewModel(
             $this->runs->totalCostNanoCredits($user),
             $months,
-            $this->latestMonthPage($user, $viewer, $months[0] ?? null),
+            $this->latestMonthPage($user, $viewer, $months[0] ?? null, $kind),
         );
     }
 
@@ -58,6 +59,7 @@ final readonly class RecommendationRunHistory
         User $user,
         ViewerTimeZoneModel $viewer,
         ?HistoryMonthModel $newestMonth,
+        ?AiRunKind $kind,
     ): ?RunHistoryMonthPageModel {
         if (null === $newestMonth) {
             return null;
@@ -65,7 +67,7 @@ final readonly class RecommendationRunHistory
 
         $window = MonthWindowModel::fromMonth($newestMonth->month, $viewer);
 
-        return $this->month($user, $window, RunHistoryFilterModel::all());
+        return $this->month($user, $window, new RunHistoryFilterModel($kind, null));
     }
 
     /**

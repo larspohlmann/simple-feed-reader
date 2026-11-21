@@ -6,7 +6,7 @@ namespace App\Service\Curation\Recommendation\Feed\Model;
 
 use App\Enum\AiRunKind;
 
-/** Which runs a history page reads: one kind or, when the kind is null, every kind; older than the cursor if set. */
+/** A null kind reads every kind. */
 final readonly class RunHistoryFilterModel
 {
     public function __construct(

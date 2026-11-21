@@ -71,6 +71,7 @@ final class RecommendationRunHistoryJson
 
         return [
             'id' => $run['id'],
+            'kind' => $run['kind']->value,
             'status' => $run['status']?->value,
             'providerHost' => $run['providerHost'],
             'model' => $run['model'],

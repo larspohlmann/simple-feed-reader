@@ -206,6 +206,23 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         self::assertSame([AiRunKind::Story, AiRunKind::Story], array_column($secondPage, 'kind'));
     }
 
+    public function testACursorOnAForYouRunStillReachesAStoryRunOfTheSameSecond(): void
+    {
+        $user = $this->user('history-cursor-lower-rank@example.com');
+        $createdAt = new \DateTimeImmutable('2026-08-03 10:00:00');
+        $forYouRun = $this->fixtures()->persistRunAt($user, $createdAt);
+        $storyRun = $this->persistStoryRunAt($user, $createdAt);
+        $before = new RunHistoryCursorModel($createdAt, AiRunKind::ForYou, $forYouRun->requireId());
+
+        $rows = $this->historyRepository()->pageForMonth(
+            $user,
+            $this->august(),
+            new RunHistoryFilterModel(null, $before),
+        );
+
+        self::assertSame([$storyRun->requireId()], array_column($rows, 'id'));
+    }
+
     public function testTotalSumsEveryKind(): void
     {
         $user = $this->user('history-total@example.com');
