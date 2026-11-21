@@ -72,14 +72,4 @@ final class StoryAiRun
     {
         $this->providerUsage->stamp($providerHost, $model);
     }
-
-    public function getProviderHost(): ?string
-    {
-        return $this->providerUsage->getProviderHost();
-    }
-
-    public function getModel(): ?string
-    {
-        return $this->providerUsage->getModel();
-    }
 }

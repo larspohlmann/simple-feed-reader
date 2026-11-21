@@ -68,12 +68,16 @@ final class StoryAiRunsTest extends DbTestCase
     public function testOpeningARunStampsTheConnectionsProviderAndModel(): void
     {
         $openedId = $this->runs()->openFor($this->pass)->requireId();
-        $this->entityManager->clear();
 
-        $reloaded = $this->entityManager->find(StoryAiRun::class, $openedId);
-        self::assertNotNull($reloaded);
-        self::assertSame('api.example.test', $reloaded->getProviderHost());
-        self::assertSame('qwen3-14b', $reloaded->getModel());
+        $stamp = $this->entityManager->createQueryBuilder()
+            ->select('run.providerUsage.providerHost AS providerHost', 'run.providerUsage.model AS model')
+            ->from(StoryAiRun::class, 'run')
+            ->where('run.id = :id')
+            ->setParameter('id', $openedId)
+            ->getQuery()
+            ->getSingleResult();
+
+        self::assertSame(['providerHost' => 'api.example.test', 'model' => 'qwen3-14b'], $stamp);
     }
 
     private function runWithOneLogRow(User $owner): int
