@@ -782,7 +782,11 @@ final class TrendingStoryRepositoryTest extends DbTestCase
         $story = $this->fixtures->story(
             TrendingWindow::Day,
             '2031-05-14 10:00:00',
-            ...[...$this->persistLemmyCopies(), $this->member($this->articleFeed('outlet'))],
+            ...[
+                ...$this->persistLemmyCopies(),
+                $this->member($this->articleFeed('outlet')),
+                $this->member($this->articleFeed('second')),
+            ],
         );
         $this->recordTitle($story, 'Hafenstreik', 2, '2031-05-14 05:00:00');
 
