@@ -37,7 +37,7 @@ final readonly class RecommendationCandidateRepository
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $this->poolScope($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->poolScope(...), $userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->poolScope(...)), $userId);
         $qb->setMaxResults($poolSize);
 
         return $this->titledEntries($qb);

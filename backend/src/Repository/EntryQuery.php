@@ -87,6 +87,12 @@ final readonly class EntryQuery
         );
     }
 
+    #[\NoDiscard]
+    public function withoutReadFilter(): self
+    {
+        return $this->view === EntryView::Unread ? $this->inAllView() : $this;
+    }
+
     public function isNarrowed(): bool
     {
         return $this->tagId !== null || $this->networkScope !== null || $this->feedGroup !== null;

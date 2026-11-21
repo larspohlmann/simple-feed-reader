@@ -28,6 +28,12 @@ final readonly class EntrySearchQuery
         $this->limit = EntryQuery::clampLimit($limit);
     }
 
+    #[\NoDiscard]
+    public function withoutReadFilter(): self
+    {
+        return new self($this->userId, $this->terms, $this->cursor, $this->limit, false, $this->order);
+    }
+
     public function ordering(): EntryListOrdering
     {
         return EntryListOrdering::byPublishedDate($this->order);

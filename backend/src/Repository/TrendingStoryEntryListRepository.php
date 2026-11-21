@@ -57,7 +57,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setMaxResults($query->page->limit)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $query->userId);
         if ($query->page->onlyUnread) {
             $this->scopes->unread($qb, EntryAliases::primary());
         }
@@ -79,7 +79,7 @@ final class TrendingStoryEntryListRepository extends ServiceEntityRepository
             ->setParameter('notHidden', false, Types::BOOLEAN)
             ->setParameter('story', $query->storyId);
         $this->applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->applyMembership(...), $query->userId);
+        $this->collapse->apply($qb, CollapseScope::fromScope($this->applyMembership(...)), $query->userId);
 
         /** @var array{memberCount: int|string, unreadCount: int|string|null} $row */
         $row = $qb->getQuery()->getSingleResult();
