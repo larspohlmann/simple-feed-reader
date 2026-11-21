@@ -238,10 +238,13 @@ final class TrendingStoryEntryListRepositoryTest extends DbTestCase
     private function persistCrossPost(TrendingFixtures $fixtures, string $community, string $publishedAt): Entry
     {
         $page = 'https://lemmy.example/post/' . $community;
-        $post = LemmyPostEntries::buildEntry($fixtures->feed($community, SocialNetwork::Lemmy), $page);
-        $post->setPublishedAt(new \DateTimeImmutable($publishedAt));
-        LemmyPostEntries::linkCrossPost($this->entityManager, $post, $page, 'cross-post-hash');
-        $this->entityManager->persist($post);
+        $post = LemmyPostEntries::persistPost(
+            $this->entityManager,
+            $fixtures->feed($community, SocialNetwork::Lemmy),
+            $page,
+            $publishedAt,
+        );
+        $post->getCanonicalItem()?->recordCrossPostHash('cross-post-hash');
 
         return $post;
     }

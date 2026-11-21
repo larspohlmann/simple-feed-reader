@@ -17,6 +17,7 @@ use App\Repository\EntrySearchQuery;
 use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\NetworkFeedSubscriptions;
 
 final class CrossPostCollapseTest extends DbTestCase
 {
@@ -30,11 +31,10 @@ final class CrossPostCollapseTest extends DbTestCase
         parent::setUp();
         $this->user = new User('crosspost@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($this->user);
-        $this->feedA = $this->persistFeed('https://a.example/feed.xml');
-        $this->feedB = $this->persistFeed('https://b.example/feed.xml');
-        $this->persistSubscription($this->feedA);
-        $this->subscriptionB = $this->persistSubscription($this->feedB);
-        $this->entityManager->flush();
+        $subscriptions = new NetworkFeedSubscriptions($this->entityManager);
+        $this->feedA = $subscriptions->subscribe($this->user, 'https://a.example/feed.xml')->getFeed();
+        $this->subscriptionB = $subscriptions->subscribe($this->user, 'https://b.example/feed.xml');
+        $this->feedB = $this->subscriptionB->getFeed();
     }
 
     public function testACrossPostGroupShowsAsOneRowLedByTheEarliestPublished(): void
@@ -270,10 +270,8 @@ final class CrossPostCollapseTest extends DbTestCase
 
     private function persistCrossPost(Feed $feed, string $page, string $hash, string $publishedAt): Entry
     {
-        $entry = LemmyPostEntries::buildEntry($feed, $page, publishedAt: $publishedAt);
-        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
-        LemmyPostEntries::linkCrossPost($this->entityManager, $entry, $page, $hash);
-        $this->entityManager->persist($entry);
+        $entry = LemmyPostEntries::persistPost($this->entityManager, $feed, $page, $publishedAt);
+        $entry->getCanonicalItem()?->recordCrossPostHash($hash);
 
         return $entry;
     }
@@ -298,12 +296,7 @@ final class CrossPostCollapseTest extends DbTestCase
 
     private function persistPost(Feed $feed, string $page, string $publishedAt): Entry
     {
-        $entry = LemmyPostEntries::buildEntry($feed, $page, publishedAt: $publishedAt);
-        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
-        $this->entityManager->persist(LemmyPostEntries::linkItem($entry, $page));
-        $this->entityManager->persist($entry);
-
-        return $entry;
+        return LemmyPostEntries::persistPost($this->entityManager, $feed, $page, $publishedAt);
     }
 
     private function persistRead(Entry $entry): void
@@ -319,21 +312,5 @@ final class CrossPostCollapseTest extends DbTestCase
         self::assertInstanceOf(EntryListRepository::class, $repository);
 
         return $repository;
-    }
-
-    private function persistFeed(string $url): Feed
-    {
-        $feed = new Feed($url);
-        $this->entityManager->persist($feed);
-
-        return $feed;
-    }
-
-    private function persistSubscription(Feed $feed): Subscription
-    {
-        $subscription = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($subscription);
-
-        return $subscription;
     }
 }

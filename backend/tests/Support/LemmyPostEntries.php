@@ -54,6 +54,21 @@ final class LemmyPostEntries
         return [$firstCopy, $secondCopy];
     }
 
+    /** A post published at $publishedAt, linked to an item of its own; both persisted, the caller flushes. */
+    public static function persistPost(
+        EntityManagerInterface $entityManager,
+        Feed $feed,
+        string $page,
+        string $publishedAt,
+    ): Entry {
+        $entry = self::buildEntry($feed, $page, publishedAt: $publishedAt);
+        $entry->setPublishedAt(new \DateTimeImmutable($publishedAt));
+        $entityManager->persist(self::linkItem($entry, $page));
+        $entityManager->persist($entry);
+
+        return $entry;
+    }
+
     /** The item a Lemmy post's copies share, linked to the entry; the caller persists it. */
     public static function linkItem(Entry $entry, string $page = self::PAGE): CanonicalItem
     {
