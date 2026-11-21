@@ -15,26 +15,9 @@
   font-size: var(--fs-xs);
 }
 
-// Story actions at the start, the toggle at the end where the thumb reaches it.
-.story-line {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-2);
-}
-
-.counts {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-  overflow: hidden;
-  container-type: inline-size;
-  color: var(--text-muted);
-}
-
 .toggle {
   display: inline-flex;
+  align-self: flex-end;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);

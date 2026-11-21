@@ -16,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * Resolves feed-declared categories of newly created entries to shared
  * Category rows, then writes the per-entry links. Write-once: only for
- * entries ingest just created, never on refresh.
+ * entries ingest just created, never on refresh. The caller flushes.
  */
 final readonly class EntryCategoryWriter
 {
@@ -76,7 +76,6 @@ final readonly class EntryCategoryWriter
     {
         $resolved = $this->categories->findExistingByIdentities(array_values($distinct));
 
-        $persistedNew = false;
         foreach ($distinct as $identity => $category) {
             if (isset($resolved[$identity])) {
                 continue;
@@ -84,11 +83,6 @@ final readonly class EntryCategoryWriter
             $created = new Category($category->canonicalKey, $category->scheme);
             $this->entityManager->persist($created);
             $resolved[$identity] = $created;
-            $persistedNew = true;
-        }
-
-        if ($persistedNew) {
-            $this->entityManager->flush();
         }
 
         return $resolved;

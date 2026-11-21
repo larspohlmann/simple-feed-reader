@@ -23,7 +23,7 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
     {
     }
 
-    public function findContexts(SocialAccount $account, array $fresh): array
+    public function findSubjects(SocialAccount $account, array $fresh): array
     {
         try {
             $posts = $this->posts->byUri($account, self::uris($account, $fresh));
@@ -31,15 +31,15 @@ final readonly class BlueskyNotificationContextSource implements NotificationCon
             return [];
         }
 
-        $contexts = [];
+        $subjects = [];
         foreach ($fresh as $row) {
             $context = self::buildContext($account, $row, $posts);
             if ($context !== null) {
-                $contexts[$row->remoteId] = $context;
+                $subjects[$row->remoteId] = $row->subject->withContext($context);
             }
         }
 
-        return $contexts;
+        return $subjects;
     }
 
     /**

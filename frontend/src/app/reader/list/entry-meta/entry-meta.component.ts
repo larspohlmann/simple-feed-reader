@@ -13,6 +13,7 @@ import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { showsShortPill } from '../preview-image';
 import { VoteValue } from '../../vote-pill/vote';
 import { Observable } from 'rxjs';
+import { CommentTotals } from '../../state/comment-totals';
 
 /**
  * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
@@ -43,10 +44,11 @@ export class EntryMetaComponent {
   protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
     this.actions.vote(this.entry(), to);
   private readonly compactCount = inject(CompactCount);
+  private readonly commentTotals = inject(CommentTotals);
   protected readonly comments = computed(() =>
     buildDiscussionCount(
       this.compactCount,
-      this.entry().commentCount,
+      this.commentTotals.latestCount(this.entry()),
       'reader.discussionCounts.comments',
     ),
   );

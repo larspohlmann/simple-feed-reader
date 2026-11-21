@@ -1,4 +1,14 @@
-<a class="row" [href]="group().linkUrl" target="_blank" rel="noopener noreferrer">
+@if (entryLink(); as queryParams) {
+  <a class="row" [routerLink]="[]" [queryParams]="queryParams" queryParamsHandling="merge">
+    <ng-container *ngTemplateOutlet="rowBody" />
+  </a>
+} @else {
+  <a class="row" [href]="group().linkUrl" target="_blank" rel="noopener noreferrer">
+    <ng-container *ngTemplateOutlet="rowBody" />
+  </a>
+}
+
+<ng-template #rowBody>
   <span class="kind" [class]="group().kind">
     <app-icon [name]="glyph()" size="md" [fill]="true" />
   </span>
@@ -51,4 +61,4 @@
       <span class="sr-only">{{ 'reader.notifications.unseen' | transloco }}</span>
     }
   </div>
-</a>
+</ng-template>

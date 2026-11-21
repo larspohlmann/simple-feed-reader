@@ -27,7 +27,6 @@ import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.com
 import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
 import { showsUnreadMark } from '../../trending/story';
-import { StorySourceCountComponent } from '../../trending/story-source-count/story-source-count.component';
 import { StorySharersComponent } from '../../trending/story-sharers/story-sharers.component';
 import { injectStory } from '../../trending/story-context';
 
@@ -50,7 +49,6 @@ import { injectStory } from '../../trending/story-context';
     ThreadLineComponent,
     ThreadLinePostComponent,
     ThreadCountComponent,
-    StorySourceCountComponent,
     StorySharersComponent,
   ],
   templateUrl: './entry-row.component.html',

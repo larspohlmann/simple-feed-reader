@@ -25,8 +25,6 @@ import { MINI_CARD_THUMB_SIZES } from '../../rendition-sizes';
 import { StorySharersComponent } from '../../../trending/story-sharers/story-sharers.component';
 import { ArticleFace, articleFaceOf } from '../../../trending/shared-article-card';
 import { OpenInReaderComponent } from '../../../link-card/open-in-reader.component';
-import { StoryActionsComponent } from '../../../trending/story-actions/story-actions.component';
-import { StorySourceCountComponent } from '../../../trending/story-source-count/story-source-count.component';
 import { STORY_ICON } from '../../../trending/story';
 import { StoryArticleDto, TrendingStoryDto } from '../../../trending/trending.models';
 
@@ -48,8 +46,6 @@ const sameArticles = (
     RenditionsDirective,
     StorySharersComponent,
     OpenInReaderComponent,
-    StoryActionsComponent,
-    StorySourceCountComponent,
   ],
   templateUrl: './story-sources.component.html',
   styleUrl: './story-sources.component.scss',

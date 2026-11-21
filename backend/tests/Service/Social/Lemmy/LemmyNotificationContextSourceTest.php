@@ -27,15 +27,15 @@ final class LemmyNotificationContextSourceTest extends TestCase
     {
         $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
 
-        self::assertSame(['reply:7'], array_keys($contexts));
-        self::assertSame('My original comment', $contexts['reply:7']->answeredExcerpt);
-        self::assertSame('A post', $contexts['reply:7']->threadTitle);
-        self::assertSame('c/selfhosted', $contexts['reply:7']->threadPlace);
+        self::assertSame(['reply:7'], array_keys($subjects));
+        self::assertSame('My original comment', $subjects['reply:7']->context->answeredExcerpt);
+        self::assertSame('A post', $subjects['reply:7']->context->threadTitle);
+        self::assertSame('c/selfhosted', $subjects['reply:7']->context->threadPlace);
     }
 
     public function testAQuotedLineInTheAnsweredCommentReadsAsPlainText(): void
@@ -45,12 +45,12 @@ final class LemmyNotificationContextSourceTest extends TestCase
             'GET ' . self::COMMENT . '26906403' => new MockResponse((string) json_encode($parent)),
         ]);
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
 
-        self::assertSame('earlier My answer', $contexts['reply:7']->answeredExcerpt);
+        self::assertSame('earlier My answer', $subjects['reply:7']->context->answeredExcerpt);
     }
 
     public function testAGoneParentFindsNoContext(): void
@@ -60,12 +60,12 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 'http_code' => Response::HTTP_NOT_FOUND,
             ]),
         );
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403')],
         );
 
-        self::assertSame([], $contexts);
+        self::assertSame([], $subjects);
     }
 
     public function testARefusedLookupFindsNoContextAndTheNextIsLookedUp(): void
@@ -75,13 +75,13 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 ? new MockResponse('{"error":"banned"}', ['http_code' => Response::HTTP_BAD_REQUEST])
                 : $this->parentComment(),
         );
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2')],
         );
 
-        self::assertSame(['reply:2'], array_keys($contexts));
-        self::assertSame('My original comment', $contexts['reply:2']->answeredExcerpt);
+        self::assertSame(['reply:2'], array_keys($subjects));
+        self::assertSame('My original comment', $subjects['reply:2']->context->answeredExcerpt);
     }
 
     public function testAThrottleStopsTheLookups(): void
@@ -90,13 +90,13 @@ final class LemmyNotificationContextSourceTest extends TestCase
             'GET ' . self::COMMENT . '1' => $this->parentComment(),
             'GET ' . self::COMMENT . '2' => new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
         ]);
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2'), self::row('reply:3', '3')],
         );
 
-        self::assertSame(['reply:1'], array_keys($contexts));
-        self::assertSame('My original comment', $contexts['reply:1']->answeredExcerpt);
+        self::assertSame(['reply:1'], array_keys($subjects));
+        self::assertSame('My original comment', $subjects['reply:1']->context->answeredExcerpt);
         self::assertCount(2, $http->requests);
     }
 
@@ -107,12 +107,12 @@ final class LemmyNotificationContextSourceTest extends TestCase
                 ? new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])
                 : $this->parentComment(),
         );
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:1', '1'), self::row('reply:2', '2'), self::row('reply:3', '3')],
         );
 
-        self::assertSame(['reply:1'], array_keys($contexts));
+        self::assertSame(['reply:1'], array_keys($subjects));
         $unavailable = 'GET ' . self::COMMENT . '2';
         self::assertSame(
             ['GET ' . self::COMMENT . '1', $unavailable, $unavailable, $unavailable],
@@ -124,23 +124,23 @@ final class LemmyNotificationContextSourceTest extends TestCase
     {
         $http = new RoutedHttpClient(['GET ' . self::COMMENT . '26906403' => $this->parentComment()]);
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::lemmyAccount(),
             [self::row('reply:7', '26906403'), self::row('reply:8', '26906403')],
         );
 
         self::assertCount(1, $http->requests);
-        self::assertSame(['reply:7', 'reply:8'], array_keys($contexts));
-        self::assertSame('My original comment', $contexts['reply:7']->answeredExcerpt);
-        self::assertSame('My original comment', $contexts['reply:8']->answeredExcerpt);
+        self::assertSame(['reply:7', 'reply:8'], array_keys($subjects));
+        self::assertSame('My original comment', $subjects['reply:7']->context->answeredExcerpt);
+        self::assertSame('My original comment', $subjects['reply:8']->context->answeredExcerpt);
     }
 
     public function testRowsWithoutReferencesMakeNoCall(): void
     {
         $http = RoutedHttpClient::answering(static fn (): MockResponse => new MockResponse('{}'));
-        $contexts = $this->source($http)->findContexts(SocialApiWiring::lemmyAccount(), [self::row('reply:6', null)]);
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::lemmyAccount(), [self::row('reply:6', null)]);
 
-        self::assertSame([], $contexts);
+        self::assertSame([], $subjects);
         self::assertSame([], $http->requests);
     }
 

@@ -13,6 +13,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Bluesky\BlueskyNotificationSource;
 use App\Service\Social\Bluesky\BlueskyPostLookup;
+use App\Service\Social\Bluesky\Support\BlueskyPostKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -78,6 +79,71 @@ final class BlueskyNotificationSourceTest extends TestCase
             new NotificationSubject('', null, 'https://bsky.app/profile/did:plc:ivy'),
             $follow->subject,
         );
+    }
+
+    public function testALikeCarriesTheSubjectPost(): void
+    {
+        $notifications = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount())->notifications;
+
+        $post = BlueskyPostKey::parseKey('at://did:plc:alice/app.bsky.feed.post/3lpost1')?->keyHash();
+        self::assertSame($post, $notifications[0]->subject->keys->postHash);
+        self::assertSame($post, $notifications[1]->subject->keys->postHash);
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:alice/app.bsky.feed.post/3lpost2')?->keyHash(),
+            $notifications[2]->subject->keys->postHash,
+        );
+        self::assertNull($notifications[0]->subject->keys->answeredHash);
+    }
+
+    public function testAReplyCarriesParentAndRoot(): void
+    {
+        $keys = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount())->notifications[4]
+            ->subject->keys;
+
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:frank/app.bsky.feed.post/3l05')?->keyHash(),
+            $keys->postHash,
+        );
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:alice/app.bsky.feed.post/3lmine')?->keyHash(),
+            $keys->answeredHash,
+        );
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:zoe/app.bsky.feed.post/3lroot')?->keyHash(),
+            $keys->rootHash,
+        );
+    }
+
+    public function testAMentionCarriesOnlyItsOwnPost(): void
+    {
+        $keys = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount())->notifications[5]
+            ->subject->keys;
+
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:gina/app.bsky.feed.post/3l06')?->keyHash(),
+            $keys->postHash,
+        );
+        self::assertSame([$keys->postHash], $keys->hashes());
+    }
+
+    public function testAQuoteCarriesTheQuotedPostAsAnswered(): void
+    {
+        $notifications = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount())->notifications;
+
+        $quoted = BlueskyPostKey::parseKey('at://did:plc:alice/app.bsky.feed.post/3lquoted')?->keyHash();
+        self::assertSame($quoted, $notifications[6]->subject->keys->answeredHash);
+        self::assertSame($quoted, $notifications[8]->subject->keys->answeredHash);
+        self::assertSame(
+            BlueskyPostKey::parseKey('at://did:plc:hank/app.bsky.feed.post/3l07')?->keyHash(),
+            $notifications[6]->subject->keys->postHash,
+        );
+    }
+
+    public function testAFollowCarriesNoKeys(): void
+    {
+        $follow = $this->source($this->http())->fetch(SocialApiWiring::blueskyAccount())->notifications[7];
+
+        self::assertSame([], $follow->subject->keys->hashes());
     }
 
     public function testRepliesAndQuotesPointAtWhatTheyAnswer(): void

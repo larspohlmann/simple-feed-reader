@@ -5,9 +5,8 @@
   [attr.aria-labelledby]="titleId()"
   [attr.aria-describedby]="synopsisId()"
 >
-  <app-story-headline
-    [storyId]="story().id"
-    [title]="story().title"
-    [synopsis]="story().synopsis"
-  />
+  <app-story-headline [storyId]="story().id" [title]="story().title" [synopsis]="story().synopsis">
+    <app-story-source-count storyMeta [story]="story()" />
+  </app-story-headline>
 </a>
+<div class="story-foot"><app-story-actions [story]="story()" /></div>

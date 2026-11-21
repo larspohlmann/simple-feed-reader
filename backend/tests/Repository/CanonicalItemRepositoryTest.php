@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Enum\CanonicalItemKind;
 use App\Repository\CanonicalItemRepository;
 use App\Service\Foundation\CanonicalItem\Model\CanonicalKeyModel;
@@ -117,6 +121,94 @@ final class CanonicalItemRepositoryTest extends DbTestCase
     public function testFindByIdsOfNoIdsAsksNothing(): void
     {
         self::assertSame([], $this->items->findByIds([]));
+    }
+
+    public function testFindsTheLowestReadableCopyPerHash(): void
+    {
+        $key = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://m.test/users/a/statuses/1');
+        $user = $this->persistUser('reader@example.com');
+        $first = $this->persistSubscribedEntry($user, 'https://a.test/feed', $key);
+        $second = $this->persistSubscribedEntry($user, 'https://b.test/feed', $key);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$key->keyHash() => min($first->requireId(), $second->requireId())],
+            $this->items->findReadableEntryIds(
+                $user->requireId(),
+                CanonicalItemKind::Mastodon,
+                [$key->keyHash(), 'missing'],
+            ),
+        );
+    }
+
+    public function testIgnoresAnotherUsersSubscription(): void
+    {
+        $key = new CanonicalKeyModel(CanonicalItemKind::Mastodon, 'https://m.test/users/a/statuses/2');
+        $reader = $this->persistUser('a@example.com');
+        $other = $this->persistUser('b@example.com');
+        $this->persistSubscribedEntry($other, 'https://a.test/feed', $key);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [],
+            $this->items->findReadableEntryIds($reader->requireId(), CanonicalItemKind::Mastodon, [$key->keyHash()]),
+        );
+    }
+
+    public function testIgnoresAnUnsubscribedFeedsEntry(): void
+    {
+        $key = new CanonicalKeyModel(CanonicalItemKind::Bluesky, 'at://did:plc:x/app.bsky.feed.post/1');
+        $user = $this->persistUser('reader@example.com');
+        $entry = $this->persistSubscribedEntry($user, 'https://a.test/feed', $key);
+        $this->entityManager->flush();
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['feed' => $entry->getFeed()]);
+        self::assertNotNull($subscription);
+        $this->entityManager->remove($subscription);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [],
+            $this->items->findReadableEntryIds($user->requireId(), CanonicalItemKind::Bluesky, [$key->keyHash()]),
+        );
+    }
+
+    public function testIgnoresTheSameHashOfAnotherKind(): void
+    {
+        $key = new CanonicalKeyModel(CanonicalItemKind::Lemmy, 'https://lemmy.test/post/9');
+        $user = $this->persistUser('reader@example.com');
+        $this->persistSubscribedEntry($user, 'https://a.test/feed', $key);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [],
+            $this->items->findReadableEntryIds($user->requireId(), CanonicalItemKind::Mastodon, [$key->keyHash()]),
+        );
+    }
+
+    public function testAnEmptyAskFindsNothing(): void
+    {
+        self::assertSame([], $this->items->findReadableEntryIds(1, CanonicalItemKind::Lemmy, []));
+    }
+
+    private function persistUser(string $email): User
+    {
+        $user = new User($email, self::buildCreatedAt());
+        $this->entityManager->persist($user);
+
+        return $user;
+    }
+
+    private function persistSubscribedEntry(User $user, string $feedUrl, CanonicalKeyModel $key): Entry
+    {
+        $feed = new Feed($feedUrl);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, self::buildCreatedAt()));
+        $entry = new Entry($feed, 'guid-' . $feedUrl, null, 'Title', self::buildCreatedAt(), self::buildCreatedAt());
+        $entry->linkTo($this->items->ensureAll([$key], self::buildCreatedAt())[$key->identity()]);
+        $this->entityManager->persist($entry);
+
+        return $entry;
     }
 
     private function ensureItem(CanonicalItemKind $kind, string $canonicalKey): int

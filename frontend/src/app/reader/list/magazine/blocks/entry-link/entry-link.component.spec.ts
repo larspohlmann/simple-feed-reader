@@ -232,7 +232,7 @@ describe('EntryLinkComponent', () => {
     expect(entryActions.open).not.toHaveBeenCalled();
   });
 
-  it('leads a Trending story with the post, its card, the sources line and the posters of the rest', () => {
+  it('leads a Trending story with the post, its card and the posters of the rest', () => {
     const other = (id: number, name: string): StoryArticleDto =>
       article({ id, source: 'Home@bsky', poster: { name, url: null, imageUrl: null } });
     const fixture = mount(
@@ -253,7 +253,6 @@ describe('EntryLinkComponent', () => {
     expect(element.querySelector('.title')!.textContent).toContain('Worth a read, this one.');
     expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
     expect(element.querySelector('app-link-card small')!.textContent).toContain('news.test');
-    expect(element.querySelector('app-story-source-count')!.textContent).toContain('4 sources');
     element.querySelector<HTMLButtonElement>('app-more-sources .toggle')!.click();
     fixture.detectChanges();
     const feeds = [...element.querySelectorAll('app-more-sources .mini .feed')].map((feed) =>
@@ -262,7 +261,7 @@ describe('EntryLinkComponent', () => {
     expect(feeds).toEqual(['Ben', 'Cat', 'Dan']);
   });
 
-  it('leads a story no followed outlet carries with the shared card, its sharers and the shares count', () => {
+  it('leads a story no followed outlet carries with the shared card and its sharers', () => {
     const sharer = (id: number, name: string): EntryDto =>
       entry({ id, excerpt: `${name} says read this`, poster: { name, url: null, imageUrl: null } });
     const fixture = mount(
@@ -283,8 +282,6 @@ describe('EntryLinkComponent', () => {
 
     expect(element.querySelector('.title')).toBeNull();
     expect(element.querySelector('app-link-card strong')!.textContent).toContain('A shared story');
-    expect(element.querySelector('app-story-source-count')!.textContent).toContain('2 sources');
-    expect(element.querySelector('app-story-source-count')!.textContent).toContain('3 shares');
     const sharers = element.querySelectorAll('app-story-sharers .sharer .name');
     expect(Array.from(sharers).map((sharer) => sharer.textContent!.trim())).toEqual([
       'Ann',
@@ -321,12 +318,11 @@ describe('EntryLinkComponent', () => {
     });
   });
 
-  it('names no shares on a story no post shares', () => {
+  it('names no sharers on a story no post shares', () => {
     const element = mount(
       aStory({ outletCount: 2, viewed: false, shareCount: 0, articles: [article()] }),
     ).nativeElement as HTMLElement;
 
-    expect(element.querySelector('app-story-source-count')!.textContent).not.toContain('share');
     expect(element.querySelector('app-story-sharers .sharers')).toBeNull();
   });
 

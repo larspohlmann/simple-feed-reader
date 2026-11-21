@@ -6,6 +6,7 @@ namespace App\Service\Social\Lemmy;
 
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
@@ -17,6 +18,7 @@ use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\Support\LemmyCommentPath;
+use App\Service\Social\Lemmy\Support\LemmyPostKey;
 use App\Service\Social\Notification\Model\ContextReferenceModel;
 use App\Service\Social\Notification\Model\FetchedNotificationModel;
 use App\Service\Social\Notification\Model\NotificationPageModel;
@@ -115,11 +117,23 @@ final readonly class LemmyNotificationSource implements NotificationSourceInterf
                 $this->buildExcerpt($entry->node('comment')->string('content')),
                 $account->getServiceUrl() . '/comment/' . $commentId,
                 $answeredId === null ? $context : $context->withOnComment(),
+                new NotificationPostKeys(self::parsePostKeyHash($account, $entry->node('post'))),
             ),
             $createdAt,
             $item->isTrue('read'),
             new ContextReferenceModel(answeredId: $answeredId),
         );
+    }
+
+    private static function parsePostKeyHash(SocialAccount $account, JsonNodeModel $post): ?string
+    {
+        $address = $post->string('ap_id');
+        $postId = $post->int('id');
+        if ($postId !== null) {
+            $address = LemmyPostKey::resolvePostPage($address, $account->getServiceUrl(), $postId);
+        }
+
+        return LemmyPostKey::parseKey($address)?->keyHash();
     }
 
     private function buildExcerpt(?string $markdown): ?string

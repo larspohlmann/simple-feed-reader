@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Social\Notification;
 
 use App\Entity\NotificationActor;
+use App\Entity\NotificationSubject;
 use App\Entity\SocialNotification;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
+use App\Repository\CanonicalItemRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialNotificationPollRepository;
 use App\Repository\SocialNotificationRepository;
@@ -25,6 +28,7 @@ final readonly class NotificationList
         private SocialAccountRepository $accounts,
         private SocialNotificationRepository $notifications,
         private SocialNotificationPollRepository $polls,
+        private CanonicalItemRepository $canonicalItems,
     ) {
     }
 
@@ -47,12 +51,25 @@ final readonly class NotificationList
         $found = $this->notifications->findGroupPage($accountIds, $cursor, self::PAGE_SIZE);
         $hasNextPage = count($found) > self::PAGE_SIZE;
         $shown = array_slice($found, 0, self::PAGE_SIZE);
-        $newest = $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP);
+        $newest = array_filter(
+            $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP),
+            static fn (array $rows): bool => $rows !== [],
+        );
+        $subjects = array_map(static fn (array $rows): NotificationSubject => $rows[0]->getSubject(), $newest);
+        $hashes = array_merge(...array_map(
+            static fn (NotificationSubject $subject): array => $subject->keys->hashes(),
+            $subjects,
+        ));
+        $entryIds = $this->canonicalItems->findReadableEntryIds(
+            $user->requireId(),
+            CanonicalItemKind::fromNetwork($network),
+            $hashes,
+        );
 
         $groups = [];
         foreach ($shown as $group) {
-            $rows = $newest[$group['latestId']];
-            if ($rows === []) {
+            $rows = $newest[$group['latestId']] ?? null;
+            if ($rows === null) {
                 continue;
             }
             $groups[] = new NotificationGroupModel(
@@ -61,9 +78,10 @@ final readonly class NotificationList
                 $handles[$group['accountId']],
                 array_map(static fn (SocialNotification $row): NotificationActor => $row->getActor(), $rows),
                 $group['count'],
-                $rows[0]->getSubject(),
+                $subjects[$group['latestId']],
                 $rows[0]->getCreatedAt(),
                 $group['seen'],
+                $subjects[$group['latestId']]->keys->pickEntryId($entryIds),
             );
         }
 

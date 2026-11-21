@@ -7,9 +7,7 @@
   @let shares =
     (story().shareCount === 1 ? 'reader.trendingSharesOne' : 'reader.trendingShares')
       | transloco: { count: story().shareCount };
-  &ngsp;<span class="separator" aria-hidden="true">·</span>&ngsp;<span class="sources">{{
-    shares
-  }}</span
+  <span class="separator" aria-hidden="true">·</span><span class="sources">{{ shares }}</span
   ><span class="compact" aria-hidden="true" [title]="shares"
     ><app-icon name="share" size="text" />{{ story().shareCount }}</span
   >

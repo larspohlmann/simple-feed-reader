@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\CanonicalItem;
+use App\Entity\Entry;
+use App\Entity\Feed;
 use App\Entity\NotificationActor;
 use App\Entity\NotificationContext;
+use App\Entity\NotificationPostKeys;
 use App\Entity\NotificationSubject;
 use App\Entity\SocialAccount;
 use App\Entity\SocialNotification;
 use App\Entity\SocialNotificationPoll;
+use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Lemmy\LemmyNotificationSource;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
@@ -60,6 +66,144 @@ final class SocialNotificationControllerTest extends ApiTestCase
         self::assertFalse($group['onComment']);
         self::assertNull($payload['nextCursor']);
         self::assertSame([], $payload['scopeMissing']);
+    }
+
+    public function testAMastodonLikeOnASubscribedPostAnswersItsEntryId(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-mastodon@example.test');
+        $account = $this->persisted(SocialAccounts::mastodonOf($user));
+        $key = 'https://m.test/users/me/statuses/1';
+        $entry = $this->persistSubscribedEntry($user, CanonicalItemKind::Mastodon, $key);
+        $keys = new NotificationPostKeys(CanonicalItem::hashKey($key));
+        $this->persistNotification($account, SocialNotificationKind::Like, $keys);
+
+        $client->request('GET', '/api/me/notifications?network=mastodon');
+
+        self::assertResponseIsSuccessful();
+        $group = $this->listPayload($client)['groups'][0];
+        self::assertSame($entry->requireId(), $group['entryId']);
+        self::assertSame('https://m.test/link', $group['linkUrl']);
+    }
+
+    public function testABlueskyReplyResolvesThroughTheAnsweredPost(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-bluesky@example.test');
+        $account = $this->persisted(SocialAccounts::blueskyOf($user));
+        $answered = 'at://did:plc:me/app.bsky.feed.post/1';
+        $entry = $this->persistSubscribedEntry($user, CanonicalItemKind::Bluesky, $answered);
+        $this->persistNotification($account, SocialNotificationKind::Reply, new NotificationPostKeys(
+            CanonicalItem::hashKey('at://did:plc:bob/app.bsky.feed.post/2'),
+            CanonicalItem::hashKey($answered),
+        ));
+
+        $client->request('GET', '/api/me/notifications?network=bluesky');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($entry->requireId(), $this->listPayload($client)['groups'][0]['entryId']);
+    }
+
+    public function testThePostsEntryBeatsTheAnsweredPostsWhenBothResolve(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-order@example.test');
+        $account = $this->persisted(SocialAccounts::blueskyOf($user));
+        $post = 'at://did:plc:bob/app.bsky.feed.post/2';
+        $answered = 'at://did:plc:me/app.bsky.feed.post/1';
+        $this->persistSubscribedEntry($user, CanonicalItemKind::Bluesky, $answered);
+        $postEntry = $this->persistSubscribedEntry($user, CanonicalItemKind::Bluesky, $post);
+        $keys = new NotificationPostKeys(CanonicalItem::hashKey($post), CanonicalItem::hashKey($answered));
+        $this->persistNotification($account, SocialNotificationKind::Reply, $keys);
+
+        $client->request('GET', '/api/me/notifications?network=bluesky');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($postEntry->requireId(), $this->listPayload($client)['groups'][0]['entryId']);
+    }
+
+    public function testALemmyReplyAnswersThePostsEntryId(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-lemmy@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $key = 'https://lemmy.test/post/9';
+        $entry = $this->persistSubscribedEntry($user, CanonicalItemKind::Lemmy, $key);
+        $keys = new NotificationPostKeys(CanonicalItem::hashKey($key));
+        $this->persistNotification($account, SocialNotificationKind::Reply, $keys);
+
+        $client->request('GET', '/api/me/notifications?network=lemmy');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($entry->requireId(), $this->listPayload($client)['groups'][0]['entryId']);
+    }
+
+    public function testAPostOnlyInAnotherUsersFeedAnswersNoEntryId(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-other@example.test');
+        $other = $this->factory()->create('notification-entry-owner@example.test');
+        $account = $this->persisted(SocialAccounts::mastodonOf($user));
+        $key = 'https://m.test/users/me/statuses/2';
+        $this->persistSubscribedEntry($other, CanonicalItemKind::Mastodon, $key);
+        $keys = new NotificationPostKeys(CanonicalItem::hashKey($key));
+        $this->persistNotification($account, SocialNotificationKind::Like, $keys);
+
+        $client->request('GET', '/api/me/notifications?network=mastodon');
+
+        self::assertResponseIsSuccessful();
+        $group = $this->listPayload($client)['groups'][0];
+        self::assertArrayHasKey('entryId', $group);
+        self::assertNull($group['entryId']);
+        self::assertSame('https://m.test/link', $group['linkUrl']);
+    }
+
+    public function testAFollowAnswersNoEntryId(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-entry-follow@example.test');
+        $account = $this->persisted(SocialAccounts::mastodonOf($user));
+        $this->persistNotification($account, SocialNotificationKind::Follow, new NotificationPostKeys());
+
+        $client->request('GET', '/api/me/notifications?network=mastodon');
+
+        self::assertResponseIsSuccessful();
+        $group = $this->listPayload($client)['groups'][0];
+        self::assertArrayHasKey('entryId', $group);
+        self::assertNull($group['entryId']);
+    }
+
+    private function persistNotification(
+        SocialAccount $account,
+        SocialNotificationKind $kind,
+        NotificationPostKeys $keys,
+    ): void {
+        $this->entityManager()->persist(new SocialNotification(
+            $account,
+            'remote-entry',
+            $kind,
+            new NotificationActor('@bob', null, null, 'https://m.test/@bob'),
+            (new NotificationSubject('group', 'excerpt', 'https://m.test/link'))->withKeys($keys),
+            new \DateTimeImmutable('2026-11-16 10:00:00'),
+            false,
+        ));
+        $this->entityManager()->flush();
+    }
+
+    private function persistSubscribedEntry(User $user, CanonicalItemKind $kind, string $canonicalKey): Entry
+    {
+        $createdAt = new \DateTimeImmutable('2026-11-20 08:30:00');
+        $feed = new Feed('https://feeds.test/' . md5($canonicalKey));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, $createdAt));
+        $item = new CanonicalItem($kind, $canonicalKey, $createdAt);
+        $this->entityManager()->persist($item);
+        $entry = new Entry($feed, 'guid-' . $canonicalKey, null, 'Title', $createdAt, $createdAt);
+        $entry->linkTo($item);
+        $this->entityManager()->persist($entry);
+        $this->entityManager()->flush();
+
+        return $entry;
     }
 
     public function testAGroupCarriesItsContext(): void

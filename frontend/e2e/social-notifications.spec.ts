@@ -92,6 +92,7 @@ function group(overrides: Partial<NotificationGroupDto> & Pick<NotificationGroup
     threadBy: null,
     onComment: false,
     linkUrl: `https://bsky.app/post/${overrides.id}`,
+    entryId: null,
     latestAt: '2026-11-16T10:00:00+00:00',
     seen: true,
     ...overrides,

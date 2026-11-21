@@ -34,12 +34,12 @@ final class BlueskyNotificationContextSourceTest extends TestCase
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT))],
         );
 
-        $context = $contexts[self::NOTIFICATION];
+        $context = $subjects[self::NOTIFICATION]->context;
         self::assertSame('My own post', $context->answeredExcerpt);
         self::assertSame('How do you all handle feeds?', $context->threadTitle);
         self::assertSame('Zoe', $context->threadBy);
@@ -54,20 +54,20 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => ['text' => 'How do you all handle feeds?'],
         ]]]));
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT))],
         );
 
-        self::assertSame('zoe.bsky.social', $contexts[self::NOTIFICATION]->threadBy);
-        self::assertNull($contexts[self::NOTIFICATION]->answeredExcerpt);
+        self::assertSame('zoe.bsky.social', $subjects[self::NOTIFICATION]->context->threadBy);
+        self::assertNull($subjects[self::NOTIFICATION]->context->answeredExcerpt);
     }
 
     public function testNoThreadLineForYourOwnThreadOrADirectReplyToItsStart(): void
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::OWN_ROOT)),
             self::row(
                 SocialNotificationKind::Reply,
@@ -76,11 +76,11 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             ),
         ]);
 
-        self::assertSame([self::NOTIFICATION, self::SECOND_NOTIFICATION], array_keys($contexts));
-        foreach ($contexts as $context) {
-            self::assertSame('My own post', $context->answeredExcerpt);
-            self::assertNull($context->threadTitle);
-            self::assertNull($context->threadBy);
+        self::assertSame([self::NOTIFICATION, self::SECOND_NOTIFICATION], array_keys($subjects));
+        foreach ($subjects as $subject) {
+            self::assertSame('My own post', $subject->context->answeredExcerpt);
+            self::assertNull($subject->context->threadTitle);
+            self::assertNull($subject->context->threadBy);
         }
         self::assertSame([self::lookup(self::MINE)], $this->lookups($http));
     }
@@ -97,20 +97,20 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => ['text' => 'How do you all handle feeds?'],
         ]]]));
 
-        $contexts = $this->source($http)->findContexts(
+        $subjects = $this->source($http)->findSubjects(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::THEIRS, self::ROOT))],
         );
 
-        self::assertNull($contexts[self::NOTIFICATION]->answeredExcerpt);
-        self::assertFalse($contexts[self::NOTIFICATION]->onComment);
-        self::assertSame('Zoe', $contexts[self::NOTIFICATION]->threadBy);
+        self::assertNull($subjects[self::NOTIFICATION]->context->answeredExcerpt);
+        self::assertFalse($subjects[self::NOTIFICATION]->context->onComment);
+        self::assertSame('Zoe', $subjects[self::NOTIFICATION]->context->threadBy);
         self::assertSame([self::lookup(self::ROOT)], $this->lookups($http));
     }
 
     public function testARowWithNeitherPostFoundGetsNoContext(): void
     {
-        $contexts = $this->source($this->http($this->posts()))->findContexts(SocialApiWiring::blueskyAccount(), [
+        $subjects = $this->source($this->http($this->posts()))->findSubjects(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
             self::row(
                 SocialNotificationKind::Reply,
@@ -119,31 +119,31 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             ),
         ]);
 
-        self::assertSame([self::NOTIFICATION], array_keys($contexts));
+        self::assertSame([self::NOTIFICATION], array_keys($subjects));
     }
 
     public function testTwoRowsAnsweringOnePostAskForItOnce(): void
     {
         $http = $this->http($this->posts());
 
-        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::blueskyAccount(), [
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE)),
             self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE), self::SECOND_NOTIFICATION),
         ]);
 
-        self::assertSame([self::NOTIFICATION, self::SECOND_NOTIFICATION], array_keys($contexts));
-        self::assertSame('My own post', $contexts[self::SECOND_NOTIFICATION]->answeredExcerpt);
+        self::assertSame([self::NOTIFICATION, self::SECOND_NOTIFICATION], array_keys($subjects));
+        self::assertSame('My own post', $subjects[self::SECOND_NOTIFICATION]->context->answeredExcerpt);
         self::assertSame([self::lookup(self::MINE)], $this->lookups($http));
     }
 
     public function testAQuoteGetsYourQuotedPost(): void
     {
-        $contexts = $this->source($this->http($this->posts()))->findContexts(
+        $subjects = $this->source($this->http($this->posts()))->findSubjects(
             SocialApiWiring::blueskyAccount(),
             [self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED))],
         );
 
-        self::assertSame('The post you quoted', $contexts[self::NOTIFICATION]->answeredExcerpt);
+        self::assertSame('The post you quoted', $subjects[self::NOTIFICATION]->context->answeredExcerpt);
     }
 
     /** @return iterable<string, array{SocialNotificationKind, ContextReferenceModel, array<string, mixed>, bool}> */
@@ -195,13 +195,13 @@ final class BlueskyNotificationContextSourceTest extends TestCase
             'record' => $answeredRecord,
         ]]]);
 
-        $contexts = $this->source($this->http($posts))->findContexts(
+        $subjects = $this->source($this->http($posts))->findSubjects(
             SocialApiWiring::blueskyAccount(),
             [self::row($kind, $references)],
         );
 
-        self::assertSame($onComment, $contexts[self::NOTIFICATION]->onComment);
-        self::assertSame('My own post', $contexts[self::NOTIFICATION]->answeredExcerpt);
+        self::assertSame($onComment, $subjects[self::NOTIFICATION]->context->onComment);
+        self::assertSame('My own post', $subjects[self::NOTIFICATION]->context->answeredExcerpt);
     }
 
     public function testAnUnreachableAppViewFindsNoContext(): void
@@ -212,9 +212,9 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         });
         $row = self::row(SocialNotificationKind::Reply, new ContextReferenceModel(self::MINE, self::ROOT));
 
-        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [$row]);
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::blueskyAccount(), [$row]);
 
-        self::assertSame([], $contexts);
+        self::assertSame([], $subjects);
     }
 
     public function testAThrottledAppViewFindsNoContext(): void
@@ -225,9 +225,9 @@ final class BlueskyNotificationContextSourceTest extends TestCase
         });
         $row = self::row(SocialNotificationKind::Quote, new ContextReferenceModel(self::QUOTED));
 
-        $contexts = $this->source($http)->findContexts(SocialApiWiring::blueskyAccount(), [$row]);
+        $subjects = $this->source($http)->findSubjects(SocialApiWiring::blueskyAccount(), [$row]);
 
-        self::assertSame([], $contexts);
+        self::assertSame([], $subjects);
     }
 
     private function posts(): string

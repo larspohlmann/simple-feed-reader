@@ -1,5 +1,5 @@
 import { EMPTY } from 'rxjs';
-import { Component, Provider } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -15,7 +15,7 @@ import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unren
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
-import { provideStoryActions } from '../../../../testing/story-actions-testing';
+import { CommentTotals } from '../../state/comment-totals';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -44,11 +44,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 const article = (over: Partial<StoryArticleDto> = {}): StoryArticleDto =>
   aStoryArticle({ ...entry(), ...over });
 
-function mount(testEntry: ListItem, arrange?: () => void, storyActions: Provider[] = []) {
+function mount(testEntry: ListItem, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [
-      ...storyActions,
       provideStoryContext(storyOf(testEntry)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
@@ -73,31 +72,18 @@ it('renders nothing without duplicates', () => {
 });
 
 describe("a Trending story's footer in the list layout (#2128)", () => {
-  const footOf = (row: ListItem, storyActions = provideStoryActions()) =>
-    (mount(row, undefined, storyActions).nativeElement as HTMLElement).querySelector('.also-foot');
+  const footOf = (row: ListItem) =>
+    (mount(row).nativeElement as HTMLElement).querySelector('.also-foot');
 
-  it('leads with the story actions, before the other outlets', () => {
+  it('lists the other outlets and leaves the story actions to its title card (#2435)', () => {
     const foot = footOf(aStory({ articles: [article(), article({ id: 2 })] }))!;
 
-    expect(foot.firstElementChild!.localName).toBe('app-story-actions');
-    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
+    expect(foot.querySelector('app-story-actions')).toBeNull();
     expect(foot.querySelectorAll('.also-entry').length).toBe(1);
   });
 
-  it('still shows for a story with no other articles, holding only its actions', () => {
-    const foot = footOf(aStory({ articles: [article()] }))!;
-
-    expect(foot.querySelector('.lead')).toBeNull();
-    expect(foot.querySelectorAll('.story-actions button').length).toBe(2);
-  });
-
-  it('offers no story actions off Trending', () => {
-    const foot = footOf(
-      aStory({ articles: [article(), article({ id: 2 })] }),
-      provideStoryActions('all'),
-    )!;
-
-    expect(foot.querySelector('.story-actions')).toBeNull();
+  it('shows nothing for a story with no other articles', () => {
+    expect(footOf(aStory({ articles: [article()] }))).toBeNull();
   });
 });
 
@@ -427,7 +413,6 @@ it("shows a copy's row in the popover without the story's pieces", () => {
   TestBed.configureTestingModule({
     imports: [StoryCardHostComponent, provideTranslocoTesting()],
     providers: [
-      ...provideStoryActions(),
       provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
@@ -446,10 +431,7 @@ it("shows a copy's row in the popover without the story's pieces", () => {
     .getContainerElement()
     .querySelector('.dup-popover')!;
   expect(panel.querySelector('app-entry-row')).not.toBeNull();
-  expect(fixture.nativeElement.querySelector('app-story-actions')).not.toBeNull();
-  expect(panel.querySelector('app-story-source-count')).toBeNull();
   expect(panel.querySelector('app-story-sharers')).toBeNull();
-  expect(panel.querySelector('app-story-actions')).toBeNull();
 });
 
 describe('a Lemmy cross-post chip (#2420)', () => {
@@ -480,6 +462,19 @@ describe('a Lemmy cross-post chip (#2420)', () => {
     expect(chip.textContent).toContain('3');
     expect(labels).toEqual(['12 points', '3 comments']);
     expect(chip.querySelector('.t')).toBeNull();
+  });
+
+  it('counts the comments of a cross-post thread the reader opened (#2433)', () => {
+    const duplicate = crossPost();
+    const fixture = mount(entry({ ...lead(), duplicates: [duplicate] }));
+
+    TestBed.inject(CommentTotals).record(duplicate, 8);
+    fixture.detectChanges();
+
+    const chip = fixture.nativeElement.querySelector('.also-entry') as HTMLElement;
+    const counts = Array.from(chip.querySelectorAll('[role="img"]'));
+
+    expect(counts.map((icon) => icon.getAttribute('aria-label'))).toContain('8 comments');
   });
 
   it('opens a cross-post in the reader on click, with no popover', () => {

@@ -50,6 +50,17 @@ final class EntryIngestorCategoriesTest extends DbTestCase
         self::assertSame(2, $this->entryCategoryCount());
     }
 
+    public function testIngestLeavesEntriesWithANewCategoryForTheCallersFlush(): void
+    {
+        $parsed = $this->parsedFeedWithEntry('guid-1', [new ParsedCategoryModel('Politics')]);
+
+        $created = $this->ingestor->ingest($this->feed, $parsed, $this->context());
+
+        self::assertCount(1, $created);
+        self::assertNull($created[0]->getId(), 'ingest() must leave every new row to the caller\'s flush');
+        self::assertSame(0, $this->categoryCount());
+    }
+
     /**
      * @param list<ParsedCategoryModel> $categories
      */

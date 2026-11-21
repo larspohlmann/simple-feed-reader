@@ -7,6 +7,7 @@
 
   @include story-card.card;
 
+  position: relative;
   display: block;
   min-width: 0;
   margin-bottom: var(--space-2);
@@ -19,16 +20,35 @@
   border-end-end-radius: 0;
 }
 
+/* Stretched over the card by its `::after`, so the foot's buttons sit beside the link,
+   never inside it: a button never nests in an anchor. */
 .story-link {
   @include story-card.card-padding;
 
   display: block;
+  padding-bottom: 0;
   border-radius: inherit;
   color: inherit;
   text-decoration: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
 }
 
-/* Inside the link: the card tucked under the title covers its bottom edge. */
 .story-link:focus-visible {
   outline-offset: -2px;
+}
+
+.story-foot {
+  @include story-card.card-padding;
+
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-1);
+  font-size: var(--fs-xs);
 }

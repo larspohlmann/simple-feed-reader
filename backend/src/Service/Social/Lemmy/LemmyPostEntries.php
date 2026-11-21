@@ -11,7 +11,6 @@ use App\Entity\SocialAccount;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Foundation\Text\Support\HtmlAnchor;
-use App\Service\Foundation\Url\Support\LemmyPostUrl;
 use App\Service\Ingestion\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
 use App\Service\Ingestion\Parser\Support\DateParser;
@@ -21,6 +20,7 @@ use App\Service\Outbound\Image\Model\DeclaredImageModel;
 use App\Service\Social\Completion\Model\KnownSharesModel;
 use App\Service\Social\Lemmy\Support\LemmyCommunity;
 use App\Service\Social\Lemmy\Support\LemmyLanguageTag;
+use App\Service\Social\Lemmy\Support\LemmyPostKey;
 use App\Service\Social\Lemmy\Support\LemmySearchedPost;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\TimelinePageModel;
@@ -119,7 +119,7 @@ final readonly class LemmyPostEntries
         if (null === $address || null === $postId || $post->isTrue('deleted') || $post->isTrue('removed')) {
             return null;
         }
-        $thread = Discussion::platformThread(self::resolvePostPage($address, $homeInstance, $postId));
+        $thread = Discussion::platformThread(LemmyPostKey::resolvePostPage($address, $homeInstance, $postId));
 
 
         return $this->buildPostEntry($postView, $address)
@@ -166,11 +166,6 @@ final readonly class LemmyPostEntries
             . (null === $markdown ? '' : $this->markdown->toHtml($markdown));
 
         return '' === $html ? null : $html;
-    }
-
-    private static function resolvePostPage(string $address, string $homeInstance, int $postId): string
-    {
-        return null === LemmyPostUrl::parse($address) ? $homeInstance . '/post/' . $postId : $address;
     }
 
     private static function buildCounts(JsonNodeModel $counts): DiscussionCounts

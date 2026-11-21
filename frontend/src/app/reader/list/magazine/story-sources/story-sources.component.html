@@ -1,54 +1,46 @@
 <app-story-sharers [article]="leadOf(story())" />
-<div class="more-sources">
-  <div class="story-line">
-    <app-story-actions [story]="story()" />
-    <span class="counts"><app-story-source-count [story]="story()" /></span>
-    @if (copies().length) {
-      <button
-        type="button"
-        class="toggle reads-as-text"
-        [attr.aria-expanded]="expanded()"
-        [attr.aria-controls]="expanded() ? panelId : null"
-        (click)="toggle($event)"
-        (keydown.enter)="$event.stopPropagation()"
-        (keydown.space)="$event.stopPropagation()"
-      >
-        <app-icon [name]="storyIcon" size="sm" aria-hidden="true" />
-        {{ countKey() | transloco: { count: copies().length } }}
-        <app-icon
-          [name]="expanded() ? 'expand_less' : 'expand_more'"
-          size="sm"
-          aria-hidden="true"
-        />
-      </button>
+@if (copies().length) {
+  <div class="more-sources">
+    <button
+      type="button"
+      class="toggle reads-as-text"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="expanded() ? panelId : null"
+      (click)="toggle($event)"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    >
+      <app-icon [name]="storyIcon" size="sm" aria-hidden="true" />
+      {{ countKey() | transloco: { count: copies().length } }}
+      <app-icon [name]="expanded() ? 'expand_less' : 'expand_more'" size="sm" aria-hidden="true" />
+    </button>
+    @if (expanded()) {
+      <div class="minis" [id]="panelId">
+        @for (source of sources(); track source.copy.id) {
+          <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+          <div
+            class="mini"
+            (click)="$event.stopPropagation()"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
+          >
+            @if (source.card; as card) {
+              <a class="face" [href]="card.url" target="_blank" rel="noopener noreferrer">
+                <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
+              </a>
+              <app-open-in-reader [card]="card" opening="alone" />
+            } @else {
+              <button type="button" class="face reads-as-text" (click)="open(source.copy)">
+                <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
+              </button>
+            }
+            <app-story-sharers [article]="source.copy" />
+          </div>
+        }
+      </div>
     }
   </div>
-  @if (expanded()) {
-    <div class="minis" [id]="panelId">
-      @for (source of sources(); track source.copy.id) {
-        <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
-        <div
-          class="mini"
-          (click)="$event.stopPropagation()"
-          (keydown.enter)="$event.stopPropagation()"
-          (keydown.space)="$event.stopPropagation()"
-        >
-          @if (source.card; as card) {
-            <a class="face" [href]="card.url" target="_blank" rel="noopener noreferrer">
-              <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
-            </a>
-            <app-open-in-reader [card]="card" opening="alone" />
-          } @else {
-            <button type="button" class="face reads-as-text" (click)="open(source.copy)">
-              <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
-            </button>
-          }
-          <app-story-sharers [article]="source.copy" />
-        </div>
-      }
-    </div>
-  }
-</div>
+}
 
 <ng-template #face let-source>
   @if (source.picture) {
