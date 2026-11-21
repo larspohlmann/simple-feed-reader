@@ -142,11 +142,7 @@ export class RecommendationRunHistoryComponent {
     return formatCost(nanoCredits, this.language.lang());
   }
 
-  /** The legend's own icon for a status -- the same map each row reads, so
-   *  the legend cannot explain an icon no row actually uses (#409). */
-  statusIcon(status: RunHistoryStatus): string {
-    return runHistoryStatusIcon(status);
-  }
+  readonly statusIcon = runHistoryStatusIcon;
 
   /** A month section was opened. Rows already loaded (newest month from the
    *  overview, or an older month opened earlier) means nothing to fetch:

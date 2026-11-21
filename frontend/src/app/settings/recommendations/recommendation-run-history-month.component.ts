@@ -98,11 +98,7 @@ export class RecommendationRunHistoryMonthComponent {
     return run.durationSeconds === null ? null : formatDuration(run.durationSeconds);
   }
 
-  /** The Material Symbol standing in for the raw status word on mobile --
-   *  shared with the legend's own icon so the two cannot disagree (#409). */
-  statusIcon(status: NonNullable<RunHistoryRow['status']>): string {
-    return runHistoryStatusIcon(status);
-  }
+  readonly statusIcon = runHistoryStatusIcon;
 
   showMoreLabel(): string {
     return this.i18n.translate('settings.ai.recommendations.historyShowMore', {
