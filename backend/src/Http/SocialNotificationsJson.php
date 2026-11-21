@@ -54,6 +54,7 @@ final class SocialNotificationsJson
             'threadPlace' => $group->subject->context->threadPlace,
             'threadBy' => $group->subject->context->threadBy,
             'onComment' => $group->subject->context->onComment,
+            'entryId' => $group->entryId,
         ];
     }
 

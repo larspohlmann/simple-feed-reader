@@ -7,9 +7,11 @@ namespace App\Service\Social\Notification;
 use App\Entity\NotificationActor;
 use App\Entity\SocialNotification;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SocialNotificationKind;
+use App\Repository\CanonicalItemRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialNotificationPollRepository;
 use App\Repository\SocialNotificationRepository;
@@ -25,6 +27,7 @@ final readonly class NotificationList
         private SocialAccountRepository $accounts,
         private SocialNotificationRepository $notifications,
         private SocialNotificationPollRepository $polls,
+        private CanonicalItemRepository $canonicalItems,
     ) {
     }
 
@@ -49,6 +52,9 @@ final readonly class NotificationList
         $shown = array_slice($found, 0, self::PAGE_SIZE);
         $newest = $this->notifications->findNewestPerGroup($shown, self::ACTORS_PER_GROUP);
 
+        $shownRows = array_filter($newest, static fn (array $rows): bool => $rows !== []);
+        $entryIds = $this->findEntryIds($user, $network, $shownRows);
+
         $groups = [];
         foreach ($shown as $group) {
             $rows = $newest[$group['latestId']];
@@ -64,6 +70,7 @@ final readonly class NotificationList
                 $rows[0]->getSubject(),
                 $rows[0]->getCreatedAt(),
                 $group['seen'],
+                $this->pickEntryId($rows[0], $entryIds),
             );
         }
 
@@ -76,5 +83,35 @@ final readonly class NotificationList
             ),
             $needingReconnect,
         );
+    }
+
+    /**
+     * @param array<int, list<SocialNotification>> $newestRowsPerGroup
+     * @return array<string, int>
+     */
+    private function findEntryIds(User $user, SocialNetwork $network, array $newestRowsPerGroup): array
+    {
+        $hashes = [];
+        foreach ($newestRowsPerGroup as $rows) {
+            array_push($hashes, ...$rows[0]->getSubject()->keys->hashes());
+        }
+
+        return $this->canonicalItems->findReadableEntryIds(
+            $user->requireId(),
+            CanonicalItemKind::fromNetwork($network),
+            array_values(array_unique($hashes)),
+        );
+    }
+
+    /** @param array<string, int> $entryIds */
+    private function pickEntryId(SocialNotification $row, array $entryIds): ?int
+    {
+        foreach ($row->getSubject()->keys->hashes() as $hash) {
+            if (isset($entryIds[$hash])) {
+                return $entryIds[$hash];
+            }
+        }
+
+        return null;
     }
 }

@@ -20,6 +20,7 @@ final readonly class NotificationGroupModel
         public NotificationSubject $subject,
         public \DateTimeImmutable $latestAt,
         public bool $seen,
+        public ?int $entryId,
     ) {
     }
 }
