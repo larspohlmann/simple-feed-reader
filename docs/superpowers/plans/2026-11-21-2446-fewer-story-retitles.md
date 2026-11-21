@@ -34,7 +34,7 @@
 - Test: `backend/tests/Repository/TrendingStoryRepositoryTest.php`. Move the existing calls to the new signature.
 
 - [ ] **Step 1:** Write these failing repository tests. In each, the current time is 2031-05-14 12:00, so the retry cutoff is 11:00 and the re-title cutoff is 06:00.
-  - `testATitledStoryGrownByHalfIsNotDue`: two members, titled at count 1… no. Use three members titled at count 2, attempted at 2031-05-14 04:00. Expect `[]`.
+  - `testATitledStoryGrownByHalfIsNotDue`: three members titled at count 2, attempted at 2031-05-14 04:00. Expect `[]`.
   - `testATitledStoryDoublesButWaitsSixHours`: two members titled at count 1, attempted at 08:00. Expect `[]`.
   - `testADoubledStoryIsDueSixHoursAfterItsTitle`: two members titled at count 1, attempted at 05:00. Expect `[storyId]`.
   - `testAnUntitledStoryIsRetriedAfterAnHour`: no title, attempted at 10:30. Expect `[storyId]`.
