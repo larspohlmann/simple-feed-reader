@@ -1,19 +1,13 @@
 @let sources = 'reader.trendingSources' | transloco: { count: story().outletCount };
-<app-icon class="lead" aria-hidden="true" [name]="storyIcon" size="text" /><span class="sources">{{
+<app-icon aria-hidden="true" [name]="storyIcon" size="text" /><span class="words">{{
   sources
 }}</span
-><span class="compact" aria-hidden="true" [title]="sources"
-  ><app-icon [name]="storyIcon" size="text" />{{ story().outletCount }}</span
->
+><span class="number" aria-hidden="true" [title]="sources">{{ story().outletCount }}</span>
 @if (story().shareCount) {
   @let shares =
     (story().shareCount === 1 ? 'reader.trendingSharesOne' : 'reader.trendingShares')
       | transloco: { count: story().shareCount };
   <span class="separator" aria-hidden="true">·</span
-  ><app-icon class="lead" aria-hidden="true" name="share" size="text" /><span class="sources">{{
-    shares
-  }}</span
-  ><span class="compact" aria-hidden="true" [title]="shares"
-    ><app-icon name="share" size="text" />{{ story().shareCount }}</span
-  >
+  ><app-icon aria-hidden="true" name="share" size="text" /><span class="words">{{ shares }}</span
+  ><span class="number" aria-hidden="true" [title]="shares">{{ story().shareCount }}</span>
 }

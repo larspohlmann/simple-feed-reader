@@ -372,8 +372,6 @@ describe('EntryListComponent', () => {
         first: {
           entries: [member(1, joinedSince), member(2, joinedSince), member(3, joinedBefore)],
           nextCursor: 'C2',
-          title: 'Harbour strike',
-          synopsis: null,
           story: null,
           memberCount: 4,
           unreadCount: 4,
@@ -385,8 +383,6 @@ describe('EntryListComponent', () => {
         C2: {
           entries: [member(4, joinedSince), member(5, joinedBefore)],
           nextCursor: null,
-          title: 'Harbour strike',
-          synopsis: null,
           story: null,
           memberCount: 4,
           unreadCount: 4,
@@ -3117,9 +3113,7 @@ describe('EntryListComponent', () => {
         const element = mount({ selection: trending(), layout, items: stories })
           .nativeElement as HTMLElement;
 
-        expect(element.querySelectorAll('.row-slot app-story-source-count .sources')).toHaveLength(
-          2,
-        );
+        expect(element.querySelectorAll('.row-slot app-story-source-count .words')).toHaveLength(2);
       });
     });
 
