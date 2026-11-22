@@ -5,7 +5,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Observable, Subject, config, of, throwError } from 'rxjs';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ComposeRequest, LinkRequest, QuoteRequest, ReplyRequest } from './compose-request';
+import { ComposeRequest, LinkRequest, ResponseRequest } from './compose-request';
 import {
   ComposerCardDto,
   ComposerContextDto,
@@ -54,9 +54,7 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const target = (
-    overrides: Partial<Omit<ReplyRequest, 'kind'>> & { kind?: 'reply' | 'quote' } = {},
-  ): ReplyRequest | QuoteRequest => ({
+  const target = (overrides: Partial<ResponseRequest> = {}): ResponseRequest => ({
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',

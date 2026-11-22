@@ -117,7 +117,7 @@ final readonly class ComposerContexts
 
     private static function startPublication(): PublicationModel
     {
-        return PublicationModel::fromDraft(new PostDraftModel(''));
+        return new PublicationModel(new PostDraftModel(''));
     }
 
     /** @return \Closure(): ?SocialPostModel */

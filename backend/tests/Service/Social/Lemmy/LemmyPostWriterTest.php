@@ -142,7 +142,7 @@ final class LemmyPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             $this->account(),
-            PublicationModel::fromDraft(new PostDraftModel('Just text'))
+            new PublicationModel(new PostDraftModel('Just text'))
                 ->withLemmy(new LemmyCommunityPostModel(7, 'Title')),
         );
 
@@ -224,7 +224,7 @@ final class LemmyPostWriterTest extends TestCase
             SocialPostTooLongException::class,
         ];
         yield 'no Lemmy choices at all' => [
-            PublicationModel::fromDraft(new PostDraftModel('Hi'))->withEmbed(new LinkEmbedModel(self::ARTICLE, 'A')),
+            new PublicationModel(new PostDraftModel('Hi'))->withEmbed(new LinkEmbedModel(self::ARTICLE, 'A')),
             SocialPostCommunityMissingException::class,
         ];
         yield 'the community is checked before the title' => [
@@ -298,18 +298,18 @@ final class LemmyPostWriterTest extends TestCase
 
     private function replying(string $postId, ?string $commentId, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)
+        return new PublicationModel($draft)
             ->withReplyTo(SocialPostModel::onLemmy($this->account(), $postId, $commentId));
     }
 
     private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withEmbed(new QuotedPostEmbedModel($post));
+        return new PublicationModel($draft)->withEmbed(new QuotedPostEmbedModel($post));
     }
 
     private static function linkPost(PostDraftModel $draft, ?string $title, ?int $communityId): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)
+        return new PublicationModel($draft)
             ->withEmbed(new LinkEmbedModel(self::ARTICLE, 'An article'))
             ->withLemmy(new LemmyCommunityPostModel($communityId, $title));
     }

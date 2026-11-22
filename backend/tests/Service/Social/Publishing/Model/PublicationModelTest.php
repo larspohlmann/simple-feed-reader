@@ -12,11 +12,11 @@ use PHPUnit\Framework\TestCase;
 
 final class PublicationModelTest extends TestCase
 {
-    public function testFromDraftCarriesNothingElse(): void
+    public function testConstructorCarriesNothingElse(): void
     {
         $draft = new PostDraftModel('Hallo');
 
-        $publication = PublicationModel::fromDraft($draft);
+        $publication = new PublicationModel($draft);
 
         self::assertSame($draft, $publication->draft);
         self::assertNull($publication->inReplyTo);
@@ -26,7 +26,7 @@ final class PublicationModelTest extends TestCase
 
     public function testWithersReturnACopy(): void
     {
-        $original = PublicationModel::fromDraft(new PostDraftModel('Hallo'));
+        $original = new PublicationModel(new PostDraftModel('Hallo'));
         $post = SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110');
 
         $reply = $original->withReplyTo($post);

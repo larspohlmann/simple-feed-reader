@@ -22,7 +22,7 @@ final class PostDraftRequest
 
     public function toPublication(): PublicationModel
     {
-        return PublicationModel::fromDraft($this->buildDraft($this->text));
+        return new PublicationModel($this->buildDraft($this->text));
     }
 
     /** @param string|null $address a reply in the entry's thread; null answers the entry's own post */

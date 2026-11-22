@@ -199,7 +199,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             $target,
             ComposerKind::Reply,
-            PublicationModel::fromDraft(new PostDraftModel('Hi')),
+            new PublicationModel(new PostDraftModel('Hi')),
         );
 
         self::assertSame(['resolve ' . self::STATUS_URL, 'reply 110 Hi'], $this->mastodon->calls);
@@ -215,7 +215,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             new ResponseTargetModel($this->post(), self::REPLY_URI),
             ComposerKind::Reply,
-            PublicationModel::fromDraft(new PostDraftModel('Hi')),
+            new PublicationModel(new PostDraftModel('Hi')),
         );
 
         self::assertSame(['resolve ' . self::REPLY_URI, 'reply 110 Hi'], $this->mastodon->calls);
@@ -236,7 +236,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             new ResponseTargetModel($this->post(), accountId: $second->requireId()),
             ComposerKind::Reply,
-            PublicationModel::fromDraft(new PostDraftModel('Hi')),
+            new PublicationModel(new PostDraftModel('Hi')),
         );
 
         self::assertSame(['bea@mastodon.example'], $resolvedOn);
@@ -257,7 +257,7 @@ final class SocialResponsesTest extends DbTestCase
                     $this->owner,
                     new ResponseTargetModel($entry, accountId: $account->requireId()),
                     ComposerKind::Reply,
-                    PublicationModel::fromDraft(new PostDraftModel('Hi')),
+                    new PublicationModel(new PostDraftModel('Hi')),
                 ),
                 SocialAccountNotFoundException::class,
                 'Only an account of the user on the entry\'s network can answer.',
@@ -275,7 +275,7 @@ final class SocialResponsesTest extends DbTestCase
                 $this->owner,
                 new ResponseTargetModel($this->post()),
                 ComposerKind::Reply,
-                PublicationModel::fromDraft(new PostDraftModel('Hi')),
+                new PublicationModel(new PostDraftModel('Hi')),
             ),
             SocialPostRefusedException::class,
             'A post that takes no replies cannot be answered.',
@@ -295,7 +295,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             $target,
             ComposerKind::Reply,
-            PublicationModel::fromDraft(new PostDraftModel('Hi')),
+            new PublicationModel(new PostDraftModel('Hi')),
         );
         $this->comments->load($this->owner, $entry);
 
@@ -310,7 +310,7 @@ final class SocialResponsesTest extends DbTestCase
                 $this->owner,
                 new ResponseTargetModel($this->post(), 'at://did:plc:x/app.bsky.feed.post/1'),
                 ComposerKind::Reply,
-                PublicationModel::fromDraft(new PostDraftModel('Hi')),
+                new PublicationModel(new PostDraftModel('Hi')),
             ),
             NotASocialPostException::class,
             'Only a post on the entry\'s network can be answered.',
@@ -324,7 +324,7 @@ final class SocialResponsesTest extends DbTestCase
         $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 0, 2));
 
         $target = new ResponseTargetModel($entry);
-        $publication = PublicationModel::fromDraft(new PostDraftModel('Read'));
+        $publication = new PublicationModel(new PostDraftModel('Read'));
 
         $published = $this->responses()->respond($this->owner, $target, ComposerKind::Quote, $publication);
 
@@ -344,7 +344,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             new ResponseTargetModel($this->post()),
             ComposerKind::Quote,
-            PublicationModel::fromDraft(new PostDraftModel('Read')),
+            new PublicationModel(new PostDraftModel('Read')),
         );
 
         self::assertSame(FakeMastodonNetwork::REPLY_URI, $published->url);
@@ -361,7 +361,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->owner,
             new ResponseTargetModel($entry, self::REPLY_URI),
             ComposerKind::Quote,
-            PublicationModel::fromDraft(new PostDraftModel('Read')),
+            new PublicationModel(new PostDraftModel('Read')),
         );
         $this->comments->load($this->owner, $entry);
 
@@ -379,7 +379,7 @@ final class SocialResponsesTest extends DbTestCase
                 $this->owner,
                 new ResponseTargetModel($this->post()),
                 ComposerKind::Quote,
-                PublicationModel::fromDraft(new PostDraftModel('Read')),
+                new PublicationModel(new PostDraftModel('Read')),
             ),
             SocialPostRefusedException::class,
             'A post its author keeps from quotes cannot be quoted.',
@@ -407,7 +407,7 @@ final class SocialResponsesTest extends DbTestCase
         ];
         yield 'publishing' => [
             static fn (SocialResponses $responses, User $user, ResponseTargetModel $target): mixed => $responses
-                ->respond($user, $target, ComposerKind::Link, PublicationModel::fromDraft(new PostDraftModel('Hi'))),
+                ->respond($user, $target, ComposerKind::Link, new PublicationModel(new PostDraftModel('Hi'))),
         ];
     }
 

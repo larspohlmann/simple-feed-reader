@@ -1,5 +1,5 @@
 import { LinkCardDto } from '../../link-card/link-card';
-import { ResponseKind } from './compose-request';
+import { ComposerKind } from './compose-request';
 
 /** A link card as the composer shows it: the one a post carries, or the page a link post shares. */
 export type ComposerCardDto = Omit<LinkCardDto, 'readerToken'>;
@@ -21,9 +21,6 @@ export interface LinkComposerSubjectDto {
 
 /** What the composer shows above the text: what the post answers, quotes or shares. */
 export type ComposerSubjectDto = PostComposerSubjectDto | LinkComposerSubjectDto;
-
-/** What the composer sends: a link post that names a post on its network quotes it. */
-export type ComposerKind = ResponseKind | 'link';
 
 /**
  * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: what the composer

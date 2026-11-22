@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkRequest, ComposeRequest, ReplyRequest } from './compose-request';
+import { LinkRequest, ComposeRequest, ResponseRequest } from './compose-request';
 import { ComposerContextDto, PostComposerSubjectDto, PublishedPostDto } from './composer-dto';
 import { ComposerApi } from './composer-api';
 import { PostNetwork, PostNetworks } from '../post-networks.service';
@@ -19,7 +19,7 @@ const QUOTED: PostComposerSubjectDto = {
   card: null,
 };
 
-const TARGET: ReplyRequest = {
+const TARGET: ResponseRequest = {
   kind: 'reply',
   entryId: 7,
   network: 'mastodon',

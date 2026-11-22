@@ -18,11 +18,6 @@ final readonly class PublicationModel
     ) {
     }
 
-    public static function fromDraft(PostDraftModel $draft): self
-    {
-        return new self($draft);
-    }
-
     #[\NoDiscard]
     public function withReplyTo(SocialPostModel $post): self
     {
@@ -39,11 +34,5 @@ final readonly class PublicationModel
     public function withLemmy(LemmyCommunityPostModel $lemmy): self
     {
         return clone($this, ['lemmy' => $lemmy]);
-    }
-
-    #[\NoDiscard]
-    public function withDraft(PostDraftModel $draft): self
-    {
-        return clone($this, ['draft' => $draft]);
     }
 }

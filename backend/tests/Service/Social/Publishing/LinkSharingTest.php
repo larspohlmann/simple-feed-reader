@@ -175,7 +175,7 @@ final class LinkSharingTest extends DbTestCase
         $published = $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::ARTICLE_URL . '&utm_source=x'),
-            PublicationModel::fromDraft(new PostDraftModel('Worth reading')),
+            new PublicationModel(new PostDraftModel('Worth reading')),
         );
 
         self::assertSame(['share ' . self::ARTICLE_URL . ' Worth reading'], $this->mastodon->calls);
@@ -275,7 +275,7 @@ final class LinkSharingTest extends DbTestCase
         $published = $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::STATUS_URL),
-            PublicationModel::fromDraft(new PostDraftModel('Look')),
+            new PublicationModel(new PostDraftModel('Look')),
         );
 
         self::assertSame(
@@ -296,7 +296,7 @@ final class LinkSharingTest extends DbTestCase
             fn () => $this->linkSharing()->publish(
                 $this->owner,
                 self::target(null, self::STATUS_URL),
-                PublicationModel::fromDraft(new PostDraftModel('  ')),
+                new PublicationModel(new PostDraftModel('  ')),
             ),
             SocialPostTextMissingException::class,
             'A quote of a post needs some text of its own.',
@@ -312,7 +312,7 @@ final class LinkSharingTest extends DbTestCase
         $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::STATUS_URL),
-            PublicationModel::fromDraft(new PostDraftModel('Look')),
+            new PublicationModel(new PostDraftModel('Look')),
         );
 
         self::assertSame(
@@ -337,7 +337,7 @@ final class LinkSharingTest extends DbTestCase
         $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::STATUS_URL),
-            PublicationModel::fromDraft(new PostDraftModel('Look')),
+            new PublicationModel(new PostDraftModel('Look')),
         );
 
         self::assertSame(
@@ -353,7 +353,7 @@ final class LinkSharingTest extends DbTestCase
         $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::BLUESKY_POST_URL),
-            PublicationModel::fromDraft(new PostDraftModel('Look')),
+            new PublicationModel(new PostDraftModel('Look')),
         );
 
         self::assertSame(['share ' . self::BLUESKY_POST_URL . ' Look'], $this->mastodon->calls);
@@ -378,7 +378,7 @@ final class LinkSharingTest extends DbTestCase
         $this->blueskyLinkSharing($http, $pageCards)->publish(
             $this->owner,
             new LinkTargetModel(SocialNetwork::Bluesky, null, self::BLUESKY_POST_URL),
-            PublicationModel::fromDraft(new PostDraftModel('Look')),
+            new PublicationModel(new PostDraftModel('Look')),
         );
 
         $lastRequest = array_last($http->requests);
@@ -456,7 +456,7 @@ final class LinkSharingTest extends DbTestCase
 
     private static function publication(): PublicationModel
     {
-        return PublicationModel::fromDraft(new PostDraftModel('Hi'));
+        return new PublicationModel(new PostDraftModel('Hi'));
     }
 
     private function linkSharing(): LinkSharing

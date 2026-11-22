@@ -38,7 +38,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             SocialAccounts::mastodon(),
-            PublicationModel::fromDraft(new PostDraftModel('Hallo', visibility: 'unlisted', language: 'de')),
+            new PublicationModel(new PostDraftModel('Hallo', visibility: 'unlisted', language: 'de')),
         );
 
         self::assertSame(
@@ -246,7 +246,7 @@ final class MastodonPostWriterTest extends TestCase
         try {
             $this->writer($http)->publish(
                 SocialAccounts::mastodon(),
-                PublicationModel::fromDraft(new PostDraftModel(str_repeat('ä', 501))),
+                new PublicationModel(new PostDraftModel(str_repeat('ä', 501))),
             );
             self::fail('A post over the limit is refused.');
         } catch (SocialPostTooLongException $exception) {
@@ -265,7 +265,7 @@ final class MastodonPostWriterTest extends TestCase
         try {
             $this->writer($http)->publish(
                 SocialAccounts::mastodon(),
-                PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 491), contentWarning: 'spoilers!!')),
+                new PublicationModel(new PostDraftModel(str_repeat('a', 491), contentWarning: 'spoilers!!')),
             );
         } finally {
             self::assertSame([], $http->requests);
@@ -278,7 +278,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             SocialAccounts::mastodon(),
-            PublicationModel::fromDraft(new PostDraftModel(str_repeat('👍🏽', 500))),
+            new PublicationModel(new PostDraftModel(str_repeat('👍🏽', 500))),
         );
 
         self::assertSame([self::STATUSES], $http->requestLines());
@@ -293,7 +293,7 @@ final class MastodonPostWriterTest extends TestCase
             new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
         )->publish(
             SocialAccounts::mastodon(),
-            PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 900))),
+            new PublicationModel(new PostDraftModel(str_repeat('a', 900))),
         );
 
         self::assertSame([self::STATUSES], $http->requestLines());
@@ -305,7 +305,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             SocialAccounts::mastodon(),
-            PublicationModel::fromDraft(new PostDraftModel(str_repeat('ä', 500))),
+            new PublicationModel(new PostDraftModel(str_repeat('ä', 500))),
         );
 
         self::assertSame([self::STATUSES], $http->requestLines());
@@ -318,7 +318,7 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             SocialAccounts::mastodon(),
-            PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 476) . ' ' . $url)),
+            new PublicationModel(new PostDraftModel(str_repeat('a', 476) . ' ' . $url)),
         );
 
         self::assertSame([self::STATUSES], $http->requestLines());
@@ -367,17 +367,17 @@ final class MastodonPostWriterTest extends TestCase
 
     private static function replying(SocialPostModel $post, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withReplyTo($post);
+        return new PublicationModel($draft)->withReplyTo($post);
     }
 
     private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withEmbed(new QuotedPostEmbedModel($post));
+        return new PublicationModel($draft)->withEmbed(new QuotedPostEmbedModel($post));
     }
 
     private static function sharing(string $url, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
+        return new PublicationModel($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
     }
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter

@@ -60,7 +60,7 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->writer($http)->publish(
             SocialApiWiring::blueskyAccount(),
-            PublicationModel::fromDraft(new PostDraftModel('Hallo', language: 'de')),
+            new PublicationModel(new PostDraftModel('Hallo', language: 'de')),
         );
 
         $record = self::recordSent($http);
@@ -511,17 +511,17 @@ final class BlueskyPostWriterTest extends TestCase
 
     private static function replying(SocialPostModel $post, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withReplyTo($post);
+        return new PublicationModel($draft)->withReplyTo($post);
     }
 
     private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withEmbed(new QuotedPostEmbedModel($post));
+        return new PublicationModel($draft)->withEmbed(new QuotedPostEmbedModel($post));
     }
 
     private static function sharing(string $url, PostDraftModel $draft): PublicationModel
     {
-        return PublicationModel::fromDraft($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
+        return new PublicationModel($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
     }
 
     private static function keyedDraft(): PostDraftModel

@@ -71,13 +71,13 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
         return PostDeletion::Deleted;
     }
 
-    private function guardLength(SocialAccount $account, string $contentWarning, string $status): void
+    private function guardLength(SocialAccount $account, string $contentWarning, string $statusText): void
     {
         $maxCharacters = $this->statusLimit->findMaxCharacters($account);
         if (null === $maxCharacters) {
             return;
         }
-        if (MastodonTextLength::measureLength($contentWarning, $status) > $maxCharacters) {
+        if (MastodonTextLength::measureLength($contentWarning, $statusText) > $maxCharacters) {
             throw new SocialPostTooLongException(
                 sprintf('A Mastodon post on this server holds %d characters.', $maxCharacters),
             );

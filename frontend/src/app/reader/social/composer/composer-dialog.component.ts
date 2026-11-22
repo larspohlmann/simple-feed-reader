@@ -26,13 +26,8 @@ import { inputChecked, inputValue } from '../../../shared/input-value';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
-import { ComposeRequest } from './compose-request';
-import {
-  ComposerContextDto,
-  ComposerKind,
-  MASTODON_VISIBILITIES,
-  MastodonVisibility,
-} from './composer-dto';
+import { ComposeRequest, ComposerKind } from './compose-request';
+import { ComposerContextDto, MASTODON_VISIBILITIES, MastodonVisibility } from './composer-dto';
 import { SentPost } from './composed-post';
 import { ComposerLane, SharedDraft } from './composer-lane';
 import { ComposerLanes } from './composer-lanes';

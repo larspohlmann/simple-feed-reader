@@ -18,7 +18,7 @@ final class BlueskyComposerDefaultsTest extends TestCase
     public function testEveryPublicationHolds300Graphemes(): void
     {
         $account = SocialApiWiring::blueskyAccount();
-        $standalone = PublicationModel::fromDraft(new PostDraftModel(''));
+        $standalone = new PublicationModel(new PostDraftModel(''));
         $post = SocialPostModel::onBluesky($account, 'at://did:plc:ann/app.bsky.feed.post/1', 'cid');
         $publications = [
             $standalone,

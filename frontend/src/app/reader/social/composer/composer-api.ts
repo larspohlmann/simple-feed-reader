@@ -7,6 +7,14 @@ import { ComposerContextDto, PostDraftDto, PublishedPostDto } from './composer-d
 
 const RESPONSE_PATHS: Record<ResponseKind, string> = { reply: 'replies', quote: 'quotes' };
 
+interface ComposerRoute {
+  contextPath: string;
+  contextParams: Record<string, string>;
+  sendPath: string;
+  sendParams: Record<string, string>;
+  sendBody: (draft: PostDraftDto) => object;
+}
+
 /** What the composer asks and sends: the context of a post to write and the post once written. */
 @Injectable({ providedIn: 'root' })
 export class ComposerApi {
@@ -14,70 +22,55 @@ export class ComposerApi {
   private readonly base = inject(API_BASE_URL);
 
   context(request: ComposeRequest, accountId?: number): Observable<ComposerContextDto> {
-    return this.http.get<ComposerContextDto>(this.contextPath(request), {
+    const route = this.route(request);
+    return this.http.get<ComposerContextDto>(route.contextPath, {
       params: {
-        ...composerParams(request),
+        ...route.contextParams,
         ...(accountId === undefined ? {} : { accountId }),
       },
     });
   }
 
   send(request: ComposeRequest, draft: PostDraftDto): Observable<PublishedPostDto> {
+    const route = this.route(request);
+    return this.http.post<PublishedPostDto>(route.sendPath, route.sendBody(draft), {
+      params: route.sendParams,
+    });
+  }
+
+  private route(request: ComposeRequest): ComposerRoute {
     switch (request.kind) {
-      case 'link':
-        return this.http.post<PublishedPostDto>(`${this.base}/api/social/links`, {
-          ...draft,
-          network: request.network,
-          url: request.url,
-        });
+      case 'link': {
+        const quote: Record<string, string> =
+          request.quote === null ? {} : { quote: request.quote };
+        return {
+          contextPath: `${this.base}/api/social/link-composer`,
+          contextParams: {
+            network: request.network,
+            url: request.url,
+            title: request.title,
+            ...quote,
+          },
+          sendPath: `${this.base}/api/social/links`,
+          sendParams: {},
+          sendBody: (draft) => ({ ...draft, network: request.network, url: request.url }),
+        };
+      }
       case 'reply':
-      case 'quote':
-        return this.http.post<PublishedPostDto>(
-          `${this.base}/api/entries/${request.entryId}/social/${RESPONSE_PATHS[request.kind]}`,
-          draft,
-          { params: addressParam(request.address) },
-        );
+      case 'quote': {
+        const address = addressParam(request.address);
+        const entryPath = `${this.base}/api/entries/${request.entryId}/social`;
+        return {
+          contextPath: `${entryPath}/composer`,
+          contextParams: { kind: request.kind, ...address },
+          sendPath: `${entryPath}/${RESPONSE_PATHS[request.kind]}`,
+          sendParams: address,
+          sendBody: (draft) => draft,
+        };
+      }
       default:
         return assertNever(request);
     }
-  }
-
-  private contextPath(request: ComposeRequest): string {
-    switch (request.kind) {
-      case 'link':
-        return `${this.base}/api/social/link-composer`;
-      case 'reply':
-      case 'quote':
-        return `${this.base}/api/entries/${request.entryId}/social/composer`;
-      default:
-        return assertNever(request);
-    }
-  }
-}
-
-function targetParams(request: ComposeRequest): Record<string, string> {
-  switch (request.kind) {
-    case 'link':
-      return { network: request.network, url: request.url };
-    case 'reply':
-    case 'quote':
-      return addressParam(request.address);
-    default:
-      return assertNever(request);
-  }
-}
-
-function composerParams(request: ComposeRequest): Record<string, string> {
-  switch (request.kind) {
-    case 'link': {
-      const quote: Record<string, string> = request.quote === null ? {} : { quote: request.quote };
-      return { ...targetParams(request), title: request.title, ...quote };
-    }
-    case 'reply':
-    case 'quote':
-      return { kind: request.kind, ...targetParams(request) };
-    default:
-      return assertNever(request);
   }
 }
 

@@ -31,12 +31,12 @@ final class LinkPostDraftRequest
 
     public function toLinkTarget(): LinkTargetModel
     {
-        return new LinkTargetModel($this->network, $this->accountId, $this->url, '', '');
+        return new LinkTargetModel($this->network, $this->accountId, $this->url);
     }
 
     public function toPublication(): PublicationModel
     {
-        $publication = PublicationModel::fromDraft($this->buildDraft($this->text));
+        $publication = new PublicationModel($this->buildDraft($this->text));
         if (null === $this->title && null === $this->communityId) {
             return $publication;
         }

@@ -90,7 +90,7 @@ final class LemmyComposerDefaultsTest extends TestCase
 
     private static function standalone(): PublicationModel
     {
-        return PublicationModel::fromDraft(new PostDraftModel(''));
+        return new PublicationModel(new PostDraftModel(''));
     }
 
     private static function linkTo(string $title): PublicationModel

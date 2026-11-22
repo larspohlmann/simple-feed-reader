@@ -59,7 +59,7 @@ final class PostWritingTest extends DbTestCase
 
     private static function linkPost(): PublicationModel
     {
-        return PublicationModel::fromDraft(new PostDraftModel('Read this'))
+        return new PublicationModel(new PostDraftModel('Read this'))
             ->withEmbed(new LinkEmbedModel(self::URL, 'An article'));
     }
 
