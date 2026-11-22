@@ -1,7 +1,7 @@
 import { Provider, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, config } from 'rxjs';
-import { SentPost } from '../composer/composed-post';
+import { SentPost } from '../../social/composer/composed-post';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';

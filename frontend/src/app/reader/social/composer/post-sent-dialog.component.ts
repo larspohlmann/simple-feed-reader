@@ -40,12 +40,12 @@ export class PostSentDialogComponent {
 
   private headingFor(posts: SentPost[]): string {
     if (posts.length === 1) {
-      return this.transloco.translate(`reader.posted.${posts[0].kind}.${posts[0].network}`);
+      return this.transloco.translate(`social.posted.${posts[0].kind}.${posts[0].network}`);
     }
     const networks = networkList(
       posts.map(({ network }) => network),
       this.language(),
     );
-    return this.transloco.translate('reader.posted.many', { networks });
+    return this.transloco.translate('social.posted.many', { networks });
   }
 }

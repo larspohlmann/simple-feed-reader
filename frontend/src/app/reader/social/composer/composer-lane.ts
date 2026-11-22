@@ -5,22 +5,22 @@ import { Observable, Subject, Subscription, map, tap } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemText } from '../../../core/problem';
 import { randomUuid } from '../../../shared/random-uuid';
+import { PostTargetDto } from '../../entry-social';
 import {
   ComposerContextDto,
-  LemmyLinkFieldsDto,
+  LemmyPostFieldsDto,
   MastodonVisibility,
   PostDraftDto,
-  PostTargetDto,
   PublishedPostDto,
-} from '../../entry-social';
-import { SocialPostApi } from '../../social-post-api';
+} from './composer-dto';
+import { ComposerApi } from './composer-api';
 import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
 import { postLength } from './post-length';
 
 const SEND_FAILURE_KEYS: Readonly<Record<string, string | undefined>> = {
-  social_network_unavailable: 'reader.composer.notSent',
-  social_write_outcome_unknown: 'reader.composer.mayHaveSent',
+  social_network_unavailable: 'social.composer.notSent',
+  social_write_outcome_unknown: 'social.composer.mayHaveSent',
 };
 
 type ContextState =
@@ -42,7 +42,7 @@ export type SharedDraft = Omit<
  * The key is minted once, so a resend publishes the post once. Built in an injection context.
  */
 export class ComposerLane {
-  private readonly api = inject(SocialPostApi);
+  private readonly api = inject(ComposerApi);
   private readonly i18n = inject(TranslocoService);
   private readonly communityMemory = inject(LemmyCommunityMemory);
   readonly network: SocialNetworkName;
@@ -104,7 +104,7 @@ export class ComposerLane {
   load(): void {
     this.loading.unsubscribe();
     this.loadState.set({ status: 'loading' });
-    this.loading = this.api.composer(this.target, this.chosenAccountId()).subscribe({
+    this.loading = this.api.context(this.target, this.chosenAccountId()).subscribe({
       next: (context) => this.adopt(context),
       error: (error: HttpErrorResponse) => {
         this.loadState.set({ status: 'failed', message: this.messageOf(error) });
@@ -170,7 +170,7 @@ export class ComposerLane {
     if (context.lemmy !== null) this.adoptLemmy(context.accountId, context.lemmy);
   }
 
-  private adoptLemmy(accountId: number, lemmy: LemmyLinkFieldsDto): void {
+  private adoptLemmy(accountId: number, lemmy: LemmyPostFieldsDto): void {
     const remembered = this.communityMemory.recall(accountId);
     const offered = lemmy.communities.some((community) => community.id === remembered);
     if (!this.titleWritten) this.typedTitle.set(lemmy.title);

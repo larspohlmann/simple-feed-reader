@@ -15,7 +15,7 @@
     <app-network-logo [network]="lane.network" />
     {{ names[lane.network] }}
     @if (sent) {
-      <span class="posted">✓ {{ 'reader.composer.pillPosted' | transloco }}</span>
+      <span class="posted">✓ {{ 'social.composer.pillPosted' | transloco }}</span>
     } @else if (lane.loadError() !== null) {
       <span class="warning-mark" aria-hidden="true">⚠</span>
     }

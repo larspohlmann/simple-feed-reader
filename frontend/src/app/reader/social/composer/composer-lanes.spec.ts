@@ -3,16 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import {
-  ComposerContextDto,
-  LinkTargetDto,
-  PostComposerSubjectDto,
-  PostTargetDto,
-  PublishedPostDto,
-  ResponseTargetDto,
-} from '../../entry-social';
-import { SocialPostApi } from '../../social-post-api';
-import { PostNetwork, PostNetworks } from '../share/post-networks.service';
+import { LinkTargetDto, PostTargetDto, ResponseTargetDto } from '../../entry-social';
+import { ComposerContextDto, PostComposerSubjectDto, PublishedPostDto } from './composer-dto';
+import { ComposerApi } from './composer-api';
+import { PostNetwork, PostNetworks } from '../post-networks.service';
 import { ComposerLanes } from './composer-lanes';
 import { SentPost } from './composed-post';
 import { LemmyCommunityMemory } from './lemmy-community-memory';
@@ -48,7 +42,7 @@ const BOTH: PostNetwork[] = [
 const DRAFT = { text: 'Hi', language: 'en' };
 
 describe('ComposerLanes', () => {
-  let api: { composer: jest.Mock; send: jest.Mock };
+  let api: { context: jest.Mock; send: jest.Mock };
   let memory: { recall: jest.Mock; remember: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
@@ -81,7 +75,7 @@ describe('ComposerLanes', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         ComposerLanes,
-        { provide: SocialPostApi, useValue: api },
+        { provide: ComposerApi, useValue: api },
         { provide: PostNetworks, useValue: { connected: signal(connected) } },
         { provide: LemmyCommunityMemory, useValue: memory },
       ],
@@ -97,7 +91,7 @@ describe('ComposerLanes', () => {
 
   beforeEach(() => {
     api = {
-      composer: jest.fn(() => of(context())),
+      context: jest.fn(() => of(context())),
       send: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
     };
     memory = { recall: jest.fn(() => null), remember: jest.fn() };
@@ -106,7 +100,7 @@ describe('ComposerLanes', () => {
   it("loads the target's context on init", () => {
     const lanes = initialised();
 
-    expect(api.composer).toHaveBeenCalledWith(TARGET, undefined);
+    expect(api.context).toHaveBeenCalledWith(TARGET, undefined);
     expect(lanes.lanes()).toHaveLength(1);
     expect(lanes.primary().network).toBe('mastodon');
     expect(lanes.primary().context()).toEqual(context());
@@ -115,7 +109,7 @@ describe('ComposerLanes', () => {
 
   it('a newer load drops the one on the wire', () => {
     const slow = new Subject<ComposerContextDto>();
-    api.composer.mockReturnValueOnce(slow);
+    api.context.mockReturnValueOnce(slow);
     const lanes = initialised();
     expect(lanes.primary().state()).toEqual({ status: 'loading' });
 
@@ -130,7 +124,7 @@ describe('ComposerLanes', () => {
 
     lanes.primary().chooseAccount(5);
 
-    expect(api.composer).toHaveBeenLastCalledWith(TARGET, 5);
+    expect(api.context).toHaveBeenLastCalledWith(TARGET, 5);
   });
 
   it('send carries the key minted once, across retries', () => {
@@ -234,7 +228,7 @@ describe('ComposerLanes', () => {
   it('keeps a chosen visibility over the next account default', () => {
     const lane = initialised().primary();
     lane.chooseVisibility('private');
-    api.composer.mockReturnValue(of(context({ accountId: 5, visibility: 'public' })));
+    api.context.mockReturnValue(of(context({ accountId: 5, visibility: 'public' })));
 
     lane.chooseAccount(5);
 
@@ -243,7 +237,7 @@ describe('ComposerLanes', () => {
 
   it('drops a load still on the wire when the composer goes', () => {
     const slow = new Subject<ComposerContextDto>();
-    api.composer.mockReturnValueOnce(slow);
+    api.context.mockReturnValueOnce(slow);
     initialised();
     expect(slow.observed).toBe(true);
 
@@ -266,8 +260,8 @@ describe('ComposerLanes', () => {
       expect(networksOf(lanes.lanes())).toEqual(['bluesky', 'mastodon']);
       expect(networksOf(lanes.active())).toEqual(['mastodon']);
       expect(lanes.showsPills()).toBe(true);
-      expect(api.composer).toHaveBeenCalledTimes(1);
-      expect(api.composer).toHaveBeenCalledWith(LINK, undefined);
+      expect(api.context).toHaveBeenCalledTimes(1);
+      expect(api.context).toHaveBeenCalledWith(LINK, undefined);
       expect(laneOf(lanes, 'bluesky').target).toEqual({ ...LINK, network: 'bluesky' });
     });
 
@@ -286,8 +280,8 @@ describe('ComposerLanes', () => {
       lanes.toggle('bluesky');
 
       expect(networksOf(lanes.active())).toEqual(['bluesky', 'mastodon']);
-      expect(api.composer).toHaveBeenCalledTimes(2);
-      expect(api.composer).toHaveBeenLastCalledWith({ ...LINK, network: 'bluesky' }, undefined);
+      expect(api.context).toHaveBeenCalledTimes(2);
+      expect(api.context).toHaveBeenLastCalledWith({ ...LINK, network: 'bluesky' }, undefined);
     });
 
     it('refuses to switch off the last active lane', () => {
@@ -311,7 +305,7 @@ describe('ComposerLanes', () => {
 
     it('turns a lane off whose load fails while another is active', () => {
       const lanes = initialised(LINK, BOTH);
-      api.composer.mockReturnValueOnce(throwError(refusal));
+      api.context.mockReturnValueOnce(throwError(refusal));
 
       lanes.toggle('bluesky');
 
@@ -320,7 +314,7 @@ describe('ComposerLanes', () => {
     });
 
     it('keeps the only active lane on when its load fails', () => {
-      api.composer.mockReturnValueOnce(throwError(refusal));
+      api.context.mockReturnValueOnce(throwError(refusal));
       const lanes = initialised(LINK, BOTH);
 
       expect(lanes.primary().active()).toBe(true);
@@ -329,7 +323,7 @@ describe('ComposerLanes', () => {
 
     it('reloads a failed lane when it is activated again', () => {
       const lanes = initialised(LINK, BOTH);
-      api.composer.mockReturnValueOnce(throwError(refusal));
+      api.context.mockReturnValueOnce(throwError(refusal));
       lanes.toggle('bluesky');
 
       lanes.toggle('bluesky');
@@ -341,7 +335,7 @@ describe('ComposerLanes', () => {
     it('drops the load of a lane switched off mid-load, and loads again on its return', () => {
       const lanes = initialised(LINK, BOTH);
       const slow = new Subject<ComposerContextDto>();
-      api.composer.mockReturnValueOnce(slow);
+      api.context.mockReturnValueOnce(slow);
       lanes.toggle('bluesky');
 
       lanes.toggle('bluesky');
@@ -349,12 +343,12 @@ describe('ComposerLanes', () => {
       expect(slow.observed).toBe(false);
       expect(laneOf(lanes, 'bluesky').context()).toBeNull();
       lanes.toggle('bluesky');
-      expect(api.composer).toHaveBeenCalledTimes(3);
+      expect(api.context).toHaveBeenCalledTimes(3);
     });
 
     it('lets only the Mastodon lane carry its content warning', () => {
       const lanes = initialised(LINK, BOTH);
-      api.composer.mockReturnValueOnce(of(context({ kind: 'link', visibility: null })));
+      api.context.mockReturnValueOnce(of(context({ kind: 'link', visibility: null })));
       lanes.toggle('bluesky');
       lanes.primary().contentWarning.set(' Ending ');
       laneOf(lanes, 'bluesky').contentWarning.set('Stray');
@@ -422,7 +416,7 @@ describe('ComposerLanes', () => {
 
     it('seeds the title from the context and the community from memory', () => {
       memory.recall.mockReturnValue(42);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
 
       const lane = lemmyLane();
 
@@ -434,7 +428,7 @@ describe('ComposerLanes', () => {
 
     it('drops a remembered community the account no longer offers', () => {
       memory.recall.mockReturnValue(99);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
 
       const lane = lemmyLane();
 
@@ -444,10 +438,10 @@ describe('ComposerLanes', () => {
 
     it("keeps a typed title on a switch, and resets the community to the next account's", () => {
       memory.recall.mockImplementation((accountId: number) => (accountId === 8 ? 41 : 42));
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
       lane.writeTitle('Mine');
-      api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
+      api.context.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
 
       lane.chooseAccount(9);
 
@@ -457,9 +451,9 @@ describe('ComposerLanes', () => {
 
     it('reseeds an untouched title from the next account on a switch', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
-      api.composer.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
+      api.context.mockReturnValue(of(lemmyContext({ title: 'Theirs' }, { accountId: 9 })));
 
       lane.chooseAccount(9);
 
@@ -467,7 +461,7 @@ describe('ComposerLanes', () => {
     });
 
     it('collapses a line break in a typed title to one space, as Lemmy titles hold none', () => {
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
       lane.writeTitle('A long \r\n  read\nabout\rnothing');
@@ -477,7 +471,7 @@ describe('ComposerLanes', () => {
 
     it('is not ready with a title of only whitespace', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
       lane.writeTitle('   ');
@@ -487,7 +481,7 @@ describe('ComposerLanes', () => {
 
     it("is not ready with a title under Lemmy's three characters once trimmed", () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
       lane.writeTitle(' ab ');
@@ -499,7 +493,7 @@ describe('ComposerLanes', () => {
 
     it('is not ready with a title over the limit, counting code points', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
 
       lane.writeTitle('😀'.repeat(200));
@@ -512,7 +506,7 @@ describe('ComposerLanes', () => {
 
     it('waits for a title the context left empty', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext({ title: '' })));
+      api.context.mockReturnValue(of(lemmyContext({ title: '' })));
       const lane = lemmyLane();
       expect(lane.fieldsReady()).toBe(false);
 
@@ -523,7 +517,7 @@ describe('ComposerLanes', () => {
 
     it('sends the trimmed title and the community, and remembers the community', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
       lane.community.set(42);
       lane.writeTitle(' A long read ');
@@ -542,7 +536,7 @@ describe('ComposerLanes', () => {
 
     it('shows what it posted by its title, not its body', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       const lane = lemmyLane();
       lane.writeTitle(' A long read ');
       let sent: SentPost | undefined;
@@ -554,7 +548,7 @@ describe('ComposerLanes', () => {
 
     it('remembers nothing when the send fails', () => {
       memory.recall.mockReturnValue(41);
-      api.composer.mockReturnValue(of(lemmyContext()));
+      api.context.mockReturnValue(of(lemmyContext()));
       api.send.mockReturnValue(throwError(refusal));
       const lane = lemmyLane();
 

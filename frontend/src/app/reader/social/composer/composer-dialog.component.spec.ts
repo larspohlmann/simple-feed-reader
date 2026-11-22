@@ -5,18 +5,16 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Observable, Subject, config, of, throwError } from 'rxjs';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { LinkTargetDto, PostTargetDto, ResponseTargetDto } from '../../entry-social';
 import {
   ComposerCardDto,
   ComposerContextDto,
   LinkComposerSubjectDto,
-  LinkTargetDto,
   PostComposerSubjectDto,
-  PostTargetDto,
   PublishedPostDto,
-  ResponseTargetDto,
-} from '../../entry-social';
-import { SocialPostApi } from '../../social-post-api';
-import { PostNetwork, PostNetworks } from '../share/post-networks.service';
+} from './composer-dto';
+import { ComposerApi } from './composer-api';
+import { PostNetwork, PostNetworks } from '../post-networks.service';
 import { ComposerDialogComponent } from './composer-dialog.component';
 
 const REPLY = 'https://hachyderm.io/users/ann/statuses/200';
@@ -41,7 +39,7 @@ describe('ComposerDialogComponent', () => {
   let backdropClick: Subject<MouseEvent>;
   let keydownEvents: Subject<KeyboardEvent>;
   const connected = signal<PostNetwork[]>([]);
-  let api: { composer: jest.Mock; send: jest.Mock };
+  let api: { context: jest.Mock; send: jest.Mock };
 
   const context = (overrides: Partial<ComposerContextDto> = {}): ComposerContextDto => ({
     kind: 'reply',
@@ -79,7 +77,7 @@ describe('ComposerDialogComponent', () => {
       providers: [
         { provide: DialogRef, useValue: { close, backdropClick, keydownEvents } },
         { provide: DIALOG_DATA, useValue: replyTarget },
-        { provide: SocialPostApi, useValue: api },
+        { provide: ComposerApi, useValue: api },
         { provide: PostNetworks, useValue: { connected } },
         provideAccountIdentity(),
       ],
@@ -91,7 +89,7 @@ describe('ComposerDialogComponent', () => {
 
   const element = (fixture: ReturnType<typeof mount>) => fixture.nativeElement as HTMLElement;
   const textArea = (fixture: ReturnType<typeof mount>) =>
-    element(fixture).querySelector('#reply-text') as HTMLTextAreaElement;
+    element(fixture).querySelector('#compose-text') as HTMLTextAreaElement;
   const sendButton = (fixture: ReturnType<typeof mount>) =>
     element(fixture).querySelector('button[type="submit"]') as HTMLButtonElement;
 
@@ -112,7 +110,7 @@ describe('ComposerDialogComponent', () => {
     keydownEvents = new Subject<KeyboardEvent>();
     connected.set([]);
     api = {
-      composer: jest.fn(() => of(context())),
+      context: jest.fn(() => of(context())),
       send: jest.fn(() => of<PublishedPostDto>({ address: 'https://x/1', url: null })),
     };
   });
@@ -120,7 +118,7 @@ describe('ComposerDialogComponent', () => {
   it('shows the post it answers and starts the text where the server says', () => {
     const fixture = mount();
 
-    expect(api.composer).toHaveBeenCalledWith(
+    expect(api.context).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'reply', entryId: 7, address: REPLY }),
       undefined,
     );
@@ -151,22 +149,22 @@ describe('ComposerDialogComponent', () => {
 
   it('offers the account choice only with more than one account, keeping the text on a change', () => {
     const single = mount();
-    expect(element(single).querySelector('#reply-account')).toBeNull();
+    expect(element(single).querySelector('#compose-account')).toBeNull();
     TestBed.resetTestingModule();
 
     const accounts = [
       { id: 4, handle: '@alice@mastodon.example' },
       { id: 5, handle: '@bea@mastodon.example' },
     ];
-    api.composer.mockReturnValue(of(context({ accounts })));
+    api.context.mockReturnValue(of(context({ accounts })));
     const fixture = mount();
     type(fixture, 'Kept');
-    const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+    const select = element(fixture).querySelector('#compose-account') as HTMLSelectElement;
     select.value = '5';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(api.composer).toHaveBeenLastCalledWith(
+    expect(api.context).toHaveBeenLastCalledWith(
       expect.objectContaining({ entryId: 7, address: REPLY }),
       5,
     );
@@ -174,7 +172,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('puts the account choice above the text in a reply, as before crossposting', () => {
-    api.composer.mockReturnValue(
+    api.context.mockReturnValue(
       of(
         context({
           accounts: [
@@ -186,7 +184,7 @@ describe('ComposerDialogComponent', () => {
     );
     const fixture = mount();
 
-    const select = element(fixture).querySelector('#reply-account')!;
+    const select = element(fixture).querySelector('#compose-account')!;
     expect(
       select.compareDocumentPosition(textArea(fixture)) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -199,33 +197,33 @@ describe('ComposerDialogComponent', () => {
     ];
 
     function chooseSecond(fixture: ReturnType<typeof mount>): void {
-      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      const select = element(fixture).querySelector('#compose-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
     }
 
     it('retries there after a failed load', () => {
-      api.composer.mockReturnValue(of(context({ accounts })));
+      api.context.mockReturnValue(of(context({ accounts })));
       const fixture = mount();
-      api.composer.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })));
+      api.context.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 502 })));
       chooseSecond(fixture);
 
       (element(fixture).querySelector('app-error-banner button') as HTMLButtonElement).click();
 
-      expect(api.composer).toHaveBeenLastCalledWith(
+      expect(api.context).toHaveBeenLastCalledWith(
         expect.objectContaining({ entryId: 7, address: REPLY }),
         5,
       );
     });
 
     it('keeps a visibility the user chose over the next account default', () => {
-      api.composer.mockReturnValue(of(context({ accounts })));
+      api.context.mockReturnValue(of(context({ accounts })));
       const fixture = mount();
-      const visibility = element(fixture).querySelector('#reply-visibility') as HTMLSelectElement;
+      const visibility = element(fixture).querySelector('#compose-visibility') as HTMLSelectElement;
       visibility.value = 'private';
       visibility.dispatchEvent(new Event('change'));
-      api.composer.mockReturnValue(of(context({ accounts, accountId: 5, visibility: 'public' })));
+      api.context.mockReturnValue(of(context({ accounts, accountId: 5, visibility: 'public' })));
       chooseSecond(fixture);
       type(fixture, 'Hi');
 
@@ -235,10 +233,10 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('drops a context still on the wire when the composer closes', () => {
-      api.composer.mockReturnValue(of(context({ accounts })));
+      api.context.mockReturnValue(of(context({ accounts })));
       const fixture = mount();
       const slow = new Subject<ComposerContextDto>();
-      api.composer.mockReturnValueOnce(slow);
+      api.context.mockReturnValueOnce(slow);
       chooseSecond(fixture);
       expect(slow.observed).toBe(true);
 
@@ -249,7 +247,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('sends only a text that is there and fits the limit', () => {
-    api.composer.mockReturnValue(of(context({ text: '', maxCharacters: 5 })));
+    api.context.mockReturnValue(of(context({ text: '', maxCharacters: 5 })));
     const fixture = mount();
 
     expect(sendButton(fixture).disabled).toBe(true);
@@ -346,7 +344,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author takes no replies', () => {
-    api.composer.mockReturnValue(of(context({ canSend: false })));
+    api.context.mockReturnValue(of(context({ canSend: false })));
     const fixture = mount(target({ network: 'bluesky' }));
 
     expect(element(fixture).textContent).toContain('The author limits who can reply');
@@ -357,17 +355,17 @@ describe('ComposerDialogComponent', () => {
     const lemmy = () => target({ network: 'lemmy', address: 'https://lemmy.example/comment/12' });
 
     it('heads the reply for Lemmy and shows no visibility row', () => {
-      api.composer.mockReturnValue(
+      api.context.mockReturnValue(
         of(context({ accounts: [{ id: 9, handle: '@lars@lemmy.example' }], visibility: null })),
       );
       const fixture = mount(lemmy());
 
       expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Reply on Lemmy');
-      expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
+      expect(element(fixture).querySelector('#compose-visibility')).toBeNull();
     });
 
     it('says a locked post cannot be replied to', () => {
-      api.composer.mockReturnValue(of(context({ canSend: false, visibility: null })));
+      api.context.mockReturnValue(of(context({ canSend: false, visibility: null })));
       const fixture = mount(lemmy());
 
       expect(element(fixture).querySelector('[role="alert"]')?.textContent).toContain(
@@ -378,13 +376,13 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('writes a quote under its own heading and sends it as a quote', () => {
-    api.composer.mockReturnValue(of(context({ kind: 'quote', text: '' })));
+    api.context.mockReturnValue(of(context({ kind: 'quote', text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
     type(fixture, 'Worth reading');
 
     expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Quote on Mastodon');
     expect(sendButton(fixture).textContent?.trim()).toBe('Quote');
-    expect(api.composer).toHaveBeenCalledWith(
+    expect(api.context).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'quote', entryId: 7, address: REPLY }),
       undefined,
     );
@@ -398,7 +396,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('says so and sends nothing when the author keeps the post from quotes', () => {
-    api.composer.mockReturnValue(of(context({ kind: 'quote', canSend: false, text: '' })));
+    api.context.mockReturnValue(of(context({ kind: 'quote', canSend: false, text: '' })));
     const fixture = mount(target({ kind: 'quote' }));
 
     expect(element(fixture).textContent).toContain('You can’t quote this post');
@@ -412,7 +410,7 @@ describe('ComposerDialogComponent', () => {
     box.checked = true;
     box.dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    const warning = element(fixture).querySelector('#reply-warning') as HTMLInputElement;
+    const warning = element(fixture).querySelector('#compose-warning') as HTMLInputElement;
     warning.value = 'Ending';
     warning.dispatchEvent(new Event('input'));
 
@@ -422,7 +420,7 @@ describe('ComposerDialogComponent', () => {
   });
 
   it("counts Mastodon's content warning towards the limit", () => {
-    api.composer.mockReturnValue(of(context({ text: '', maxCharacters: 500 })));
+    api.context.mockReturnValue(of(context({ text: '', maxCharacters: 500 })));
     const fixture = mount();
     type(fixture, 'a'.repeat(491));
     expect(sendButton(fixture).disabled).toBe(false);
@@ -430,7 +428,7 @@ describe('ComposerDialogComponent', () => {
     box.checked = true;
     box.dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    const warning = element(fixture).querySelector('#reply-warning') as HTMLInputElement;
+    const warning = element(fixture).querySelector('#compose-warning') as HTMLInputElement;
     warning.value = 'spoilers!!';
     warning.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -440,10 +438,10 @@ describe('ComposerDialogComponent', () => {
   });
 
   it('shows Bluesky no visibility choice', () => {
-    api.composer.mockReturnValue(of(context({ visibility: null, text: '' })));
+    api.context.mockReturnValue(of(context({ visibility: null, text: '' })));
     const fixture = mount(target({ network: 'bluesky' }));
 
-    expect(element(fixture).querySelector('#reply-visibility')).toBeNull();
+    expect(element(fixture).querySelector('#compose-visibility')).toBeNull();
     expect(element(fixture).querySelector('.warns')).toBeNull();
   });
 
@@ -463,10 +461,10 @@ describe('ComposerDialogComponent', () => {
     const quoteContext = (overrides: Partial<ComposerContextDto> = {}) =>
       linkContext({ kind: 'quote', text: '', subject: QUOTED, ...overrides });
 
-    beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
+    beforeEach(() => api.context.mockReturnValue(of(linkContext())));
 
     it('puts the caret before the quote so a comment can go first', () => {
-      api.composer.mockReturnValue(
+      api.context.mockReturnValue(
         of(linkContext({ text: '“A line”\n\nhttps://example.com/story' })),
       );
 
@@ -484,7 +482,7 @@ describe('ComposerDialogComponent', () => {
 
     it('shows the page card and the starting text once the context arrives', () => {
       const slow = new Subject<ComposerContextDto>();
-      api.composer.mockReturnValue(slow);
+      api.context.mockReturnValue(slow);
       const fixture = mount(article());
       expect(element(fixture).querySelector('.article')).toBeNull();
       expect(element(fixture).querySelector('h1, h2')?.textContent).toContain('Post on Mastodon');
@@ -498,7 +496,7 @@ describe('ComposerDialogComponent', () => {
       expect(card.querySelector('img')!.getAttribute('src')).toBe('https://example.com/lead.jpg');
       expect(element(fixture).querySelector('.target')).toBeNull();
       expect(textArea(fixture).value).toBe('A long read\n\nhttps://example.com/story');
-      expect(api.composer).toHaveBeenCalledWith(
+      expect(api.context).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: 'link',
           network: 'mastodon',
@@ -510,7 +508,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('shows a post on its own network as the quote it becomes, with an empty text', () => {
-      api.composer.mockReturnValue(of(quoteContext()));
+      api.context.mockReturnValue(of(quoteContext()));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quoted = element(fixture).querySelector('.target')!;
@@ -531,7 +529,7 @@ describe('ComposerDialogComponent', () => {
         imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
         siteName: 'politico.com',
       };
-      api.composer.mockReturnValue(of(quoteContext({ subject: { ...QUOTED, card } })));
+      api.context.mockReturnValue(of(quoteContext({ subject: { ...QUOTED, card } })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quotedCard = element(fixture).querySelector('.target .article')!;
@@ -541,7 +539,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the quote of a post on its own network to the link endpoint, closing with it shown', () => {
-      api.composer.mockReturnValue(of(quoteContext()));
+      api.context.mockReturnValue(of(quoteContext()));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
       type(fixture, 'Look');
 
@@ -557,7 +555,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('shows a card without an image or site when the page has none', () => {
-      api.composer.mockReturnValue(
+      api.context.mockReturnValue(
         of(
           linkContext({
             subject: { kind: 'link', card: { ...STORY_CARD, imageUrl: null, siteName: '' } },
@@ -571,7 +569,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('says so when the post it becomes a quote of takes no quotes', () => {
-      api.composer.mockReturnValue(of(quoteContext({ canSend: false })));
+      api.context.mockReturnValue(of(quoteContext({ canSend: false })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       expect(element(fixture).textContent).toContain('You can’t quote this post');
@@ -579,15 +577,15 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('uses the starting text once, keeping what the reader wrote over an account switch', () => {
-      api.composer.mockReturnValue(of(linkContext({ accounts })));
+      api.context.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, '');
-      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      const select = element(fixture).querySelector('#compose-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
 
-      expect(api.composer).toHaveBeenLastCalledWith(
+      expect(api.context).toHaveBeenLastCalledWith(
         expect.objectContaining({ kind: 'link', network: 'mastodon' }),
         5,
       );
@@ -595,10 +593,10 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('keeps the quote heading while an account switch reloads the context', () => {
-      api.composer.mockReturnValue(of(quoteContext({ accounts })));
+      api.context.mockReturnValue(of(quoteContext({ accounts })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
-      api.composer.mockReturnValue(new Subject<ComposerContextDto>());
-      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      api.context.mockReturnValue(new Subject<ComposerContextDto>());
+      const select = element(fixture).querySelector('#compose-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
@@ -607,11 +605,11 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('keeps what the reader wrote when a later context quotes', () => {
-      api.composer.mockReturnValue(of(linkContext({ accounts })));
+      api.context.mockReturnValue(of(linkContext({ accounts })));
       const fixture = mount(article());
       type(fixture, 'Mine');
-      api.composer.mockReturnValue(of(quoteContext({ accounts })));
-      const select = element(fixture).querySelector('#reply-account') as HTMLSelectElement;
+      api.context.mockReturnValue(of(quoteContext({ accounts })));
+      const select = element(fixture).querySelector('#compose-account') as HTMLSelectElement;
       select.value = '5';
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
@@ -620,7 +618,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('sends the post as a link post', () => {
-      api.composer.mockReturnValue(of(linkContext({ visibility: null, text: 'A long read' })));
+      api.context.mockReturnValue(of(linkContext({ visibility: null, text: 'A long read' })));
       const fixture = mount(article({ network: 'bluesky' }));
 
       expect(sendButton(fixture).textContent?.trim()).toBe('Post');
@@ -686,7 +684,7 @@ describe('ComposerDialogComponent', () => {
       ]);
       blueskyContext = () => of(onBluesky());
       mastodonContext = () => of(onMastodon());
-      api.composer.mockImplementation((posted: PostTargetDto) =>
+      api.context.mockImplementation((posted: PostTargetDto) =>
         posted.network === 'bluesky' ? blueskyContext() : mastodonContext(),
       );
     });
@@ -713,7 +711,7 @@ describe('ComposerDialogComponent', () => {
     const banners = (fixture: ReturnType<typeof mount>) =>
       Array.from(element(fixture).querySelectorAll('app-error-banner'));
     const loadsOf = (network: string) =>
-      api.composer.mock.calls.filter(([posted]) => posted.network === network);
+      api.context.mock.calls.filter(([posted]) => posted.network === network);
     const sendsOf = (network: string) =>
       api.send.mock.calls.filter(([posted]) => posted.network === network);
     function choose(fixture: ReturnType<typeof mount>, selector: string, value: string): void {
@@ -865,7 +863,7 @@ describe('ComposerDialogComponent', () => {
       blueskyContext = () => of(onBluesky({ accounts: blueskyAccounts }));
       const fixture = fromBluesky();
 
-      const select = element(fixture).querySelector('#reply-account-bluesky')!;
+      const select = element(fixture).querySelector('#compose-account-bluesky')!;
       expect(
         textArea(fixture).compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
@@ -921,9 +919,9 @@ describe('ComposerDialogComponent', () => {
       toggle(fixture, 'Mastodon');
       const slow = new Subject<ComposerContextDto>();
       blueskyContext = () => slow;
-      choose(fixture, '#reply-account-bluesky', '2');
+      choose(fixture, '#compose-account-bluesky', '2');
 
-      choose(fixture, '#reply-account-mastodon', '5');
+      choose(fixture, '#compose-account-mastodon', '5');
 
       expect(slow.observed).toBe(true);
       expect(loadsOf('mastodon').at(-1)).toEqual([{ ...article(), network: 'mastodon' }, 5]);
@@ -951,26 +949,28 @@ describe('ComposerDialogComponent', () => {
     it("Mastodon's warning and visibility hide when it is off and come back with their values", () => {
       const fixture = fromBluesky();
       toggle(fixture, 'Mastodon');
-      choose(fixture, '#reply-visibility-mastodon', 'private');
+      choose(fixture, '#compose-visibility-mastodon', 'private');
       const box = element(fixture).querySelector('.warns input') as HTMLInputElement;
       box.checked = true;
       box.dispatchEvent(new Event('change'));
       fixture.detectChanges();
-      const warning = element(fixture).querySelector('#reply-warning-mastodon') as HTMLInputElement;
+      const warning = element(fixture).querySelector(
+        '#compose-warning-mastodon',
+      ) as HTMLInputElement;
       warning.value = 'Ending';
       warning.dispatchEvent(new Event('input'));
 
       toggle(fixture, 'Mastodon');
 
-      expect(element(fixture).querySelector('#reply-visibility-mastodon')).toBeNull();
+      expect(element(fixture).querySelector('#compose-visibility-mastodon')).toBeNull();
       expect(element(fixture).querySelector('.warns')).toBeNull();
       toggle(fixture, 'Mastodon');
       const visibility = element(fixture).querySelector(
-        '#reply-visibility-mastodon',
+        '#compose-visibility-mastodon',
       ) as HTMLSelectElement;
       expect(visibility.value).toBe('private');
       expect(
-        (element(fixture).querySelector('#reply-warning-mastodon') as HTMLInputElement).value,
+        (element(fixture).querySelector('#compose-warning-mastodon') as HTMLInputElement).value,
       ).toBe('Ending');
       submit(fixture);
       const blueskyDraft = sendsOf('bluesky')[0][1];
@@ -1122,7 +1122,7 @@ describe('ComposerDialogComponent', () => {
         expect(ref.disableClose).toBe(true);
         expect(pills(fixture).every((button) => button.disabled)).toBe(true);
         const selects = Array.from(
-          element(fixture).querySelectorAll('select[id^="reply-account-"]'),
+          element(fixture).querySelectorAll('select[id^="compose-account-"]'),
         ) as HTMLSelectElement[];
         expect(selects).toHaveLength(2);
         expect(selects.every((select) => select.disabled)).toBe(true);
@@ -1241,7 +1241,7 @@ describe('ComposerDialogComponent', () => {
     );
 
     it('a Mastodon link lane shows the fixed line "Mastodon adds <url>" while active', () => {
-      api.composer.mockReturnValue(of(forKind('link')));
+      api.context.mockReturnValue(of(forKind('link')));
 
       const fixture = mount(article());
 
@@ -1250,7 +1250,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('names the URL the server appends, which the card carries without tracking', () => {
-      api.composer.mockReturnValue(of(forKind('link')));
+      api.context.mockReturnValue(of(forKind('link')));
 
       const fixture = mount(article({ url: `${URL_OF_STORY}?utm_source=feed` }));
 
@@ -1259,25 +1259,25 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('a Mastodon quote lane shows no URL line', () => {
-      api.composer.mockReturnValue(of(forKind('quote')));
+      api.context.mockReturnValue(of(forKind('quote')));
 
       expect(urlLine(mount(article()))).toBeNull();
     });
 
     it('Bluesky alone shows no URL line', () => {
-      api.composer.mockReturnValue(of(forKind('link', { visibility: null })));
+      api.context.mockReturnValue(of(forKind('link', { visibility: null })));
 
       expect(urlLine(mount(article({ network: 'bluesky' })))).toBeNull();
     });
 
     it('a link post with blank text can be sent', () => {
-      api.composer.mockReturnValue(of(forKind('link', { text: '' })));
+      api.context.mockReturnValue(of(forKind('link', { text: '' })));
 
       expect(sendButton(mount(article())).disabled).toBe(false);
     });
 
     it('a blank quote cannot', () => {
-      api.composer.mockReturnValue(of(forKind('quote')));
+      api.context.mockReturnValue(of(forKind('quote')));
 
       expect(sendButton(mount(article())).disabled).toBe(true);
     });
@@ -1288,7 +1288,7 @@ describe('ComposerDialogComponent', () => {
         from: 'bluesky' | 'mastodon',
         text = 'A long read',
       ) => {
-        api.composer.mockImplementation((posted: PostTargetDto) =>
+        api.context.mockImplementation((posted: PostTargetDto) =>
           of(
             posted.network === 'bluesky'
               ? forKind(kinds.bluesky, { visibility: null, text })
@@ -1325,7 +1325,7 @@ describe('ComposerDialogComponent', () => {
       });
 
       it('shows no note with one lane', () => {
-        api.composer.mockReturnValue(of(forKind('link')));
+        api.context.mockReturnValue(of(forKind('link')));
 
         expect(note(mount(article()))).toBeNull();
       });
@@ -1381,16 +1381,16 @@ describe('ComposerDialogComponent', () => {
     beforeEach(() => {
       localStorage.clear();
       lemmyCommunities = COMMUNITIES;
-      api.composer.mockImplementation((posted: PostTargetDto) =>
+      api.context.mockImplementation((posted: PostTargetDto) =>
         of(posted.network === 'lemmy' ? onLemmy() : onMastodon()),
       );
     });
 
     const lemmyOnly = () => mount(article({ network: 'lemmy' }));
     const communitySelect = (fixture: ReturnType<typeof mount>) =>
-      element(fixture).querySelector('[id^="reply-community"]') as HTMLSelectElement | null;
+      element(fixture).querySelector('[id^="compose-community"]') as HTMLSelectElement | null;
     const titleField = (fixture: ReturnType<typeof mount>) =>
-      element(fixture).querySelector('textarea[id^="reply-title"]') as HTMLTextAreaElement;
+      element(fixture).querySelector('textarea[id^="compose-title"]') as HTMLTextAreaElement;
     const titleCounter = (fixture: ReturnType<typeof mount>) =>
       element(fixture).querySelector('.title-counter')!;
     function chooseCommunity(fixture: ReturnType<typeof mount>, id: string): void {
@@ -1450,8 +1450,8 @@ describe('ComposerDialogComponent', () => {
     it('describes the title field by its counter', () => {
       const fixture = lemmyOnly();
 
-      expect(titleCounter(fixture).id).toBe('reply-title-counter');
-      expect(titleField(fixture).getAttribute('aria-describedby')).toBe('reply-title-counter');
+      expect(titleCounter(fixture).id).toBe('compose-title-counter');
+      expect(titleField(fixture).getAttribute('aria-describedby')).toBe('compose-title-counter');
     });
 
     it('turns the title counter red over the limit and Send off', () => {
@@ -1505,11 +1505,11 @@ describe('ComposerDialogComponent', () => {
       lemmyPill.click();
       fixture.detectChanges();
 
-      const visibility = element(fixture).querySelector('#reply-visibility-mastodon')!;
-      expect(communitySelect(fixture)!.id).toBe('reply-community-lemmy');
-      expect(titleField(fixture).id).toBe('reply-title-lemmy');
+      const visibility = element(fixture).querySelector('#compose-visibility-mastodon')!;
+      expect(communitySelect(fixture)!.id).toBe('compose-community-lemmy');
+      expect(titleField(fixture).id).toBe('compose-title-lemmy');
       expect(titleField(fixture).getAttribute('aria-describedby')).toBe(
-        'reply-title-counter-lemmy',
+        'compose-title-counter-lemmy',
       );
       expect(
         visibility.compareDocumentPosition(communitySelect(fixture)!) &

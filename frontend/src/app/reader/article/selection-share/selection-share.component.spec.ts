@@ -7,7 +7,7 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { LayoutService } from '../../layout.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { SentPost } from '../composer/composed-post';
+import { SentPost } from '../../social/composer/composed-post';
 import { PostActions } from '../composer/post-actions.service';
 import { SHARE_RECORDER } from '../share/share-recorder';
 import { ArticleSelection } from './article-selection.service';

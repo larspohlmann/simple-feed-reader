@@ -1,4 +1,4 @@
-import { PostNetwork } from './post-networks.service';
+import { PostNetwork } from '../../social/post-networks.service';
 import { ShareItem, TargetItem, shareMenuItems } from './share-menu';
 
 const NETWORKS: PostNetwork[] = [

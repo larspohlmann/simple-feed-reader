@@ -1821,6 +1821,38 @@
       "mastodon": "Responder en Mastodon",
       "lemmy": "Responder en Lemmy"
     },
+    "deleteReply": {
+      "action": "Eliminar respuesta",
+      "title": "¿Eliminar esta respuesta?",
+      "message": "También se elimina en {{ network }}.",
+      "confirm": "Eliminar"
+    },
+    "deletePost": {
+      "action": "Eliminar publicación",
+      "title": "¿Eliminar esta publicación?",
+      "titleWithOneReply": "¿Eliminar esta publicación y su respuesta?",
+      "titleWithReplies": "¿Eliminar esta publicación y sus {{ count }} respuestas?",
+      "message": "También se elimina en {{ network }}.",
+      "confirm": "Eliminar",
+      "alreadyGone": "Ya eliminada en {{ network }}; quitada de aquí."
+    },
+    "postDeletedThere": "Eliminada en {{ network }}; quitada de aquí.",
+    "quote": {
+      "bluesky": "Citar en Bluesky",
+      "mastodon": "Citar en Mastodon",
+      "lemmy": "Citar en Lemmy"
+    },
+    "quoteForbidden": {
+      "bluesky": "El autor no permite citar esta publicación",
+      "mastodon": "No puedes citar esta publicación"
+    },
+    "link": {
+      "bluesky": "Publicar en Bluesky",
+      "mastodon": "Publicar en Mastodon",
+      "lemmy": "Publicar en Lemmy"
+    }
+  },
+  "social": {
     "composer": {
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
@@ -1863,40 +1895,10 @@
         "loading": "Preparando la publicación",
         "account": "Publicar como",
         "text": "Tu publicación",
-        "send": "Publicar",
-        "sendBoth": "Publicar en ambos"
-      }
-    },
-    "deleteReply": {
-      "action": "Eliminar respuesta",
-      "title": "¿Eliminar esta respuesta?",
-      "message": "También se elimina en {{ network }}.",
-      "confirm": "Eliminar"
-    },
-    "deletePost": {
-      "action": "Eliminar publicación",
-      "title": "¿Eliminar esta publicación?",
-      "titleWithOneReply": "¿Eliminar esta publicación y su respuesta?",
-      "titleWithReplies": "¿Eliminar esta publicación y sus {{ count }} respuestas?",
-      "message": "También se elimina en {{ network }}.",
-      "confirm": "Eliminar",
-      "alreadyGone": "Ya eliminada en {{ network }}; quitada de aquí."
-    },
-    "postDeletedThere": "Eliminada en {{ network }}; quitada de aquí.",
-    "quote": {
-      "bluesky": "Citar en Bluesky",
-      "mastodon": "Citar en Mastodon",
-      "lemmy": "Citar en Lemmy"
-    },
-    "quoteForbidden": {
-      "bluesky": "El autor no permite citar esta publicación",
-      "mastodon": "No puedes citar esta publicación"
-    },
-    "link": {
-      "bluesky": "Publicar en Bluesky",
-      "mastodon": "Publicar en Mastodon",
-      "lemmy": "Publicar en Lemmy",
-      "many": "Publicar en {{ networks }}"
+        "send": "Publicar"
+      },
+      "crosspostHeading": "Publicar en {{ networks }}",
+      "sendToBoth": "Publicar en ambos"
     },
     "posted": {
       "link": {

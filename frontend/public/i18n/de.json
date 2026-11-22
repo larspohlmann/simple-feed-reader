@@ -1331,7 +1331,11 @@
     "trendingSharesOne": "einmal geteilt",
     "storyCreated": "erstellt {{time}}",
     "storyLastAdded": "letzter Artikel {{time}}",
-    "trendingWindow": { "label": "Zeitraum", "day": "24 Std.", "week": "7 Tage" },
+    "trendingWindow": {
+      "label": "Zeitraum",
+      "day": "24 Std.",
+      "week": "7 Tage"
+    },
     "trendingEmptyDay": "Eine Story erscheint hier, sobald mehrere deiner Feeds innerhalb von 24 Stunden darüber berichten.",
     "trendingEmptyWeek": "Eine Story erscheint hier, sobald mehrere deiner Feeds innerhalb von 7 Tagen darüber berichten. Was in deiner 24-Stunden-Liste steht, kommt hier nicht noch einmal.",
     "narrationPlayer": "Anhören — KI-generierte Vorlesung",
@@ -1817,6 +1821,38 @@
       "mastodon": "Auf Mastodon antworten",
       "lemmy": "Auf Lemmy antworten"
     },
+    "deleteReply": {
+      "action": "Antwort löschen",
+      "title": "Diese Antwort löschen?",
+      "message": "Sie wird auch auf {{ network }} gelöscht.",
+      "confirm": "Löschen"
+    },
+    "deletePost": {
+      "action": "Beitrag löschen",
+      "title": "Diesen Beitrag löschen?",
+      "titleWithOneReply": "Diesen Beitrag und seine Antwort löschen?",
+      "titleWithReplies": "Diesen Beitrag und seine {{ count }} Antworten löschen?",
+      "message": "Er wird auch auf {{ network }} gelöscht.",
+      "confirm": "Löschen",
+      "alreadyGone": "Auf {{ network }} schon gelöscht – hier entfernt."
+    },
+    "postDeletedThere": "Auf {{ network }} gelöscht – hier entfernt.",
+    "quote": {
+      "bluesky": "Auf Bluesky zitieren",
+      "mastodon": "Auf Mastodon zitieren",
+      "lemmy": "Auf Lemmy zitieren"
+    },
+    "quoteForbidden": {
+      "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
+      "mastodon": "Diesen Beitrag kannst du nicht zitieren"
+    },
+    "link": {
+      "bluesky": "Auf Bluesky posten",
+      "mastodon": "Auf Mastodon posten",
+      "lemmy": "Auf Lemmy posten"
+    }
+  },
+  "social": {
     "composer": {
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
@@ -1859,40 +1895,10 @@
         "loading": "Beitrag wird vorbereitet",
         "account": "Posten als",
         "text": "Dein Beitrag",
-        "send": "Posten",
-        "sendBoth": "Auf beiden posten"
-      }
-    },
-    "deleteReply": {
-      "action": "Antwort löschen",
-      "title": "Diese Antwort löschen?",
-      "message": "Sie wird auch auf {{ network }} gelöscht.",
-      "confirm": "Löschen"
-    },
-    "deletePost": {
-      "action": "Beitrag löschen",
-      "title": "Diesen Beitrag löschen?",
-      "titleWithOneReply": "Diesen Beitrag und seine Antwort löschen?",
-      "titleWithReplies": "Diesen Beitrag und seine {{ count }} Antworten löschen?",
-      "message": "Er wird auch auf {{ network }} gelöscht.",
-      "confirm": "Löschen",
-      "alreadyGone": "Auf {{ network }} schon gelöscht – hier entfernt."
-    },
-    "postDeletedThere": "Auf {{ network }} gelöscht – hier entfernt.",
-    "quote": {
-      "bluesky": "Auf Bluesky zitieren",
-      "mastodon": "Auf Mastodon zitieren",
-      "lemmy": "Auf Lemmy zitieren"
-    },
-    "quoteForbidden": {
-      "bluesky": "Die Autorin oder der Autor erlaubt keine Zitate dieses Beitrags",
-      "mastodon": "Diesen Beitrag kannst du nicht zitieren"
-    },
-    "link": {
-      "bluesky": "Auf Bluesky posten",
-      "mastodon": "Auf Mastodon posten",
-      "lemmy": "Auf Lemmy posten",
-      "many": "Auf {{ networks }} posten"
+        "send": "Posten"
+      },
+      "crosspostHeading": "Auf {{ networks }} posten",
+      "sendToBoth": "Auf beiden posten"
     },
     "posted": {
       "link": {

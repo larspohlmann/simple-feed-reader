@@ -10,7 +10,7 @@ import {
 import { Observable, catchError, defer, forkJoin, map, of } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostTargetDto } from '../../entry-social';
-import { PostNetworks } from '../share/post-networks.service';
+import { PostNetworks } from '../post-networks.service';
 import { SentPost } from './composed-post';
 import { ComposerLane, SharedDraft } from './composer-lane';
 
@@ -58,12 +58,12 @@ export class ComposerLanes {
     this.picked().activate();
   }
 
-  /** Switches a lane on or off; the last active lane stays on, and a sent one stays as it is. */
   /** A control's id, suffixed by its lane's network while several lanes show their own. */
   controlId(control: string, lane: ComposerLane): string {
-    return this.showsPills() ? `reply-${control}-${lane.network}` : `reply-${control}`;
+    return this.showsPills() ? `compose-${control}-${lane.network}` : `compose-${control}`;
   }
 
+  /** Switches a lane on or off; the last active lane stays on, and a sent one stays as it is. */
   toggle(network: SocialNetworkName): void {
     const lane = this.built().find((candidate) => candidate.network === network);
     if (lane === undefined || lane.sent() !== null) return;

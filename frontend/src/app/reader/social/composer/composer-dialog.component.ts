@@ -26,18 +26,18 @@ import { inputChecked, inputValue } from '../../../shared/input-value';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
+import { PostTargetDto } from '../../entry-social';
 import {
   ComposerContextDto,
   ComposerKind,
   MASTODON_VISIBILITIES,
   MastodonVisibility,
-  PostTargetDto,
-} from '../../entry-social';
+} from './composer-dto';
 import { SentPost } from './composed-post';
 import { ComposerLane, SharedDraft } from './composer-lane';
 import { ComposerLanes } from './composer-lanes';
 import { ComposerSubjectComponent } from './composer-subject.component';
-import { LemmyLinkFieldsComponent } from './lemmy-link-fields.component';
+import { LemmyPostFieldsComponent } from './lemmy-post-fields.component';
 import { NetworkPillsComponent } from './network-pills.component';
 import { postLength } from './post-length';
 
@@ -59,7 +59,7 @@ import { postLength } from './post-length';
     ErrorBannerComponent,
     FieldComponent,
     IconComponent,
-    LemmyLinkFieldsComponent,
+    LemmyPostFieldsComponent,
     NetworkLogoComponent,
     NetworkPillsComponent,
     NgTemplateOutlet,
@@ -109,13 +109,13 @@ export class ComposerDialogComponent {
     }),
   );
   /** Where the words that differ between a reply, a quote and a link post live. */
-  protected readonly copy = computed(() => `reader.composer.${this.kind()}`);
+  protected readonly copy = computed(() => `social.composer.${this.kind()}`);
   protected readonly heading = computed(() => {
     if (!this.crossposts()) {
       return { key: `reader.${this.kind()}.${this.primary().network}`, params: {} };
     }
     const networks = networkList(this.activeNetworks(), this.language());
-    return { key: 'reader.link.many', params: { networks } };
+    return { key: 'social.composer.crosspostHeading', params: { networks } };
   });
   protected readonly sendLabel = computed(() => {
     const pending = this.lanes.pending();
@@ -126,12 +126,12 @@ export class ComposerDialogComponent {
       pending.map(({ network }) => network),
       this.language(),
     );
-    return { key: 'reader.composer.retry', params: { network } };
+    return { key: 'social.composer.retry', params: { network } };
   });
   private readonly sendKey = computed(() => {
     const count = this.activeNetworks().length;
-    if (count === 2) return 'reader.composer.link.sendBoth';
-    return count > 2 ? 'reader.composer.link.send' : `${this.copy()}.send`;
+    if (count === 2) return 'social.composer.sendToBoth';
+    return count > 2 ? 'social.composer.link.send' : `${this.copy()}.send`;
   });
   protected readonly counters = computed(() =>
     this.lanes.active().flatMap((lane) => {
@@ -155,7 +155,7 @@ export class ComposerDialogComponent {
       );
   });
   protected readonly accountLabel = computed(() =>
-    this.crossposts() ? 'reader.composer.accountOn' : `${this.copy()}.account`,
+    this.crossposts() ? 'social.composer.accountOn' : `${this.copy()}.account`,
   );
   protected readonly writable = computed(() =>
     this.lanes.active().some((lane) => lane.context()?.canSend === true),
@@ -283,8 +283,8 @@ export class ComposerDialogComponent {
 }
 
 const KIND_NOTES: readonly { kind: ComposerKind; key: string }[] = [
-  { kind: 'link', key: 'reader.composer.sharesAsLink' },
-  { kind: 'quote', key: 'reader.composer.quotesPost' },
+  { kind: 'link', key: 'social.composer.sharesAsLink' },
+  { kind: 'quote', key: 'social.composer.quotesPost' },
 ];
 
 function browserLanguage(): string | null {

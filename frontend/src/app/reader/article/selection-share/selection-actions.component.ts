@@ -5,7 +5,7 @@ import { IconButtonDirective } from '../../../shared/icon-button/icon-button.dir
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { LayoutService } from '../../layout.service';
 import { PostActions } from '../composer/post-actions.service';
-import { PostNetworks } from '../share/post-networks.service';
+import { PostNetworks } from '../../social/post-networks.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { sharedLink, sharedPage } from '../share/share-content';
 import { SHARE_RECORDER } from '../share/share-recorder';

@@ -11,7 +11,7 @@
         @if (lane.error(); as error) {
           <app-error-banner
             [message]="
-              'reader.composer.networkError'
+              'social.composer.networkError'
                 | transloco: { network: names[lane.network], message: error.message }
             "
             [actionLabel]="error.retries ? ('reader.retry' | transloco) : null"
@@ -57,7 +57,7 @@
       <app-field [label]="copy() + '.text' | transloco">
         <textarea
           #textField
-          id="reply-text"
+          id="compose-text"
           rows="5"
           [value]="text()"
           [disabled]="!writable()"
@@ -68,7 +68,7 @@
         <p class="fixed-url">
           <app-icon name="link" size="xs" />
           <span>{{
-            'reader.composer.linkAdded' | transloco: { network: names.mastodon, url }
+            'social.composer.linkAdded' | transloco: { network: names.mastodon, url }
           }}</span>
         </p>
       }
@@ -80,7 +80,7 @@
           [disabled]="text() === '' || sending()"
           (click)="clear()"
         >
-          {{ 'reader.composer.clear' | transloco }}
+          {{ 'social.composer.clear' | transloco }}
         </app-button>
         <p class="counters" aria-live="polite">
           @for (counter of counters(); track counter.network; let first = $first) {
@@ -89,9 +89,9 @@
             }
             <span class="counter" [class.over]="counter.over">
               @if (counters().length > 1) {
-                {{ 'reader.composer.namedCounter' | transloco: counter }}
+                {{ 'social.composer.namedCounter' | transloco: counter }}
               } @else {
-                {{ 'reader.composer.counter' | transloco: counter }}
+                {{ 'social.composer.counter' | transloco: counter }}
               }
             </span>
           }
@@ -107,14 +107,14 @@
             />
           }
           @if (lane.visibility(); as current) {
-            <app-field [label]="'reader.composer.visibility' | transloco">
+            <app-field [label]="'social.composer.visibility' | transloco">
               <select
                 [id]="controlId('visibility', lane)"
                 (change)="chooseVisibility(lane, $event)"
               >
                 @for (option of visibilities; track option) {
                   <option [value]="option" [selected]="option === current">
-                    {{ 'reader.composer.visibilities.' + option | transloco }}
+                    {{ 'social.composer.visibilities.' + option | transloco }}
                   </option>
                 }
               </select>
@@ -125,10 +125,10 @@
                 [checked]="lane.contentWarning() !== null"
                 (change)="toggleWarning(lane, $event)"
               />
-              {{ 'reader.composer.addWarning' | transloco }}
+              {{ 'social.composer.addWarning' | transloco }}
             </label>
             @if (lane.contentWarning() !== null) {
-              <app-field [label]="'reader.composer.warning' | transloco">
+              <app-field [label]="'social.composer.warning' | transloco">
                 <input
                   [id]="controlId('warning', lane)"
                   maxlength="500"
@@ -139,7 +139,7 @@
             }
           }
           @if (laneContext.lemmy; as lemmy) {
-            <app-lemmy-link-fields [lane]="lane" [lemmy]="lemmy" [disabled]="locked(lane)" />
+            <app-lemmy-post-fields [lane]="lane" [lemmy]="lemmy" [disabled]="locked(lane)" />
           }
         }
       }

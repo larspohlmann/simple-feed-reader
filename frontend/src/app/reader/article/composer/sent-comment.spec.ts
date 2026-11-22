@@ -1,4 +1,4 @@
-import { SentPost } from './composed-post';
+import { SentPost } from '../../social/composer/composed-post';
 import { sentComment } from './sent-comment';
 
 describe('sentComment', () => {

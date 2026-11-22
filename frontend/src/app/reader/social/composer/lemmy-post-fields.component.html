@@ -1,14 +1,14 @@
 @if (lemmy().communities.length === 0) {
-  <p class="note">{{ 'reader.composer.noCommunities' | transloco }}</p>
+  <p class="note">{{ 'social.composer.noCommunities' | transloco }}</p>
 } @else {
-  <app-field [label]="'reader.composer.community' | transloco">
+  <app-field [label]="'social.composer.community' | transloco">
     <select
       [id]="controlId('community')"
       [disabled]="disabled()"
       (change)="chooseCommunity($event)"
     >
       <option value="" disabled [selected]="lane().community() === null">
-        {{ 'reader.composer.chooseCommunity' | transloco }}
+        {{ 'social.composer.chooseCommunity' | transloco }}
       </option>
       @for (community of lemmy().communities; track community.id) {
         <option [value]="community.id" [selected]="community.id === lane().community()">
@@ -18,7 +18,7 @@
     </select>
   </app-field>
 }
-<app-field [label]="'reader.composer.title' | transloco">
+<app-field [label]="'social.composer.title' | transloco">
   <textarea
     class="title"
     rows="2"
@@ -37,7 +37,7 @@
   aria-live="polite"
 >
   {{
-    'reader.composer.counter'
+    'social.composer.counter'
       | transloco: { used: lane().titleLength(), max: lemmy().maxTitleCharacters }
   }}
 </p>

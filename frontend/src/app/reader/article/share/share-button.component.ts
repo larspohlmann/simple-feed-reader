@@ -31,7 +31,7 @@ import { LayoutService } from '../../layout.service';
 import { PostActions } from '../composer/post-actions.service';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectedQuote } from '../selection-share/selected-quote';
-import { PostNetworks } from './post-networks.service';
+import { PostNetworks } from '../../social/post-networks.service';
 import {
   ShareContent,
   SharedPage,

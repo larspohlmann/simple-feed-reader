@@ -1,7 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { ComposerSubjectDto } from '../../entry-social';
+import { ComposerSubjectDto } from './composer-dto';
 
 /** What a post answers, quotes or shares: the post with the link card it carries, or the shared page's card. */
 @Component({

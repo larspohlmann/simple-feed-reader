@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkComposerSubjectDto, PostComposerSubjectDto } from '../../entry-social';
+import { LinkComposerSubjectDto, PostComposerSubjectDto } from './composer-dto';
 import { SentPost } from './composed-post';
 import { PostSentDialogComponent } from './post-sent-dialog.component';
 

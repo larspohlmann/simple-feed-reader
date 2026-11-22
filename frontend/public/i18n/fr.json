@@ -1821,6 +1821,38 @@
       "mastodon": "Répondre sur Mastodon",
       "lemmy": "Répondre sur Lemmy"
     },
+    "deleteReply": {
+      "action": "Supprimer la réponse",
+      "title": "Supprimer cette réponse ?",
+      "message": "Elle sera aussi supprimée sur {{ network }}.",
+      "confirm": "Supprimer"
+    },
+    "deletePost": {
+      "action": "Supprimer la publication",
+      "title": "Supprimer cette publication ?",
+      "titleWithOneReply": "Supprimer cette publication et sa réponse ?",
+      "titleWithReplies": "Supprimer cette publication et ses {{ count }} réponses ?",
+      "message": "Elle sera aussi supprimée sur {{ network }}.",
+      "confirm": "Supprimer",
+      "alreadyGone": "Déjà supprimée sur {{ network }} — retirée ici."
+    },
+    "postDeletedThere": "Supprimée sur {{ network }} — retirée ici.",
+    "quote": {
+      "bluesky": "Citer sur Bluesky",
+      "mastodon": "Citer sur Mastodon",
+      "lemmy": "Citer sur Lemmy"
+    },
+    "quoteForbidden": {
+      "bluesky": "L'auteur n'autorise pas les citations de cette publication",
+      "mastodon": "Vous ne pouvez pas citer cette publication"
+    },
+    "link": {
+      "bluesky": "Publier sur Bluesky",
+      "mastodon": "Publier sur Mastodon",
+      "lemmy": "Publier sur Lemmy"
+    }
+  },
+  "social": {
     "composer": {
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
@@ -1863,40 +1895,10 @@
         "loading": "Préparation de la publication",
         "account": "Publier en tant que",
         "text": "Votre publication",
-        "send": "Publier",
-        "sendBoth": "Publier sur les deux"
-      }
-    },
-    "deleteReply": {
-      "action": "Supprimer la réponse",
-      "title": "Supprimer cette réponse ?",
-      "message": "Elle sera aussi supprimée sur {{ network }}.",
-      "confirm": "Supprimer"
-    },
-    "deletePost": {
-      "action": "Supprimer la publication",
-      "title": "Supprimer cette publication ?",
-      "titleWithOneReply": "Supprimer cette publication et sa réponse ?",
-      "titleWithReplies": "Supprimer cette publication et ses {{ count }} réponses ?",
-      "message": "Elle sera aussi supprimée sur {{ network }}.",
-      "confirm": "Supprimer",
-      "alreadyGone": "Déjà supprimée sur {{ network }} — retirée ici."
-    },
-    "postDeletedThere": "Supprimée sur {{ network }} — retirée ici.",
-    "quote": {
-      "bluesky": "Citer sur Bluesky",
-      "mastodon": "Citer sur Mastodon",
-      "lemmy": "Citer sur Lemmy"
-    },
-    "quoteForbidden": {
-      "bluesky": "L'auteur n'autorise pas les citations de cette publication",
-      "mastodon": "Vous ne pouvez pas citer cette publication"
-    },
-    "link": {
-      "bluesky": "Publier sur Bluesky",
-      "mastodon": "Publier sur Mastodon",
-      "lemmy": "Publier sur Lemmy",
-      "many": "Publier sur {{ networks }}"
+        "send": "Publier"
+      },
+      "crosspostHeading": "Publier sur {{ networks }}",
+      "sendToBoth": "Publier sur les deux"
     },
     "posted": {
       "link": {

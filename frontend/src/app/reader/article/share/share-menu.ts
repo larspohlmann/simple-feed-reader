@@ -1,5 +1,5 @@
 import { SocialNetworkName } from '../../../core/social-network';
-import { PostNetwork } from './post-networks.service';
+import { PostNetwork } from '../../social/post-networks.service';
 import { ConfiguredTarget, SHARE_TARGETS, ShareTarget, carriesText } from './share-targets';
 
 /** What the menu shares: the page, the page with a hint that a selection could be quoted, or a selected quote. */

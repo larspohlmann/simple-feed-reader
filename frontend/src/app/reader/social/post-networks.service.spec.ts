@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { SocialAccountRefDto } from '../../social-feed';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SocialAccountRefDto } from '../social-feed';
+import { SubscriptionsStore } from '../state/subscriptions.store';
 import { PostNetworks } from './post-networks.service';
 
 function postNetworksOf(accounts: SocialAccountRefDto[]): PostNetworks {

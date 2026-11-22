@@ -2,7 +2,7 @@
   @for (posted of posts; track posted.address) {
     <section class="post">
       @if (posted.authorHandle; as handle) {
-        <p class="account">{{ 'reader.posted.as' | transloco: { handle } }}</p>
+        <p class="account">{{ 'social.posted.as' | transloco: { handle } }}</p>
       }
       <p class="text">{{ posted.text }}</p>
       @if (posted.target; as subject) {
@@ -15,7 +15,7 @@
           variant="primary"
           (click)="open(url)"
         >
-          {{ 'reader.posted.open' | transloco }}
+          {{ 'social.posted.open' | transloco }}
         </app-button>
       }
     </section>
@@ -26,7 +26,7 @@
   </app-button>
   @if (single?.url; as url) {
     <app-button footer focusInitial variant="primary" (click)="open(url)">
-      {{ 'reader.posted.open' | transloco }}
+      {{ 'social.posted.open' | transloco }}
     </app-button>
   }
 </app-overlay-panel>

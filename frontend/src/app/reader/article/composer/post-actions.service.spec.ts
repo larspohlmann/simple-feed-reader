@@ -13,10 +13,10 @@ import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { NetworkShares } from '../share/network-shares.service';
-import { SentPost } from './composed-post';
-import { ComposerDialogComponent } from './composer-dialog.component';
+import { SentPost } from '../../social/composer/composed-post';
+import { ComposerDialogComponent } from '../../social/composer/composer-dialog.component';
 import { PostActions } from './post-actions.service';
-import { PostSentDialogComponent } from './post-sent-dialog.component';
+import { PostSentDialogComponent } from '../../social/composer/post-sent-dialog.component';
 
 const ADDRESS = 'https://mastodon.example/users/alice/statuses/200';
 

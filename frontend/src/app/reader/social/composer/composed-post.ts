@@ -1,5 +1,5 @@
 import { SocialNetworkName } from '../../../core/social-network';
-import { ComposerKind, ComposerSubjectDto, PublishedPostDto } from '../../entry-social';
+import { ComposerKind, ComposerSubjectDto, PublishedPostDto } from './composer-dto';
 
 /** What the composer published, with what the panel and the sent overlay need to show it before the network does. */
 export interface SentPost extends PublishedPostDto {

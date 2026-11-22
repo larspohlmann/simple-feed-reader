@@ -1,5 +1,8 @@
 import { expect, Page, test } from '@playwright/test';
-import type { ComposerContextDto, PublishedPostDto } from '../src/app/reader/entry-social';
+import type {
+  ComposerContextDto,
+  PublishedPostDto,
+} from '../src/app/reader/social/composer/composer-dto';
 import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { presetLocalStorage } from './support/auth';
 import {

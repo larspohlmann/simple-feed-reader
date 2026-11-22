@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
+import { SubscriptionsStore } from '../state/subscriptions.store';
 
 export interface PostNetwork {
   readonly network: SocialNetworkName;
