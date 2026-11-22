@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
@@ -109,6 +109,15 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
       link.getAttribute('href'),
     );
     expect(links).toEqual(['/trending/stories/7', '/trending/stories/4', '/trending/stories/9']);
+  });
+
+  it('opens the story over the current list but closes the open article (#2479)', async () => {
+    const fixture = mount([story(7)]);
+    await TestBed.inject(Router).navigateByUrl('/?tag=56&entry=12-an-article&link=abc');
+    expand(fixture);
+
+    const link = root(fixture).querySelector('.followed-row .nav');
+    expect(link?.getAttribute('href')).toBe('/trending/stories/7?tag=56');
   });
 
   it('shows the count on a row that has new members, and none on one that has not', () => {
