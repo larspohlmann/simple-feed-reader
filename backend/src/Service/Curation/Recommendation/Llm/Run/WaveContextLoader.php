@@ -34,7 +34,7 @@ final readonly class WaveContextLoader
             $batches,
             $this->candidateLoader->summarize($tick->userId(), self::wholePlanIds($run)),
             new PromptContext(
-                $this->historyLoader->load($tick->userId(), $tick->settings),
+                $this->historyLoader->favorites($tick->userId(), $tick->settings),
                 $tick->settings,
                 $run->getProfileText(),
             ),

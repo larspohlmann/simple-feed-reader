@@ -62,15 +62,16 @@ final readonly class RecommendationPromptBuilder
 
     /**
      * @param list<ArticleLineModel> $candidates
+     * @param list<ArticleLineModel> $favorites
      *
      * @return list<list<int>>
      */
     public function packBatches(
         array $candidates,
-        RecommendationHistoryModel $history,
+        array $favorites,
         EffectiveRecommendationSettingsModel $settings,
     ): array {
-        $favoritesSection = $this->favoritesSection($history);
+        $favoritesSection = $this->favoritesSection($favorites);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::estimateTokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = $this->answerBudget->answerBoundTokens(
@@ -114,7 +115,7 @@ final readonly class RecommendationPromptBuilder
         $picksLimit = $context->settings->poolLimits->picksLimit;
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
             + TokenEstimate::estimateTokens((string) $context->profile)
-            + TokenEstimate::estimateTokens($this->favoritesSection($context->history));
+            + TokenEstimate::estimateTokens($this->favoritesSection($context->favorites));
         $lineChars = self::DESCRIPTION_CHARS + self::CANDIDATE_LINE_FRAME_CHARS;
         $perCandidateInputTokens = TokenEstimate::estimateTokensForLength($lineChars);
 
@@ -174,7 +175,7 @@ final readonly class RecommendationPromptBuilder
         if ($this->hasContent($context->profile)) {
             $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($context->history);
+        $sections[] = $this->favoritesSection($context->favorites);
         $poolFrame = $this->poolFrameLine($poolSummary);
         if (null !== $poolFrame) {
             $sections[] = $poolFrame;
@@ -262,7 +263,7 @@ final readonly class RecommendationPromptBuilder
         if ($this->hasContent($context->profile)) {
             $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($context->history);
+        $sections[] = $this->favoritesSection($context->favorites);
         $sections[] = $this->candidateSection($shortlistLines);
 
         return [
@@ -330,7 +331,7 @@ final readonly class RecommendationPromptBuilder
     private function historySections(RecommendationHistoryModel $history): string
     {
         return implode("\n\n", [
-            $this->favoritesSection($history),
+            $this->favoritesSection($history->favorites),
             $this->historySection('SHARED (newest first):', $history->shared),
             $this->historySection('LIKED (newest first):', $history->liked),
             $this->historySection('KEPT (newest first):', $history->kept),
@@ -338,9 +339,12 @@ final readonly class RecommendationPromptBuilder
         ]);
     }
 
-    private function favoritesSection(RecommendationHistoryModel $history): string
+    /**
+     * @param list<ArticleLineModel> $favorites
+     */
+    private function favoritesSection(array $favorites): string
     {
-        return $this->historySection('FAVORITES (newest first):', $history->favorites);
+        return $this->historySection('FAVORITES (newest first):', $favorites);
     }
 
     /**

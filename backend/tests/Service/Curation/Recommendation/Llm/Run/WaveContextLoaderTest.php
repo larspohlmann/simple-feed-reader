@@ -17,11 +17,13 @@ use App\Service\Curation\Recommendation\Run\WaveBatchLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordsHistorySectionQueries;
 use App\Tests\Support\SeedsUsers;
 
 final class WaveContextLoaderTest extends DbTestCase
 {
     use BuildsTickContexts;
+    use RecordsHistorySectionQueries;
     use SeedsUsers;
 
     private User $owner;
@@ -71,6 +73,18 @@ final class WaveContextLoaderTest extends DbTestCase
         self::assertSame([$ids[0], $ids[1]], $wave->batches()[0]->ids);
         self::assertSame([$ids[0]], $wave->batches()[0]->validIds());
         self::assertSame(1, $wave->poolSummary?->total);
+    }
+
+    public function testTheWaveReadsFavoritesAloneFromTheHistory(): void
+    {
+        $run = $this->runWithPlan([$this->entryIds(2)]);
+        $tick = $this->tick($run);
+        $batches = $this->batchLoader()->next($tick, 1);
+
+        $this->startRecordingQueries();
+        $this->loader()->load($tick, $batches);
+
+        self::assertSame([], $this->recordedHistorySectionQueries());
     }
 
     /** @return list<int> */

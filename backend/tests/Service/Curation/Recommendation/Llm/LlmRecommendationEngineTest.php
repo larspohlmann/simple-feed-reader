@@ -11,11 +11,13 @@ use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordsHistorySectionQueries;
 use App\Tests\Support\SeedsUsers;
 
 final class LlmRecommendationEngineTest extends DbTestCase
 {
     use BuildsTickContexts;
+    use RecordsHistorySectionQueries;
     use SeedsUsers;
 
     private User $owner;
@@ -38,15 +40,36 @@ final class LlmRecommendationEngineTest extends DbTestCase
         $this->fixtures->capBatchesAt($this->owner, 7);
         $run = $this->fixtures->createRun($this->owner);
         $this->entityManager->flush();
-        $candidates = array_map(
-            static fn (int $entryId): ArticleLineModel
-                => new ArticleLineModel($entryId, 'Article ' . $entryId, 'Example', '2026-10-01', null),
-            range(101, 117),
-        );
 
-        $batches = $this->engine()->packBatches($candidates, $this->tick($run));
+        $batches = $this->engine()->packBatches(self::candidates(range(101, 117)), $this->tick($run));
 
         self::assertSame([range(101, 107), range(108, 114), range(115, 117)], $batches);
+    }
+
+    public function testPackingReadsFavoritesAloneFromTheHistory(): void
+    {
+        $run = $this->fixtures->createRun($this->owner);
+        $this->entityManager->flush();
+        $tick = $this->tick($run);
+
+        $this->startRecordingQueries();
+        $this->engine()->packBatches(self::candidates([101, 102]), $tick);
+
+        self::assertSame([], $this->recordedHistorySectionQueries());
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<ArticleLineModel>
+     */
+    private static function candidates(array $entryIds): array
+    {
+        return array_map(
+            static fn (int $entryId): ArticleLineModel
+                => new ArticleLineModel($entryId, 'Article ' . $entryId, 'Example', '2026-10-01', null),
+            $entryIds,
+        );
     }
 
     private function engine(): LlmRecommendationEngine

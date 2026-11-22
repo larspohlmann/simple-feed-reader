@@ -35,7 +35,7 @@ final readonly class LlmRecommendationEngine implements RecommendationEngineInte
     {
         return $this->promptBuilder->packBatches(
             $candidates,
-            $this->historyLoader->load($tick->userId(), $tick->settings),
+            $this->historyLoader->favorites($tick->userId(), $tick->settings),
             $tick->settings,
         );
     }
