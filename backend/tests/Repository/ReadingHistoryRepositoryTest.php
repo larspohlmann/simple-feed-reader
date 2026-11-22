@@ -389,11 +389,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
 
     public function testAFavoriteCopyInAFeedTheReaderLeftDoesNotHideTheViewedCopy(): void
     {
-        $leftFeed = new Feed('https://left.example.com/feed.xml');
-        $this->entityManager->persist($leftFeed);
-        $followed = $this->persistEntry('copy');
-        $left = SavedPostFixtures::entry($this->entityManager, $leftFeed, 'copy', 'https://left.example.com/copy');
-        $left->linkTo($this->linkNewItem($followed, CanonicalItemKind::Mastodon));
+        [$followed, $left] = $this->persistPostInAFollowedAndALeftFeed();
         $this->markViewed($followed, '2026-10-02 09:00:00');
         $this->markViewed($left, '2026-10-02 09:00:00')->markFavorite();
         $this->entityManager->flush();
@@ -401,6 +397,51 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertSame(
             [$followed->requireId()],
             $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAFavoriteLowerCopyKeepsThePostOutOfViewed(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        SavedPostFixtures::state($this->entityManager, $this->user, $lower)->markFavorite();
+        $this->markViewed($higher, '2026-10-02 09:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+        self::assertSame(
+            [$lower->requireId()],
+            $this->entryIds($this->history()->favorites($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testASharedCopyInAFeedTheReaderLeftDoesNotHideTheViewedCopy(): void
+    {
+        [$followed, $left] = $this->persistPostInAFollowedAndALeftFeed();
+        $this->markViewed($followed, '2026-10-02 09:00:00');
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $left,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$followed->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAFavoriteCopyInAFeedTheReaderLeftDoesNotHideTheLikedCopy(): void
+    {
+        [$followed, $left] = $this->persistPostInAFollowedAndALeftFeed();
+        SavedPostFixtures::state($this->entityManager, $this->user, $left)->markFavorite();
+        $this->likeItemOf($followed);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$followed->requireId()],
+            $this->entryIds($this->history()->liked($this->user->requireId(), 10)),
         );
     }
 
@@ -472,6 +513,18 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $higher->linkTo($this->linkNewItem($lower, CanonicalItemKind::Mastodon));
 
         return [$lower, $higher];
+    }
+
+    /** @return array{Entry, Entry} the copy in the reader's main feed, then one in a feed the reader left */
+    private function persistPostInAFollowedAndALeftFeed(): array
+    {
+        $leftFeed = new Feed('https://left.example.com/feed.xml');
+        $this->entityManager->persist($leftFeed);
+        $followed = $this->persistEntry('copy');
+        $left = SavedPostFixtures::entry($this->entityManager, $leftFeed, 'copy', 'https://left.example.com/copy');
+        $left->linkTo($this->linkNewItem($followed, CanonicalItemKind::Mastodon));
+
+        return [$followed, $left];
     }
 
     private function markViewed(Entry $entry, string $viewedAt): EntryState

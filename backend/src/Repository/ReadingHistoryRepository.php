@@ -17,9 +17,9 @@ use Doctrine\ORM\QueryBuilder;
 
 /**
  * The reader's history in still-subscribed feeds, each entry only in its highest section (favorite, shared,
- * liked, kept, viewed). Liked and viewed treat a post's followed copies as one: one line, from the lowest-id copy,
- * and none when another copy sits higher. Favorites and kept order by effectiveDate, since EntryState has no
- * favorited-at; shared orders by sharedAt, liked by likedAt or votedAt, and viewed by viewedAt.
+ * liked, kept, viewed). Liked and viewed take one line per post, from its lowest-id followed copy, and leave the
+ * post out when any followed copy ranks in a higher section. Favorites and kept order by effectiveDate, since
+ * EntryState has no favorited-at; shared orders by sharedAt, liked by likedAt or votedAt, and viewed by viewedAt.
  */
 final readonly class ReadingHistoryRepository
 {
@@ -95,13 +95,15 @@ final readonly class ReadingHistoryRepository
             ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
             ->andWhere('NOT ' . EntryLikeDql::exists(EntryAliases::primary()))
-            ->andWhere('NOT ' . $this->buildFollowedCopyStateCondition(
+            ->andWhere('NOT ' . self::buildFollowedCopyCondition(
                 'sibling',
                 'e.canonicalItem',
-                'sibling.id <> e.id AND (siblingState.isFavorite = :true OR siblingState.isKept = :true'
-                . ' OR (siblingState.isViewed = :true AND sibling.id < e.id))',
+                self::buildCopyStateCondition(
+                    'sibling',
+                    static fn (string $state): string => "$state.isFavorite = :true OR $state.isKept = :true"
+                        . " OR ($state.isViewed = :true AND sibling.id < e.id)",
+                ) . ' OR ' . EntryShareDql::buildSharedCondition('sibling'),
             ))
-            ->andWhere('NOT ' . $this->buildFollowedCopySharedCondition('sharedSibling', 'e.canonicalItem'))
             ->orderBy('es.viewedAt', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -142,18 +144,16 @@ final readonly class ReadingHistoryRepository
             ->join('e.feed', 'f')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('IDENTITY(liking.user) = :user')
-            ->andWhere('NOT ' . $this->buildFollowedCopyStateCondition(
-                'favoriteCopy',
+            ->andWhere('NOT ' . self::buildFollowedCopyCondition(
+                'copy',
                 'liking.canonicalItem',
-                'favoriteCopyState.isFavorite = :true',
+                self::buildCopyStateCondition('copy', static fn (string $state): string => "$state.isFavorite = :true")
+                    . ' OR ' . EntryShareDql::buildSharedCondition('copy'),
             ))
-            ->andWhere('NOT ' . $this->buildFollowedCopySharedCondition('sharedCopy', 'liking.canonicalItem'))
-            ->andWhere(sprintf(
-                'NOT EXISTS (SELECT 1 FROM %s lowerCopy JOIN %s lowerSubscription'
-                . ' ON lowerSubscription.feed = lowerCopy.feed AND lowerSubscription.user = :user'
-                . ' WHERE lowerCopy.canonicalItem = liking.canonicalItem AND lowerCopy.id < e.id)',
-                Entry::class,
-                Subscription::class,
+            ->andWhere('NOT ' . self::buildFollowedCopyCondition(
+                'lowerCopy',
+                'liking.canonicalItem',
+                'lowerCopy.id < e.id',
             ))
             ->orderBy('liking.' . $instantField, 'DESC')
             ->addOrderBy('e.id', 'DESC')
@@ -161,39 +161,35 @@ final readonly class ReadingHistoryRepository
             ->setParameter('true', true, Types::BOOLEAN);
     }
 
-    /** A copy of the item in a feed the reader follows whose state, as {$copyAlias}State, meets $stateCondition. */
-    private function buildFollowedCopyStateCondition(
+    /** A copy of the item, in a feed the reader follows, that meets $copyCondition. */
+    private static function buildFollowedCopyCondition(
         string $copyAlias,
         string $itemExpression,
-        string $stateCondition,
+        string $copyCondition,
     ): string {
         return sprintf(
             'EXISTS (SELECT 1 FROM %1$s %2$s JOIN %3$s %2$sSubscription'
-            . ' WITH %2$sSubscription.feed = %2$s.feed AND %2$sSubscription.user = :user'
-            . ' JOIN %4$s %2$sState WITH %2$sState.entry = %2$s AND %2$sState.user = :user'
-            . ' WHERE %2$s.canonicalItem = %5$s AND %6$s)',
+            . ' ON %2$sSubscription.feed = %2$s.feed AND %2$sSubscription.user = :user'
+            . ' WHERE %2$s.canonicalItem = %4$s AND (%5$s))',
             Entry::class,
             $copyAlias,
             Subscription::class,
-            EntryState::class,
             $itemExpression,
-            $stateCondition,
+            $copyCondition,
         );
     }
 
-    /** A copy of the item, in a feed the reader follows, that the reader shared. */
-    private function buildFollowedCopySharedCondition(string $copyAlias, string $itemExpression): string
+    /** @param \Closure(string): string $stateCondition takes the state's alias */
+    private static function buildCopyStateCondition(string $copyAlias, \Closure $stateCondition): string
     {
+        $state = $copyAlias . 'State';
+
         return sprintf(
-            'EXISTS (SELECT 1 FROM %1$s %2$s JOIN %3$s %2$sSubscription'
-            . ' WITH %2$sSubscription.feed = %2$s.feed AND %2$sSubscription.user = :user'
-            . ' JOIN %4$s %2$sShare WITH %2$sShare.entry = %2$s AND %2$sShare.user = :user'
-            . ' WHERE %2$s.canonicalItem = %5$s)',
-            Entry::class,
+            'EXISTS (SELECT 1 FROM %1$s %2$s WHERE %2$s.entry = %3$s AND %2$s.user = :user AND (%4$s))',
+            EntryState::class,
+            $state,
             $copyAlias,
-            Subscription::class,
-            EntryShare::class,
-            $itemExpression,
+            $stateCondition($state),
         );
     }
 
