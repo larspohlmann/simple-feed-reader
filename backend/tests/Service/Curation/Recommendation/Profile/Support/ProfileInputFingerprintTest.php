@@ -85,6 +85,45 @@ final class ProfileInputFingerprintTest extends TestCase
         );
     }
 
+    public function testTheLikedSectionChangesIt(): void
+    {
+        $withLiked = new ProfileInputsModel(
+            new RecommendationHistoryModel(
+                self::lines([11]),
+                self::lines([12]),
+                self::lines([13]),
+                [],
+                self::lines([15]),
+            ),
+            [],
+        );
+
+        self::assertNotSame(
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs($withLiked, $this->caps(), $this->connection(5, 'm')),
+        );
+    }
+
+    public function testTheLikedCapChangesIt(): void
+    {
+        self::assertNotSame(
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::hashInputs(
+                $this->inputs([11], [12], [13]),
+                new RecommendationHistoryCaps(40, 40, 80, 40, 41),
+                $this->connection(5, 'm'),
+            ),
+        );
+    }
+
     public function testACapChangesIt(): void
     {
         self::assertNotSame(
