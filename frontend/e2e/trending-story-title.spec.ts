@@ -497,13 +497,14 @@ test.describe("a story's list is a list of its own (desktop)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
   const keptLead: EntryDto = { ...leadOf(STORY_ID), isKept: true };
+  const keptRow = entryWire({ id: 991, title: 'Fixture kept row', isKept: true });
   const keepButton = (page: Page) =>
     layer(page).locator('.row-slot').first().getByRole('button', { name: 'Keep', exact: true });
 
-  async function openOverKept(page: Page): Promise<void> {
+  async function openOverKept(page: Page, kept: EntryDto[] = []): Promise<void> {
     await stubStories(page, false);
     await stubStoryPage(page, { entries: [keptLead] });
-    await stubKept(page);
+    await stubKept(page, kept);
     await signIn(page, 'list');
     await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
     await expect(layer(page).locator('.row-slot')).toHaveCount(1);
@@ -665,7 +666,6 @@ test.describe("a story's list is a list of its own (desktop)", () => {
   test('a click on the list beneath while the story slides out reaches that list', async ({
     page,
   }) => {
-    const keptRow = entryWire({ id: 991, title: 'Fixture kept row', isKept: true });
     const patched: string[] = [];
     await page.route(
       (url) => /^\/api\/entries\/\d+\/state$/.test(url.pathname),
@@ -674,12 +674,7 @@ test.describe("a story's list is a list of its own (desktop)", () => {
         return route.fulfill({ status: 200, json: {} });
       },
     );
-    await stubStories(page, false);
-    await stubStoryPage(page, { entries: [keptLead] });
-    await stubKept(page, [keptRow]);
-    await signIn(page, 'list');
-    await page.goto(`/trending/stories/${STORY_ID}?view=kept`);
-    await expect(layer(page).locator('.row-slot')).toHaveCount(1);
+    await openOverKept(page, [keptRow]);
     await expect(page.locator('section.list .row-slot')).toHaveCount(1);
     await settleAnimations(page.locator('.story-overlay'));
 
@@ -692,6 +687,22 @@ test.describe("a story's list is a list of its own (desktop)", () => {
       .dispatchEvent('click');
 
     await expect.poll(() => patched).toEqual([`/api/entries/${keptRow.id}/state`]);
+  });
+
+  test('the list beneath keeps its rail in place of the page scrollbar as the story closes (#2453)', async ({
+    page,
+  }) => {
+    const pageScrollbar = () =>
+      page.evaluate(() => getComputedStyle(document.documentElement).scrollbarWidth);
+    await openOverKept(page, [keptRow]);
+    await expect(page.locator('section.list .row-slot')).toHaveCount(1);
+
+    await closeStory(page);
+    await page.locator('.story-overlay.article-leave').waitFor({ state: 'attached' });
+    expect(await pageScrollbar()).toBe('none');
+    await expect(layer(page)).toHaveCount(0);
+
+    expect(await pageScrollbar()).toBe('none');
   });
 
   test("hiding the sidebar focuses the story's own way back to it", async ({ page }) => {

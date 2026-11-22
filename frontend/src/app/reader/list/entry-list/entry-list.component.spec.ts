@@ -35,6 +35,7 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
+import { PAGE_SCROLLBAR_HIDDEN_CLASS } from '../../../shared/page-scrollbar/page-scrollbar';
 import { ListScrollState } from './list-scroll-state';
 import {
   ElementBackedScrollHosts,
@@ -108,6 +109,10 @@ function mount(
       ...providers,
     ],
   });
+  return mountAnother(over);
+}
+
+function mountAnother(over: Record<string, unknown> = {}): ComponentFixture<EntryListComponent> {
   const fixture = TestBed.createComponent(EntryListComponent);
   const inputs = {
     title: 'All items',
@@ -2946,7 +2951,7 @@ describe('EntryListComponent', () => {
 
       expect(rail(fixture)!.classList).not.toContain('horizontal');
       expect(fill(fixture)).toBe('50');
-      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
+      expect(document.documentElement.classList).toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
     });
 
     it('stands on the right edge in place of the scrollbar on a phone', () => {
@@ -2955,7 +2960,7 @@ describe('EntryListComponent', () => {
       scrollTo(fixture, scroller, 0);
 
       expect(rail(fixture)!.classList).not.toContain('horizontal');
-      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
+      expect(document.documentElement.classList).toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
     });
 
     it('is not shown for a paged search, which has no total', () => {
@@ -2968,17 +2973,37 @@ describe('EntryListComponent', () => {
       const fixture = mount({ ...pagedList, selection: search });
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 0);
-      expect(document.documentElement.classList).not.toContain('page-scrollbar-hidden');
+      expect(document.documentElement.classList).not.toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
     });
 
     it('gives the page its scrollbar back when the list goes', () => {
       const fixture = mount(pagedList);
       scrollTo(fixture, layOut(fixture, 100, 1100), 0);
-      expect(document.documentElement.classList).toContain('page-scrollbar-hidden');
+      expect(document.documentElement.classList).toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
 
       fixture.destroy();
 
-      expect(document.documentElement.classList).not.toContain('page-scrollbar-hidden');
+      expect(document.documentElement.classList).not.toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
+    });
+
+    it('keeps the page scrollbar hidden for the list beneath when a list over it goes (#2453)', () => {
+      const beneath = mount(pagedList);
+      scrollTo(beneath, layOut(beneath, 100, 1100), 0);
+      const over = mountAnother(pagedList);
+      scrollTo(over, layOut(over, 100, 1100), 0);
+
+      over.destroy();
+
+      expect(document.documentElement.classList).toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
+    });
+
+    it('keeps the page scrollbar hidden for the list beneath while a list over it loads (#2453)', () => {
+      const beneath = mount(pagedList);
+      scrollTo(beneath, layOut(beneath, 100, 1100), 0);
+
+      mountAnother({ items: [], loading: true });
+
+      expect(document.documentElement.classList).toContain(PAGE_SCROLLBAR_HIDDEN_CLASS);
     });
 
     it('goes idle when the rows give way to the empty state', () => {
