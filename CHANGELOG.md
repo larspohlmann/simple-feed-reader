@@ -15,27 +15,15 @@ lives in the git log and the merged pull requests.
 This release adds Lemmy, Trending stories with their own headlines and synopses,
 and notifications from Bluesky, Mastodon and Lemmy.
 
-**Lemmy.** Connect a Lemmy account in Settings → Social Media, and the
-communities you follow and your timelines arrive as feeds. A post shows its
-score and its community, with threaded comments sorted by interest. Vote on
-posts and comments and reply, all from the reader.
+**Lemmy and notifications.** Connect a Lemmy account and the communities you
+follow arrive as feeds, with scores and threaded comments. Vote and reply from
+the reader. Each connected network, Bluesky and Mastodon included, now has a
+bell in the sidebar for likes, replies and mentions.
 
-**Trending stories.** Each story is now one card that grows with the story: its
-sources and shares, when it started and when its last article joined. Open it to
-read everything that covered it as a list of its own. Follow a story to keep it
-in the sidebar, or hide one you don't care about. With an LLM connected, each
-story gets its own headline and a short synopsis. Stories are grouped in
-English, German, French and Spanish, and an article counts once however many
-feeds and posts carry it.
-
-**Notifications.** Each connected network's section in the sidebar carries a
-bell with the unseen count. The list groups likes, reposts, replies, mentions,
-quotes and follows from Bluesky, Mastodon and Lemmy, and a row opens its post.
-
-**Also new.** One composer shares a page's link to Bluesky, Mastodon and a Lemmy
-community. Lists show a post's like and reply counts. Article links lose their
-tracking parameters. For you judges a social post by the article it links to.
-The AI cost overview lists every AI call, story titles included.
+**Trending stories.** Each story is now one card with its sources, when it
+started and when its last article joined. Follow it to keep it in the sidebar,
+or hide it. With an LLM connected, each story gets its own headline and a short
+synopsis.
 
 ## [v1.9.4] - 2026-11-13
 
