@@ -52,7 +52,8 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {
             $this->imageWriter->write($entry, $embed->leadImage);
         }
-        $assembled = EntryMediaAssembler::assemble(self::findLeadMedium($entry, $embed), $embed->media, []);
+        $lead = $embed->linkCards === [] ? self::storedImage($entry) : null;
+        $assembled = EntryMediaAssembler::assemble($lead, $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
         $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
@@ -126,12 +127,6 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
             $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped),
             $shared->ownProse,
         );
-    }
-
-    /** A card's thumbnail leads the entry but belongs to the card, never to the post's own media. */
-    private static function findLeadMedium(Entry $entry, RenderedEmbedModel $embed): ?DeclaredImageModel
-    {
-        return $embed->linkCards === [] ? self::storedImage($entry) : null;
     }
 
     private static function storedImage(Entry $entry): ?DeclaredImageModel

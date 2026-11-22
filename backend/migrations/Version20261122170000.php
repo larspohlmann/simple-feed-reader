@@ -23,12 +23,19 @@ final class Version20261122170000 extends AbstractMigration
             !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
             'Supports MySQL and SQLite only.',
         );
-        $onlyTheLeadImage = $platform instanceof AbstractMySQLPlatform
-            ? "JSON_LENGTH(media) = 1 AND JSON_UNQUOTE(JSON_EXTRACT(media, '$[0].url')) = image_url"
-            : "json_array_length(media) = 1 AND json_extract(media, '$[0].url') = image_url";
+        if ($platform instanceof AbstractMySQLPlatform) {
+            $this->addSql(
+                'UPDATE entry JOIN (SELECT DISTINCT entry_id FROM link_card WHERE thread_post_id IS NULL) carded'
+                . " ON carded.entry_id = entry.id SET entry.media = NULL WHERE entry.guid LIKE 'at://%'"
+                . " AND entry.share_kind = 'link' AND JSON_LENGTH(entry.media) = 1"
+                . " AND JSON_UNQUOTE(JSON_EXTRACT(entry.media, '$[0].url')) = entry.image_url",
+            );
 
+            return;
+        }
         $this->addSql(
-            "UPDATE entry SET media = NULL WHERE guid LIKE 'at://%' AND share_kind = 'link' AND " . $onlyTheLeadImage
+            "UPDATE entry SET media = NULL WHERE guid LIKE 'at://%' AND share_kind = 'link'"
+            . " AND json_array_length(media) = 1 AND json_extract(media, '$[0].url') = image_url"
             . ' AND EXISTS (SELECT 1 FROM link_card WHERE link_card.entry_id = entry.id'
             . ' AND link_card.thread_post_id IS NULL)',
         );
