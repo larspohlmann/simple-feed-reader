@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon\Support;
 
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use PHPUnit\Framework\TestCase;
 
@@ -51,5 +52,28 @@ final class MastodonStatusKeyTest extends TestCase
             MastodonStatusKey::parseEntryKey(null, 'https://pl.example/other')?->key,
         );
         self::assertNull(MastodonStatusKey::parseEntryKey('not a url', null));
+    }
+
+    public function testAStatusOnAnApAddressTakesItsKeyFromItsPage(): void
+    {
+        $status = JsonNodeModel::fromValue([
+            'uri' => 'https://mastodon.example/ap/users/1174/statuses/123',
+            'url' => 'https://mastodon.example/@alice/123',
+        ]);
+
+        self::assertSame(
+            'https://mastodon.example/users/alice/statuses/123',
+            MastodonStatusKey::parseStatusKey($status)?->key,
+        );
+    }
+
+    public function testAStatusWithoutAPageKeepsItsUri(): void
+    {
+        $status = JsonNodeModel::fromValue(['uri' => 'https://mastodon.example/users/alice/statuses/123']);
+
+        self::assertSame(
+            'https://mastodon.example/users/alice/statuses/123',
+            MastodonStatusKey::parseStatusKey($status)?->key,
+        );
     }
 }
