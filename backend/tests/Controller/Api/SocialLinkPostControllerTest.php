@@ -268,14 +268,17 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
     public function testPostsTheLinkNamedInTheBody(): void
     {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::STATUSES => self::published()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{}'),
+            self::STATUSES => self::published(),
+        ]);
         $user = $this->signIn($client, 'link-body@example.test');
         $this->mastodonAccountOf($user);
 
         $this->sendLink($client, 'mastodon', self::ARTICLE_URL, ['text' => '']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        self::assertSame(['status' => self::ARTICLE_URL], json_decode($this->http->requests[0]['body'], true));
+        self::assertSame(['status' => self::ARTICLE_URL], json_decode($this->http->requests[1]['body'], true));
     }
 
     public function testAUrlOnlyInTheQueryStringIsMissing(): void
@@ -297,6 +300,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     public function testALinkPostIsPublishedOnMastodonWithTheComposersChoices(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => new MockResponse(json_encode(
                 ['id' => '202', 'uri' => self::LINK_POST, 'url' => 'https://mastodon.example/@alice/202'],
                 \JSON_THROW_ON_ERROR,
@@ -316,12 +320,12 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             ['address' => self::LINK_POST, 'url' => 'https://mastodon.example/@alice/202'],
             $this->payload($client),
         );
-        self::assertSame([self::STATUSES], $this->routesAsked());
+        self::assertSame([self::INSTANCE, self::STATUSES], $this->routesAsked());
         self::assertSame(
             ['status' => 'Worth reading ' . self::ARTICLE_URL, 'visibility' => 'unlisted'],
-            json_decode($this->http->requests[0]['body'], true),
+            json_decode($this->http->requests[1]['body'], true),
         );
-        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[0]['headers']);
+        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[1]['headers']);
     }
 
     public function testBlankTextLinkPostIsPublishedOnBluesky(): void
@@ -350,7 +354,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
     public function testBlankTextLinkPostIsPublishedOnMastodon(): void
     {
-        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::STATUSES => self::published()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{}'),
+            self::STATUSES => self::published(),
+        ]);
         $user = $this->signIn($client, 'link-blank-mastodon@example.test');
         $this->mastodonAccountOf($user);
 
@@ -359,8 +366,23 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(
             ['status' => 'https://example.com/article?id=7'],
-            json_decode($this->http->requests[0]['body'], true),
+            json_decode($this->http->requests[1]['body'], true),
         );
+    }
+
+    public function testALinkPostOverTheInstancesLimitIsRefusedWithoutAWrite(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::INSTANCE => new MockResponse('{"configuration":{"statuses":{"max_characters":500}}}'),
+        ]);
+        $user = $this->signIn($client, 'link-too-long@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->sendLink($client, 'mastodon', self::ARTICLE_URL, ['text' => str_repeat('a', 476)]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_post_too_long', $this->payload($client)['type'] ?? null);
+        self::assertSame([self::INSTANCE], $this->routesAsked());
     }
 
     public function testALinkPostIsPublishedOnLemmyInTheChosenCommunity(): void
@@ -540,6 +562,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::STATUS_SEARCH => self::statuses(self::quotableStatus()),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published(),
         ]);
         $user = $this->signIn($client, 'link-quote@example.test');
@@ -549,23 +572,23 @@ final class SocialLinkPostControllerTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(['address' => self::LINK_POST, 'url' => self::LINK_POST_URL], $this->payload($client));
-        self::assertSame([self::STATUS_SEARCH, self::STATUSES], $this->routesAsked());
+        self::assertSame([self::STATUS_SEARCH, self::INSTANCE, self::STATUSES], $this->routesAsked());
         self::assertSame(
             ['status' => 'Look', 'quoted_status_id' => '110'],
-            json_decode($this->http->requests[1]['body'], true),
+            json_decode($this->http->requests[2]['body'], true),
         );
     }
 
     /** @return iterable<string, array{MockResponse, list<string>}> */
     public static function unquotableStatuses(): iterable
     {
-        $once = [self::STATUS_SEARCH, self::STATUSES];
+        $once = [self::STATUS_SEARCH, self::INSTANCE, self::STATUSES];
 
         yield 'the author forbids quoting' => [self::statuses(['id' => '110']), $once];
         yield 'the instance cannot find it' => [new MockResponse('{"statuses":[]}'), $once];
         yield 'the instance is down' => [
             new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
-            [self::STATUS_SEARCH, self::STATUS_SEARCH, self::STATUS_SEARCH, self::STATUSES],
+            [self::STATUS_SEARCH, self::STATUS_SEARCH, self::STATUS_SEARCH, self::INSTANCE, self::STATUSES],
         ];
     }
 
@@ -575,6 +598,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::STATUS_SEARCH => $search,
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published(),
         ]);
         $user = $this->signIn($client, sprintf('link-unquotable-%s@example.test', spl_object_id($search)));
@@ -609,10 +633,10 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->sendLink($client, 'mastodon', $blueskyPost, ['text' => 'Look']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::STATUSES], $this->routesAsked());
+        self::assertSame([self::INSTANCE, self::OWN_ACCOUNT, self::INSTANCE, self::STATUSES], $this->routesAsked());
         self::assertSame(
             ['status' => "Look\n\n" . $blueskyPost],
-            json_decode($this->http->requests[2]['body'], true),
+            json_decode($this->http->requests[3]['body'], true),
         );
     }
 

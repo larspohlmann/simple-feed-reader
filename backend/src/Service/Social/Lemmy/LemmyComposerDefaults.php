@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Text\Support\WordBoundary;
 use App\Service\Social\Lemmy\LemmyCommunities;
+use App\Service\Social\Lemmy\Support\LemmyPostLimits;
 use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
 use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
@@ -18,8 +19,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
 {
-    public const int MAX_CHARACTERS = 10000;
-
     public function __construct(private LemmyCommunities $communities)
     {
     }
@@ -31,16 +30,16 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
     ): ComposerDefaultsModel {
         $link = $publication->embed;
         if (null !== $publication->inReplyTo || !$link instanceof LinkEmbedModel) {
-            return new ComposerDefaultsModel(self::MAX_CHARACTERS);
+            return new ComposerDefaultsModel(LemmyPostLimits::MAX_CHARACTERS);
         }
 
         return new ComposerDefaultsModel(
-            self::MAX_CHARACTERS,
+            LemmyPostLimits::MAX_CHARACTERS,
             lemmyPost: new LemmyPostFieldsModel(
                 $this->communities->postable($account),
-                WordBoundary::clipped($link->title, LemmyPostWriter::MAX_TITLE_CHARACTERS),
-                LemmyPostWriter::MIN_TITLE_CHARACTERS,
-                LemmyPostWriter::MAX_TITLE_CHARACTERS,
+                WordBoundary::clipped($link->title, LemmyPostLimits::MAX_TITLE_CHARACTERS),
+                LemmyPostLimits::MIN_TITLE_CHARACTERS,
+                LemmyPostLimits::MAX_TITLE_CHARACTERS,
             ),
         );
     }

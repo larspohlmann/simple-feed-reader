@@ -10,7 +10,7 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Lemmy\LemmyAccountApi;
-use App\Service\Social\Lemmy\LemmyComposerDefaults;
+use App\Service\Social\Lemmy\Support\LemmyPostLimits;
 use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
@@ -31,9 +31,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
-    public const int MIN_TITLE_CHARACTERS = 3;
-    public const int MAX_TITLE_CHARACTERS = 200;
-
     private const string NO_QUOTES = 'Lemmy takes no quotes.';
 
     public function __construct(private LemmyAccountApi $lemmy)
@@ -64,7 +61,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         SocialPostModel $target,
         PostDraftModel $draft,
     ): PublishedPostModel {
-        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
+        self::guardLength($draft->text, LemmyPostLimits::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
         $answer = $this->lemmy->post($account, '/api/v3/comment', self::buildCommentPayload($target, $draft));
 
         return self::requirePublishedPost($answer, 'comment_view', 'comment');
@@ -77,7 +74,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         $communityId = $publication->lemmy->communityId
             ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
         $title = self::requireValidTitle($publication->lemmy->title);
-        self::guardLength($text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
+        self::guardLength($text, LemmyPostLimits::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
 
         return ['name' => $title]
             + self::buildUrlField($publication->embed)
@@ -94,14 +91,14 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
     private static function requireValidTitle(?string $title): string
     {
         $title = trim($title ?? '');
-        if (mb_strlen($title) < self::MIN_TITLE_CHARACTERS) {
+        if (mb_strlen($title) < LemmyPostLimits::MIN_TITLE_CHARACTERS) {
             throw new SocialPostTitleTooShortException(
-                sprintf('A Lemmy title needs at least %d characters.', self::MIN_TITLE_CHARACTERS),
+                sprintf('A Lemmy title needs at least %d characters.', LemmyPostLimits::MIN_TITLE_CHARACTERS),
             );
         }
         self::guardLength(
             $title,
-            self::MAX_TITLE_CHARACTERS,
+            LemmyPostLimits::MAX_TITLE_CHARACTERS,
             'A Lemmy post title holds %d characters.',
         );
 

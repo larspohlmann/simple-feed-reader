@@ -10,7 +10,10 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\MastodonStatusLimit;
 use App\Service\Social\Mastodon\Support\MastodonStatusAction;
+use App\Service\Social\Mastodon\Support\MastodonTextLength;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
 use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
 use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
 use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
@@ -28,20 +31,23 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
 {
     private const string STATUSES = '/api/v1/statuses';
     private const int BLANK_LINE_LENGTH = 2;
-    private const int LINK_LENGTH = 23;
     /** What a link post sets aside for the blank line and the link this writer appends. */
-    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + self::LINK_LENGTH;
+    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + MastodonTextLength::LINK_LENGTH;
 
-    public function __construct(private MastodonAccountApi $mastodon)
-    {
+    public function __construct(
+        private MastodonAccountApi $mastodon,
+        private MastodonStatusLimit $statusLimit,
+    ) {
     }
 
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
+        $status = self::buildStatusText($publication);
+        $this->guardLength($account, $status);
         $idempotencyKey = $publication->draft->idempotencyKey;
         $request = ApiRequestModel::postJson(
             $account->getServiceUrl() . self::STATUSES,
-            self::buildStatusPayload($publication),
+            self::buildStatusPayload($publication, $status),
             null === $idempotencyKey ? [] : ['Idempotency-Key' => $idempotencyKey],
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
@@ -65,13 +71,23 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
         return PostDeletion::Deleted;
     }
 
+    private function guardLength(SocialAccount $account, string $status): void
+    {
+        $maxCharacters = $this->statusLimit->resolveMaxCharacters($account);
+        if (MastodonTextLength::measureLength($status) > $maxCharacters) {
+            throw new SocialPostTooLongException(
+                sprintf('A Mastodon post on this server holds %d characters.', $maxCharacters),
+            );
+        }
+    }
+
     /** @return array<string, string> */
-    private static function buildStatusPayload(PublicationModel $publication): array
+    private static function buildStatusPayload(PublicationModel $publication, string $status): array
     {
         $draft = $publication->draft;
 
         return array_filter([
-            'status' => self::buildStatusText($publication),
+            'status' => $status,
             'in_reply_to_id' => $publication->inReplyTo?->postId,
             'quoted_status_id' => self::readQuotedStatusId($publication->embed),
             'visibility' => $draft->visibility,

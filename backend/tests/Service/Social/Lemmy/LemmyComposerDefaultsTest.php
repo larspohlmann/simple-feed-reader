@@ -7,7 +7,7 @@ namespace App\Tests\Service\Social\Lemmy;
 use App\Entity\SocialAccount;
 use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Lemmy\LemmyComposerDefaults;
-use App\Service\Social\Lemmy\LemmyPostWriter;
+use App\Service\Social\Lemmy\Support\LemmyPostLimits;
 use App\Service\Social\Publishing\Model\CommunityModel;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
 use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
@@ -40,7 +40,7 @@ final class LemmyComposerDefaultsTest extends TestCase
     public function testAPlainPostHoldsTheSameTenThousandCharactersAndOffersNoPostFields(): void
     {
         self::assertEquals(
-            new ComposerDefaultsModel(LemmyComposerDefaults::MAX_CHARACTERS),
+            new ComposerDefaultsModel(LemmyPostLimits::MAX_CHARACTERS),
             (new LemmyComposerDefaults(new LemmyCommunities(SocialApiWiring::lemmyAccountApi(
                 (new RoutedHttpClient([]))->client(),
             ))))->forPublication(self::account(), self::standalone(), self::noThreadStarter()),
@@ -54,7 +54,7 @@ final class LemmyComposerDefaultsTest extends TestCase
 
         self::assertEquals(
             new ComposerDefaultsModel(
-                LemmyComposerDefaults::MAX_CHARACTERS,
+                LemmyPostLimits::MAX_CHARACTERS,
                 lemmyPost: new LemmyPostFieldsModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 3, 200),
             ),
             $defaults,
@@ -69,7 +69,7 @@ final class LemmyComposerDefaultsTest extends TestCase
             ->lemmyPost;
 
         self::assertNotNull($fields);
-        self::assertLessThanOrEqual(LemmyPostWriter::MAX_TITLE_CHARACTERS, mb_strlen($fields->title));
+        self::assertLessThanOrEqual(LemmyPostLimits::MAX_TITLE_CHARACTERS, mb_strlen($fields->title));
         self::assertMatchesRegularExpression('/^(wordy )+wordy…$/u', $fields->title);
     }
 

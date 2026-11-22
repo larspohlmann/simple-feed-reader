@@ -59,6 +59,7 @@ final class ComposerContextsTest extends DbTestCase
         $mastodonDefaults = new MastodonComposerDefaults(
             SocialApiWiring::mastodonAccountApi($http->client()),
             SocialApiWiring::mastodonApiClient($http->client()),
+            SocialApiWiring::mastodonStatusLimit($http->client()),
         );
         $postAddresses = SocialRuleWiring::postAddresses();
         $posts = new SocialPostFinder(

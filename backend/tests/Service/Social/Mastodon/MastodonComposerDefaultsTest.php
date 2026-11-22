@@ -135,6 +135,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         return new MastodonComposerDefaults(
             SocialApiWiring::mastodonAccountApi($http->client()),
             SocialApiWiring::mastodonApiClient($http->client()),
+            SocialApiWiring::mastodonStatusLimit($http->client()),
         );
     }
 

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonPostWriter;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
 use App\Service\Social\Publishing\Model\PostDraftModel;
 use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
 use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
@@ -26,6 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
 final class MastodonPostWriterTest extends TestCase
 {
     private const string STATUSES = 'POST https://mastodon.example/api/v1/statuses';
+    private const string INSTANCE = 'GET https://mastodon.example/api/v2/instance';
+    private const int MAX_CHARACTERS = 500;
     private const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
     private const string REPLY_URL = 'https://mastodon.example/@alice/120';
 
@@ -236,6 +239,60 @@ final class MastodonPostWriterTest extends TestCase
         );
     }
 
+    public function testRefusesTextOverTheServersLimitWithoutSending(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        try {
+            $this->writer($http)->publish(
+                SocialAccounts::mastodon(),
+                PublicationModel::fromDraft(new PostDraftModel(str_repeat('ä', 501))),
+            );
+            self::fail('A post over the limit is refused.');
+        } catch (SocialPostTooLongException $exception) {
+            self::assertSame('A Mastodon post on this server holds 500 characters.', $exception->getMessage());
+        }
+
+        self::assertSame([], $http->requests);
+    }
+
+    public function testTextAtTheServersLimitIsSent(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            PublicationModel::fromDraft(new PostDraftModel(str_repeat('ä', 500))),
+        );
+
+        self::assertSame([self::STATUSES], $http->requestLines());
+    }
+
+    public function testLongLinksCountAsTwentyThreeCharacters(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+        $url = 'https://example.com/' . str_repeat('a', 280);
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 476) . ' ' . $url)),
+        );
+
+        self::assertSame([self::STATUSES], $http->requestLines());
+    }
+
+    public function testTheLinkAppendedToASharedLinkCountsTowardsTheLimit(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->expectException(SocialPostTooLongException::class);
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::sharing('https://e.x/a', new PostDraftModel(str_repeat('a', 476))),
+        );
+    }
+
     public function testDeletingAStatusReportsWhetherMastodonStillHadIt(): void
     {
         $http = new RoutedHttpClient([
@@ -282,7 +339,15 @@ final class MastodonPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter
     {
-        return new MastodonPostWriter(SocialApiWiring::mastodonAccountApi($http->client()));
+        $instance = (new RoutedHttpClient([self::INSTANCE => new MockResponse(json_encode(
+            ['configuration' => ['statuses' => ['max_characters' => self::MAX_CHARACTERS]]],
+            \JSON_THROW_ON_ERROR,
+        ))]))->client();
+
+        return new MastodonPostWriter(
+            SocialApiWiring::mastodonAccountApi($http->client()),
+            SocialApiWiring::mastodonStatusLimit($instance),
+        );
     }
 
     private static function post(): SocialPostModel

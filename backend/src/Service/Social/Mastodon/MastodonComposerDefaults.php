@@ -10,6 +10,7 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonPostWriter;
+use App\Service\Social\Mastodon\MastodonStatusLimit;
 use App\Service\Social\Mastodon\Support\MastodonVisibility;
 use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
@@ -27,13 +28,12 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
-    private const string INSTANCE = '/api/v2/instance';
-    private const int DEFAULT_MAX_CHARACTERS = 500;
     private const string DEFAULT_VISIBILITY = 'public';
 
     public function __construct(
         private MastodonAccountApi $accountApi,
         private MastodonApiClient $mastodon,
+        private MastodonStatusLimit $statusLimit,
     ) {
     }
 
@@ -43,7 +43,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         \Closure $threadStarter,
     ): ComposerDefaultsModel {
         $defaults = new ComposerDefaultsModel(
-            $this->resolveMaxCharacters($account),
+            $this->statusLimit->resolveMaxCharacters($account),
             $this->resolveVisibility($account, $publication),
             self::collectMentions($account, $publication->inReplyTo, $threadStarter),
         );
@@ -71,17 +71,9 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return $embed instanceof QuotedPostEmbedModel ? $embed->post : null;
     }
 
-    private function resolveMaxCharacters(SocialAccount $account): int
-    {
-        return $this->fetchAnswerOrEmpty($account, self::INSTANCE)
-            ->node('configuration')->node('statuses')->int('max_characters')
-            ?? self::DEFAULT_MAX_CHARACTERS;
-    }
-
     private function resolvePrivacy(SocialAccount $account): string
     {
-        return $this->fetchAnswerOrEmpty($account, MastodonApiClient::VERIFY_CREDENTIALS)
-            ->node('source')->string('privacy')
+        return $this->fetchOwnAccount($account)->node('source')->string('privacy')
             ?? self::DEFAULT_VISIBILITY;
     }
 
@@ -108,10 +100,12 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return array_values(array_map(static fn (string $author): string => '@' . $author, array_unique($others)));
     }
 
-    private function fetchAnswerOrEmpty(SocialAccount $account, string $path): JsonNodeModel
+    private function fetchOwnAccount(SocialAccount $account): JsonNodeModel
     {
         try {
-            $answer = $this->mastodon->answer($this->accountApi->authorizedGet($account, $path));
+            $answer = $this->mastodon->answer(
+                $this->accountApi->authorizedGet($account, MastodonApiClient::VERIFY_CREDENTIALS),
+            );
         } catch (SocialNetworkUnreachableException | SocialCredentialsRejectedException) {
             return JsonNodeModel::fromValue([]);
         }
