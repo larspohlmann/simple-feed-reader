@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release adds Lemmy, Trending stories with their own headlines and synopses,
+and notifications from Bluesky, Mastodon and Lemmy.
+
+**Lemmy and notifications.** Connect a Lemmy account and the communities you
+follow arrive as feeds, with scores and threaded comments. Vote and reply from
+the reader. Each connected network, Bluesky and Mastodon included, now has a
+bell in the sidebar for likes, replies and mentions.
+
+**Trending stories.** Each story is now one card with its sources, when it
+started and when its last article joined. Follow it to keep it in the sidebar,
+or hide it. With an LLM connected, each story gets its own headline and a short
+synopsis.
+
 ## [v1.9.4] - 2026-11-13
 
 ### Highlights
