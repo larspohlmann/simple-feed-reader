@@ -17,6 +17,8 @@ const TAG = makeTag(1, 'Fixture tag', { position: 0 });
 const SCALED = {
   rowTitle: 'app-entry-row .title',
   rowMeta: 'app-entry-row .meta',
+  rowAction: 'app-entry-row app-entry-actions button',
+  rowPill: 'app-entry-row app-entry-pills .pill',
   articleTitle: 'app-reader-view article .title',
   articleBody: 'app-reader-view .content p',
   articleHeading: 'app-reader-view .content h2',
@@ -26,8 +28,7 @@ const FIXED = {
   listHeaderCount: 'app-list-header .title-count',
   toolbarTitle: 'app-reader-view .bar-title',
   toolbarButton: 'app-reader-view .bar .nav button',
-  rowAction: 'app-entry-row app-entry-actions button',
-  pill: 'app-entry-row app-entry-pills .pill',
+  articlePill: 'app-reader-view app-entry-pills .pill',
 };
 
 async function stubReader(page: Page): Promise<void> {
@@ -87,7 +88,9 @@ test('a saved text size reaches the root before the app boots', async ({ page })
 test.describe('on a desktop pane layout', () => {
   test.use({ viewport: DESKTOP });
 
-  test('reading text scales; headers, toolbar, buttons and pills do not', async ({ page }) => {
+  test('reading text and the entry meta row scale; headers, toolbar, buttons and article pills do not', async ({
+    page,
+  }) => {
     await presetLocalStorage(page, { 'sfr.layout': 'pane' });
     await stubReader(page);
     await page.goto('/');
