@@ -82,6 +82,9 @@ export class ArticleGestures {
   readonly pullTransform = computed(() =>
     this.pull() === 0 ? 'none' : `translate3d(0, ${-this.pull()}px, 0)`,
   );
+  private readonly moving = computed(
+    () => this.dragX() !== 0 || this.dragY() !== 0 || this.pull() !== 0,
+  );
   readonly snapTransition = computed(() =>
     !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
   );
@@ -113,7 +116,7 @@ export class ArticleGestures {
     const pageLayer = inject(PageLayer, { optional: true });
     if (!pageLayer) return;
     effect(() => {
-      if (this.swipeTransform() !== 'none' || this.pullTransform() !== 'none') {
+      if (this.moving()) {
         pageLayer.startMoving();
       } else {
         pageLayer.stopMoving();
