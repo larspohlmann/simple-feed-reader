@@ -136,6 +136,16 @@ test.describe('A full-screen article owns the page on a phone', () => {
     expect((await row.boundingBox())!.y).toBeCloseTo(rowY, 0);
   });
 
+  test('paints the list beneath only until the article covers it (#2459)', async ({ page }) => {
+    await openArticleFromList(page);
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'hidden');
+
+    await page.locator(`${LAYER} .corner-back`).click();
+
+    await expectListBackAtItsOffset(page);
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'visible');
+  });
+
   test('scrolls the page while reading; its toolbar retracts, the list bar stays', async ({
     page,
   }) => {
@@ -165,8 +175,10 @@ test.describe('A full-screen article owns the page on a phone', () => {
     const { row, rowY } = await openArticleFromList(page);
     await scrollPageTo(page, ARTICLE_OFFSET);
 
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'hidden');
     await touchDrag(page, `${LAYER} .reader`, { x: 20, y: 400 }, { x: 260, y: 410 });
     await expect(page.locator(`${LAYER} .frame`)).toHaveAttribute('style', /translate3d\(240px/);
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'visible');
     expect((await row.boundingBox())!.y).toBeCloseTo(rowY, 0);
 
     await liftTouch(page, `${LAYER} .reader`);
@@ -177,8 +189,10 @@ test.describe('A full-screen article owns the page on a phone', () => {
     await openArticleFromList(page);
     await scrollPageToEnd(page);
 
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'hidden');
     await touchDrag(page, `${LAYER} .reader`, { x: 180, y: 600 }, { x: 180, y: 250 });
     await expect(page.locator(`${LAYER} .pull-back`)).toBeAttached();
+    await expect(page.locator('section.list')).toHaveCSS('visibility', 'visible');
     await liftTouch(page, `${LAYER} .reader`);
 
     await expectListBackAtItsOffset(page);

@@ -191,6 +191,22 @@ app-reader-header.hidden {
   }
 }
 
+/* A covered layer is not painted once the one above has slid over it: a scroll that outruns the
+   paint above showed it through (#2459). Painted while the layer above slides or a gesture moves it. */
+.main > .page-pinned:not(.article-leave) {
+  animation: page-covered 0s 0.22s forwards;
+}
+
+.main:has(> .page-moving) > .page-pinned {
+  animation: none;
+}
+
+@keyframes page-covered {
+  to {
+    visibility: hidden;
+  }
+}
+
 /* The list pane's width is user-owned: dragged on the divider below, persisted
    per device (PaneSplitService, #810). `--list-width` is written by the
    divider; 42% is only the fallback before its effect writes the saved value. */
