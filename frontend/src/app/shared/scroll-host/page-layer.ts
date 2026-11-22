@@ -1,5 +1,7 @@
 /** The class a pinned layer carries; the reader shell's stylesheet fixes it in place. */
 export const PAGE_PINNED_CLASS = 'page-pinned';
+/** The class a layer carries while a gesture moves it; the layers pinned beneath it are painted then. */
+export const PAGE_MOVING_CLASS = 'page-moving';
 /** How far the page had scrolled into a pinned layer; its pinned box is shifted up by it. */
 export const PAGE_PIN_TOP = '--page-pin-top';
 /** How far a leading layer's content starts below its top; it pads that much above its content. */
@@ -53,6 +55,14 @@ export class PageLayer {
     this.element.classList.remove(PAGE_PINNED_CLASS);
     this.element.style.removeProperty(PAGE_PIN_TOP);
     return top;
+  }
+
+  startMoving(): void {
+    this.element.classList.add(PAGE_MOVING_CLASS);
+  }
+
+  stopMoving(): void {
+    this.element.classList.remove(PAGE_MOVING_CLASS);
   }
 
   private hold(top: number): void {

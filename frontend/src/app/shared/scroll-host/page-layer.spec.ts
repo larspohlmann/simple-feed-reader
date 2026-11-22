@@ -1,4 +1,4 @@
-import { PAGE_PINNED_CLASS, PAGE_PIN_TOP, PageLayer } from './page-layer';
+import { PAGE_MOVING_CLASS, PAGE_PINNED_CLASS, PAGE_PIN_TOP, PageLayer } from './page-layer';
 
 describe('PageLayer', () => {
   const element = document.createElement('section');
@@ -75,5 +75,15 @@ describe('PageLayer', () => {
     expect(layer.pinned).toBe(false);
     expect(element.classList).not.toContain(PAGE_PINNED_CLASS);
     expect(element.style.getPropertyValue(PAGE_PIN_TOP)).toBe('');
+  });
+
+  it('marks itself moving until it settles (#2459)', () => {
+    const layer = new PageLayer(element);
+
+    layer.startMoving();
+    expect(element.classList).toContain(PAGE_MOVING_CLASS);
+
+    layer.stopMoving();
+    expect(element.classList).not.toContain(PAGE_MOVING_CLASS);
   });
 });
