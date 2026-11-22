@@ -32,7 +32,7 @@ describe('PostSentDialogComponent', () => {
     authorHandle: '@alice.test',
     kind: 'link',
     network: 'bluesky',
-    target: story,
+    subject: story,
     ...overrides,
   });
 
@@ -79,13 +79,20 @@ describe('PostSentDialogComponent', () => {
   });
 
   it('shows a quote with the post it quoted', () => {
-    const element = mount(sent({ kind: 'quote', network: 'mastodon', target: quoted }));
+    const element = mount(sent({ kind: 'quote', network: 'mastodon', subject: quoted }));
 
     expect(element.querySelector('h1, h2')?.textContent).toContain('Quote posted on Mastodon');
     const shown = element.querySelector('.target')!;
     expect(shown.textContent).toContain('Ann');
     expect(shown.textContent).toContain('What do you think?');
     expect(element.querySelector('.article')).toBeNull();
+  });
+
+  it('shows no subject for a post without one', () => {
+    const element = mount(sent({ subject: null }));
+
+    expect(element.querySelector('app-composer-subject')).toBeNull();
+    expect(element.querySelector('.post .text')!.textContent).toContain('Worth a read');
   });
 
   it('shows the link card of the post it quoted', () => {
@@ -97,7 +104,7 @@ describe('PostSentDialogComponent', () => {
       siteName: 'politico.com',
     };
     const element = mount(
-      sent({ kind: 'quote', network: 'mastodon', target: { ...quoted, card } }),
+      sent({ kind: 'quote', network: 'mastodon', subject: { ...quoted, card } }),
     );
 
     expect(element.querySelector('.target .article .title')!.textContent).toContain(

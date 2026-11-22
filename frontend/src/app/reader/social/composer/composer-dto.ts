@@ -1,5 +1,5 @@
 import { LinkCardDto } from '../../link-card/link-card';
-import { ResponseKind } from '../../entry-social';
+import { ResponseKind } from './compose-request';
 
 /** A link card as the composer shows it: the one a post carries, or the page a link post shares. */
 export type ComposerCardDto = Omit<LinkCardDto, 'readerToken'>;

@@ -26,7 +26,7 @@ import { inputChecked, inputValue } from '../../../shared/input-value';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
-import { PostTargetDto } from '../../entry-social';
+import { ComposeRequest } from './compose-request';
 import {
   ComposerContextDto,
   ComposerKind,
@@ -74,7 +74,7 @@ import { postLength } from './post-length';
 })
 export class ComposerDialogComponent {
   protected readonly ref = inject<DialogRef<SentPost[]>>(DialogRef);
-  protected readonly target = inject<PostTargetDto>(DIALOG_DATA);
+  protected readonly request = inject<ComposeRequest>(DIALOG_DATA);
   protected readonly lanes = inject(ComposerLanes);
   private readonly language = inject(LanguageService).lang;
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
@@ -88,14 +88,14 @@ export class ComposerDialogComponent {
     computation: (starting, previous) =>
       this.textTouched || starting === undefined ? (previous?.value ?? '') : starting,
   });
-  private readonly caretBeforeText = this.target.kind === 'link' && this.target.quote !== null;
+  private readonly caretBeforeText = this.request.kind === 'link' && this.request.quote !== null;
   protected readonly sending = signal(false);
   private readonly holdsOpen = computed(() => this.sending() || this.lanes.sentPosts().length > 0);
 
   protected readonly context = computed(() => this.primary().context());
   private readonly kind = linkedSignal<ComposerContextDto | null, ComposerKind>({
     source: this.context,
-    computation: (context, previous) => context?.kind ?? previous?.value ?? this.target.kind,
+    computation: (context, previous) => context?.kind ?? previous?.value ?? this.request.kind,
   });
   private readonly activeNetworks = computed(() =>
     this.lanes.active().map(({ network }) => network),
@@ -191,7 +191,7 @@ export class ComposerDialogComponent {
   );
 
   constructor() {
-    this.lanes.init(this.target);
+    this.lanes.init(this.request);
     // The field appears only once the context loads, after the focus trap placed its initial focus.
     effect(() => this.placeCaret(this.textField()?.nativeElement));
     merge(

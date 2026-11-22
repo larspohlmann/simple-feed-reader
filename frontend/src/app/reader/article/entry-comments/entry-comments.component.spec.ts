@@ -2,7 +2,7 @@ import { EMPTY } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
@@ -58,7 +58,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
-        { provide: PostActions, useValue: responses },
+        { provide: ArticlePostActions, useValue: responses },
         { provide: LinkReaderNavigation, useValue: navigation },
         provideSocialAccounts([aMastodonAccount()]),
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },

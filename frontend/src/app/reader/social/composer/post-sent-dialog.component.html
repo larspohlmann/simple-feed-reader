@@ -5,7 +5,7 @@
         <p class="account">{{ 'social.posted.as' | transloco: { handle } }}</p>
       }
       <p class="text">{{ posted.text }}</p>
-      @if (posted.target; as subject) {
+      @if (posted.subject; as subject) {
         <app-composer-subject [subject]="subject" />
       }
       @if (posts.length > 1 && posted.url; as url) {

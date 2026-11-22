@@ -14,7 +14,7 @@ import { ToastService } from '../../shared/toast/toast.service';
 import { Problem } from '../../core/problem';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
-import { PostActions } from '../article/composer/post-actions.service';
+import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RemovedPosts } from '../removed-posts.service';
 import { TestListContext, provideRouteListForTest } from '../../../testing/list-context-testing';
@@ -47,7 +47,7 @@ function createActions(collaborators: Collaborators): EntryStateActions {
       { provide: SavedSearchesStore, useValue: collaborators.savedSearches ?? {} },
       { provide: ReaderRouteState, useValue: collaborators.routeState },
       { provide: ToastService, useValue: collaborators.toast ?? { show: jest.fn() } },
-      { provide: PostActions, useValue: {} },
+      { provide: ArticlePostActions, useValue: {} },
     ],
   });
   return TestBed.inject(EntryStateActions);
@@ -75,7 +75,7 @@ describe('EntryStateActions liking (#1600)', () => {
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
         },
         { provide: ToastService, useValue: { showProblem } },
-        { provide: PostActions, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
       ],
     });
     actions = TestBed.inject(EntryStateActions);
@@ -134,7 +134,7 @@ describe('EntryStateActions opening', () => {
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
         },
         { provide: ToastService, useValue: {} },
-        { provide: PostActions, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
       ],
     });
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -377,7 +377,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
           useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
         },
         { provide: ToastService, useValue: {} },
-        { provide: PostActions, useValue: { deletePost } },
+        { provide: ArticlePostActions, useValue: { deletePost } },
       ],
     });
     actions = TestBed.inject(EntryStateActions);
@@ -438,7 +438,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
           useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
         },
         { provide: ToastService, useValue: { show } },
-        { provide: PostActions, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
       ],
     });
     TestBed.inject(EntryStateActions);
@@ -494,7 +494,7 @@ describe('EntryStateActions voting (#2218)', () => {
           useValue: { openEntryId: signal(null), openEntry },
         },
         { provide: ToastService, useValue: { showProblem } },
-        { provide: PostActions, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
       ],
     });
     actions = TestBed.inject(EntryStateActions);

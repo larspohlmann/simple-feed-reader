@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkTargetDto, PostTargetDto, ResponseTargetDto } from '../../entry-social';
+import { LinkRequest, ComposeRequest, ReplyRequest } from './compose-request';
 import { ComposerContextDto, PostComposerSubjectDto, PublishedPostDto } from './composer-dto';
 import { ComposerApi } from './composer-api';
 import { PostNetwork, PostNetworks } from '../post-networks.service';
@@ -19,14 +19,14 @@ const QUOTED: PostComposerSubjectDto = {
   card: null,
 };
 
-const TARGET: ResponseTargetDto = {
+const TARGET: ReplyRequest = {
   kind: 'reply',
   entryId: 7,
   network: 'mastodon',
   address: 'https://hachyderm.io/users/ann/statuses/200',
 };
 
-const LINK: LinkTargetDto = {
+const LINK: LinkRequest = {
   kind: 'link',
   network: 'mastodon',
   url: 'https://example.com/story',
@@ -68,7 +68,7 @@ describe('ComposerLanes', () => {
     });
 
   function initialised(
-    target: PostTargetDto = TARGET,
+    target: ComposeRequest = TARGET,
     connected: PostNetwork[] = [],
   ): ComposerLanes {
     TestBed.configureTestingModule({
@@ -151,7 +151,7 @@ describe('ComposerLanes', () => {
       network: 'mastodon',
       text: 'Hi',
       authorHandle: '@alice@mastodon.example',
-      target: QUOTED,
+      subject: QUOTED,
     });
   });
 
@@ -262,7 +262,7 @@ describe('ComposerLanes', () => {
       expect(lanes.showsPills()).toBe(true);
       expect(api.context).toHaveBeenCalledTimes(1);
       expect(api.context).toHaveBeenCalledWith(LINK, undefined);
-      expect(laneOf(lanes, 'bluesky').target).toEqual({ ...LINK, network: 'bluesky' });
+      expect(laneOf(lanes, 'bluesky').request).toEqual({ ...LINK, network: 'bluesky' });
     });
 
     it('keeps the picked lane when nothing else is connected', () => {
@@ -363,7 +363,7 @@ describe('ComposerLanes', () => {
     it('sends every pending lane, answering once all have, and leaves a sent lane as it is', () => {
       const lanes = initialised(LINK, BOTH);
       lanes.toggle('bluesky');
-      api.send.mockImplementation((posted: PostTargetDto) =>
+      api.send.mockImplementation((posted: ComposeRequest) =>
         posted.network === 'mastodon'
           ? of<PublishedPostDto>({ address: 'https://x/1', url: null })
           : throwError(refusal),
@@ -381,7 +381,7 @@ describe('ComposerLanes', () => {
   });
 
   describe('the Lemmy lane', () => {
-    const ON_LEMMY: LinkTargetDto = { ...LINK, network: 'lemmy' };
+    const ON_LEMMY: LinkRequest = { ...LINK, network: 'lemmy' };
     const COMMUNITIES = [
       { id: 41, handle: '!php@programming.dev' },
       { id: 42, handle: '!rss@lemmy.world' },

@@ -15,7 +15,7 @@ import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ReaderRouteState } from './reader-route-state.service';
-import { PostActions } from '../article/composer/post-actions.service';
+import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
 import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
 import { RemovedPost, RemovedPosts } from '../removed-posts.service';
 import { VoteValue } from '../vote-pill/vote';
@@ -32,7 +32,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly routeState = inject(ReaderRouteState);
   private readonly toast = inject(ToastService);
-  private readonly postActions = inject(PostActions);
+  private readonly postActions = inject(ArticlePostActions);
   private readonly transloco = inject(TranslocoService);
   private readonly openVotableId = computed(() => {
     const entry = this.routeState.openEntry();

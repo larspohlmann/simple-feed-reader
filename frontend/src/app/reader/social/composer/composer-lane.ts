@@ -5,7 +5,7 @@ import { Observable, Subject, Subscription, map, tap } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { parseProblem, problemText } from '../../../core/problem';
 import { randomUuid } from '../../../shared/random-uuid';
-import { PostTargetDto } from '../../entry-social';
+import { ComposeRequest } from './compose-request';
 import {
   ComposerContextDto,
   LemmyPostFieldsDto,
@@ -96,15 +96,15 @@ export class ComposerLane {
     );
   });
 
-  constructor(readonly target: PostTargetDto) {
-    this.network = target.network;
+  constructor(readonly request: ComposeRequest) {
+    this.network = request.network;
   }
 
   /** A newer load drops the one still on the wire, so a slow answer never replaces a later choice. */
   load(): void {
     this.loading.unsubscribe();
     this.loadState.set({ status: 'loading' });
-    this.loading = this.api.context(this.target, this.chosenAccountId()).subscribe({
+    this.loading = this.api.context(this.request, this.chosenAccountId()).subscribe({
       next: (context) => this.adopt(context),
       error: (error: HttpErrorResponse) => {
         this.loadState.set({ status: 'failed', message: this.messageOf(error) });
@@ -147,7 +147,7 @@ export class ComposerLane {
   send(draft: SharedDraft, text: string): Observable<SentPost> {
     const context = this.requireContext();
     this.sendFailure.set(null);
-    return this.api.send(this.target, this.draftFor(draft, context)).pipe(
+    return this.api.send(this.request, this.draftFor(draft, context)).pipe(
       map((published) => this.sentAs(published, context, text)),
       tap({
         next: (sent) => {
@@ -219,7 +219,7 @@ export class ComposerLane {
       network: this.network,
       text: context.lemmy === null ? text : this.trimmedTitle(),
       authorHandle: account?.handle ?? null,
-      target: context.subject,
+      subject: context.subject,
     };
   }
 

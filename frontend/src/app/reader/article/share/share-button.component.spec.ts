@@ -15,7 +15,7 @@ import { SharingService } from '../../../core/preferences/sharing.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectedQuote } from '../selection-share/selected-quote';
 import { ShareButtonAppearance, ShareButtonComponent } from './share-button.component';
@@ -66,7 +66,7 @@ describe('ShareButtonComponent', () => {
         { provide: ActionSheet, useValue: sheet },
         { provide: LayoutService, useValue: { isCoarse: signal(coarse) } },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
-        { provide: PostActions, useValue: postActions },
+        { provide: ArticlePostActions, useValue: postActions },
         ...(withRecorder ? [{ provide: SHARE_RECORDER, useValue: recorder }] : []),
         ...selectionProviders,
       ],

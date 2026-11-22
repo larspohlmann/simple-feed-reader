@@ -8,7 +8,7 @@ import { LayoutService } from '../../layout.service';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SentPost } from '../../social/composer/composed-post';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { SHARE_RECORDER } from '../share/share-recorder';
 import { ArticleSelection } from './article-selection.service';
 import { SelectedQuote } from './selected-quote';
@@ -88,7 +88,7 @@ describe('SelectionShareComponent', () => {
       imports: [SelectionShareComponent, provideTranslocoTesting()],
       providers: [
         { provide: ArticleSelection, useValue: selection },
-        { provide: PostActions, useValue: postActions },
+        { provide: ArticlePostActions, useValue: postActions },
         { provide: SHARE_RECORDER, useValue: recorder },
         { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },

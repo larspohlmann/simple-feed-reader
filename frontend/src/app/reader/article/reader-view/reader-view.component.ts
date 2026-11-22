@@ -38,7 +38,7 @@ import { SocialCountsComponent } from '../social-counts/social-counts.component'
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 import { PostActionsView } from '../../entry-social';
 import { SocialCountsService } from '../social-counts/social-counts.service';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
@@ -143,7 +143,7 @@ export class ReaderViewComponent implements OnChanges {
       expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
-  private readonly responses = inject(PostActions);
+  private readonly responses = inject(ArticlePostActions);
   private readonly subscriptions = inject(SubscriptionsStore);
   protected readonly lemmyConnected = computed(() =>
     this.subscriptions

@@ -18,7 +18,7 @@ import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -212,7 +212,7 @@ describe('ReaderViewComponent', () => {
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         {
-          provide: PostActions,
+          provide: ArticlePostActions,
           useValue: { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() },
         },
         { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
@@ -284,7 +284,7 @@ describe('ReaderViewComponent', () => {
           button.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING,
         ).toBeTruthy();
         button.click();
-        expect(TestBed.inject(PostActions).reply).toHaveBeenCalledWith(
+        expect(TestBed.inject(ArticlePostActions).reply).toHaveBeenCalledWith(
           expect.objectContaining({ id: 7 }),
           'lemmy',
           null,

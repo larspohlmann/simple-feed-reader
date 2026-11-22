@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { EMPTY, Observable, catchError, filter, map, switchMap, tap } from 'rxjs';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
@@ -10,15 +9,14 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { EntryCommentDto } from '../../entry-comment';
 import { EntryDto } from '../../models';
-import { PostTargetDto, SharedLinkDto } from '../../entry-social';
 import { ItemRef } from '../../state/item-key';
 import { SocialPostApi } from '../../social-post-api';
 import { CommentsService } from '../entry-comments/comments.service';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { NetworkShares } from '../share/network-shares.service';
 import { SentPost } from '../../social/composer/composed-post';
-import { ComposerDialogComponent } from '../../social/composer/composer-dialog.component';
-import { PostSentDialogComponent } from '../../social/composer/post-sent-dialog.component';
+import { SharedLinkDto } from '../../social/composer/compose-request';
+import { Composer } from '../../social/composer/composer.service';
 import { sentComment } from './sent-comment';
 
 /**
@@ -27,38 +25,40 @@ import { sentComment } from './sent-comment';
  * load. A quote or a link post lands outside the thread, so an overlay shows what went out and offers to open it.
  */
 @Injectable({ providedIn: 'root' })
-export class PostActions {
+export class ArticlePostActions {
   private readonly comments = inject(CommentsService);
   private readonly counts = inject(SocialCountsService);
   private readonly shares = inject(NetworkShares);
   private readonly api = inject(SocialPostApi);
   private readonly confirm = inject(ConfirmService);
-  private readonly dialog = inject(Dialog);
+  private readonly composer = inject(Composer);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
 
   /** Replies to the entry's own post, or to the reply in its thread named by `address`. */
   reply(item: ItemRef, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'reply', entryId: item.id, network, address }).subscribe(([sent]) => {
-      this.comments.insertReply(item, address, sentComment(sent, new Date()));
-      if (address === null) this.counts.stepReplies(item, true);
-    });
+    this.composer
+      .open({ kind: 'reply', entryId: item.id, network, address })
+      .subscribe(([sent]) => {
+        this.comments.insertReply(item, address, sentComment(sent, new Date()));
+        if (address === null) this.counts.stepReplies(item, true);
+      });
   }
 
   /** Quotes the entry's own post, or the reply in its thread named by `address`. */
   quote(item: ItemRef, network: SocialNetworkName, address: string | null): void {
-    this.respond({ kind: 'quote', entryId: item.id, network, address }).subscribe((posts) => {
+    this.composer.open({ kind: 'quote', entryId: item.id, network, address }).subscribe((posts) => {
       if (address === null) this.quotedPost(item);
       else this.comments.countQuote(item, address);
-      this.announce(posts);
+      this.composer.announce(posts);
     });
   }
 
   /** Emits the posts that went out; a closed composer emits nothing. */
   postLink(network: SocialNetworkName, link: SharedLinkDto): Observable<SentPost[]> {
-    return this.respond({ kind: 'link', network, ...link }).pipe(
-      tap((posts) => this.announce(posts)),
-    );
+    return this.composer
+      .open({ kind: 'link', network, ...link })
+      .pipe(tap((posts) => this.composer.announce(posts)));
   }
 
   delete(item: ItemRef, network: SocialNetworkName, comment: EntryCommentDto): void {
@@ -117,16 +117,6 @@ export class PostActions {
     );
   }
 
-  /** Opens the composer; it answers the published posts, and nothing when closed. */
-  private respond(target: PostTargetDto): Observable<SentPost[]> {
-    return this.dialog
-      .open<SentPost[], PostTargetDto>(ComposerDialogComponent, {
-        panelClass: 'app-dialog',
-        data: target,
-      })
-      .closed.pipe(filter((posts): posts is SentPost[] => posts !== undefined));
-  }
-
   private quotedPost(item: ItemRef): void {
     this.counts.stepQuotes(item);
     this.shares.reflect(item.id);
@@ -136,12 +126,5 @@ export class PostActions {
     if (replies === 0) return this.transloco.translate('reader.deletePost.title');
     if (replies === 1) return this.transloco.translate('reader.deletePost.titleWithOneReply');
     return this.transloco.translate('reader.deletePost.titleWithReplies', { count: replies });
-  }
-
-  private announce(posts: SentPost[]): void {
-    this.dialog.open<void, SentPost[]>(PostSentDialogComponent, {
-      panelClass: 'app-dialog',
-      data: posts,
-    });
   }
 }

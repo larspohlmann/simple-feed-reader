@@ -9,9 +9,9 @@ import {
 } from '@angular/core';
 import { Observable, catchError, defer, forkJoin, map, of } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
-import { PostTargetDto } from '../../entry-social';
 import { PostNetworks } from '../post-networks.service';
 import { SentPost } from './composed-post';
+import { ComposeRequest, crossposts } from './compose-request';
 import { ComposerLane, SharedDraft } from './composer-lane';
 
 /** The lanes of one open composer: a link post gets one per connected link network, anything else one. */
@@ -47,11 +47,11 @@ export class ComposerLanes {
     inject(DestroyRef).onDestroy(() => this.dispose());
   }
 
-  init(target: PostTargetDto): void {
+  init(request: ComposeRequest): void {
     this.dispose();
-    this.pickedNetwork.set(target.network);
+    this.pickedNetwork.set(request.network);
     const lanes = runInInjectionContext(this.injector, () =>
-      this.networksFor(target).map((network) => new ComposerLane({ ...target, network })),
+      this.networksFor(request).map((network) => new ComposerLane({ ...request, network })),
     );
     for (const lane of lanes) lane.loadFailed.subscribe(() => this.switchOff(lane));
     this.built.set(lanes);
@@ -83,10 +83,10 @@ export class ComposerLanes {
     ).pipe(map(() => undefined));
   }
 
-  private networksFor(target: PostTargetDto): SocialNetworkName[] {
-    if (target.kind !== 'link') return [target.network];
+  private networksFor(request: ComposeRequest): SocialNetworkName[] {
+    if (!crossposts(request)) return [request.network];
     const connected = this.postNetworks.connected().map(({ network }) => network);
-    return connected.includes(target.network) ? connected : [target.network];
+    return connected.includes(request.network) ? connected : [request.network];
   }
 
   private switchOff(lane: ComposerLane): void {

@@ -7,5 +7,5 @@ export interface SentPost extends PublishedPostDto {
   network: SocialNetworkName;
   text: string;
   authorHandle: string | null;
-  target: ComposerSubjectDto | null;
+  subject: ComposerSubjectDto | null;
 }

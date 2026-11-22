@@ -9,7 +9,7 @@ describe('sentComment', () => {
     authorHandle: '@alice.bsky.social',
     kind: 'reply',
     network: 'bluesky',
-    target: { kind: 'post', authorName: null, authorHandle: null, excerpt: '', card: null },
+    subject: { kind: 'post', authorName: null, authorHandle: null, excerpt: '', card: null },
   };
 
   it('shows the text escaped, in paragraphs, as the reader’s own fresh reply', () => {

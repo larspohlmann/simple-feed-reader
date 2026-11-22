@@ -1,6 +1,6 @@
 import { Provider, signal } from '@angular/core';
 import { ListAutoplayService } from '../app/core/preferences/list-autoplay.service';
-import { PostActions } from '../app/reader/article/composer/post-actions.service';
+import { ArticlePostActions } from '../app/reader/article/post-actions/article-post-actions.service';
 import { SubscriptionsStore } from '../app/reader/state/subscriptions.store';
 import { ImageProxyService } from '../app/shared/proxied-image/image-proxy.service';
 import { failingImageProxy } from './image-proxy-testing';
@@ -10,7 +10,7 @@ export function provideArticlePageStubs(): Provider[] {
   return [
     { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
     { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
-    { provide: PostActions, useValue: {} },
+    { provide: ArticlePostActions, useValue: {} },
     { provide: ImageProxyService, useValue: failingImageProxy() },
   ];
 }

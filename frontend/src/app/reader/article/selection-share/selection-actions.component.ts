@@ -4,7 +4,7 @@ import { SocialNetworkName } from '../../../core/social-network';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { LayoutService } from '../../layout.service';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { PostNetworks } from '../../social/post-networks.service';
 import { ShareButtonComponent } from '../share/share-button.component';
 import { sharedLink, sharedPage } from '../share/share-content';
@@ -24,7 +24,7 @@ export class SelectionActionsComponent {
   readonly url = input.required<string>();
   readonly title = input('');
 
-  private readonly postActions = inject(PostActions);
+  private readonly postActions = inject(ArticlePostActions);
   private readonly recorder = inject(SHARE_RECORDER, { optional: true });
   protected readonly networks = inject(PostNetworks).connected;
   private readonly selection = inject(ArticleSelection);

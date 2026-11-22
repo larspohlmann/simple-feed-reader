@@ -5,7 +5,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Observable, Subject, config, of, throwError } from 'rxjs';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkTargetDto, PostTargetDto, ResponseTargetDto } from '../../entry-social';
+import { ComposeRequest, LinkRequest, QuoteRequest, ReplyRequest } from './compose-request';
 import {
   ComposerCardDto,
   ComposerContextDto,
@@ -54,7 +54,9 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const target = (overrides: Partial<ResponseTargetDto> = {}): ResponseTargetDto => ({
+  const target = (
+    overrides: Partial<Omit<ReplyRequest, 'kind'>> & { kind?: 'reply' | 'quote' } = {},
+  ): ReplyRequest | QuoteRequest => ({
     kind: 'reply',
     entryId: 7,
     network: 'mastodon',
@@ -62,7 +64,7 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  const article = (overrides: Partial<LinkTargetDto> = {}): LinkTargetDto => ({
+  const article = (overrides: Partial<LinkRequest> = {}): LinkRequest => ({
     kind: 'link',
     network: 'mastodon',
     url: 'https://example.com/story',
@@ -71,7 +73,7 @@ describe('ComposerDialogComponent', () => {
     ...overrides,
   });
 
-  function mount(replyTarget: PostTargetDto = target()) {
+  function mount(replyTarget: ComposeRequest = target()) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -126,6 +128,15 @@ describe('ComposerDialogComponent', () => {
     expect(answered.querySelector('.handle')!.textContent).toContain('@ann@hachyderm.io');
     expect(answered.querySelector('.excerpt')!.textContent).toContain('What do you think?');
     expect(textArea(fixture).value).toBe('@ann@hachyderm.io ');
+  });
+
+  it('renders no subject when the context has none', () => {
+    api.context.mockReturnValue(of(context({ subject: null })));
+
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('app-composer-subject')).toBeNull();
+    expect(textArea(fixture)).not.toBeNull();
   });
 
   it('puts the cursor in the text once the composer is ready', () => {
@@ -281,7 +292,7 @@ describe('ComposerDialogComponent', () => {
         authorHandle: '@alice@mastodon.example',
         kind: 'reply',
         network: 'mastodon',
-        target: QUOTED,
+        subject: QUOTED,
       },
     ]);
   });
@@ -550,7 +561,7 @@ describe('ComposerDialogComponent', () => {
         expect.objectContaining({ text: 'Look' }),
       );
       expect(close).toHaveBeenCalledWith([
-        expect.objectContaining({ kind: 'quote', network: 'mastodon', target: QUOTED }),
+        expect.objectContaining({ kind: 'quote', network: 'mastodon', subject: QUOTED }),
       ]);
     });
 
@@ -633,7 +644,7 @@ describe('ComposerDialogComponent', () => {
         expect.objectContaining({ text: 'A long read', accountId: 4 }),
       );
       expect(close).toHaveBeenCalledWith([
-        expect.objectContaining({ address: 'https://x/1', kind: 'link', target: STORY }),
+        expect.objectContaining({ address: 'https://x/1', kind: 'link', subject: STORY }),
       ]);
     });
   });
@@ -684,7 +695,7 @@ describe('ComposerDialogComponent', () => {
       ]);
       blueskyContext = () => of(onBluesky());
       mastodonContext = () => of(onMastodon());
-      api.context.mockImplementation((posted: PostTargetDto) =>
+      api.context.mockImplementation((posted: ComposeRequest) =>
         posted.network === 'bluesky' ? blueskyContext() : mastodonContext(),
       );
     });
@@ -991,7 +1002,7 @@ describe('ComposerDialogComponent', () => {
         network,
         text: TITLE,
         authorHandle: handle,
-        target: STORY,
+        subject: STORY,
       });
       const blueskySent = sentPost('bluesky', '@alice.bsky.social');
       const mastodonSent = sentPost('mastodon', '@alice@mastodon.example');
@@ -999,7 +1010,7 @@ describe('ComposerDialogComponent', () => {
 
       beforeEach(() => {
         mastodonSend = () => of(published('mastodon'));
-        api.send.mockImplementation((posted: PostTargetDto) =>
+        api.send.mockImplementation((posted: ComposeRequest) =>
           posted.network === 'bluesky' ? of(published('bluesky')) : mastodonSend(),
         );
       });
@@ -1288,7 +1299,7 @@ describe('ComposerDialogComponent', () => {
         from: 'bluesky' | 'mastodon',
         text = 'A long read',
       ) => {
-        api.context.mockImplementation((posted: PostTargetDto) =>
+        api.context.mockImplementation((posted: ComposeRequest) =>
           of(
             posted.network === 'bluesky'
               ? forKind(kinds.bluesky, { visibility: null, text })
@@ -1381,7 +1392,7 @@ describe('ComposerDialogComponent', () => {
     beforeEach(() => {
       localStorage.clear();
       lemmyCommunities = COMMUNITIES;
-      api.context.mockImplementation((posted: PostTargetDto) =>
+      api.context.mockImplementation((posted: ComposeRequest) =>
         of(posted.network === 'lemmy' ? onLemmy() : onMastodon()),
       );
     });
