@@ -123,6 +123,22 @@ final class MastodonNotificationSourceTest extends TestCase
         );
     }
 
+    public function testAStatusOnAnApAddressCarriesTheKeyOfItsPage(): void
+    {
+        $http = $this->http(listBody: $this->fixture(self::FIXTURES . 'notifications-ap-uri.json'));
+
+        $notifications = $this->source($http)->fetch(SocialApiWiring::mastodonAccount())->notifications;
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/@alice/7001')?->keyHash(),
+            $notifications[0]->subject->keys->postHash,
+        );
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/@alice/7002')?->keyHash(),
+            $notifications[1]->subject->keys->answeredHash,
+        );
+    }
+
     public function testAFollowCarriesNoKeys(): void
     {
         $follow = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[4];

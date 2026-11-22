@@ -56,6 +56,26 @@ final class MastodonNotificationContextSourceTest extends TestCase
         );
     }
 
+    public function testAnAnsweredStatusOnAnApAddressCarriesTheKeyOfItsPage(): void
+    {
+        $answer = new MockResponse((string) json_encode([[
+            'id' => '4000',
+            'uri' => 'https://mastodon.example/ap/users/1174/statuses/4000',
+            'url' => 'https://mastodon.example/@alice/4000',
+        ]]));
+        $http = new RoutedHttpClient(['GET ' . self::STATUSES . 'id[]=4000' => $answer]);
+
+        $subjects = $this->source($http)->findSubjects(
+            SocialApiWiring::mastodonAccount(),
+            [self::row('1', '4000')],
+        );
+
+        self::assertSame(
+            MastodonStatusKey::parseKey('https://mastodon.example/@alice/4000')?->keyHash(),
+            $subjects['1']->keys->answeredHash,
+        );
+    }
+
     public function testTheAnsweredKeyIsStoredEvenWhenTheExcerptIsUnchanged(): void
     {
         $answer = new MockResponse((string) json_encode([
