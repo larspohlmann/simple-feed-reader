@@ -7,25 +7,23 @@ namespace App\Tests\Support;
 use App\Entity\SocialAccount;
 use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
-use App\Service\Social\Publishing\Model\LinkPostChoicesModel;
-use App\Service\Social\Publishing\Model\SharedLinkModel;
-use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 
 /** A Lemmy link composer that offers no communities and the page title as it is. */
 final class FakeLemmyComposerDefaults implements ComposerDefaultsInterface
 {
-    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
-    {
-        return new ComposerDefaultsModel(10000);
-    }
+    public function forPublication(
+        SocialAccount $account,
+        PublicationModel $publication,
+        \Closure $threadStarter,
+    ): ComposerDefaultsModel {
+        $link = $publication->embed;
+        if (null !== $publication->inReplyTo || !$link instanceof LinkEmbedModel) {
+            return new ComposerDefaultsModel(10000);
+        }
 
-    public function forAccount(SocialAccount $account): ComposerDefaultsModel
-    {
-        return new ComposerDefaultsModel(10000);
-    }
-
-    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
-    {
-        return new ComposerDefaultsModel(10000, linkPost: new LinkPostChoicesModel([], $link->title, 3, 200));
+        return new ComposerDefaultsModel(10000, lemmyPost: new LemmyPostFieldsModel([], $link->title, 3, 200));
     }
 }

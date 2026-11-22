@@ -49,7 +49,7 @@ function composerContext(network: 'bluesky' | 'mastodon' | 'lemmy'): ComposerCon
     maxCharacters: { bluesky: 300, mastodon: 500, lemmy: 10000 }[network],
     visibility: network === 'mastodon' ? 'public' : null,
     text: '',
-    target: {
+    subject: {
       kind: 'link',
       card: {
         url: `https://fixtures.invalid/${ENTRY.id}`,

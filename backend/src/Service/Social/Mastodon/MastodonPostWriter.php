@@ -27,6 +27,10 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class MastodonPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     private const string STATUSES = '/api/v1/statuses';
+    private const int BLANK_LINE_LENGTH = 2;
+    private const int LINK_LENGTH = 23;
+    /** What a link post sets aside for the blank line and the link this writer appends. */
+    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + self::LINK_LENGTH;
 
     public function __construct(private MastodonAccountApi $mastodon)
     {

@@ -51,7 +51,7 @@ describe('ComposerDialogComponent', () => {
     maxCharacters: 500,
     visibility: 'unlisted',
     text: '@ann@hachyderm.io ',
-    target: QUOTED,
+    subject: QUOTED,
     lemmy: null,
     ...overrides,
   });
@@ -439,11 +439,11 @@ describe('ComposerDialogComponent', () => {
       context({
         kind: 'link',
         text: 'A long read\n\nhttps://example.com/story',
-        target: STORY,
+        subject: STORY,
         ...overrides,
       });
     const quoteContext = (overrides: Partial<ComposerContextDto> = {}) =>
-      linkContext({ kind: 'quote', text: '', target: QUOTED, ...overrides });
+      linkContext({ kind: 'quote', text: '', subject: QUOTED, ...overrides });
 
     beforeEach(() => api.composer.mockReturnValue(of(linkContext())));
 
@@ -513,7 +513,7 @@ describe('ComposerDialogComponent', () => {
         imageUrl: 'https://cdn.bsky.app/img/thumb.jpg',
         siteName: 'politico.com',
       };
-      api.composer.mockReturnValue(of(quoteContext({ target: { ...QUOTED, card } })));
+      api.composer.mockReturnValue(of(quoteContext({ subject: { ...QUOTED, card } })));
       const fixture = mount(article({ url: 'https://mastodon.social/@ann/110' }));
 
       const quotedCard = element(fixture).querySelector('.target .article')!;
@@ -542,7 +542,7 @@ describe('ComposerDialogComponent', () => {
       api.composer.mockReturnValue(
         of(
           linkContext({
-            target: { kind: 'link', card: { ...STORY_CARD, imageUrl: null, siteName: '' } },
+            subject: { kind: 'link', card: { ...STORY_CARD, imageUrl: null, siteName: '' } },
           }),
         ),
       );
@@ -636,7 +636,7 @@ describe('ComposerDialogComponent', () => {
     let mastodonContext: () => Observable<ComposerContextDto>;
 
     const linkContext = (overrides: Partial<ComposerContextDto> = {}) =>
-      context({ kind: 'link', text: TITLE, target: STORY, ...overrides });
+      context({ kind: 'link', text: TITLE, subject: STORY, ...overrides });
     const onBluesky = (overrides: Partial<ComposerContextDto> = {}) =>
       linkContext({
         accounts: [blueskyAccounts[0]],
@@ -762,7 +762,7 @@ describe('ComposerDialogComponent', () => {
     });
 
     it('the picked pill can be switched off once the other is on, and the preview follows', () => {
-      mastodonContext = () => of(onMastodon({ kind: 'quote', target: QUOTED }));
+      mastodonContext = () => of(onMastodon({ kind: 'quote', subject: QUOTED }));
       const fixture = fromBluesky();
       toggle(fixture, 'Mastodon');
       expect(element(fixture).querySelector('.article')).not.toBeNull();
@@ -1200,7 +1200,7 @@ describe('ComposerDialogComponent', () => {
       context({
         kind,
         text: kind === 'quote' ? '' : 'A long read',
-        target: kind === 'quote' ? QUOTED : STORY,
+        subject: kind === 'quote' ? QUOTED : STORY,
         ...overrides,
       });
     const urlLine = (fixture: ReturnType<typeof mount>) =>
@@ -1349,7 +1349,7 @@ describe('ComposerDialogComponent', () => {
         maxCharacters: 10000,
         visibility: null,
         text: '',
-        target: STORY,
+        subject: STORY,
         lemmy: {
           communities: lemmyCommunities,
           title: TITLE,
@@ -1358,7 +1358,7 @@ describe('ComposerDialogComponent', () => {
         },
       });
     const onMastodon = () =>
-      context({ kind: 'link', text: TITLE, target: STORY, visibility: 'public' });
+      context({ kind: 'link', text: TITLE, subject: STORY, visibility: 'public' });
 
     beforeEach(() => {
       localStorage.clear();

@@ -94,7 +94,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
-            'target' => self::ARTICLE_HOST_CARD,
+            'subject' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
     }
 
@@ -144,7 +144,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
             'lemmy' => null,
             'kind' => 'link',
             'text' => 'The article',
-            'target' => self::ARTICLE_HOST_CARD,
+            'subject' => self::ARTICLE_HOST_CARD,
         ], $this->payload($client));
         self::assertSame([], $this->http->requests);
     }
@@ -226,7 +226,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', self::LINK_COMPOSER . 'bluesky&title=' . rawurlencode(str_repeat('ä', 1000)));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(str_repeat('ä', LinkCardContent::TITLE_MAX), $this->payload($client)['text']);
+        self::assertSame(str_repeat('ä', BlueskyPostWriter::MAX_GRAPHEMES - 1) . '…', $this->payload($client)['text']);
     }
 
     public function testTheLinkComposerWritesAsTheAccountTheReaderChose(): void
@@ -515,7 +515,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
                     'siteName' => 'Example',
                 ],
             ],
-            $this->payload($client)['target'],
+            $this->payload($client)['subject'],
         );
     }
 
@@ -585,9 +585,9 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $this->mastodonAccountOf($user);
 
         $client->request('GET', '/api/social/link-composer?network=mastodon&url=' . rawurlencode($blueskyPost));
-        $target = $this->payload($client)['target'];
-        self::assertIsArray($target);
-        self::assertSame('link', $target['kind']);
+        $subject = $this->payload($client)['subject'];
+        self::assertIsArray($subject);
+        self::assertSame('link', $subject['kind']);
 
         $this->send($client, self::MASTODON_LINKS . rawurlencode($blueskyPost), ['text' => 'Look']);
 

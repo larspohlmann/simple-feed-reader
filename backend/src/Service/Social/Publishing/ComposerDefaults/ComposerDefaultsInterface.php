@@ -6,7 +6,7 @@ namespace App\Service\Social\Publishing\ComposerDefaults;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
-use App\Service\Social\Publishing\Model\SharedLinkModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -18,11 +18,9 @@ interface ComposerDefaultsInterface
      *
      * @param \Closure(): ?SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
      */
-    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel;
-
-    /** The defaults of a post the account writes on its own, mentioning no one. */
-    public function forAccount(SocialAccount $account): ComposerDefaultsModel;
-
-    /** The defaults of a post that shares a link, net of what the network adds to the text. */
-    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel;
+    public function forPublication(
+        SocialAccount $account,
+        PublicationModel $publication,
+        \Closure $threadStarter,
+    ): ComposerDefaultsModel;
 }

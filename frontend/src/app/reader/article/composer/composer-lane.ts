@@ -219,7 +219,7 @@ export class ComposerLane {
       network: this.network,
       text: context.lemmy === null ? text : this.trimmedTitle(),
       authorHandle: account?.handle ?? null,
-      target: context.target,
+      target: context.subject,
     };
   }
 

@@ -137,7 +137,7 @@ final class LinkSharingTest extends DbTestCase
 
         self::assertEquals(
             new LinkCardContent(self::ARTICLE_URL, 'Card for ' . self::ARTICLE_URL, null, null, 'example.com'),
-            $context->target,
+            $context->subject,
         );
         self::assertSame([self::ARTICLE_URL], $this->pages->readUrls());
     }
@@ -149,7 +149,10 @@ final class LinkSharingTest extends DbTestCase
 
         $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, $missing));
 
-        self::assertEquals(new LinkCardContent($missing, 'news.example', null, null, 'news.example'), $context->target);
+        self::assertEquals(
+            new LinkCardContent($missing, 'news.example', null, null, 'news.example'),
+            $context->subject,
+        );
     }
 
     public function testTheComposerWritesAsTheChosenAccount(): void
@@ -191,7 +194,7 @@ final class LinkSharingTest extends DbTestCase
 
         $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
-        self::assertSame($preview, $context->target);
+        self::assertSame($preview, $context->subject);
         self::assertSame(ComposerKind::Quote, $context->kind);
         self::assertSame('', $context->text);
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
@@ -226,7 +229,7 @@ final class LinkSharingTest extends DbTestCase
 
         self::assertSame('', $plain->text);
         self::assertSame('“foo”', $quoting->text);
-        self::assertSame('A story', $quoting->defaults->linkPost?->title);
+        self::assertSame('A story', $quoting->defaults->lemmyPost?->title);
     }
 
     public function testTheSharedAddressKeepsTheTextFragmentThatPointsAtTheQuote(): void
@@ -250,7 +253,7 @@ final class LinkSharingTest extends DbTestCase
         $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Quote, $context->kind);
-        self::assertSame($preview, $context->target);
+        self::assertSame($preview, $context->subject);
         self::assertSame('“A line worth sharing”', $context->text);
     }
 
@@ -261,8 +264,8 @@ final class LinkSharingTest extends DbTestCase
 
         $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
-        self::assertInstanceOf(LinkCardContent::class, $context->target);
-        self::assertSame(self::STATUS_URL, $context->target->url);
+        self::assertInstanceOf(LinkCardContent::class, $context->subject);
+        self::assertSame(self::STATUS_URL, $context->subject->url);
     }
 
     public function testAStatusSharedOnItsOwnNetworkIsQuoted(): void

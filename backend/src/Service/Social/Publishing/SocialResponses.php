@@ -57,7 +57,7 @@ final readonly class SocialResponses
         $post = $this->targets->find($user, $target);
 
         return ComposerKind::Quote === $kind
-            ? $this->contexts->buildQuoteContext($post)
+            ? $this->contexts->buildQuoteContext($post, '')
             : $this->contexts->buildReplyContext($post, $target);
     }
 

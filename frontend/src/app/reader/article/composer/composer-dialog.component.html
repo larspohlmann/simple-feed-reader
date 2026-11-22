@@ -31,7 +31,9 @@
     }
 
     @if (context(); as context) {
-      <app-composer-subject [subject]="context.target" />
+      @if (context.subject; as subject) {
+        <app-composer-subject [subject]="subject" />
+      }
       @for (note of kindNotes(); track note.key) {
         <p class="kind-note">
           @for (network of note.networks; track network) {

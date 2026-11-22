@@ -104,7 +104,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'lemmy' => null,
             'kind' => 'reply',
             'text' => '@gargron@mastodon.social ',
-            'target' => [
+            'subject' => [
                 'kind' => 'post',
                 'authorName' => 'Eugen',
                 'authorHandle' => '@Gargron@mastodon.social',
@@ -160,8 +160,8 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame(10000, $payload['maxCharacters']);
         self::assertNull($payload['visibility']);
         self::assertSame('', $payload['text']);
-        self::assertIsArray($payload['target']);
-        self::assertSame('Ada', $payload['target']['authorName']);
+        self::assertIsArray($payload['subject']);
+        self::assertSame('Ada', $payload['subject']['authorName']);
         self::assertSame([self::LEMMY_POST], $this->routesAsked());
     }
 

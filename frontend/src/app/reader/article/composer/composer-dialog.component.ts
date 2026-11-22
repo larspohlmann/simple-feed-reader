@@ -164,7 +164,7 @@ export class ComposerDialogComponent {
     const subject = this.lanes
       .active()
       .find((lane) => lane.network === 'mastodon' && lane.context()?.kind === 'link')
-      ?.context()?.target;
+      ?.context()?.subject;
     return subject?.kind === 'link' ? subject.card.url : null;
   });
   protected readonly kindNotes = computed(() => {

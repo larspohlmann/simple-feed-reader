@@ -62,7 +62,7 @@ describe('ComposerLanes', () => {
     maxCharacters: 500,
     visibility: 'unlisted',
     text: '@ann@hachyderm.io ',
-    target: QUOTED,
+    subject: QUOTED,
     lemmy: null,
     ...overrides,
   });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Publishing\Support;
 
 use App\Service\Social\Bluesky\BlueskyPostWriter;
+use App\Service\Social\Mastodon\MastodonPostWriter;
 use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Publishing\Support\ComposerStartingText;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,11 @@ final class ComposerStartingTextTest extends TestCase
     public function testALinkPostStartsWithTheTitleAlone(): void
     {
         self::assertSame('Title', ComposerStartingText::sharing(new SharedLinkModel(self::URL, 'Title'), 475));
+    }
+
+    public function testALongTitleIsCutAtAWordToTheLimitItIsGiven(): void
+    {
+        self::assertSame('one two…', ComposerStartingText::sharing(new SharedLinkModel(self::URL, 'one two three'), 9));
     }
 
     public function testALinkPostWithoutATitleStartsEmpty(): void
@@ -58,7 +64,7 @@ final class ComposerStartingTextTest extends TestCase
     {
         $link = new SharedLinkModel(self::URL, 'A story', str_repeat('word ', 200));
 
-        $text = ComposerStartingText::sharing($link, self::MASTODON_DEFAULT - ComposerStartingText::LINK_ROOM);
+        $text = ComposerStartingText::sharing($link, self::MASTODON_DEFAULT - MastodonPostWriter::LINK_ROOM);
 
         self::assertStringNotContainsString('https://', $text);
         self::assertLessThanOrEqual(475, mb_strlen($text));

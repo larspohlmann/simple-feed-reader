@@ -9,11 +9,14 @@ use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
+use App\Service\Social\Mastodon\MastodonPostWriter;
 use App\Service\Social\Mastodon\Support\MastodonVisibility;
 use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
-use App\Service\Social\Publishing\Model\SharedLinkModel;
-use App\Service\Social\Publishing\Support\ComposerStartingText;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Model\SocialPostModel;
@@ -34,30 +37,38 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     ) {
     }
 
-    public function resolveDefaults(SocialPostModel $target, \Closure $threadStarter): ComposerDefaultsModel
-    {
-        $account = $target->account;
-
-        return new ComposerDefaultsModel(
+    public function forPublication(
+        SocialAccount $account,
+        PublicationModel $publication,
+        \Closure $threadStarter,
+    ): ComposerDefaultsModel {
+        $defaults = new ComposerDefaultsModel(
             $this->resolveMaxCharacters($account),
-            MastodonVisibility::pickStricter(
-                $target->postContext->visibility ?? self::DEFAULT_VISIBILITY,
-                $this->resolvePrivacy($account),
-            ),
-            self::collectMentions($target, $threadStarter),
+            $this->resolveVisibility($account, $publication),
+            self::collectMentions($account, $publication->inReplyTo, $threadStarter),
+        );
+
+        return $publication->embed instanceof LinkEmbedModel
+            ? $defaults->withMaxCharacters($defaults->maxCharacters - MastodonPostWriter::LINK_ROOM)
+            : $defaults;
+    }
+
+    private function resolveVisibility(SocialAccount $account, PublicationModel $publication): string
+    {
+        $answered = $publication->inReplyTo ?? self::readQuotedPost($publication->embed);
+        if (null === $answered) {
+            return $this->resolvePrivacy($account);
+        }
+
+        return MastodonVisibility::pickStricter(
+            $answered->postContext->visibility ?? self::DEFAULT_VISIBILITY,
+            $this->resolvePrivacy($account),
         );
     }
 
-    public function forAccount(SocialAccount $account): ComposerDefaultsModel
+    private static function readQuotedPost(?PostEmbedModelInterface $embed): ?SocialPostModel
     {
-        return new ComposerDefaultsModel($this->resolveMaxCharacters($account), $this->resolvePrivacy($account));
-    }
-
-    public function forLinkFrom(SocialAccount $account, SharedLinkModel $link): ComposerDefaultsModel
-    {
-        $defaults = $this->forAccount($account);
-
-        return $defaults->withMaxCharacters($defaults->maxCharacters - ComposerStartingText::LINK_ROOM);
+        return $embed instanceof QuotedPostEmbedModel ? $embed->post : null;
     }
 
     private function resolveMaxCharacters(SocialAccount $account): int
@@ -79,10 +90,16 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
      *
      * @return list<string>
      */
-    private static function collectMentions(SocialPostModel $target, \Closure $threadStarter): array
-    {
-        $account = $target->account;
-        $authors = [$target->postContext->authorIdentity, $threadStarter()?->postContext->authorIdentity];
+    private static function collectMentions(
+        SocialAccount $account,
+        ?SocialPostModel $inReplyTo,
+        \Closure $threadStarter,
+    ): array {
+        if (null === $inReplyTo) {
+            return [];
+        }
+
+        $authors = [$inReplyTo->postContext->authorIdentity, $threadStarter()?->postContext->authorIdentity];
         $others = array_filter(
             array_map(static fn (?string $author): string => mb_strtolower($author ?? ''), $authors),
             static fn (string $author): bool => '' !== $author && !SocialIdentity::isAccount($author, $account),

@@ -85,7 +85,7 @@ export interface ComposerContextDto {
   maxCharacters: number;
   visibility: MastodonVisibility | null;
   text: string;
-  target: ComposerSubjectDto;
+  subject: ComposerSubjectDto | null;
   lemmy: LemmyLinkFieldsDto | null;
 }
 

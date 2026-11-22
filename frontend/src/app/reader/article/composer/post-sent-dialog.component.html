@@ -5,7 +5,9 @@
         <p class="account">{{ 'reader.posted.as' | transloco: { handle } }}</p>
       }
       <p class="text">{{ posted.text }}</p>
-      <app-composer-subject [subject]="posted.target" />
+      @if (posted.target; as subject) {
+        <app-composer-subject [subject]="subject" />
+      }
       @if (posts.length > 1 && posted.url; as url) {
         <app-button
           class="open"

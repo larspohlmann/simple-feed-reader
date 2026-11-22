@@ -133,7 +133,7 @@ final class SocialResponsesTest extends DbTestCase
             ComposerKind::Quote,
         );
 
-        self::assertSame($preview, $context->target);
+        self::assertSame($preview, $context->subject);
     }
 
     public function testAReplyInTheThreadAlsoLooksUpTheEntrysPostAsItsStarter(): void

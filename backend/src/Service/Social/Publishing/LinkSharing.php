@@ -50,7 +50,7 @@ final readonly class LinkSharing
 
         return null === $share->quoted
             ? $this->contexts->buildLinkContext($share->account, $share->link)
-            : $this->contexts->buildQuotedLinkContext($share->quoted, $share->link);
+            : $this->contexts->buildQuoteContext($share->quoted, $share->link->quote);
     }
 
     /**

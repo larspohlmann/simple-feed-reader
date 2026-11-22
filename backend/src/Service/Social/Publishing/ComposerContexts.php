@@ -10,6 +10,10 @@ use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
 use App\Service\Social\Publishing\Model\ComposerContextModel;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
 use App\Service\Social\Publishing\Model\ComposerKind;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\ResponseTargetModel;
 use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Publishing\Support\ComposerStartingText;
@@ -39,60 +43,57 @@ final readonly class ComposerContexts
 
     public function buildReplyContext(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
-        $defaults = $this->defaults->get($post->account->getNetwork()->value)
-            ->resolveDefaults($post, $this->buildThreadStarterLookup($target, $post));
+        $defaults = $this->selectDefaults($post->account)->forPublication(
+            $post->account,
+            self::startPublication()->withReplyTo($post),
+            $this->buildThreadStarterLookup($target, $post),
+        );
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
-        return $this->buildContext($post, ComposerKind::Reply, $defaults, $text);
+        return $this->buildPostContext($post, ComposerKind::Reply, $defaults, $text);
     }
 
-    public function buildQuoteContext(SocialPostModel $post): ComposerContextModel
+    public function buildQuoteContext(SocialPostModel $post, string $quote): ComposerContextModel
     {
-        return $this->buildQuotingContext($post, '');
+        $defaults = $this->selectDefaults($post->account)->forPublication(
+            $post->account,
+            self::startPublication()->withEmbed(new QuotedPostEmbedModel($post)),
+            self::noThreadStarter(),
+        );
+        $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
+
+        return $this->buildPostContext($post, ComposerKind::Quote, $defaults, $text);
     }
 
     public function buildLinkContext(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
-        $defaults = $this->defaults->get($account->getNetwork()->value)->forLinkFrom($account, $link);
+        $defaults = $this->selectDefaults($account)->forPublication(
+            $account,
+            self::startPublication()->withEmbed(new LinkEmbedModel($link->url, $link->title)),
+            self::noThreadStarter(),
+        );
 
         return new ComposerContextModel(
             $this->connectedBeside($account),
             $account,
             canSend: true,
             defaults: $defaults,
-            target: $this->pageCards->resolveCard($link->url),
+            subject: $this->pageCards->resolveCard($link->url),
             kind: ComposerKind::Link,
-            text: $this->buildStartingText($link, $defaults),
+            text: self::buildLinkText($link, $defaults),
         );
     }
 
-    private function buildStartingText(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
+    private static function buildLinkText(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
     {
-        if (null !== $defaults->linkPost) {
+        if (null !== $defaults->lemmyPost) {
             return ComposerStartingText::quoting($link->quote, $defaults->maxCharacters);
         }
 
         return ComposerStartingText::sharing($link, $defaults->maxCharacters);
     }
 
-    /** A shared link that names a quotable post quotes it, starting with the selection the reader shares. */
-    public function buildQuotedLinkContext(SocialPostModel $post, SharedLinkModel $link): ComposerContextModel
-    {
-        return $this->buildQuotingContext($post, $link->quote);
-    }
-
-    /** A quote names nobody, so it never asks for the thread's starter. */
-    private function buildQuotingContext(SocialPostModel $post, string $quote): ComposerContextModel
-    {
-        $defaults = $this->defaults->get($post->account->getNetwork()->value)
-            ->resolveDefaults($post, static fn (): ?SocialPostModel => null)
-            ->withoutMentions();
-        $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
-
-        return $this->buildContext($post, ComposerKind::Quote, $defaults, $text);
-    }
-
-    private function buildContext(
+    private function buildPostContext(
         SocialPostModel $post,
         ComposerKind $kind,
         ComposerDefaultsModel $defaults,
@@ -107,6 +108,22 @@ final readonly class ComposerContexts
             $kind,
             $text,
         );
+    }
+
+    private function selectDefaults(SocialAccount $account): ComposerDefaultsInterface
+    {
+        return $this->defaults->get($account->getNetwork()->value);
+    }
+
+    private static function startPublication(): PublicationModel
+    {
+        return PublicationModel::fromDraft(new PostDraftModel(''));
+    }
+
+    /** @return \Closure(): ?SocialPostModel */
+    private static function noThreadStarter(): \Closure
+    {
+        return static fn (): ?SocialPostModel => null;
     }
 
     /** @return list<SocialAccount> */

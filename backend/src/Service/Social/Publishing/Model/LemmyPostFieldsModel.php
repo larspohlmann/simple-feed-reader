@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Publishing\Model;
 
-/** What a link post chooses from: the communities it may go to, the title it starts with and the title's length limits. */
-final readonly class LinkPostChoicesModel
+/** What a Lemmy link post chooses from: the communities it may go to, its starting title and the title's limits. */
+final readonly class LemmyPostFieldsModel
 {
     /** @param list<CommunityModel> $communities */
     public function __construct(

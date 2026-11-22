@@ -10,10 +10,6 @@ use App\Service\Social\Publishing\Model\SharedLinkModel;
 /** Where the composer's text starts before the reader types. */
 final class ComposerStartingText
 {
-    private const int BLANK_LINE_LENGTH = 2;
-    private const int MASTODON_LINK_LENGTH = 23;
-    /** What a Mastodon link post sets aside for the blank line and the link. */
-    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + self::MASTODON_LINK_LENGTH;
     private const string OPENING_QUOTE = '“';
     private const string CLOSING_QUOTE = '”';
 
@@ -27,14 +23,14 @@ final class ComposerStartingText
         return [] === $mentions ? '' : implode(' ', $mentions) . ' ';
     }
 
-    /** The title, or the quote, alone: a link post carries its link outside the text, in the card or the status. */
+    /** The title, or the quote, alone, cut to fit: a link post carries its link outside the text. */
     public static function sharing(SharedLinkModel $link, int $maxCharacters): string
     {
         if ('' !== $link->quote) {
             return self::quoting($link->quote, $maxCharacters);
         }
 
-        return $link->title;
+        return WordBoundary::clipped($link->title, $maxCharacters);
     }
 
     /** The quote in typographic quotes, cut at a word so the whole fits $room characters; nothing without a quote. */
