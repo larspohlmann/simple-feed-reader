@@ -1,4 +1,6 @@
 @use '../../../theme/count-badge';
+@use 'sidebar-row' as row;
+@include row.chevron('.bell');
 
 :host {
   display: inline-flex;
@@ -6,18 +8,7 @@
 
 .bell {
   position: relative;
-  display: inline-grid;
-  place-items: center;
-  color: var(--text-muted);
   text-decoration: none;
-}
-
-:host(.has-unseen) {
-  margin-right: var(--space-2);
-}
-
-:host(.has-unseen) .bell {
-  color: var(--text-secondary);
 }
 
 :host(.current) .bell {
@@ -28,17 +19,7 @@
   @include count-badge.disc(calc(var(--icon-sm) - var(--space-0)), 9px);
 
   position: absolute;
-  top: calc(var(--space-1) * -1);
+  z-index: 1;
+  top: 0;
   left: 55%;
-}
-
-@media (pointer: coarse) {
-  .bell::before {
-    content: '';
-    position: absolute;
-
-    /* A '+' or the label sits one --space-2 to the left: the tap area stops halfway across that gap. */
-    inset: calc((var(--icon-dense) - var(--tap-target)) / 2);
-    left: calc(var(--space-2) / -2);
-  }
 }

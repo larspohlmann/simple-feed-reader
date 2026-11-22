@@ -178,7 +178,7 @@
       &::before {
         content: '';
         position: absolute;
-        inset: calc(var(--space-2) - var(--space-0) / 2);
+        inset: var(--chevron-disc-inset);
         border-radius: var(--radius-pill);
         background: color-mix(in srgb, var(--text-primary) 7%, transparent);
       }
