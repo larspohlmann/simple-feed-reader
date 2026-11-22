@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Mastodon\MastodonComposerDefaults;
 use App\Service\Social\Publishing\ComposerContexts;
+use App\Service\Social\Publishing\Model\ComposerKind;
 use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\SharedPageCards;
@@ -43,6 +44,24 @@ final class ComposerContextsTest extends DbTestCase
 
         self::assertSame(475, $context->defaults->maxCharacters);
         self::assertSame($title, $context->text);
+    }
+
+    public function testATextPostContextStartsEmptyWithNoSubjectAndTheAccountsOwnDefaults(): void
+    {
+        $account = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonOf($this->user('composer-contexts-post@example.test')),
+        );
+
+        $context = $this->contexts()->buildTextPostContext($account);
+
+        self::assertSame(ComposerKind::Post, $context->kind);
+        self::assertNull($context->subject);
+        self::assertSame('', $context->text);
+        self::assertTrue($context->canSend);
+        self::assertSame(500, $context->defaults->maxCharacters);
+        self::assertSame('public', $context->defaults->visibility);
+        self::assertSame([$account], $context->accounts);
     }
 
     private function contexts(): ComposerContexts

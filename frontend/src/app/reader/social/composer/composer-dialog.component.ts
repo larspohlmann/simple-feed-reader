@@ -37,8 +37,9 @@ import { NetworkPillsComponent } from './network-pills.component';
 import { postLength } from './post-length';
 
 /**
- * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, or a post of a shared URL.
- * Closing never asks: typed text is discarded.
+ * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, a post of a shared
+ * URL, or a post of text alone.
+ * Closing never asks: typed text is discarded, unless the request carries a draft that keeps it.
  * It stays open while a post is on the wire, and once one went out it closes only with it, so
  * the reader always learns what was published.
  * Send posts to every active network still to post. A failed send keeps the text and says why;
@@ -77,11 +78,15 @@ export class ComposerDialogComponent {
   protected readonly visibilities = MASTODON_VISIBILITIES;
   protected readonly names = SOCIAL_NETWORK_NAMES;
   protected readonly primary = this.lanes.primary;
-  private textTouched = false;
+  private readonly draft = this.request.draft;
+  /** A kept draft counts as typed, so the context's empty starting text never replaces it. */
+  private textTouched = (this.draft?.() ?? '') !== '';
   protected readonly text = linkedSignal<string | undefined, string>({
     source: () => this.lanes.picked().context()?.text,
     computation: (starting, previous) =>
-      this.textTouched || starting === undefined ? (previous?.value ?? '') : starting,
+      this.textTouched || starting === undefined
+        ? (previous?.value ?? this.draft?.() ?? '')
+        : starting,
   });
   private readonly caretBeforeText = this.request.kind === 'link' && this.request.quote !== null;
   protected readonly sending = signal(false);
@@ -221,13 +226,18 @@ export class ComposerDialogComponent {
 
   protected write(event: Event): void {
     this.textTouched = true;
-    this.text.set(inputValue(event));
+    this.setText(inputValue(event));
   }
 
   protected clear(): void {
     this.textTouched = true;
-    this.text.set('');
+    this.setText('');
     this.textField()?.nativeElement.focus();
+  }
+
+  private setText(text: string): void {
+    this.text.set(text);
+    this.draft?.set(text);
   }
 
   protected chooseVisibility(lane: ComposerLane, event: Event): void {

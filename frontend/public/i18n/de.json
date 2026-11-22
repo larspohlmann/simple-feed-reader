@@ -1850,6 +1850,14 @@
       "bluesky": "Auf Bluesky posten",
       "mastodon": "Auf Mastodon posten",
       "lemmy": "Auf Lemmy posten"
+    },
+    "post": {
+      "bluesky": "Neuer Beitrag auf Bluesky",
+      "mastodon": "Neuer Beitrag auf Mastodon"
+    },
+    "compose": {
+      "button": "Neuer Beitrag auf {{network}}",
+      "reconnect": "Verbinde dein {{network}}-Konto neu, um zu posten"
     }
   },
   "social": {
@@ -1898,7 +1906,13 @@
         "send": "Posten"
       },
       "crosspostHeading": "Auf {{ networks }} posten",
-      "sendToBoth": "Auf beiden posten"
+      "sendToBoth": "Auf beiden posten",
+      "post": {
+        "loading": "Beitrag wird vorbereitet",
+        "account": "Posten als",
+        "text": "Dein Beitrag",
+        "send": "Posten"
+      }
     },
     "posted": {
       "link": {
@@ -1912,7 +1926,11 @@
       },
       "many": "Auf {{ networks }} veröffentlicht",
       "as": "Als {{ handle }}",
-      "open": "Beitrag öffnen"
+      "open": "Beitrag öffnen",
+      "post": {
+        "bluesky": "Auf Bluesky veröffentlicht",
+        "mastodon": "Auf Mastodon veröffentlicht"
+      }
     }
   },
   "common": {

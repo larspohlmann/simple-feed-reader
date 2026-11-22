@@ -23,7 +23,8 @@ export interface LinkComposerSubjectDto {
 export type ComposerSubjectDto = PostComposerSubjectDto | LinkComposerSubjectDto;
 
 /**
- * The answer of `GET /api/entries/{id}/social/composer` and `GET /api/social/link-composer`: what the composer
+ * The answer of `GET /api/entries/{id}/social/composer`, `GET /api/social/link-composer` and
+ * `GET /api/social/post-composer`: what the composer
  * sends and shows, whether the author lets the reader reply or quote, as asked, as whom, and where the text starts.
  * `visibility` is null on Bluesky.
  */

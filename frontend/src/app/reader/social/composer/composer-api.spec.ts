@@ -141,4 +141,18 @@ describe('ComposerApi', () => {
     expect(plain.request.params.has('quote')).toBe(false);
     plain.flush({});
   });
+
+  it('GETs the composer of a text post by its network, and POSTs the post with the network in the body', () => {
+    api.context({ kind: 'post', network: 'mastodon' }).subscribe();
+    expect(
+      ctrl.expectOne('https://api.test/api/social/post-composer?network=mastodon').request.method,
+    ).toBe('GET');
+
+    const draft = { text: 'Just a thought', accountId: 4, language: 'en', idempotencyKey: 'k-3' };
+    api.send({ kind: 'post', network: 'bluesky' }, draft).subscribe();
+    const toPost = ctrl.expectOne('https://api.test/api/social/posts');
+    expect(toPost.request.method).toBe('POST');
+    expect(toPost.request.body).toEqual({ ...draft, network: 'bluesky' });
+    toPost.flush({ address: 'at://x', url: null });
+  });
 });

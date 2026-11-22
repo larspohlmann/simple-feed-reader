@@ -387,28 +387,30 @@ final class SocialResponsesTest extends DbTestCase
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
     }
 
-    #[DataProvider('linkRefusals')]
-    public function testALinkAnswersNoPostAndIsRefusedBeforeAnyLookup(\Closure $attempt): void
+    #[DataProvider('nonResponseKinds')]
+    public function testAKindThatAnswersNoPostIsRefusedBeforeAnyLookup(ComposerKind $kind): void
     {
-        $this->assertRefused(
-            fn (): mixed => $attempt($this->responses(), $this->owner, new ResponseTargetModel($this->post())),
-            SocialPostRefusedException::class,
-            'A link answers no post.',
-        );
+        $target = new ResponseTargetModel($this->post());
+        $attempts = [
+            fn (ResponseTargetModel $target): mixed => $this->responses()->prepareContext($this->owner, $target, $kind),
+            fn (ResponseTargetModel $target): mixed => $this->responses()
+                ->respond($this->owner, $target, $kind, new PublicationModel(new PostDraftModel('Hi'))),
+        ];
+        foreach ($attempts as $attempt) {
+            $this->assertRefused(
+                fn (): mixed => $attempt($target),
+                SocialPostRefusedException::class,
+                sprintf('A %s answers no post.', $kind->value),
+            );
+        }
         self::assertSame([], $this->mastodon->calls);
     }
 
-    /** @return iterable<string, array{\Closure}> */
-    public static function linkRefusals(): iterable
+    /** @return iterable<string, array{ComposerKind}> */
+    public static function nonResponseKinds(): iterable
     {
-        yield 'opening the composer' => [
-            static fn (SocialResponses $responses, User $user, ResponseTargetModel $target): mixed => $responses
-                ->prepareContext($user, $target, ComposerKind::Link),
-        ];
-        yield 'publishing' => [
-            static fn (SocialResponses $responses, User $user, ResponseTargetModel $target): mixed => $responses
-                ->respond($user, $target, ComposerKind::Link, new PublicationModel(new PostDraftModel('Hi'))),
-        ];
+        yield 'link' => [ComposerKind::Link];
+        yield 'text post' => [ComposerKind::Post];
     }
 
     private function post(): Entry

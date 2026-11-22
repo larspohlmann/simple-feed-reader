@@ -33,6 +33,13 @@
         }
       </a>
       @if (current.networkAccounts.length > 0) {
+        @if (composable()) {
+          <app-sidebar-compose-button
+            [network]="current.network"
+            [disabled]="!canCompose()"
+            (compose)="startPost($event)"
+          />
+        }
         <app-sidebar-notifications-bell
           [network]="current.network"
           [count]="current.notificationsUnseen"

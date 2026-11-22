@@ -33,7 +33,7 @@ final class ComposerContextJson
      *     maxCharacters: int,
      *     visibility: string|null,
      *     lemmy: LemmyPostRow|null,
-     *     kind: 'reply'|'quote'|'link',
+     *     kind: 'reply'|'quote'|'link'|'post',
      *     text: string,
      *     subject: PostSubjectRow|LinkSubjectRow|null,
      * }
