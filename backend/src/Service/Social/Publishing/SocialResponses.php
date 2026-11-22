@@ -53,7 +53,7 @@ final readonly class SocialResponses
      */
     public function prepareContext(User $user, ResponseTargetModel $target, ComposerKind $kind): ComposerContextModel
     {
-        self::refuseLink($kind);
+        self::guardAgainstLink($kind);
         $post = $this->targets->find($user, $target);
 
         return ComposerKind::Quote === $kind
@@ -80,7 +80,7 @@ final readonly class SocialResponses
         ComposerKind $kind,
         PublicationModel $publication,
     ): PublishedPostModel {
-        self::refuseLink($kind);
+        self::guardAgainstLink($kind);
         $post = $this->allowedTarget($user, $target, $kind);
         $published = $this->writing->publish($post->account, self::buildResponse($publication, $kind, $post));
         $this->forgetWhatChanged($user, $target->entry);
@@ -92,7 +92,7 @@ final readonly class SocialResponses
     }
 
     /** @throws SocialPostRefusedException */
-    private static function refuseLink(ComposerKind $kind): void
+    private static function guardAgainstLink(ComposerKind $kind): void
     {
         if (ComposerKind::Link === $kind) {
             throw new SocialPostRefusedException('A link post answers no post.');

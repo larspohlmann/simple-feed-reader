@@ -24,7 +24,7 @@ use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\Support\SocialIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** Mastodon's composer names the author and the thread's starter, never less private than the post it answers. */
+/** Mastodon's composer names the author and the thread's starter, never less private than the post it answers or quotes. */
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
 final readonly class MastodonComposerDefaults implements ComposerDefaultsInterface
 {
@@ -37,7 +37,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     ) {
     }
 
-    public function forPublication(
+    public function resolveDefaults(
         SocialAccount $account,
         PublicationModel $publication,
         \Closure $threadStarter,

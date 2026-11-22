@@ -16,6 +16,11 @@ final class MastodonTextLengthTest extends TestCase
         self::assertSame($length, MastodonTextLength::measureLength('', $text));
     }
 
+    public function testAPunctuatedLinkMayCountShorterThanMastodon(): void
+    {
+        self::assertSame(1 + 23, MastodonTextLength::measureLength('', '(https://example.com/a).'));
+    }
+
     public function testTheContentWarningCountsAsWrittenBeforeTheText(): void
     {
         self::assertSame(
@@ -40,7 +45,6 @@ final class MastodonTextLengthTest extends TestCase
         yield 'plain text in code points' => ['Hallo', 5];
         yield 'a long link counts 23' => ['see https://example.com/' . str_repeat('a', 200), 4 + 23];
         yield 'every link counts 23' => ['http://a.co https://b.example/x', 23 + 1 + 23];
-        yield 'a link swallows the punctuation after it' => ['(https://example.com/a).', 1 + 23];
         yield 'a non-breaking space ends a link' => ["https://example.com/a\u{00A0}hi", 23 + 3];
         yield 'an ideographic space ends a link' => ["x\u{3000}https://e.x/\u{3000}y", 1 + 1 + 23 + 1 + 1];
         yield 'a byte order mark ends a link' => ["\u{FEFF}https://a.b/\u{FEFF}z", 1 + 23 + 1 + 1];

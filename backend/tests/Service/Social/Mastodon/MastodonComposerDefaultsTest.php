@@ -30,7 +30,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         $target = self::post(new PostContextModel('ann@hachyderm.io', visibility: 'unlisted'));
         $starter = self::post(new PostContextModel('Gargron@mastodon.social', visibility: 'public'));
 
-        $defaults = $this->defaults($http)->forPublication(
+        $defaults = $this->defaults($http)->resolveDefaults(
             $target->account,
             self::replyTo($target),
             static fn (): SocialPostModel => $starter,
@@ -51,9 +51,9 @@ final class MastodonComposerDefaultsTest extends TestCase
         $account = $target->account;
 
         $first = $this->defaults($http)
-            ->forPublication($account, self::replyTo($target), static fn (): SocialPostModel => $starter);
+            ->resolveDefaults($account, self::replyTo($target), static fn (): SocialPostModel => $starter);
         $second = $this->defaults($http)
-            ->forPublication($account, self::replyTo($again), static fn (): SocialPostModel => $again);
+            ->resolveDefaults($account, self::replyTo($again), static fn (): SocialPostModel => $again);
 
         self::assertSame(['@ann@hachyderm.io'], $first->mentions);
         self::assertSame('direct', $first->visibility);
@@ -69,7 +69,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         $target = self::post(new PostContextModel());
 
         $defaults = $this->defaults($http)
-            ->forPublication($target->account, self::replyTo($target), static fn (): SocialPostModel => $target);
+            ->resolveDefaults($target->account, self::replyTo($target), static fn (): SocialPostModel => $target);
 
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }
@@ -77,7 +77,7 @@ final class MastodonComposerDefaultsTest extends TestCase
     public function testAStandalonePostStartsFromTheAccountsPrivacyAndTheInstanceLimit(): void
     {
         $defaults = $this->defaults($this->answering(500, 'unlisted'))
-            ->forPublication(SocialAccounts::mastodon(), self::standalone(), self::noThreadStarter());
+            ->resolveDefaults(SocialAccounts::mastodon(), self::standalone(), self::noThreadStarter());
 
         self::assertEquals(new ComposerDefaultsModel(500, 'unlisted', []), $defaults);
     }
@@ -90,7 +90,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         ]);
 
         $defaults = $this->defaults($http)
-            ->forPublication(SocialAccounts::mastodon(), self::standalone(), self::noThreadStarter());
+            ->resolveDefaults(SocialAccounts::mastodon(), self::standalone(), self::noThreadStarter());
 
         self::assertEquals(new ComposerDefaultsModel(500, 'public', []), $defaults);
     }
@@ -101,7 +101,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         $quote = self::standalone()->withEmbed(new QuotedPostEmbedModel($quoted));
 
         $defaults = $this->defaults($this->answering(500, 'public'))
-            ->forPublication($quoted->account, $quote, static fn (): never => self::fail('A quote names no one.'));
+            ->resolveDefaults($quoted->account, $quote, static fn (): never => self::fail('A quote names no one.'));
 
         self::assertEquals(new ComposerDefaultsModel(500, 'private', []), $defaults);
     }
@@ -111,7 +111,7 @@ final class MastodonComposerDefaultsTest extends TestCase
         $link = self::standalone()->withEmbed(new LinkEmbedModel('https://example.com', 'A title'));
 
         $defaults = $this->defaults($this->answering(500, 'unlisted'))
-            ->forPublication(SocialAccounts::mastodon(), $link, self::noThreadStarter());
+            ->resolveDefaults(SocialAccounts::mastodon(), $link, self::noThreadStarter());
 
         self::assertEquals(new ComposerDefaultsModel(475, 'unlisted', []), $defaults);
     }

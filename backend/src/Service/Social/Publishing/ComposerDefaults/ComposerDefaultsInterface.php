@@ -18,7 +18,7 @@ interface ComposerDefaultsInterface
      *
      * @param \Closure(): ?SocialPostModel $threadStarter the entry's own post, found only when a network asks for it
      */
-    public function forPublication(
+    public function resolveDefaults(
         SocialAccount $account,
         PublicationModel $publication,
         \Closure $threadStarter,

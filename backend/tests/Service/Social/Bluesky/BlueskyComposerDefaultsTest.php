@@ -30,7 +30,7 @@ final class BlueskyComposerDefaultsTest extends TestCase
             self::assertEquals(
                 new ComposerDefaultsModel(300),
                 (new BlueskyComposerDefaults())
-                    ->forPublication($account, $publication, static fn (): ?SocialPostModel => null),
+                    ->resolveDefaults($account, $publication, static fn (): ?SocialPostModel => null),
             );
         }
     }

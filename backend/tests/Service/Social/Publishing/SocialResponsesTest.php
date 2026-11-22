@@ -49,6 +49,7 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\SocialRuleWiring;
 use App\Tests\Support\StubPageCardReader;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -384,6 +385,30 @@ final class SocialResponsesTest extends DbTestCase
             'A post its author keeps from quotes cannot be quoted.',
         );
         self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+    }
+
+    #[DataProvider('linkRefusals')]
+    public function testALinkAnswersNoPostAndIsRefusedBeforeAnyLookup(\Closure $attempt): void
+    {
+        $this->assertRefused(
+            fn (): mixed => $attempt($this->responses(), $this->owner, new ResponseTargetModel($this->post())),
+            SocialPostRefusedException::class,
+            'A link answers no post.',
+        );
+        self::assertSame([], $this->mastodon->calls);
+    }
+
+    /** @return iterable<string, array{\Closure}> */
+    public static function linkRefusals(): iterable
+    {
+        yield 'opening the composer' => [
+            static fn (SocialResponses $responses, User $user, ResponseTargetModel $target): mixed => $responses
+                ->prepareContext($user, $target, ComposerKind::Link),
+        ];
+        yield 'publishing' => [
+            static fn (SocialResponses $responses, User $user, ResponseTargetModel $target): mixed => $responses
+                ->respond($user, $target, ComposerKind::Link, PublicationModel::fromDraft(new PostDraftModel('Hi'))),
+        ];
     }
 
     private function post(): Entry

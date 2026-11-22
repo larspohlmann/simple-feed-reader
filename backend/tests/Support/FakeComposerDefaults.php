@@ -19,7 +19,7 @@ final class FakeComposerDefaults implements ComposerDefaultsInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function forPublication(
+    public function resolveDefaults(
         SocialAccount $account,
         PublicationModel $publication,
         \Closure $threadStarter,

@@ -14,11 +14,7 @@ export class ComposerApi {
   private readonly base = inject(API_BASE_URL);
 
   context(request: ComposeRequest, accountId?: number): Observable<ComposerContextDto> {
-    const path =
-      request.kind === 'link'
-        ? `${this.base}/api/social/link-composer`
-        : `${this.base}/api/entries/${request.entryId}/social/composer`;
-    return this.http.get<ComposerContextDto>(path, {
+    return this.http.get<ComposerContextDto>(this.contextPath(request), {
       params: {
         ...composerParams(request),
         ...(accountId === undefined ? {} : { accountId }),
@@ -27,34 +23,68 @@ export class ComposerApi {
   }
 
   send(request: ComposeRequest, draft: PostDraftDto): Observable<PublishedPostDto> {
-    if (request.kind === 'link') {
-      return this.http.post<PublishedPostDto>(`${this.base}/api/social/links`, {
-        ...draft,
-        network: request.network,
-        url: request.url,
-      });
+    switch (request.kind) {
+      case 'link':
+        return this.http.post<PublishedPostDto>(`${this.base}/api/social/links`, {
+          ...draft,
+          network: request.network,
+          url: request.url,
+        });
+      case 'reply':
+      case 'quote':
+        return this.http.post<PublishedPostDto>(
+          `${this.base}/api/entries/${request.entryId}/social/${RESPONSE_PATHS[request.kind]}`,
+          draft,
+          { params: addressParam(request.address) },
+        );
+      default:
+        return assertNever(request);
     }
-    return this.http.post<PublishedPostDto>(
-      `${this.base}/api/entries/${request.entryId}/social/${RESPONSE_PATHS[request.kind]}`,
-      draft,
-      { params: addressParam(request.address) },
-    );
+  }
+
+  private contextPath(request: ComposeRequest): string {
+    switch (request.kind) {
+      case 'link':
+        return `${this.base}/api/social/link-composer`;
+      case 'reply':
+      case 'quote':
+        return `${this.base}/api/entries/${request.entryId}/social/composer`;
+      default:
+        return assertNever(request);
+    }
   }
 }
 
 function targetParams(request: ComposeRequest): Record<string, string> {
-  if (request.kind === 'link') {
-    return { network: request.network, url: request.url };
+  switch (request.kind) {
+    case 'link':
+      return { network: request.network, url: request.url };
+    case 'reply':
+    case 'quote':
+      return addressParam(request.address);
+    default:
+      return assertNever(request);
   }
-  return addressParam(request.address);
 }
 
 function composerParams(request: ComposeRequest): Record<string, string> {
-  if (request.kind !== 'link') return { kind: request.kind, ...targetParams(request) };
-  const quote: Record<string, string> = request.quote === null ? {} : { quote: request.quote };
-  return { ...targetParams(request), title: request.title, ...quote };
+  switch (request.kind) {
+    case 'link': {
+      const quote: Record<string, string> = request.quote === null ? {} : { quote: request.quote };
+      return { ...targetParams(request), title: request.title, ...quote };
+    }
+    case 'reply':
+    case 'quote':
+      return { kind: request.kind, ...targetParams(request) };
+    default:
+      return assertNever(request);
+  }
 }
 
 function addressParam(address: string | null): Record<string, string> {
   return address === null ? {} : { address };
+}
+
+function assertNever(request: never): never {
+  throw new Error(`Unhandled composer request: ${JSON.stringify(request)}`);
 }

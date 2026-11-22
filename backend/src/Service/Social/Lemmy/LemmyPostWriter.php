@@ -72,7 +72,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
     {
         $text = $publication->draft->text;
         $communityId = $publication->lemmy->communityId
-            ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
+            ?? throw new SocialPostCommunityMissingException('A Lemmy post goes to a community.');
         $title = self::requireValidTitle($publication->lemmy->title);
         self::guardLength($text, LemmyPostLimits::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
 

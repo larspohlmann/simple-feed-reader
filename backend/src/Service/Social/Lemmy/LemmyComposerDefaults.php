@@ -23,7 +23,7 @@ final readonly class LemmyComposerDefaults implements ComposerDefaultsInterface
     {
     }
 
-    public function forPublication(
+    public function resolveDefaults(
         SocialAccount $account,
         PublicationModel $publication,
         \Closure $threadStarter,

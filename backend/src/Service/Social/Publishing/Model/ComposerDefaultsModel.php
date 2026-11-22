@@ -10,7 +10,7 @@ final readonly class ComposerDefaultsModel
     /**
      * @param string|null               $visibility the Mastodon visibility to start from; null on Bluesky
      * @param list<string>              $mentions   handles with their "@", in the order they open the text
-     * @param LemmyPostFieldsModel|null $lemmyPost  what a Lemmy link post chooses from; null elsewhere
+     * @param LemmyPostFieldsModel|null $lemmyPost  what a Lemmy post chooses from; null elsewhere
      */
     public function __construct(
         public int $maxCharacters,

@@ -43,7 +43,7 @@
 | `ResponseTargetFinder.php` | Entry + address → the post to answer, as the acting account |
 | `SharedPostQuoteFinder.php` | URL → quotable post on the same network |
 | `PostWriter/PostWriterInterface.php` | `publish()` per network |
-| `ComposerDefaults/ComposerDefaultsInterface.php` | `forPublication()` per network |
+| `ComposerDefaults/ComposerDefaultsInterface.php` | `resolveDefaults()` per network |
 | `Model/PostDraftModel.php` | What the user typed: text, visibility, CW, language, idempotency key |
 | `Model/PublicationModel.php` | Draft + `inReplyTo` + embed + Lemmy placement |
 | `Model/LemmyCommunityPostModel.php` | Community and title of a Lemmy post |
@@ -165,7 +165,7 @@ Pure move plus the deletion split; behaviour and signatures unchanged except whe
 
 **Interfaces:**
 - Produces:
-  - `ComposerDefaultsInterface::forPublication(SocialAccount $account, PublicationModel $publication, \Closure $threadStarter): ComposerDefaultsModel` replaces `resolveDefaults`, `forAccount`, `forLinkFrom`; `$threadStarter` keeps its docblock ("the entry's own post, found only when a network asks for it") and is `static fn (): ?SocialPostModel => null` for anything but a reply.
+  - `ComposerDefaultsInterface::resolveDefaults(SocialAccount $account, PublicationModel $publication, \Closure $threadStarter): ComposerDefaultsModel` replaces `resolveDefaults`, `forAccount`, `forLinkFrom`; `$threadStarter` keeps its docblock ("the entry's own post, found only when a network asks for it") and is `static fn (): ?SocialPostModel => null` for anything but a reply.
   - Mastodon: max characters from the instance; visibility = `pickStricter(answered-or-quoted post visibility ?? 'public', account privacy)` when there is an `inReplyTo` or a `QuotedPostEmbedModel`, else the account privacy; mentions only with `inReplyTo`; minus `MastodonPostWriter::LINK_ROOM` with a `LinkEmbedModel`. `LINK_ROOM` (and its two parts) moves from `ComposerStartingText` to `MastodonPostWriter` (the writer appends the link).
   - Lemmy: `LemmyPostFieldsModel` (same fields as `LinkPostChoicesModel`) when the publication has no `inReplyTo` and has a `LinkEmbedModel`, title clipped from `LinkEmbedModel::$title`; `ComposerDefaultsModel::$linkPost` → `$lemmyPost`.
   - Bluesky: always `BlueskyPostWriter::MAX_GRAPHEMES`.
@@ -174,8 +174,8 @@ Pure move plus the deletion split; behaviour and signatures unchanged except whe
   - `ComposerContextJson`: key `subject` (row or `null`), `LinkPostRow` → `LemmyPostRow`, the JSON key `lemmy` unchanged, `kind` type `'reply'|'quote'|'link'`.
 
 - [ ] **Step 1: Write the failing tests**
-  - `MastodonComposerDefaultsTest`: `testAStandalonePostStartsFromTheAccountsPrivacyAndTheInstanceLimit` (instance 500, privacy `unlisted` → `(500, 'unlisted', [])`); `testAReplyMentionsTheAuthorAndTheThreadStarter` (existing case via `forPublication`); `testAQuoteTakesTheStricterVisibilityAndMentionsNoOne` (post `private`, account `public` → `'private'`, `[]`); `testALinkPostLeavesRoomForTheLink` (500 → 475).
-  - `LemmyComposerDefaultsTest::testALinkPostOffersCommunitiesAndAClippedTitle` (existing, via `forPublication`); `testAReplyOffersNoPostFields` → `lemmyPost` null.
+  - `MastodonComposerDefaultsTest`: `testAStandalonePostStartsFromTheAccountsPrivacyAndTheInstanceLimit` (instance 500, privacy `unlisted` → `(500, 'unlisted', [])`); `testAReplyMentionsTheAuthorAndTheThreadStarter` (existing case via `resolveDefaults`); `testAQuoteTakesTheStricterVisibilityAndMentionsNoOne` (post `private`, account `public` → `'private'`, `[]`); `testALinkPostLeavesRoomForTheLink` (500 → 475).
+  - `LemmyComposerDefaultsTest::testALinkPostOffersCommunitiesAndAClippedTitle` (existing, via `resolveDefaults`); `testAReplyOffersNoPostFields` → `lemmyPost` null.
   - `BlueskyComposerDefaultsTest::testEveryPublicationHolds300Graphemes`.
   - `ComposerContextJsonTest::testAContextWithoutSubjectSendsNull` — `['subject' => null]` in the row; existing cases assert `subject` instead of `target`.
   - `ComposerContextsTest::testAMastodonLinkContextStartsFromTheTitleWithinTheLinkBudget` — title of 600 characters, instance 500 → `text` fits 475 and `maxCharacters` 475.

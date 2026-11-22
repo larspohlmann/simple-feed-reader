@@ -45,7 +45,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface, PostDelet
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
         $draft = $publication->draft;
-        self::assertFits($draft);
+        self::guardLength($draft);
 
         // Built only when a post is created, so a resend that finds its post uploads no thumbnail.
         $fields = fn (): array => [
@@ -98,7 +98,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface, PostDelet
     }
 
     /** @throws SocialPostTooLongException */
-    private static function assertFits(PostDraftModel $draft): void
+    private static function guardLength(PostDraftModel $draft): void
     {
         if (grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
             throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));

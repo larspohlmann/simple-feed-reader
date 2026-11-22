@@ -42,12 +42,12 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
 
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        $status = self::buildStatusText($publication);
-        $this->guardLength($account, $publication->draft->contentWarning ?? '', $status);
+        $statusText = self::buildStatusText($publication);
+        $this->guardLength($account, $publication->draft->contentWarning ?? '', $statusText);
         $idempotencyKey = $publication->draft->idempotencyKey;
         $request = ApiRequestModel::postJson(
             $account->getServiceUrl() . self::STATUSES,
-            self::buildStatusPayload($publication, $status),
+            self::buildStatusPayload($publication, $statusText),
             null === $idempotencyKey ? [] : ['Idempotency-Key' => $idempotencyKey],
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);

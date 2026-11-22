@@ -43,14 +43,14 @@ final class LemmyComposerDefaultsTest extends TestCase
             new ComposerDefaultsModel(LemmyPostLimits::MAX_CHARACTERS),
             (new LemmyComposerDefaults(new LemmyCommunities(SocialApiWiring::lemmyAccountApi(
                 (new RoutedHttpClient([]))->client(),
-            ))))->forPublication(self::account(), self::standalone(), self::noThreadStarter()),
+            ))))->resolveDefaults(self::account(), self::standalone(), self::noThreadStarter()),
         );
     }
 
     public function testALinkPostOffersCommunitiesAndAClippedTitle(): void
     {
         $defaults = self::defaults()
-            ->forPublication(self::account(), self::linkTo('The article'), self::noThreadStarter());
+            ->resolveDefaults(self::account(), self::linkTo('The article'), self::noThreadStarter());
 
         self::assertEquals(
             new ComposerDefaultsModel(
@@ -65,7 +65,7 @@ final class LemmyComposerDefaultsTest extends TestCase
     {
         $title = trim(str_repeat('wordy ', 40));
 
-        $fields = self::defaults()->forPublication(self::account(), self::linkTo($title), self::noThreadStarter())
+        $fields = self::defaults()->resolveDefaults(self::account(), self::linkTo($title), self::noThreadStarter())
             ->lemmyPost;
 
         self::assertNotNull($fields);
@@ -78,7 +78,7 @@ final class LemmyComposerDefaultsTest extends TestCase
         $post = SocialPostModel::onLemmy(self::account(), '42', null);
         $reply = self::linkTo('The article')->withReplyTo($post);
 
-        $defaults = self::defaults()->forPublication(self::account(), $reply, self::noThreadStarter());
+        $defaults = self::defaults()->resolveDefaults(self::account(), $reply, self::noThreadStarter());
 
         self::assertNull($defaults->lemmyPost);
     }

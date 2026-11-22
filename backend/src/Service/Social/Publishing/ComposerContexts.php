@@ -43,31 +43,31 @@ final readonly class ComposerContexts
 
     public function buildReplyContext(SocialPostModel $post, ResponseTargetModel $target): ComposerContextModel
     {
-        $defaults = $this->selectDefaults($post->account)->forPublication(
+        $defaults = $this->selectDefaults($post->account)->resolveDefaults(
             $post->account,
             self::startPublication()->withReplyTo($post),
             $this->buildThreadStarterLookup($target, $post),
         );
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
-        return $this->buildPostContext($post, ComposerKind::Reply, $defaults, $text);
+        return $this->buildResponseContext($post, ComposerKind::Reply, $defaults, $text);
     }
 
     public function buildQuoteContext(SocialPostModel $post, string $quote): ComposerContextModel
     {
-        $defaults = $this->selectDefaults($post->account)->forPublication(
+        $defaults = $this->selectDefaults($post->account)->resolveDefaults(
             $post->account,
             self::startPublication()->withEmbed(new QuotedPostEmbedModel($post)),
             self::noThreadStarter(),
         );
         $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
 
-        return $this->buildPostContext($post, ComposerKind::Quote, $defaults, $text);
+        return $this->buildResponseContext($post, ComposerKind::Quote, $defaults, $text);
     }
 
     public function buildLinkContext(SocialAccount $account, SharedLinkModel $link): ComposerContextModel
     {
-        $defaults = $this->selectDefaults($account)->forPublication(
+        $defaults = $this->selectDefaults($account)->resolveDefaults(
             $account,
             self::startPublication()->withEmbed(new LinkEmbedModel($link->url, $link->title)),
             self::noThreadStarter(),
@@ -93,7 +93,7 @@ final readonly class ComposerContexts
         return ComposerStartingText::sharing($link, $defaults->maxCharacters);
     }
 
-    private function buildPostContext(
+    private function buildResponseContext(
         SocialPostModel $post,
         ComposerKind $kind,
         ComposerDefaultsModel $defaults,
