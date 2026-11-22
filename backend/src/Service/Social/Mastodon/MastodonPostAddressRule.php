@@ -22,7 +22,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
     {
         return SocialPostAddressModel::fromNullable(
             SocialNetwork::Mastodon,
-            AbsoluteHttpUrl::keepIfAbsolute($entry->getGuid()) ?? AbsoluteHttpUrl::keepIfAbsolute($entry->getUrl()),
+            MastodonStatusAddress::pickEntryAddress($entry->getGuid(), $entry->getUrl()),
         );
     }
 
@@ -38,7 +38,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
 
     public function parsePostUrl(string $url): ?SocialPostAddressModel
     {
-        $status = null === MastodonStatusAddress::parseAddress($url) ? null : $url;
+        $status = MastodonStatusAddress::isStatusAddress($url) ? $url : null;
 
         return SocialPostAddressModel::fromNullable(SocialNetwork::Mastodon, $status);
     }
