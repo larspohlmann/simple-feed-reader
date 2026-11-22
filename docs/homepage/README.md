@@ -50,6 +50,19 @@ Its tests run with the other Node script tests in CI:
 node --test "scripts/test/homepage-changelog/*.test.mjs"
 ```
 
+## The page is checked
+
+`scripts/test/homepage/page.test.mjs` runs in the same CI step. It fails when the
+page names a file that is not there, when the four copies of the description
+(meta, Open Graph, Twitter, JSON-LD) differ, when the gallery
+([`docs/screenshots.md`](../screenshots.md)) misses a screenshot or names one that
+is gone, when a screenshot's `width` and `height` are not those of its file, and when the
+tour's scene list does not match the scenes `tour.mjs` records.
+
+```bash
+node --test "scripts/test/homepage/*.test.mjs"
+```
+
 ## Deployment
 
 `.github/workflows/deploy-homepage.yml` rsyncs this folder over SSH into

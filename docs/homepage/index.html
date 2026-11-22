@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<meta name="description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta name="description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. Free and open source.">
 <meta name="author" content="Lars Pohlmann">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f4">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161616">
@@ -17,7 +17,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://lars-pohlmann.de/simplefeedreader/">
 <meta property="og:title" content="simple feed reader — an RSS reader that lays feeds out like a magazine">
-<meta property="og:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta property="og:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. Free and open source.">
 <meta property="og:image" content="https://lars-pohlmann.de/simplefeedreader/share.png">
 <meta property="og:image:secure_url" content="https://lars-pohlmann.de/simplefeedreader/share.png">
 <meta property="og:image:type" content="image/png">
@@ -26,7 +26,7 @@
 <meta property="og:image:alt" content="simple feed reader: an RSS reader that lays feeds out like a magazine, next to a screenshot of the magazine layout">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="simple feed reader — an RSS reader that lays feeds out like a magazine">
-<meta name="twitter:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta name="twitter:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. Free and open source.">
 <meta name="twitter:image" content="https://lars-pohlmann.de/simplefeedreader/share.png">
 <meta name="twitter:image:alt" content="simple feed reader: an RSS reader that lays feeds out like a magazine, next to a screenshot of the magazine layout">
 <script type="application/ld+json">
@@ -35,11 +35,12 @@
   "@type": "SoftwareApplication",
   "name": "simple feed reader",
   "url": "https://lars-pohlmann.de/simplefeedreader/",
-  "description": "A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.",
+  "description": "A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, Trending stories, podcasts, YouTube, Bluesky, Mastodon and Lemmy, optional AI recommendations. Free and open source.",
   "image": "https://lars-pohlmann.de/simplefeedreader/share.png",
   "screenshot": [
     "https://lars-pohlmann.de/simplefeedreader/screenshots/magazine-light.webp",
     "https://lars-pohlmann.de/simplefeedreader/screenshots/pane-light.webp",
+    "https://lars-pohlmann.de/simplefeedreader/screenshots/trending-light.webp",
     "https://lars-pohlmann.de/simplefeedreader/screenshots/mobile-magazine-light.webp"
   ],
   "applicationCategory": "NewsApplication",
@@ -60,7 +61,11 @@
     "Full-text search and saved searches",
     "Daily or weekly email digest",
     "Podcast and YouTube player with playlist and chapters",
-    "Bluesky and Mastodon timelines as feeds",
+    "Trending stories across feeds, with optional AI titles and synopses",
+    "Bluesky, Mastodon and Lemmy as feeds",
+    "Lemmy communities with votes and threaded comments",
+    "Notifications from connected social accounts",
+    "Feed directory of about 50,000 news sites and podcasts",
     "Optional AI recommendations through any OpenAI-compatible API",
     "OPML import and export",
     "Organise page for feeds and tags",
@@ -91,7 +96,7 @@
 section{padding:var(--space-8) 0}
 section + section{border-top:1px solid var(--border)}
 .sect-head{max-width:60ch;margin-bottom:var(--space-6)}
-.sect-head h2{margin-top:var(--space-2)}
+.sect-head h2,.split h2{margin-top:var(--space-2)}
 .sect-head p{margin-top:var(--space-3);font-size:16px}
 
 .layouts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
@@ -99,6 +104,8 @@ section + section{border-top:1px solid var(--border)}
 .layouts figcaption{margin-top:var(--space-3)}
 .layouts figcaption strong{display:block}
 .layouts figcaption span{color:var(--text-secondary);font-size:14px}
+
+.closeups{grid-template-columns:1fr 1fr;margin-top:var(--space-6)}
 
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5)}
@@ -195,6 +202,7 @@ pre .c{color:var(--text-muted)}
       <a href="#mobile">Mobile</a>
       <a href="#install">Install</a>
       <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/screenshots.md">Screenshots</a>
+      <a href="changelog.html">Changelog</a>
       <a href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
     </nav>
     <button class="theme-switch" type="button" aria-label="Switch to dark theme">
@@ -210,7 +218,7 @@ pre .c{color:var(--text-muted)}
     <div>
       <p class="eyebrow">Self-hosted · multi-user · open source</p>
       <h1 style="margin-top:12px">An RSS reader that lays feeds out <em>like a magazine.</em></h1>
-      <p class="lede muted">A web-based RSS/Atom reader, installed on a server of one’s own, with accounts for one or several users. It collects articles, podcasts, YouTube channels and the timelines of Bluesky and Mastodon accounts into a single reading column.</p>
+      <p class="lede muted">A web-based RSS/Atom reader, installed on a server of one’s own, with accounts for one or several users. It collects articles, podcasts, YouTube channels and the timelines of Bluesky, Mastodon and Lemmy accounts into a single reading column, and shows which stories several feeds are covering.</p>
       <div class="actions">
         <a class="btn primary" href="#install">Installation</a>
         <a class="btn" href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
@@ -243,14 +251,16 @@ pre .c{color:var(--text-muted)}
       <div class="sect-head">
         <p class="eyebrow">Tour</p>
         <h2>See it in action.</h2>
-        <p class="muted">Forty seconds on a phone: from the magazine into an article, through the sidebar to a podcast, and over to the other theme.</p>
+        <p class="muted">A minute on a phone: the magazine with its bars folding away, a video that starts on its own, an article, the stories of the day, a podcast, and the other theme.</p>
       </div>
       <ol class="tour-scenes">
-        <li><button type="button" data-scene="magazine" data-light="0.4" data-dark="0.4"><strong>The magazine</strong><span>Articles, podcasts and posts in one column.</span></button></li>
-        <li><button type="button" data-scene="reader" data-light="6.51" data-dark="6.38"><strong>Reader view</strong><span>The full text, extracted and readable.</span></button></li>
-        <li><button type="button" data-scene="sidebar" data-light="16.28" data-dark="16.59"><strong>Feeds and tags</strong><span>The drawer holds every feed, tag and saved search.</span></button></li>
-        <li><button type="button" data-scene="podcast" data-light="21.57" data-dark="21.84"><strong>Listening</strong><span>A player that stays with the reader.</span></button></li>
-        <li><button type="button" data-scene="theme" data-light="29.34" data-dark="29.57"><strong>Light and dark</strong><span>Each theme is one tap away.</span></button></li>
+        <li><button type="button" data-scene="magazine" data-light="0.4" data-dark="0.4"><strong>The magazine</strong><span>Articles, podcasts and posts in one column; the bars fold away once it scrolls.</span></button></li>
+        <li><button type="button" data-scene="video" data-light="5.26" data-dark="5.15"><strong>Video</strong><span>A video starts on its own as it scrolls into view, muted.</span></button></li>
+        <li><button type="button" data-scene="reader" data-light="11.74" data-dark="11.55"><strong>Reader view</strong><span>The full text, extracted and readable.</span></button></li>
+        <li><button type="button" data-scene="trending" data-light="21.39" data-dark="21.05"><strong>Trending</strong><span>The stories several feeds cover, one card each.</span></button></li>
+        <li><button type="button" data-scene="sidebar" data-light="32.99" data-dark="33.13"><strong>Feeds and tags</strong><span>The drawer holds every feed, tag and saved search.</span></button></li>
+        <li><button type="button" data-scene="podcast" data-light="38.01" data-dark="38.19"><strong>Listening</strong><span>A player that stays with the reader.</span></button></li>
+        <li><button type="button" data-scene="theme" data-light="45.7" data-dark="45.88"><strong>Light and dark</strong><span>Each theme is one tap away.</span></button></li>
       </ol>
     </div>
   </div>
@@ -271,6 +281,22 @@ pre .c{color:var(--text-muted)}
   </div>
 </section>
 
+<section id="trending">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Trending</p>
+      <h2>The stories several feeds are covering.</h2>
+      <ul>
+        <li><span><strong>Ranked by sources:</strong> articles about the same event form one story, over the last 24 hours or the last 7 days. An article counts once, however many feeds and posts carry it.</span></li>
+        <li><span><strong>One card per story:</strong> its sources and shares, when it started and when its last article joined. A story opens as a list of its own.</span></li>
+        <li><span><strong>Titles, optional:</strong> a connected language model writes a headline and a short synopsis for each story. Without one, the story keeps its most representative headline.</span></li>
+        <li><span><strong>Follow and Hide:</strong> a followed story stays in the sidebar and counts what is new; a hidden one does not come back.</span></li>
+      </ul>
+    </div>
+    <div class="shot"><a class="zoom" href="screenshots/trending-light.webp"><img src="screenshots/trending-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="Trending: one card per story, with its sources, its synopsis and the articles that covered it"></a></div>
+  </div>
+</section>
+
 <section id="features">
   <div class="wrap">
     <div class="sect-head">
@@ -278,12 +304,35 @@ pre .c{color:var(--text-muted)}
       <h2>Articles, audio, video and social timelines.</h2>
     </div>
     <div class="grid">
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Reader view</h3><p>The extracted full text of an article with its images, audio and video inline. A reading-time estimate, a progress bar, and a focus mode that dims everything except the current passage.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Reader view</h3><p>The extracted full text of an article with its images, audio and video inline. A reading-time estimate, a progress bar, and a focus mode that dims everything except the current passage. The discussion of a Reddit or Lemmy post and the replies to a social post load below it.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Saved searches</h3><p>Full-text search, including exact phrases in quotes. A search can be saved as a named view in the sidebar with its own unread count, and new matches can be sent as a daily or weekly email digest.</p></div>
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10 6z"/><path d="M4 6v12"/></svg></div><h3>Podcasts &amp; YouTube</h3><p>A persistent audio player with a reorderable playlist. An Apple Podcasts, SoundCloud, Mixcloud or YouTube link pasted into “Add feed” subscribes to the show, account, channel or playlist; Shorts play in a portrait player. Episodes and videos with chapters list them under the player; a tap jumps to one.</p></div>
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c-3 4-9 5-9 10a9 9 0 0 0 18 0c0-5-6-6-9-10z"/></svg></div><h3>Bluesky &amp; Mastodon</h3><p>A connected account contributes its home timeline, lists, custom feeds and followed accounts as feeds. Posts show their embedded images, links and quotes; likes and replies are sent from the reader.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10 6z"/><path d="M4 6v12"/></svg></div><h3>Podcasts &amp; YouTube</h3><p>A persistent audio player with a reorderable playlist. An Apple Podcasts, SoundCloud, Mixcloud or YouTube link pasted into “Add feed” subscribes to the show, account, channel or playlist; Shorts play in a portrait player. Episodes and videos with chapters list them under the player; a tap jumps to one. An episode that publishes a transcript shows it, and a tap on a line plays from there.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 2.2 5.3L20 9l-4.3 4 1.3 5.8L12 15.8 7 18.8 8.3 13 4 9l5.8-.7z"/></svg></div><h3>“For you”, optional</h3><p>An optional ranking of unread articles, based on which entries get favorited, kept and read. It uses any OpenAI-compatible API, including local models through Ollama or LM Studio, or TypeSafe’s Jev scorer, and shows the cost of each run.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 3 2.6 15 0 18M12 3c-2.6 3-2.6 15 0 18"/></svg></div><h3>Feed directory</h3><p>About 50,000 news sites and podcasts from the InfoBubble sources catalog, narrowed to chosen countries and languages. The directory filters by category, article length and language, searches sites and summaries, and subscribes from a row.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 15h3"/></svg></div><h3>Feed management</h3><p>Pasting a site address finds its feed. Feeds can be previewed before subscribing, imported and exported as OPML, sorted into tags nested up to three levels with colours and icons, and show their fetch status in plain language.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="social">
+  <div class="wrap split flip">
+    <div>
+      <p class="eyebrow">Social</p>
+      <h2>Bluesky, Mastodon and Lemmy.</h2>
+      <ul>
+        <li><span><strong>Timelines as feeds:</strong> a connected account contributes its home timeline, lists, custom feeds and followed accounts, on Lemmy its communities. A search can be saved as a feed of its own.</span></li>
+        <li><span><strong>Posts in full:</strong> embedded images, video, link cards and quotes, with like and reply counts and the replies below. A video in a list starts on its own as it scrolls into view, muted and one at a time.</span></li>
+        <li><span><strong>Lemmy threads:</strong> a post shows its score and its community, comments are threaded and sorted by interest, and both are voted up or down from the reader.</span></li>
+        <li><span><strong>Answering:</strong> like, reply, repost and quote go straight back to the network. A page’s link is shared to all three from one composer, a selected passage as a quote.</span></li>
+        <li><span><strong>Notifications:</strong> each network’s section carries a bell with the unseen count; likes, replies, reposts, mentions and follows are grouped in one list.</span></li>
+      </ul>
+    </div>
+    <div class="shot"><a class="zoom" href="screenshots/lemmy-light.webp"><img src="screenshots/lemmy-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="A Lemmy post open beside the list of followed communities, with its score and its community"></a></div>
+  </div>
+  <div class="wrap">
+    <div class="layouts closeups">
+      <figure><div class="shot"><a class="zoom" href="screenshots/lemmy-votes-light.webp"><img src="screenshots/lemmy-votes-light.webp" width="1284" height="728" loading="lazy" decoding="async" alt="Close-up of the end of a Lemmy post, with Add comment and the vote pill under its text"></a></div><figcaption><strong>Votes on a post</strong><span>The pill shows the score; its arrows vote up or down.</span></figcaption></figure>
+      <figure><div class="shot"><a class="zoom" href="screenshots/lemmy-comment-votes-light.webp"><img src="screenshots/lemmy-comment-votes-light.webp" width="1284" height="788" loading="lazy" decoding="async" alt="Close-up of threaded Lemmy comments, each with its score and vote arrows"></a></div><figcaption><strong>Votes on comments</strong><span>Every comment in the thread carries its own score.</span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -293,15 +342,15 @@ pre .c{color:var(--text-muted)}
     <div class="sect-head">
       <p class="eyebrow">Mobile</p>
       <h2>The same reader on a phone screen.</h2>
-      <p class="muted">On small screens the sidebar collapses and opens with a swipe, lists refresh by pulling down, and controls are sized for touch. The player bar stays at the bottom and expands into a full-size player.</p>
+      <p class="muted">On small screens the sidebar collapses and opens with a swipe, lists refresh by pulling down, and controls are sized for touch. Once a list scrolls, the app bar, the tag strip and the list header fold into a single title line, so nearly the whole screen shows content. The floating buttons sit together in one bottom corner, on the side chosen in the preferences. The player bar stays at the bottom and expands into a full-size player.</p>
     </div>
     <div class="phones">
-      <div class="shot"><a class="zoom" href="screenshots/mobile-magazine-light.webp"><img src="screenshots/mobile-magazine-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The magazine on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-magazine-light.webp"><img src="screenshots/mobile-magazine-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The magazine on a phone, at the top of the list"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-scrolled-light.webp"><img src="screenshots/mobile-scrolled-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The same list scrolled: the bars have folded into one title line"></a></div>
       <div class="shot"><a class="zoom" href="screenshots/mobile-reader-dark.webp"><img src="screenshots/mobile-reader-dark.webp" width="908" height="1832" loading="lazy" decoding="async" alt="Reader view on a phone, dark theme"></a></div>
       <div class="shot"><a class="zoom" href="screenshots/mobile-sidebar-light.webp"><img src="screenshots/mobile-sidebar-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The sidebar drawer on a phone"></a></div>
       <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-player-light.webp"><img src="screenshots/mobile-podcast-player-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The full-size audio player on a phone"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-playlist-light.webp"><img src="screenshots/mobile-podcast-playlist-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The audio playlist on a phone, above the player bar"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-for-you-light.webp"><img src="screenshots/mobile-for-you-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="For you on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-trending-light.webp"><img src="screenshots/mobile-trending-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="Trending on a phone"></a></div>
     </div>
   </div>
 </section>
@@ -311,7 +360,7 @@ pre .c{color:var(--text-muted)}
     <div class="sect-head" style="margin-bottom:0">
       <p class="eyebrow">Organise</p>
       <h2>Every feed and tag in one place.</h2>
-      <p class="muted">The Organise page lists all feeds and tags. Both are reordered by drag; several feeds can be selected at once to tag them or change their visibility; feeds that error or are gone can be retried or unsubscribed from the same list.</p>
+      <p class="muted">The Organise page lists all feeds and tags. Both are reordered by drag; several feeds can be selected at once to tag them or change their visibility; feeds that error or are gone can be retried or unsubscribed from the same list. Checkboxes on every feed, tag and network decide where it shows: All items, For you, saved searches and Trending.</p>
     </div>
     <div class="shot"><a class="zoom" href="screenshots/organise-light.webp"><img src="screenshots/organise-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The Organise page with every feed and tag"></a></div>
   </div>
@@ -321,15 +370,15 @@ pre .c{color:var(--text-muted)}
   <div class="wrap split">
     <div>
       <p class="eyebrow">Self-hosted</p>
-      <h2 style="margin-top:8px">Accounts, administration and data.</h2>
+      <h2>Accounts, administration and data.</h2>
       <ul>
         <li><span><strong>Sign-in:</strong> email and password, Google, Apple or a passkey. Registration uses an invisible proof-of-work check, no CAPTCHA.</span></li>
-        <li><span><strong>Administration:</strong> approve, suspend and delete users; set trial periods and feed limits; configure SMTP and an outbound proxy, each with a test button.</span></li>
+        <li><span><strong>Administration:</strong> approve, suspend and delete users; set trial periods and feed limits; configure SMTP and an outbound proxy, each with a test button; update the install from the app, with the optional updater container.</span></li>
         <li><span><strong>Data:</strong> a full account export as a backup file, restorable on another instance, or account deletion.</span></li>
-        <li><span><strong>AI:</strong> off unless configured, and then against any OpenAI-compatible provider, local models included.</span></li>
+        <li><span><strong>AI:</strong> off unless configured, and then against any OpenAI-compatible provider, local models included. A run history lists every call with its tokens and cost.</span></li>
       </ul>
     </div>
-    <div class="shot"><a class="zoom" href="screenshots/for-you-light.webp"><img src="screenshots/for-you-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The For you recommendations"></a></div>
+    <div class="shot"><a class="zoom" href="screenshots/admin-users-light.webp"><img src="screenshots/admin-users-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The user administration: accounts with their status, feeds and last sign-in"></a></div>
   </div>
 </section>
 

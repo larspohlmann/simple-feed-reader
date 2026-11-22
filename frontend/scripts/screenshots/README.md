@@ -9,25 +9,45 @@ SHOT_EMAIL=jamie.park@example.com
 SHOT_PASSWORD=…
 BLUESKY_HANDLE=…
 BLUESKY_APP_PASSWORD=…
+MASTODON_INSTANCE_URL=…
+MASTODON_ACCESS_TOKEN=…
+LEMMY_INSTANCE_URL=…
+LEMMY_USERNAME=…
+LEMMY_PASSWORD=…
 EOF
 
-# Sign-in and admin pages: any admin account works (the user list and proxy page are stubbed).
-# Everything else: the demo account.
-node --env-file=.env.screenshots scripts/screenshots/shots.mjs public admin library
+# Sign-in and admin pages: any admin account works (the user list and proxy page are stubbed);
+# override SHOT_EMAIL and SHOT_PASSWORD for this one run. Everything else: the demo account.
+SHOT_EMAIL=… SHOT_PASSWORD=… node --env-file=.env.screenshots scripts/screenshots/shots.mjs public admin
 
-# The Social shots, and the Bluesky section every sidebar shows, need a connected account:
-# BLUESKY_HANDLE and BLUESKY_APP_PASSWORD (an app password, never the account password) in the env
-# file. The handle shows in the shots. Connect, import a curated set of follows and feeds, shoot
-# everything with a sidebar, then disconnect; the demo keeps nothing.
-node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs candidates   # what could be imported
-BLUESKY_IMPORT_HANDLES=heise.de,hankgreen.bsky.social BLUESKY_IMPORT_COLLECTIONS=Discover \
-  node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs
+# The Social shots, and the network sections every sidebar shows, need connected accounts: a
+# Bluesky app password (never the account password), a Mastodon access token and a Lemmy sign-in
+# in the env file. The handles show in the shots. Connect each, import a curated set of follows,
+# communities and feeds, shoot everything with a sidebar, then disconnect; the demo keeps nothing.
+node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky candidates   # what could be imported
+BLUESKY_IMPORT_HANDLES=npr.org,hankgreen.bsky.social,lhn.bsky.social,agreenberg.bsky.social,mattburgess1.bsky.social,levarburton.bsky.social \
+  BLUESKY_IMPORT_COLLECTIONS=Discover \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs bluesky
+MASTODON_IMPORT_HANDLES=eff@mastodon.social,pluralistic@mamot.fr,historyofpunkrock@sfba.social,madrobotblog@mastodon.social,inthehands@hachyderm.io \
+  MASTODON_IMPORT_COLLECTIONS='#rss' \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs mastodon
+# A Lemmy community keeps its leading "!"; a collection name nothing carries imports no collection.
+LEMMY_IMPORT_HANDLES='!selfhosted@lemmy.world,!dataisbeautiful@lemmy.world,!apple_enthusiast@lemmy.world,!rssfeeds@lemmy.world,!transit@lemmy.world' \
+  LEMMY_IMPORT_COLLECTIONS=none \
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs lemmy
 node --env-file=.env.screenshots scripts/screenshots/shots.mjs library social
-node --env-file=.env.screenshots scripts/screenshots/bluesky-setup.mjs teardown
+for network in bluesky mastodon lemmy; do
+  node --env-file=.env.screenshots scripts/screenshots/social-setup.mjs "$network" teardown
+done
 
-# The Trending shots need news feeds whose stories overlap: borrow some, shoot, give them back.
+# The Trending shots need news feeds whose stories overlap (trending-feeds.mjs): borrow them, wait
+# until `status` exits 0, shoot, give them back. Below its floor (4 stories in the day window after
+# the calm filter, 4 sources on the lead, a synopsis on those four) the list is too thin to show. A rebuild runs
+# on the worker's schedule and titles follow within five minutes;
+# `docker compose exec php bin/console app:trending:rebuild --user=<id> day` builds at once.
 node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs
-node --env-file=.env.screenshots scripts/screenshots/shots.mjs trending-light mobile-trending-light
+node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs status
+node --env-file=.env.screenshots scripts/screenshots/shots.mjs trending
 node --env-file=.env.screenshots scripts/screenshots/trending-setup.mjs teardown
 
 # The Listening shots need podcasts the demo does not follow: borrow some, shoot, give them back.
@@ -36,10 +56,27 @@ PODCAST_TAG=<id> node --env-file=.env.screenshots scripts/screenshots/shots.mjs 
 node --env-file=.env.screenshots scripts/screenshots/podcast-setup.mjs teardown
 ```
 
+Before a retake, `backlog-setup.mjs` marks everything older than two days read, so the sidebar
+counts read like an account in use (the demo is opened only for screenshots).
+
+No shot and no tour scene shows violence: every list and Trending leave out entries and stories
+whose title or summary matches the word list in `lib.mjs` (killing, war, abuse, disaster). Look at
+every shot all the same; `SHOT_SKIP='pattern'` leaves out more for one run. The shots differ on
+purpose: the desktop reading shots each open another tag and another article, and shots of the
+same list start further down (`startAt`). A connected account's home timeline and discovery feeds
+stay in their network's section, out of All items, For you, saved searches and Trending.
+
+The notifications shot shows invented people: its list and the bell's count are stubbed, since a
+connected account's real notifications name real ones. The Lemmy shots show the followed
+communities, not the home timeline, and open the most discussed post near the top of that list;
+`LEMMY_POST='title words'` names another when that thread does not suit a public page.
+`lemmy-votes-light` and `lemmy-comment-votes-light` are close-ups at twice the pixels, cut to the
+end of the post with its votes and to the first comments.
+
 The post shots open the newest post of one followed account, `BLUESKY_POST_ACCOUNT` (a title
 substring, default "Lily Hay Newman"), by its title; check that the post suits a public README.
 
-`shots.mjs` takes set names (`public`, `admin`, `library`, `social`, `listening`, `all`) or individual
+`shots.mjs` takes set names (`public`, `admin`, `library`, `trending`, `social`, `listening`, `all`) or individual
 shot names, writes the WebP files straight into `docs/screenshots/`, and keeps the raw PNGs
 under the system temp directory. It needs `cwebp` on the PATH (`brew install webp`).
 
@@ -49,7 +86,9 @@ and pass through `frame.mjs`, which wraps them in a phone frame with a transpare
 ## Tour video
 
 The homepage's phone tour (`docs/homepage/tour-*`) is recorded by `tour.mjs`, both themes in one
-run; it borrows and returns the podcasts itself:
+run; it borrows and returns the podcasts and the Trending feeds itself, and waits until Trending
+is above its floor. Its video scene needs a connected network whose followed accounts have posted
+a video (run `social-setup.mjs` first):
 
 ```bash
 node --env-file=.env.screenshots scripts/screenshots/tour.mjs          # or: … tour.mjs light
@@ -58,10 +97,12 @@ node --env-file=.env.screenshots scripts/screenshots/tour.mjs          # or: …
 It writes `tour-<theme>.mp4` and `tour-<theme>-poster.webp` into
 `docs/homepage/`, and each scene's start time into the `data-light` / `data-dark` attribute of the
 page's scene list. `TOUR_OUT` points a trial run elsewhere; it updates a page only if that folder
-has an `index.html`. It needs `ffmpeg` and `cwebp` on the PATH. Check each video before committing,
+has an `index.html`. It needs `ffmpeg` and `cwebp` on the PATH, and stops rather than record a
+tour in which no video played. Check each video before committing,
 for example with a contact sheet:
-`ffmpeg -i tour-light.mp4 -vf "fps=1,scale=200:-1,tile=9x5" -frames:v 1 sheet.png`.
-An aborted run can leave the podcasts borrowed; `podcast-setup.mjs teardown` returns them.
+`ffmpeg -i tour-light.mp4 -vf "fps=1,scale=200:-1,tile=10x6" -frames:v 1 sheet.png`.
+An aborted run can leave the podcasts and the Trending feeds borrowed; `podcast-setup.mjs teardown`
+and `trending-setup.mjs teardown` return them.
 
 The demo account's password can be reset from the stack:
 

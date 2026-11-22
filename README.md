@@ -47,9 +47,9 @@ Podcasts.
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
 </p>
 
-Connect a Bluesky or Mastodon account and its home timeline, lists, custom
-feeds and follows arrive as feeds; a post shows what it embeds, and its likes
-and replies stay in the reader.
+Connect a Bluesky, Mastodon or Lemmy account and its home timeline, lists,
+custom feeds, follows and communities arrive as feeds; a post shows what it
+embeds, and its likes and replies stay in the reader.
 
 <p>
   <img src="docs/screenshots/bluesky-light.webp" alt="The Bluesky section: home timeline, a custom feed and followed accounts, with posts in the magazine" width="74%">
@@ -67,13 +67,16 @@ More in the [screenshot gallery](docs/screenshots.md).
   unread count, and optional daily or weekly email digests.
 - **Podcasts, SoundCloud, Mixcloud and YouTube** — paste a profile, show or
   channel link and subscribe; audio plays in a persistent playlist.
-- **Bluesky and Mastodon** — connect an account and its timelines, lists and
-  follows arrive as feeds; save a search and its new matches arrive as a feed
-  too.
-- **Feed discovery** from a website's address, feed previews before you
-  subscribe, OPML import and export, tags with colors and icons.
+- **Bluesky, Mastodon and Lemmy** — connect an account and its timelines,
+  lists, follows and communities arrive as feeds; save a search and its new
+  matches arrive as a feed too. Like, vote, reply, repost and quote from the
+  reader, and see each network's notifications.
+- **Feed discovery** from a website's address or a directory of about 50,000
+  news sites and podcasts, feed previews before you subscribe, OPML import and
+  export, tags with colors and icons.
 - **Trending** — the stories several of your feeds are covering, from the last
-  24 hours or the last 7 days, ranked by how many sources ran them.
+  24 hours or the last 7 days, ranked by how many sources ran them. Follow or
+  hide a story; an LLM, if you connect one, writes its headline and synopsis.
 - **"For you" (optional)** — an AI model of your choice, local or hosted, ranks
   your unread articles, with a cost overview per run.
 - **Accounts** — email and password, Google, Apple or a passkey; several users
