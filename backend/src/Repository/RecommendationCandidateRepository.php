@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Enum\InclusionSurface;
+use App\Enum\VoteScore;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -22,8 +23,8 @@ final readonly class RecommendationCandidateRepository
     }
 
     /**
-     * The newest entries since $since the reader has not favorited, kept or viewed, one copy per duplicate group.
-     * Read entries stay eligible.
+     * The newest entries since $since the reader has not favorited, kept, viewed, shared or liked, one copy per
+     * duplicate group. Read entries stay eligible.
      *
      * @return list<TitledEntry>
      */
@@ -34,7 +35,8 @@ final readonly class RecommendationCandidateRepository
             ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('since', $since)
-            ->setParameter('notInteracted', false, Types::BOOLEAN);
+            ->setParameter('notInteracted', false, Types::BOOLEAN)
+            ->setParameter('upvote', VoteScore::Up);
 
         $this->poolScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, CollapseScope::fromScope($this->poolScope(...)), $userId);
@@ -91,9 +93,10 @@ final readonly class RecommendationCandidateRepository
             '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
             . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)'
-            . ' AND NOT %2$s',
+            . ' AND NOT %2$s AND NOT %3$s',
             $aliases->state,
             EntryShareDql::exists($aliases),
+            EntryLikeDql::exists($aliases),
         ));
         $inner->andWhere(\sprintf('%s.dates.effectiveDate >= :since', $aliases->entry));
     }

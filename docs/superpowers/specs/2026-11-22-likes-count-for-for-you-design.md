@@ -16,6 +16,7 @@ section.
   favorites beat shared, shared beats liked, liked beats kept, kept beats viewed.
 - A new or withdrawn like changes the profile fingerprint, so a scheduled profile
   run is due again.
+- A liked or upvoted post leaves the For you candidates, like a shared one.
 
 ## Non-goals
 
@@ -36,6 +37,10 @@ section.
   sections do.
 - **Lower sections** — `kept()` and `viewed()` leave out liked entries, the way they
   leave out shared ones today (`EntryShareDql::exists`).
+- **Candidate pool** — `EntryLikeDql` is the one DQL definition of "liked or upvoted",
+  beside `EntryShareDql`; `kept()`, `viewed()` and the pool scope of
+  `RecommendationCandidateRepository` (its collapse semi-joins included) leave such
+  entries out.
 - **Cap** — `RecommendationHistoryCaps::LIKED_CAP = 40`, fixed like `SHARED_CAP`.
 - **Model** — `RecommendationHistoryModel` gains `liked`; `isEmpty()` counts it, so a
   reader with nothing but likes gets a profile.

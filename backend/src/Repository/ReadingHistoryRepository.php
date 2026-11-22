@@ -77,7 +77,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isKept = :true AND es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->andWhere($this->buildNotLikedCondition())
+            ->andWhere('NOT ' . EntryLikeDql::exists(EntryAliases::primary()))
             ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -94,7 +94,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->andWhere($this->buildNotLikedCondition())
+            ->andWhere('NOT ' . EntryLikeDql::exists(EntryAliases::primary()))
             ->orderBy('es.viewedAt', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -150,18 +150,6 @@ final readonly class ReadingHistoryRepository
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('user', $userId)
             ->setParameter('false', false, Types::BOOLEAN);
-    }
-
-    private function buildNotLikedCondition(): string
-    {
-        return sprintf(
-            'NOT EXISTS (SELECT 1 FROM %1$s itemLike WHERE itemLike.canonicalItem = e.canonicalItem'
-            . ' AND itemLike.user = :user)'
-            . ' AND NOT EXISTS (SELECT 1 FROM %2$s itemUpvote WHERE itemUpvote.canonicalItem = e.canonicalItem'
-            . ' AND itemUpvote.user = :user AND itemUpvote.score = :upvote)',
-            SocialLike::class,
-            DiscussionVote::class,
-        );
     }
 
     /** @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable, entryId: int}> */
