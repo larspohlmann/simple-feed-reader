@@ -49,7 +49,7 @@ final readonly class RecommendationConsolidationResolver
     {
         $run = $tick->run;
         $prompt = new PromptContext(
-            $this->historyLoader->load($tick->userId(), $tick->settings),
+            $this->historyLoader->favorites($tick->userId(), $tick->settings),
             $tick->settings,
             $run->getProfileText(),
         );

@@ -22,10 +22,13 @@ use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSe
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LikedPostFixtures;
+use App\Tests\Support\RecordsHistorySectionQueries;
 use App\Tests\Support\SharedLinks;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase
 {
+    use RecordsHistorySectionQueries;
+
     private User $user;
     private Feed $feed;
     private Subscription $subscription;
@@ -49,6 +52,16 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->entityManager->persist($this->subscription);
 
         $this->entityManager->flush();
+    }
+
+    /** The run-path pins rely on these patterns: favorites once, and each of the other five statements. */
+    public function testTheHistoryPatternsTellFavoritesFromEveryOtherSectionQuery(): void
+    {
+        $this->startRecordingQueries();
+        $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertCount(1, $this->recordedQueriesMatching(self::FAVORITES_SQL));
+        self::assertCount(5, $this->recordedHistorySectionQueries());
     }
 
     public function testEachEntryAppearsOnlyInItsHighestSection(): void

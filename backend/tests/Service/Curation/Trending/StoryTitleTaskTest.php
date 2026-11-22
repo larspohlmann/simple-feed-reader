@@ -18,14 +18,16 @@ use App\Service\Curation\Trending\StoryTitleTask;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordsQueries;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TrendingFixtures;
-use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Response;
 
 final class StoryTitleTaskTest extends DbTestCase
 {
+    use RecordsQueries;
+
     private const string NOW = '2031-05-14 12:00:00';
 
     private const string BEFORE_THE_WEEK = '2031-05-07 11:59:00';
@@ -237,13 +239,12 @@ final class StoryTitleTaskTest extends DbTestCase
     public function testAReaderWithOnlyStoriesOutsideEveryWindowIsNotRanked(): void
     {
         $this->storyLastSeen(self::BEFORE_THE_WEEK, 3);
-        $queries = $this->queries();
-        $queries->reset();
+        $this->startRecordingQueries();
 
         $due = $this->task()->dueStoryIds($this->reader, $this->clock->now());
 
         self::assertSame([], $due);
-        self::assertSame([], $this->rankingQueriesIn($queries));
+        self::assertSame([], $this->recordedQueriesMatching('/trending_story_hide/'));
     }
 
     public function testTheTitleInputIsCleaned(): void
@@ -353,26 +354,6 @@ final class StoryTitleTaskTest extends DbTestCase
         $task = self::getContainer()->get(StoryTitleTask::class);
 
         return $task;
-    }
-
-    /** @return list<string> */
-    private function rankingQueriesIn(DebugDataHolder $queries): array
-    {
-        /** @var list<array{sql: string}> $statements */
-        $statements = $queries->getData()['default'] ?? [];
-
-        return array_values(array_filter(
-            array_column($statements, 'sql'),
-            static fn (string $sql): bool => str_contains($sql, 'trending_story_hide'),
-        ));
-    }
-
-    private function queries(): DebugDataHolder
-    {
-        /** @var DebugDataHolder $queries */
-        $queries = self::getContainer()->get('doctrine.debug_data_holder');
-
-        return $queries;
     }
 
     private function sweep(): StoryAiSweep

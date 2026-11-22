@@ -20,6 +20,7 @@ use App\Service\Curation\Recommendation\Run\Model\CallProgressModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RecordsHistorySectionQueries;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -27,6 +28,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class RecommendationConsolidationResolverTest extends DbTestCase
 {
     use BuildsTickContexts;
+    use RecordsHistorySectionQueries;
 
     private User $user;
     private RecommendationRunFixtures $fixtures;
@@ -271,6 +273,23 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $this->resolveConsolidation($run);
 
         self::assertSame([CallVerdict::Usable], $this->verdictsOf($run));
+    }
+
+    public function testConsolidationReadsFavoritesAloneFromTheHistory(): void
+    {
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $id = $this->idOf($entry);
+        $run = $this->runWithWinners([['id' => $id, 'score' => 500, 'reason' => '']]);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $id, 'score' => 600, 'reason' => 'Fits.']],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+        $tick = $this->tick($run);
+
+        $this->startRecordingQueries();
+        $this->resolver()->resolve($tick);
+
+        $this->assertReadFavoritesAloneFromTheHistory();
     }
 
     public function testAnUnusableReplySettlesItsCallAsUnusable(): void

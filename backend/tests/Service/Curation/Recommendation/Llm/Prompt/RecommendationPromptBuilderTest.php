@@ -46,7 +46,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testADescriptionLongerThanTheFixedLengthIsClippedWhateverTheWindow(int $contextWindow): void
     {
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings($contextWindow, 10), null),
+            new PromptContext([], $this->settings($contextWindow, 10), null),
             [new ArticleLineModel(1, 'Long', 'F', 'D', str_repeat('a', 1000) . 'LOST')],
         );
 
@@ -58,7 +58,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $description = str_repeat('b', 996) . 'END';
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings($contextWindow, 10), null),
+            new PromptContext([], $this->settings($contextWindow, 10), null),
             [new ArticleLineModel(1, 'Short', 'F', 'D', $description)],
         );
 
@@ -81,14 +81,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testAHistoryLineShowsTheSharedArticle(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [$this->postSharing(self::councilArticle('The council approved the budget.'))],
-            kept: [],
-            viewed: [],
-        );
+        $favorites = [$this->postSharing(self::councilArticle('The council approved the budget.'))];
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($history, $this->settings(32768, 100), null),
+            new PromptContext($favorites, $this->settings(32768, 100), null),
             [],
         );
 
@@ -176,7 +172,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches(
             $candidates,
-            $this->emptyHistory(),
+            [],
             $this->settings(1_000_000, 50, maximumBatchSize: 30),
         );
 
@@ -244,20 +240,13 @@ final class RecommendationPromptBuilderTest extends TestCase
             static fn (int $id): ArticleLineModel => self::line($id, "Candidate $id", 100),
             range(1, 200),
         );
-        $history = new RecommendationHistoryModel(
-            favorites: array_map(
-                static fn (int $id): ArticleLineModel => self::line($id, "Favorite $id", 100),
-                range(1, 40),
-            ),
-            kept: array_map(static fn (int $id): ArticleLineModel => self::line($id, "Kept $id", 100), range(1, 40)),
-            viewed: array_map(
-                static fn (int $id): ArticleLineModel => self::line($id, "Viewed $id", 100),
-                range(1, 80),
-            ),
+        $favorites = array_map(
+            static fn (int $id): ArticleLineModel => self::line($id, "Favorite $id", 100),
+            range(1, 40),
         );
         $settings = $this->settings(32768, 50);
 
-        $batches = $this->builder->packBatches($candidates, $history, $settings);
+        $batches = $this->builder->packBatches($candidates, $favorites, $settings);
 
         self::assertLessThanOrEqual(5, \count($batches));
     }
@@ -272,16 +261,9 @@ final class RecommendationPromptBuilderTest extends TestCase
             static fn (int $id): ArticleLineModel => self::line($id, "Candidate $id", 100),
             range(1, 200),
         );
-        $history = new RecommendationHistoryModel(
-            favorites: array_map(
-                static fn (int $id): ArticleLineModel => self::line($id, "Favorite $id", 100),
-                range(1, 40),
-            ),
-            kept: array_map(static fn (int $id): ArticleLineModel => self::line($id, "Kept $id", 100), range(1, 40)),
-            viewed: array_map(
-                static fn (int $id): ArticleLineModel => self::line($id, "Viewed $id", 100),
-                range(1, 80),
-            ),
+        $favorites = array_map(
+            static fn (int $id): ArticleLineModel => self::line($id, "Favorite $id", 100),
+            range(1, 40),
         );
         $settings = $this->settings(
             RecommendationPromptBuilder::ESTIMATED_PROFILE_TOKENS + 9300,
@@ -289,7 +271,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             batchSize: RecommendationBatchSize::Large,
         );
 
-        $batches = $this->builder->packBatches($candidates, $history, $settings);
+        $batches = $this->builder->packBatches($candidates, $favorites, $settings);
 
         self::assertLessThanOrEqual(5, \count($batches));
     }
@@ -306,8 +288,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
         $settings = $this->settings(RecommendationPromptBuilder::ESTIMATED_PROFILE_TOKENS + 7492, 50);
 
-        $clipped = $this->builder->packBatches($tenThousandChars, $this->emptyHistory(), $settings);
-        $whole = $this->builder->packBatches($thousandChars, $this->emptyHistory(), $settings);
+        $clipped = $this->builder->packBatches($tenThousandChars, [], $settings);
+        $whole = $this->builder->packBatches($thousandChars, [], $settings);
 
         self::assertSame($whole, $clipped);
         self::assertSame([14, 14, 14, 14, 4], array_map('count', $clipped));
@@ -320,7 +302,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(1, 20),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(32768, 100));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(32768, 100));
 
         self::assertCount(1, $batches);
         self::assertSame(range(1, 20), $batches[0]);
@@ -336,7 +318,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(1, $candidateCount),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(4029, 10));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(4029, 10));
 
         self::assertGreaterThan(1, \count($batches));
         foreach ($batches as $batch) {
@@ -356,7 +338,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(1, $candidateCount),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 10));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(1_000_000, 10));
 
         self::assertSame([100, 100, 50], array_map('count', $batches));
 
@@ -372,7 +354,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(1, $candidateCount),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(1_000_000, 50));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(1_000_000, 50));
 
         self::assertCount(5, $batches);
         $batchSizes = array_map('count', $batches);
@@ -384,16 +366,12 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeFillsToTheCeilingOnALargeContext(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav', 10)],
-            kept: [],
-            viewed: [],
-        );
+        $favorites = [self::line(1, 'Fav', 10)];
 
         // A 1M-token context easily holds 6 × picksLimit lines plus the reply,
         // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
         $size = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
+            new PromptContext($favorites, $this->settings(1_000_000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
 
@@ -402,16 +380,12 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeFloorsOnATightContext(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav', 10)],
-            kept: [],
-            viewed: [],
-        );
+        $favorites = [self::line(1, 'Fav', 10)];
 
         // At a 32k context the 32k reasoning headroom alone overruns the window above the floor, so the size falls
         // back to CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit.
         $size = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(32768, 50), 'A profile.'),
+            new PromptContext($favorites, $this->settings(32768, 50), 'A profile.'),
             self::allowedLimit(),
         );
 
@@ -420,14 +394,14 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeGrowsWithTheContextWindow(): void
     {
-        $history = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $favorites = [self::line(1, 'Fav', 10)];
 
         $small = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
+            new PromptContext($favorites, $this->settings(60000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
         $large = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
+            new PromptContext($favorites, $this->settings(1_000_000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
 
@@ -438,7 +412,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testACappedModelTakesALongerShortlistWhereTheWindowLimits(): void
     {
-        $context = new PromptContext($this->emptyHistory(), $this->settings(100_000, 50), null);
+        $context = new PromptContext([], $this->settings(100_000, 50), null);
 
         $uncapped = $this->builder->consolidationInputSize($context, self::allowedLimit());
         $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 20_000));
@@ -449,7 +423,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testACapBelowTheAnswerBoundShrinksTheShortlistUntilTheAnswerFits(): void
     {
-        $context = new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null);
+        $context = new PromptContext([], $this->settings(1_000_000, 50), null);
 
         $uncapped = $this->builder->consolidationInputSize($context, self::allowedLimit());
         $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 16_384));
@@ -461,7 +435,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheFloorHoldsWhenEvenItsAnswerExceedsTheCap(): void
     {
         $size = $this->builder->consolidationInputSize(
-            new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null),
+            new PromptContext([], $this->settings(1_000_000, 50), null),
             new OutputLimitModel(Reasoning::Allowed, 4096),
         );
 
@@ -475,11 +449,11 @@ final class RecommendationPromptBuilderTest extends TestCase
         $exactFit = 1510 + 150 * 273 + 15_750 + 8000;
 
         $atTheWindow = $this->builder->consolidationInputSize(
-            new PromptContext($this->emptyHistory(), $this->settings($exactFit, 50), null),
+            new PromptContext([], $this->settings($exactFit, 50), null),
             $limit,
         );
         $oneTokenShort = $this->builder->consolidationInputSize(
-            new PromptContext($this->emptyHistory(), $this->settings($exactFit - 1, 50), null),
+            new PromptContext([], $this->settings($exactFit - 1, 50), null),
             $limit,
         );
 
@@ -489,14 +463,14 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testALongerProfileShrinksTheConsolidationShortlist(): void
     {
-        $history = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $favorites = [self::line(1, 'Fav', 10)];
 
         $short = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
+            new PromptContext($favorites, $this->settings(60000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
         $long = $this->builder->consolidationInputSize(
-            new PromptContext($history, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
+            new PromptContext($favorites, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
             self::suppressedLimit(),
         );
 
@@ -505,19 +479,15 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testMoreFavoritesShrinkTheConsolidationShortlist(): void
     {
-        $few = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
-        $many = new RecommendationHistoryModel(
-            favorites: array_map(static fn (int $id): ArticleLineModel => self::line($id, 'Fav', 100), range(1, 40)),
-            kept: [],
-            viewed: [],
-        );
+        $fewFavorites = [self::line(1, 'Fav', 10)];
+        $manyFavorites = array_map(static fn (int $id): ArticleLineModel => self::line($id, 'Fav', 100), range(1, 40));
 
         $withFew = $this->builder->consolidationInputSize(
-            new PromptContext($few, $this->settings(60000, 50), 'A profile.'),
+            new PromptContext($fewFavorites, $this->settings(60000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
         $withMany = $this->builder->consolidationInputSize(
-            new PromptContext($many, $this->settings(60000, 50), 'A profile.'),
+            new PromptContext($manyFavorites, $this->settings(60000, 50), 'A profile.'),
             self::suppressedLimit(),
         );
 
@@ -544,7 +514,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches(
             $candidates,
-            $this->emptyHistory(),
+            [],
             $this->settings(1_000_000, 50, batchSize: $batchSize),
         );
 
@@ -574,7 +544,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches(
             $candidates,
-            $this->emptyHistory(),
+            [],
             $this->settings(4096, 10, batchSize: RecommendationBatchSize::Large),
         );
 
@@ -591,7 +561,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(1, 60),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(4096, 100));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(4096, 100));
 
         self::assertNotSame([], $batches);
         // All batches except the final one should respect MINIMUM_BATCH_SIZE.
@@ -602,20 +572,16 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testBatchMessagesLayerFixedGuidanceAndContract(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Favorite', 10)],
-            kept: [],
-            viewed: [self::line(2, 'Viewed', 10)],
-        );
+        $favorites = [self::line(1, 'Favorite', 10)];
         $candidateLines = [self::line(7, 'Candidate seven', 10)];
 
         $settingsWithGuidance = $this->settings(32768, 100, 'Focus on cats.');
         $withGuidance = $this->builder->batchMessages(
-            new PromptContext($history, $settingsWithGuidance, null),
+            new PromptContext($favorites, $settingsWithGuidance, null),
             $candidateLines,
         );
         $withoutGuidance = $this->builder->batchMessages(
-            new PromptContext($history, $this->settings(32768, 100), null),
+            new PromptContext($favorites, $this->settings(32768, 100), null),
             $candidateLines,
         );
 
@@ -628,7 +594,6 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $user = $withGuidance[1]['content'];
         self::assertStringContainsString('FAVORITES (newest first):', $user);
-        self::assertStringNotContainsString('KEPT', $user);
         self::assertStringContainsString('- [7] ', $user);
     }
 
@@ -708,21 +673,13 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
     }
 
-    public function testBatchMessagesCarryProfileAndFavouritesOnly(): void
+    public function testBatchMessagesCarryProfileAndFavourites(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10), self::line(3, 'Fav three', 10)],
-            kept: [self::line(4, 'Kept one', 10), self::line(5, 'Kept two', 10), self::line(6, 'Kept three', 10)],
-            viewed: [
-                self::line(7, 'Viewed one', 10),
-                self::line(8, 'Viewed two', 10),
-                self::line(9, 'Viewed three', 10),
-            ],
-        );
+        $favorites = [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10), self::line(3, 'Fav three', 10)];
         $candidateLines = [self::line(10, 'Candidate A', 10), self::line(11, 'Candidate B', 10)];
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($history, $this->settings(32768, 100), 'Likes homelab and Rust.'),
+            new PromptContext($favorites, $this->settings(32768, 100), 'Likes homelab and Rust.'),
             $candidateLines,
         );
 
@@ -730,22 +687,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('PROFILE', $user);
         self::assertStringContainsString('Likes homelab and Rust.', $user);
         self::assertStringContainsString('FAVORITES', $user);
-        self::assertStringNotContainsString('KEPT', $user);
-        self::assertStringNotContainsString('VIEWED', $user);
         self::assertStringContainsString('"score"', $messages[0]['content']);
         self::assertStringNotContainsString('"reason"', $messages[0]['content']);
     }
 
     public function testBatchMessagesOmitProfileBlockWhenProfileIsNull(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
-            kept: [],
-            viewed: [],
-        );
+        $favorites = [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)];
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($history, $this->settings(32768, 100), null),
+            new PromptContext($favorites, $this->settings(32768, 100), null),
             [self::line(3, 'Candidate', 10)],
         );
 
@@ -790,11 +741,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testBatchMessagesReturnsTheExactRoleContentStructure(): void
     {
-        $history = new RecommendationHistoryModel(
-            favorites: [new ArticleLineModel(101, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
-            kept: [new ArticleLineModel(102, 'Kept Title', 'Feed B', '2026-01-02', null)],
-            viewed: [new ArticleLineModel(103, 'View Title', 'Feed C', '2026-01-02', null)],
-        );
+        $favorites = [new ArticleLineModel(101, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')];
         $candidateLines = [
             new ArticleLineModel(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
             new ArticleLineModel(6, 'Second', 'Feed D', '2026-01-04', null),
@@ -802,7 +749,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $settings = $this->settings(32768, 3);
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($history, $settings, 'Likes homelab.'),
+            new PromptContext($favorites, $settings, 'Likes homelab.'),
             $candidateLines,
         );
 
@@ -836,7 +783,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $exactly1001 = str_repeat('é', 1001);
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
+            new PromptContext([], $this->settings(8192, 10), null),
             [
                 new ArticleLineModel(1, 'Boundary1000', 'F', 'D', $exactly1000),
                 new ArticleLineModel(2, 'Boundary1001', 'F', 'D', $exactly1001),
@@ -860,7 +807,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $expectedTruncated = mb_substr($description, 0, 1000) . '…';
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
+            new PromptContext([], $this->settings(8192, 10), null),
             [new ArticleLineModel(9, 'Varying', 'F', 'D', $description)],
         );
 
@@ -876,7 +823,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(100, 124),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3125, 1));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(3125, 1));
 
         self::assertSame([range(100, 109), range(110, 119), range(120, 124)], $batches);
     }
@@ -890,7 +837,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(100, 124),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3189, 1));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(3189, 1));
 
         self::assertSame([range(100, 109), range(110, 119), range(120, 124)], $batches);
     }
@@ -904,7 +851,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             range(100, 119),
         );
 
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(3195, 1));
+        $batches = $this->builder->packBatches($candidates, [], $this->settings(3195, 1));
 
         self::assertSame([range(100, 109), range(110, 119)], $batches);
     }
@@ -925,13 +872,12 @@ final class RecommendationPromptBuilderTest extends TestCase
             ),
             range(1, 30),
         );
-        $history = new RecommendationHistoryModel(favorites: $favorites, kept: [], viewed: []);
         $candidates = array_map(
             static fn (int $id): ArticleLineModel => new ArticleLineModel($id, 'T', 'F', 'D', null),
             range(100, 119),
         );
 
-        $batches = $this->builder->packBatches($candidates, $history, $this->settings(4000, 1));
+        $batches = $this->builder->packBatches($candidates, $favorites, $this->settings(4000, 1));
 
         self::assertSame([range(100, 109), range(110, 119)], $batches);
     }
@@ -949,7 +895,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches(
             $candidates,
-            $this->emptyHistory(),
+            [],
             $this->settings(RecommendationPromptBuilder::ESTIMATED_PROFILE_TOKENS + 6150, 1, maximumBatchSize: 200),
         );
 
@@ -970,7 +916,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $batches = $this->builder->packBatches(
             $candidates,
-            $this->emptyHistory(),
+            [],
             $this->settings(RecommendationPromptBuilder::ESTIMATED_PROFILE_TOKENS + 3165, 1, maximumBatchSize: 50),
         );
 
@@ -1086,14 +1032,10 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav one', 10)],
-            kept: [self::line(2, 'Kept one', 10)],
-            viewed: [self::line(3, 'Viewed one', 10)],
-        );
+        $favorites = [self::line(1, 'Fav one', 10)];
 
         $messages = $this->builder->consolidationMessages(
-            new PromptContext($history, $this->settings(32768, 100), 'Likes Rust.'),
+            new PromptContext($favorites, $this->settings(32768, 100), 'Likes Rust.'),
             $pool,
             $lines,
         );
@@ -1101,8 +1043,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         // Anchored to the header, not merely both present: the text must follow "PROFILE:\n".
         self::assertStringContainsString("PROFILE:\nLikes Rust.", $messages[1]['content']);
         self::assertStringContainsString('FAVORITES', $messages[1]['content']);
-        self::assertStringNotContainsString('KEPT', $messages[1]['content']);
-        self::assertStringNotContainsString('VIEWED', $messages[1]['content']);
         self::assertStringContainsString('[5]', $messages[1]['content']);
         self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
         self::assertStringContainsString('duplicates', $messages[0]['content']);
@@ -1119,14 +1059,10 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
-        $history = new RecommendationHistoryModel(
-            favorites: [self::line(1, 'Fav one', 10)],
-            kept: [self::line(2, 'Kept one', 10)],
-            viewed: [self::line(3, 'Viewed one', 10)],
-        );
+        $favorites = [self::line(1, 'Fav one', 10)];
 
         $messages = $this->builder->consolidationMessages(
-            new PromptContext($history, $this->settings(32768, 100), 'Likes Rust.'),
+            new PromptContext($favorites, $this->settings(32768, 100), 'Likes Rust.'),
             $pool,
             $lines,
         );
@@ -1205,15 +1141,10 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    private function emptyHistory(): RecommendationHistoryModel
-    {
-        return new RecommendationHistoryModel(favorites: [], kept: [], viewed: []);
-    }
-
-    /** A generous window, no profile, and no history — the baseline context tests reach for by default. */
+    /** A generous window, no profile, and no favorites — the baseline context tests reach for by default. */
     private function defaultContext(): PromptContext
     {
-        return new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null);
+        return new PromptContext([], $this->settings(32768, 100), null);
     }
 
     private function settings(
