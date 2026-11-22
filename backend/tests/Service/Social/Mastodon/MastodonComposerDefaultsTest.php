@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Social\Mastodon\MastodonComposerDefaults;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\PostContextModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;

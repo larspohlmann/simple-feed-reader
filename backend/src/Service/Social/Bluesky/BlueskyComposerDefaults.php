@@ -7,9 +7,9 @@ namespace App\Service\Social\Bluesky;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Bluesky\BlueskyPostWriter;
-use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

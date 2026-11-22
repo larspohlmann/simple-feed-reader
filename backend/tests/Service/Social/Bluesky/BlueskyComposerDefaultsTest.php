@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Service\Social\Bluesky\BlueskyComposerDefaults;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 

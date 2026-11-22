@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
-use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Social\Model\ComposerContextModel;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
+use App\Service\Social\Publishing\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\ComposerContextModel;
+use App\Service\Social\Publishing\Model\LinkPostChoicesModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 
 /**

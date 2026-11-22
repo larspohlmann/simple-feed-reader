@@ -22,7 +22,7 @@ use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\LocalPostRemoval;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\OwnPostDeletion;
-use App\Service\Social\Social\PostWriting;
+use App\Service\Social\Social\PostDeletions;
 use App\Service\Social\Social\SocialCountsCache;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
@@ -198,7 +198,7 @@ final class OwnPostDeletionTest extends DbTestCase
         return new OwnPostDeletion(
             $accounts,
             $threadPosts,
-            new PostWriting(
+            new PostDeletions(
                 new ActingAccountGuard($this->entityManager),
                 new ServiceLocator([
                     'mastodon' => static fn (): FakeMastodonNetwork => $mastodon,

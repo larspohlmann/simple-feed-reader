@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class LinkPostDraftRequest

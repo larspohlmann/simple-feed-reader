@@ -6,24 +6,26 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use App\Service\Social\Social\PostLiker\PostLikerInterface;
 use App\Service\Social\Social\PostReposter\PostReposterInterface;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
 
 /** A Mastodon that resolves every address to status 110, records each call and can be told to fail. */
 final class FakeMastodonNetwork implements
     PostResolverInterface,
     PostLikerInterface,
     PostReposterInterface,
-    PostWriterInterface
+    PostWriterInterface,
+    PostDeleterInterface
 {
     public const string STATUS_ID = '110';
     public const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';

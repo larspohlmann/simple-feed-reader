@@ -10,13 +10,13 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\Support\MastodonVisibility;
-use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
+use App\Service\Social\Publishing\Support\ComposerStartingText;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\Support\ComposerStartingText;
 use App\Service\Social\Social\Support\SocialIdentity;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

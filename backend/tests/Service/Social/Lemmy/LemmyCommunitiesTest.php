@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Service\Social\Lemmy\LemmyCommunities;
-use App\Service\Social\Social\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\CommunityModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;

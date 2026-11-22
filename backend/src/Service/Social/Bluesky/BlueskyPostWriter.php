@@ -14,17 +14,18 @@ use App\Service\Social\Bluesky\Model\BlueskyPostKeyModel;
 use App\Service\Social\Bluesky\Support\BlueskyRecordUri;
 use App\Service\Social\Bluesky\Support\BlueskyStrongRef;
 use App\Service\Social\BlueskyPost\Support\AtPostUri;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
-final readonly class BlueskyPostWriter implements PostWriterInterface
+final readonly class BlueskyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     public const int MAX_GRAPHEMES = 300;
     private const string QUOTE_EMBED = 'app.bsky.embed.record';

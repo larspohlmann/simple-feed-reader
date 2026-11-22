@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Mastodon\Support;
 
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Social\Social\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
 
 /** Mastodon boosts only public and unlisted statuses; a status that names no visibility is taken as public. */
 final class MastodonVisibility

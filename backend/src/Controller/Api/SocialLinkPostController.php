@@ -10,7 +10,7 @@ use App\Entity\User;
 use App\Http\ComposerContextJson;
 use App\Http\PublishedPostJson;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
-use App\Service\Social\Social\LinkPosts;
+use App\Service\Social\Publishing\LinkPosts;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

@@ -11,17 +11,18 @@ use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\Support\MastodonStatusAction;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
-final readonly class MastodonPostWriter implements PostWriterInterface
+final readonly class MastodonPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     private const string STATUSES = '/api/v1/statuses';
 

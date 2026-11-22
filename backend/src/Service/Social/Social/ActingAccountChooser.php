@@ -14,7 +14,6 @@ use App\Repository\SocialFeedRepository;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
-use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Support\SocialFeedClassifier;
 
 /** Which of the user's accounts acts: the one chosen, else a private feed's own account or the network's default. */
@@ -42,18 +41,6 @@ final readonly class ActingAccountChooser
             ?? throw new NoSocialAccountForNetworkException(
                 sprintf('No %s account is connected.', $network->displayName()),
             );
-    }
-
-    /**
-     * @throws NoSocialAccountForNetworkException
-     * @throws SocialAccountNotFoundException when the chosen account is not the user's, or on another network
-     * @throws SocialAccountNeedsReconnectException
-     */
-    public function forResponse(User $user, ResponseTargetModel $target, SocialNetwork $network): SocialAccount
-    {
-        return null === $target->accountId
-            ? $this->requireAccount($user, $target->entry, $network)
-            : $this->chosenAccounts->requireConnectedOn($user, $target->accountId, $network);
     }
 
     /** @throws NoSocialAccountForNetworkException */

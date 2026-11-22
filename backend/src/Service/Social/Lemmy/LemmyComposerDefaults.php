@@ -8,10 +8,10 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Text\Support\WordBoundary;
 use App\Service\Social\Lemmy\LemmyCommunities;
-use App\Service\Social\Social\ComposerDefaults\ComposerDefaultsInterface;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Publishing\ComposerDefaults\ComposerDefaultsInterface;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\LinkPostChoicesModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

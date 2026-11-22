@@ -7,11 +7,11 @@ namespace App\Tests\Http;
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Http\ComposerContextJson;
-use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Social\Model\ComposerContextModel;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\ComposerKind;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
+use App\Service\Social\Publishing\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\ComposerContextModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\ComposerKind;
+use App\Service\Social\Publishing\Model\LinkPostChoicesModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 

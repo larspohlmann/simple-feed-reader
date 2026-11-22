@@ -259,7 +259,7 @@ may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `In
 | `Ingestion` (feed to entries) | Feed, Parser, Category, Scraper, Ingest, Refresh, Retention |
 | `Content` (what an entry shows) | Reader, ReaderAudit, LinkCard, Comments, Transcript, Chapter |
 | `Library` (the user's own state) | Subscription, SubscriptionHistory, Tag, Reading, SavedPosts, Search, Opml, EntryList |
-| `Social` | Social, Notification, Completion, Share, BlueskyPost, Bluesky, Mastodon, Lemmy |
+| `Social` | Social, Publishing, Notification, Completion, Share, BlueskyPost, Bluesky, Mastodon, Lemmy |
 | `Curation` | Recommendation, Ai, StoryAi, Trending |
 | `Identity` | Account, Auth, OAuth, Passkey |
 | `Operations` | Admin, Backup, Maintenance, SelfUpdate, Version, Grafana, Logging, ClientError, Settings, Worker, Queue |
@@ -292,8 +292,10 @@ So `Service/Curation/Recommendation/Llm` holds the LLM engine, which depends on 
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Library/Reading`, and the viewer time zone lives in `Service/Foundation/Clock`.
 - **A network's account side is its module** (#2359). `Social/Bluesky`, `Social/Mastodon` and `Social/Lemmy` hold what
-  one network's account does, and depend on `Social/Social`, `Social/Notification` and the other lower Social modules
-  (`BlueskyPost`, `Completion`, `Share`), none of which names them.
+  one network's account does, and depend on `Social/Social`, `Social/Publishing`, `Social/Notification` and the other
+  lower Social modules (`BlueskyPost`, `Completion`, `Share`), none of which names them. `Social/Publishing` owns what
+  a post says and how it goes out, on top of `Social/Social`, which never names it: deleting a post stays in
+  `Social/Social` (`PostDeleterInterface`).
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and

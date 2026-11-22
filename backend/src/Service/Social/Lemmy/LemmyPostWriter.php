@@ -11,20 +11,21 @@ use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyComposerDefaults;
+use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
+use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
-use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
-final readonly class LemmyPostWriter implements PostWriterInterface
+final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     public const int MIN_TITLE_CHARACTERS = 3;
     public const int MAX_TITLE_CHARACTERS = 200;

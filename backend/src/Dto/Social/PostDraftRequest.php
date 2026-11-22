@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Dto\Social;
 
 use App\Entity\Entry;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\ResponseTargetModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class PostDraftRequest
