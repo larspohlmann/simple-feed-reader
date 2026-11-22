@@ -167,7 +167,9 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
     public function testALikedAndKeptEntryAppearsInLikedNotKept(): void
     {
-        $this->likeEntry('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z')->markKept();
+        $state = new EntryState($this->user, $this->likeEntry('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z'));
+        $state->markKept();
+        $this->entityManager->persist($state);
         $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
@@ -373,8 +375,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         return new EntryState($this->user, $entry);
     }
 
-    /** The like is persisted here; the returned state row is the caller's to flag. */
-    private function likeEntry(string $guid, string $published, string $likedAt): EntryState
+    private function likeEntry(string $guid, string $published, string $likedAt): Entry
     {
         $entry = $this->entry($guid, $published);
         LikedPostFixtures::persistLike(
@@ -383,10 +384,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             LikedPostFixtures::linkNewItem($this->entityManager, $entry, CanonicalItemKind::Mastodon, 'key-' . $guid),
             new \DateTimeImmutable($likedAt),
         );
-        $state = new EntryState($this->user, $entry);
-        $this->entityManager->persist($state);
 
-        return $state;
+        return $entry;
     }
 
     private function settings(
