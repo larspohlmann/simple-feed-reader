@@ -46,7 +46,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame('<p>Read this.</p>', $entry->getText()->getContentHtml());
         self::assertSame('Read this.', $entry->getText()->getSummary());
         self::assertSame(self::CARD_THUMB, $entry->getImageUrl());
-        self::assertEquals([new EntryMedium(self::CARD_THUMB, 'image')], $entry->getMedia());
+        self::assertSame([], $entry->getMedia());
         self::assertSame('Post', $entry->getTitle());
         self::assertEquals([new LinkCardContent(
             Bluesky::CARD,

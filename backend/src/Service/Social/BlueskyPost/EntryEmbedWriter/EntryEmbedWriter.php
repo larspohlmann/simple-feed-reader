@@ -52,7 +52,8 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {
             $this->imageWriter->write($entry, $embed->leadImage);
         }
-        $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
+        $lead = $embed->linkCards === [] ? self::storedImage($entry) : null;
+        $assembled = EntryMediaAssembler::assemble($lead, $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
         $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
