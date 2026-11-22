@@ -1926,7 +1926,11 @@
       },
       "many": "Posted on {{ networks }}",
       "as": "As {{ handle }}",
-      "open": "Open post"
+      "open": "Open post",
+      "post": {
+        "bluesky": "Posted on Bluesky",
+        "mastodon": "Posted on Mastodon"
+      }
     }
   },
   "common": {

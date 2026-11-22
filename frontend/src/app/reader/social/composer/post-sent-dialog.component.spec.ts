@@ -88,6 +88,13 @@ describe('PostSentDialogComponent', () => {
     expect(element.querySelector('.article')).toBeNull();
   });
 
+  it('heads a text post by its network, with nothing above its text', () => {
+    const element = mount(sent({ kind: 'post', network: 'bluesky', subject: null }));
+
+    expect(element.querySelector('h1, h2')?.textContent).toContain('Posted on Bluesky');
+    expect(element.querySelector('app-composer-subject')).toBeNull();
+  });
+
   it('shows no subject for a post without one', () => {
     const element = mount(sent({ subject: null }));
 
