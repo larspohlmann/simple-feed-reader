@@ -134,16 +134,16 @@ final readonly class ReadingHistoryRepository
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect(sprintf('liking.%s AS likedAt', $instantField))
             ->from($rootClass, 'liking')
-            ->join(Entry::class, 'e', 'WITH', 'e.canonicalItem = liking.canonicalItem')
+            ->join(Entry::class, 'e', 'ON', 'e.canonicalItem = liking.canonicalItem')
             ->join('e.feed', 'f')
-            ->join(Subscription::class, 's', 'WITH', 's.feed = e.feed AND s.user = :user')
-            ->leftJoin(EntryState::class, 'es', 'WITH', 'es.entry = e AND es.user = :user')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
             ->andWhere('IDENTITY(liking.user) = :user')
             ->andWhere('es.isFavorite IS NULL OR es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
             ->andWhere(sprintf(
                 'NOT EXISTS (SELECT 1 FROM %s lowerCopy JOIN %s lowerSubscription'
-                . ' WITH lowerSubscription.feed = lowerCopy.feed AND lowerSubscription.user = :user'
+                . ' ON lowerSubscription.feed = lowerCopy.feed AND lowerSubscription.user = :user'
                 . ' WHERE lowerCopy.canonicalItem = liking.canonicalItem AND lowerCopy.id < e.id)',
                 Entry::class,
                 Subscription::class,
