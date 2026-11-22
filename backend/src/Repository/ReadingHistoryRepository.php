@@ -56,13 +56,11 @@ final readonly class ReadingHistoryRepository
     /** @return list<TitledEntry> */
     public function liked(int $userId, int $cap): array
     {
-        $likes = $this->likedEntriesQueryBuilder(SocialLike::class, 'likedAt');
-        $upvotes = $this->likedEntriesQueryBuilder(DiscussionVote::class, 'votedAt')
+        $likes = $this->likedEntriesQueryBuilder($userId, SocialLike::class, 'likedAt')->setMaxResults($cap);
+        $upvotes = $this->likedEntriesQueryBuilder($userId, DiscussionVote::class, 'votedAt')
             ->andWhere('liking.score = :upvote')
-            ->setParameter('upvote', VoteScore::Up);
-        foreach ([$likes, $upvotes] as $qb) {
-            $qb->setParameter('user', $userId)->setMaxResults($cap);
-        }
+            ->setParameter('upvote', VoteScore::Up)
+            ->setMaxResults($cap);
         $rows = [...$this->readLikedRows($likes), ...$this->readLikedRows($upvotes)];
         usort(
             $rows,
@@ -127,7 +125,7 @@ final readonly class ReadingHistoryRepository
     }
 
     /** @param class-string<SocialLike|DiscussionVote> $rootClass */
-    private function likedEntriesQueryBuilder(string $rootClass, string $instantField): QueryBuilder
+    private function likedEntriesQueryBuilder(int $userId, string $rootClass, string $instantField): QueryBuilder
     {
         return $this->entityManager->createQueryBuilder()
             ->select('e', 'f')
@@ -150,6 +148,7 @@ final readonly class ReadingHistoryRepository
             ))
             ->orderBy('liking.' . $instantField, 'DESC')
             ->addOrderBy('e.id', 'DESC')
+            ->setParameter('user', $userId)
             ->setParameter('false', false, Types::BOOLEAN);
     }
 
