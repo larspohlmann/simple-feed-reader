@@ -14,8 +14,9 @@ import {
 } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
-import { PageLayer } from '../../../shared/scroll-host/page-layer';
+import { PAGE_MOVING_CLASS, PageLayer } from '../../../shared/scroll-host/page-layer';
 import { ArticleLayerComponent } from './article-layer.component';
+import { ArticleGestures } from './article-gestures.service';
 
 @Component({
   imports: [ArticleLayerComponent],
@@ -304,6 +305,28 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
     expect(fixture.componentInstance.scrolledTo).toEqual([]);
     expect(layer.pinnedTop).toBe(0);
     expect(page.top).toBe(1200);
+  });
+
+  it('marks its page layer moving while a swipe moves it (#2459)', () => {
+    const gestures = fixture.debugElement
+      .query(By.directive(ArticleLayerComponent))
+      .injector.get(ArticleGestures);
+    const moving = (): boolean =>
+      fixture.componentInstance.layer.element.classList.contains(PAGE_MOVING_CLASS);
+    const touch = (x: number, y: number) =>
+      ({
+        touches: [{ clientX: x, clientY: y }],
+        preventDefault: () => undefined,
+      }) as unknown as TouchEvent;
+
+    gestures.onTouchStart(touch(10, 100));
+    gestures.onTouchMove(touch(60, 102));
+    fixture.detectChanges();
+    expect(moving()).toBe(true);
+
+    gestures.onTouchEnd();
+    fixture.detectChanges();
+    expect(moving()).toBe(false);
   });
 
   it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {

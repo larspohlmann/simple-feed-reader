@@ -4,6 +4,7 @@ import {
   Injectable,
   Signal,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -16,6 +17,7 @@ import {
 } from '../../reader-gestures';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
+import { PageLayer } from '../../../shared/scroll-host/page-layer';
 
 /** How far the rubber-banded overscroll pull may travel. */
 const MAX_PULL = 160;
@@ -80,6 +82,9 @@ export class ArticleGestures {
   readonly pullTransform = computed(() =>
     this.pull() === 0 ? 'none' : `translate3d(0, ${-this.pull()}px, 0)`,
   );
+  private readonly moving = computed(
+    () => this.dragX() !== 0 || this.dragY() !== 0 || this.pull() !== 0,
+  );
   readonly snapTransition = computed(() =>
     !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
   );
@@ -87,6 +92,7 @@ export class ArticleGestures {
   readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
 
   constructor() {
+    this.markPageLayerWhileMoving();
     // A swipe may start anywhere on the article layer. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
     const element = this.layer;
@@ -103,6 +109,18 @@ export class ArticleGestures {
       element.removeEventListener('touchend', end);
       element.removeEventListener('touchcancel', end);
       if (this.leaveTimer) clearTimeout(this.leaveTimer);
+    });
+  }
+
+  private markPageLayerWhileMoving(): void {
+    const pageLayer = inject(PageLayer, { optional: true });
+    if (!pageLayer) return;
+    effect(() => {
+      if (this.moving()) {
+        pageLayer.startMoving();
+      } else {
+        pageLayer.stopMoving();
+      }
     });
   }
 

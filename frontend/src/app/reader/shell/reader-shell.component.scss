@@ -2,6 +2,8 @@
 @use '../../theme/corner-circle-button' as circle;
 @use '../../theme/page-chrome';
 
+$layer-slide: 0.22s;
+
 /* The list scrolls the page (#2038): the shell grows with it and its chrome is fixed. */
 :host {
   display: block;
@@ -88,7 +90,7 @@ app-reader-header.hidden {
   /* Wide: beneath the app bar (10) — brand and account stay visible, and the
      article panel reserves the bar's height like the split pane does. */
   z-index: 5;
-  animation: article-enter 0.22s ease-out;
+  animation: article-enter $layer-slide ease-out;
 }
 
 /* Below the wide breakpoint (LayoutService's WIDE_QUERY) the article is the
@@ -121,7 +123,7 @@ app-reader-header.hidden {
 }
 
 .main:not(.split) > .article-overlay.article-leave {
-  animation: article-leave 0.22s ease-in forwards;
+  animation: article-leave $layer-slide ease-in forwards;
 }
 
 @keyframes article-enter {
@@ -161,16 +163,16 @@ app-reader-header.hidden {
 }
 
 .main.split > .story-overlay > app-story-layer {
-  animation: article-enter 0.22s ease-out;
+  animation: article-enter $layer-slide ease-out;
 }
 
 /* The column's own leave animation does nothing but last as long as the slide, which the leave waits on. */
 .main.split > .story-overlay.article-leave {
-  animation: story-column-hold 0.22s linear;
+  animation: story-column-hold $layer-slide linear;
 }
 
 .main.split > .story-overlay.article-leave > app-story-layer {
-  animation: article-leave 0.22s ease-in forwards;
+  animation: article-leave $layer-slide ease-in forwards;
 }
 
 @keyframes story-column-hold {
@@ -188,6 +190,22 @@ app-reader-header.hidden {
   .main.split > .story-overlay.article-leave,
   .main.split > .story-overlay.article-leave > app-story-layer {
     animation: none;
+  }
+}
+
+/* A covered layer is not painted once the one above has slid over it: a scroll that outruns the
+   paint above showed it through (#2459). Painted while the layer above slides or a gesture moves it. */
+.main > .page-pinned:not(.article-leave) {
+  animation: page-covered 0s $layer-slide forwards;
+}
+
+.main:has(> .page-moving) > .page-pinned {
+  animation: none;
+}
+
+@keyframes page-covered {
+  to {
+    visibility: hidden;
   }
 }
 
@@ -221,7 +239,7 @@ app-reader-header.hidden {
   position: absolute;
   inset: 0;
   z-index: 1;
-  animation: article-enter 0.22s ease-out;
+  animation: article-enter $layer-slide ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
