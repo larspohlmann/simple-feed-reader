@@ -18,24 +18,43 @@
 }
 
 .section-head .section-link {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
 }
 
 .section-head .section-link .label {
   flex: 0 1 auto;
 }
 
-.section-head .section-rest {
-  flex: 1;
-  justify-content: flex-end;
-  margin-left: calc(var(--space-3) * -1);
-  padding-left: var(--space-3);
-}
-
+/* The '+' and bell sit right, before the count, which stays in the column of the row counts below. */
 .section-head app-sidebar-compose-button,
 .section-head app-sidebar-notifications-bell {
   flex: none;
-  margin-left: calc(var(--space-2) - var(--space-3));
+}
+
+.section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
+  margin-left: calc(var(--space-1) - var(--space-3));
+}
+
+.section-head .section-rest {
+  flex: none;
+  justify-content: flex-end;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+/* Room for four digits whatever the count, so the buttons before it line up from card to card. */
+.section-head .section-count {
+  min-width: 4ch;
+  text-align: right;
+}
+
+/* On touch the discs inside the buttons set the rhythm: the '+' and bell discs --space-2 + --space-0 apart. */
+@media (pointer: coarse) {
+  .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
+    margin-left: calc(
+      var(--space-2) + var(--space-0) - var(--space-3) - 2 * var(--chevron-disc-inset)
+    );
+  }
 }
 
 .rows {

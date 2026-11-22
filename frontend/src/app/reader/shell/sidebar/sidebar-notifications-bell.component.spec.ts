@@ -51,11 +51,6 @@ describe('SidebarNotificationsBellComponent', () => {
     expect(label(4)).toBe('Bluesky notifications, 4 unseen');
   });
 
-  it('marks itself as having unseen notifications only above zero', () => {
-    expect(render(3).classList.contains('has-unseen')).toBe(true);
-    expect(render(0).classList.contains('has-unseen')).toBe(false);
-  });
-
   it('marks itself current', () => {
     expect(render(0, true).classList.contains('current')).toBe(true);
     expect(render(0, false).classList.contains('current')).toBe(false);

@@ -13,7 +13,7 @@ import { selectionQueryParams } from '../../query/query';
   templateUrl: './sidebar-notifications-bell.component.html',
   styleUrl: './sidebar-notifications-bell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.current]': 'active()', '[class.has-unseen]': 'count() > 0' },
+  host: { '[class.current]': 'active()' },
 })
 export class SidebarNotificationsBellComponent {
   readonly network = input.required<SocialNetworkName>();
