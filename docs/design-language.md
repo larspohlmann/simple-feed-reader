@@ -1823,9 +1823,11 @@ font size by it; today that is the list `.rows`, `.empty-wrap`, `.list-error`, t
 article `<article>` and its `.placeholder`, and the duplicates popover (a CDK overlay sits
 outside the page's containers, so it takes the class itself). Inside one, every `<button>` and
 `app-entry-pills` keep the fixed tokens and the inherited size; any class rule
-still overrides them. A button typeset as running text (TOC
-entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons,
-spacing, images and widths are px tokens and never scale. The list header and the
+still overrides them. A block that scales as one takes
+`scales-with-text`: its buttons, pills and `--icon-*` tokens scale too, so a count never
+grows beside a fixed glyph; the entry's meta row (`app-entry-meta`) sets it on its host (#2457). A button typeset as running text (TOC
+entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons (outside a
+`scales-with-text` block), spacing, images and widths are px tokens and never scale. The list header and the
 reader toolbar sit outside every `text-scaled` container, which is why their texts
 stay fixed. A new reading surface takes `text-scaled`. A control inside one stays fixed
 if it sizes its text with an `--fs-*` token or has no font-size rule of its own; a class

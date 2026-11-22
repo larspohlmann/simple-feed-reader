@@ -1,6 +1,7 @@
 @use './breakpoints' as bp;
 @use './brightness';
 @use './glass-rim';
+@use './icon-scale';
 @use './type-scale';
 @use './themes/graphite';
 
@@ -141,15 +142,7 @@
   --sidebar-row-deep-inset: calc(var(--sidebar-row-inset) + var(--icon-md) + var(--space-3));
   --drawer-shadow: 6px 0 24px rgb(0 0 0 / 18%);
 
-  /* Icon sizes. The same tag glyph runs from a 12px pill to a 20px sidebar
-     lead; `dense` is the glyph of the sidebar's 28px buttons (#1749). */
-  --icon-xs: 12px;
-  --icon-sm: 16px;
-  --icon-dense: 18px;
-  --icon-md: 20px;
-  --icon-lg: 24px;
-  --icon-xl: 32px;
-  --icon-2xl: 36px;
+  @include icon-scale.fixed;
 
   /* A label laid over a picture, whose colours are the picture's, not the theme's. */
   --media-scrim: rgb(0 0 0 / 55%);

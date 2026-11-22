@@ -1,0 +1,23 @@
+// The same tag glyph runs from a 12px pill to a 20px sidebar lead; `dense` is
+// the glyph of the sidebar's 28px buttons (#1749).
+$sizes: (
+  'xs': 12px,
+  'sm': 16px,
+  'dense': 18px,
+  'md': 20px,
+  'lg': 24px,
+  'xl': 32px,
+  '2xl': 36px,
+);
+
+@mixin fixed {
+  @each $name, $size in $sizes {
+    --icon-#{$name}: #{$size};
+  }
+}
+
+@mixin scaled {
+  @each $name, $size in $sizes {
+    --icon-#{$name}: calc(#{$size} * var(--text-scale, 1));
+  }
+}
