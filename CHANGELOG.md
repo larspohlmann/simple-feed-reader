@@ -10,6 +10,20 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.1] - 2026-11-22
+
+## What's Changed
+* fix(#2457): the entry meta row scales as one with the text size by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2458
+* fix(#2459): a page layer the one above covers is not painted by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2461
+* fix(#2462): a Mastodon notification keys a status from its page too by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2463
+* fix(#2464): a Mastodon post is addressed by its status-shaped address first by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2465
+* test(#2460): text-size smoke scales the entry meta row by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2466
+* fix(#2453): a story's list closing leaves the page scrollbar hidden by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2467
+* feat(#2468): likes and upvotes count for For you by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2469
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.0...v1.10.1
+
 ## [v1.10.0] - 2026-11-22
 
 ### Highlights
