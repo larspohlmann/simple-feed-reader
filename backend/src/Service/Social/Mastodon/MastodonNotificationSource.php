@@ -182,12 +182,11 @@ final readonly class MastodonNotificationSource implements NotificationSourceInt
 
     private static function buildKeys(SocialNotificationKind $kind, JsonNodeModel $status): NotificationPostKeys
     {
-        $quoted = $status->node('quote')->node('quoted_status');
+        $quotedHash = $kind === SocialNotificationKind::Quote
+            ? MastodonStatusKey::parseStatusKey($status->node('quote')->node('quoted_status'))?->keyHash()
+            : null;
 
-        return new NotificationPostKeys(
-            MastodonStatusKey::parseStatusKey($status)?->keyHash(),
-            $kind === SocialNotificationKind::Quote ? MastodonStatusKey::parseStatusKey($quoted)?->keyHash() : null,
-        );
+        return new NotificationPostKeys(MastodonStatusKey::parseStatusKey($status)?->keyHash(), $quotedHash);
     }
 
     private static function buildReferences(SocialNotificationKind $kind, JsonNodeModel $status): ContextReferenceModel

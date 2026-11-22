@@ -51,7 +51,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
         );
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/4000')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/4000', null)?->keyHash(),
             $subjects['1']->keys->answeredHash,
         );
     }
@@ -71,7 +71,7 @@ final class MastodonNotificationContextSourceTest extends TestCase
         );
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/4000')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/4000', null)?->keyHash(),
             $subjects['1']->keys->answeredHash,
         );
     }

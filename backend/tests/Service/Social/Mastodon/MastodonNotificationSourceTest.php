@@ -72,7 +72,7 @@ final class MastodonNotificationSourceTest extends TestCase
         $like = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[0];
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/1100')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/1100', null)?->keyHash(),
             $like->subject->keys->postHash,
         );
         self::assertNull($like->subject->keys->answeredHash);
@@ -84,11 +84,11 @@ final class MastodonNotificationSourceTest extends TestCase
         $notifications = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications;
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/1090')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/users/alice/statuses/1090', null)?->keyHash(),
             $notifications[1]->subject->keys->postHash,
         );
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/1040')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/users/alice/statuses/1040', null)?->keyHash(),
             $notifications[5]->subject->keys->postHash,
         );
     }
@@ -98,12 +98,12 @@ final class MastodonNotificationSourceTest extends TestCase
         $notifications = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications;
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://other.example/users/dave/statuses/5001')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://other.example/users/dave/statuses/5001', null)?->keyHash(),
             $notifications[2]->subject->keys->postHash,
         );
         self::assertNull($notifications[2]->subject->keys->answeredHash);
         self::assertSame(
-            MastodonStatusKey::parseKey('https://other.example/users/erin/statuses/5002')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://other.example/users/erin/statuses/5002', null)?->keyHash(),
             $notifications[3]->subject->keys->postHash,
         );
     }
@@ -114,11 +114,11 @@ final class MastodonNotificationSourceTest extends TestCase
             ->subject->keys;
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://other.example/users/gus/statuses/5003')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://other.example/users/gus/statuses/5003', null)?->keyHash(),
             $keys->postHash,
         );
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/4001')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/users/alice/statuses/4001', null)?->keyHash(),
             $keys->answeredHash,
         );
     }
@@ -130,11 +130,11 @@ final class MastodonNotificationSourceTest extends TestCase
         $notifications = $this->source($http)->fetch(SocialApiWiring::mastodonAccount())->notifications;
 
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/7001')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/7001', null)?->keyHash(),
             $notifications[0]->subject->keys->postHash,
         );
         self::assertSame(
-            MastodonStatusKey::parseKey('https://mastodon.example/@alice/7002')?->keyHash(),
+            MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/7002', null)?->keyHash(),
             $notifications[1]->subject->keys->answeredHash,
         );
     }

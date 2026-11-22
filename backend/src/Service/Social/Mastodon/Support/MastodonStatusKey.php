@@ -15,11 +15,6 @@ final class MastodonStatusKey
     {
     }
 
-    public static function parseKey(?string $address): ?CanonicalKeyModel
-    {
-        return self::parseAddressKey($address) ?? self::parseAbsoluteKey($address);
-    }
-
     public static function parseEntryKey(?string $guid, ?string $url): ?CanonicalKeyModel
     {
         $status = self::parseAddressKey($guid) ?? self::parseAddressKey($url);
