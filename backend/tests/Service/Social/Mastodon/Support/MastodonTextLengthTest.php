@@ -11,9 +11,22 @@ use PHPUnit\Framework\TestCase;
 final class MastodonTextLengthTest extends TestCase
 {
     #[DataProvider('texts')]
-    public function testCountsAsTheComposerDoes(string $text, int $length): void
+    public function testCountsAsMastodonDoes(string $text, int $length): void
     {
-        self::assertSame($length, MastodonTextLength::measureLength($text));
+        self::assertSame($length, MastodonTextLength::measureLength('', $text));
+    }
+
+    public function testTheContentWarningCountsAsWrittenBeforeTheText(): void
+    {
+        self::assertSame(
+            mb_strlen('see https://e.x/') + 3 + 23,
+            MastodonTextLength::measureLength('see https://e.x/', 'hi https://example.com/a'),
+        );
+    }
+
+    public function testAGraphemeSplitBetweenWarningAndTextIsOne(): void
+    {
+        self::assertSame(1, MastodonTextLength::measureLength('👍', '🏽'));
     }
 
     /** @return iterable<string, array{string, int}> */
@@ -36,7 +49,9 @@ final class MastodonTextLengthTest extends TestCase
         yield 'a local mention counts in full' => ['@alice hi', 9];
         yield 'a mention after a slash is no mention' => ['a/@alice@example.social', 23];
         yield 'a mention after a word character is no mention' => ['a@alice@example.social', 22];
-        yield 'an emoji with a skin tone is two code points' => ['👍🏽', 2];
+        yield 'an emoji with a skin tone is one grapheme' => ['👍🏽', 1];
+        yield 'a family emoji is one grapheme' => ['👨‍👩‍👧', 1];
+        yield 'a letter with a combining accent is one grapheme' => ["e\u{0301}", 1];
         yield 'umlauts are one code point each' => ['Grüße', 5];
         yield 'nothing' => ['', 0];
     }

@@ -137,7 +137,7 @@ export class ComposerDialogComponent {
     this.lanes.active().flatMap((lane) => {
       const max = lane.context()?.maxCharacters;
       if (max === undefined) return [];
-      const used = postLength(this.text(), lane.network);
+      const used = postLength(this.text(), lane.network, lane.contentWarning()?.trim());
       return [
         { lane: lane.network, network: this.names[lane.network], used, max, over: used > max },
       ];

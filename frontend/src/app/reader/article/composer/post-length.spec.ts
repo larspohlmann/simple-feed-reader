@@ -24,7 +24,13 @@ describe('postLength', () => {
     expect(postLength('https://example.test/a/long/path', 'lemmy')).toBe(32);
   });
 
-  it('counts Mastodon text in code points, so an emoji is one', () => {
+  it('counts Mastodon text in graphemes, so an emoji with a skin tone is one', () => {
+    expect(postLength('👍🏽', 'mastodon')).toBe(1);
     expect(postLength('é😀', 'mastodon')).toBe(2);
+  });
+
+  it('counts a Mastodon content warning as written, together with the text', () => {
+    expect(postLength('a'.repeat(491), 'mastodon', 'spoilers!!')).toBe(501);
+    expect(postLength('hi', 'mastodon', 'https://x.test')).toBe('https://x.testhi'.length);
   });
 });

@@ -421,6 +421,24 @@ describe('ComposerDialogComponent', () => {
     expect(api.send.mock.calls[0][1]).toMatchObject({ contentWarning: 'Ending' });
   });
 
+  it("counts Mastodon's content warning towards the limit", () => {
+    api.composer.mockReturnValue(of(context({ text: '', maxCharacters: 500 })));
+    const fixture = mount();
+    type(fixture, 'a'.repeat(491));
+    expect(sendButton(fixture).disabled).toBe(false);
+    const box = element(fixture).querySelector('.warns input') as HTMLInputElement;
+    box.checked = true;
+    box.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    const warning = element(fixture).querySelector('#reply-warning') as HTMLInputElement;
+    warning.value = 'spoilers!!';
+    warning.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(sendButton(fixture).disabled).toBe(true);
+    expect(element(fixture).querySelector('.counter')!.classList).toContain('over');
+  });
+
   it('shows Bluesky no visibility choice', () => {
     api.composer.mockReturnValue(of(context({ visibility: null, text: '' })));
     const fixture = mount(target({ network: 'bluesky' }));

@@ -43,7 +43,7 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
         $status = self::buildStatusText($publication);
-        $this->guardLength($account, $status);
+        $this->guardLength($account, $publication->draft->contentWarning ?? '', $status);
         $idempotencyKey = $publication->draft->idempotencyKey;
         $request = ApiRequestModel::postJson(
             $account->getServiceUrl() . self::STATUSES,
@@ -71,10 +71,10 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
         return PostDeletion::Deleted;
     }
 
-    private function guardLength(SocialAccount $account, string $status): void
+    private function guardLength(SocialAccount $account, string $contentWarning, string $status): void
     {
         $maxCharacters = $this->statusLimit->resolveMaxCharacters($account);
-        if (MastodonTextLength::measureLength($status) > $maxCharacters) {
+        if (MastodonTextLength::measureLength($contentWarning, $status) > $maxCharacters) {
             throw new SocialPostTooLongException(
                 sprintf('A Mastodon post on this server holds %d characters.', $maxCharacters),
             );

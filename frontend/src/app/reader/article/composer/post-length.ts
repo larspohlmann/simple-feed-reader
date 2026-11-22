@@ -8,13 +8,16 @@ const REMOTE_MENTION = /(^|[^\w/])@(\w+)@[\w.-]*\w/g;
 
 let graphemes: Intl.Segmenter | null | undefined;
 
-/** How long a post's text counts on its network: Bluesky counts graphemes, Mastodon and Lemmy code points. */
-export function postLength(text: string, network: SocialNetworkName): number {
+/**
+ * How long a post counts on its network: Bluesky counts graphemes, Lemmy code points, and Mastodon
+ * graphemes of the content warning and the text together.
+ */
+export function postLength(text: string, network: SocialNetworkName, contentWarning = ''): number {
   switch (network) {
     case 'bluesky':
       return graphemeCount(text);
     case 'mastodon':
-      return mastodonLength(text);
+      return mastodonLength(contentWarning, text);
     case 'lemmy':
       return [...text].length;
   }
@@ -25,8 +28,8 @@ function graphemeCount(text: string): number {
   return graphemes === null ? [...text].length : [...graphemes.segment(text)].length;
 }
 
-function mastodonLength(text: string): number {
+function mastodonLength(contentWarning: string, text: string): number {
   const links = text.match(LINK) ?? [];
   const withoutLinks = text.replace(LINK, '').replace(REMOTE_MENTION, '$1@$2');
-  return [...withoutLinks].length + links.length * MASTODON_LINK_LENGTH;
+  return graphemeCount(contentWarning + withoutLinks) + links.length * MASTODON_LINK_LENGTH;
 }

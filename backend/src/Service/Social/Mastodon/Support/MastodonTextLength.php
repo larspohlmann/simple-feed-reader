@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
-/** The composer's count (`post-length.ts`), so the server refuses nothing the composer let through. */
+/** Mastodon's StatusLengthValidator, which the composer's `post-length.ts` mirrors. */
 final class MastodonTextLength
 {
     public const int LINK_LENGTH = 23;
@@ -20,11 +20,13 @@ final class MastodonTextLength
     {
     }
 
-    public static function measureLength(string $text): int
+    public static function measureLength(string $contentWarning, string $text): int
     {
         $withoutLinks = preg_replace(self::LINK, '', $text, -1, $links) ?? $text;
-        $countable = preg_replace(self::REMOTE_MENTION, '$1@$2', $withoutLinks) ?? $withoutLinks;
+        $withoutHosts = preg_replace(self::REMOTE_MENTION, '$1@$2', $withoutLinks) ?? $withoutLinks;
+        $countable = $contentWarning . $withoutHosts;
+        $graphemes = grapheme_strlen($countable);
 
-        return mb_strlen($countable) + $links * self::LINK_LENGTH;
+        return (\is_int($graphemes) ? $graphemes : mb_strlen($countable)) + $links * self::LINK_LENGTH;
     }
 }

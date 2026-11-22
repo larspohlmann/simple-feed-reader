@@ -256,6 +256,34 @@ final class MastodonPostWriterTest extends TestCase
         self::assertSame([], $http->requests);
     }
 
+    public function testTheContentWarningCountsTowardsTheLimit(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->expectException(SocialPostTooLongException::class);
+
+        try {
+            $this->writer($http)->publish(
+                SocialAccounts::mastodon(),
+                PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 491), contentWarning: 'spoilers!!')),
+            );
+        } finally {
+            self::assertSame([], $http->requests);
+        }
+    }
+
+    public function testEmojiCountAsOneCharacterEach(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            PublicationModel::fromDraft(new PostDraftModel(str_repeat('👍🏽', 500))),
+        );
+
+        self::assertSame([self::STATUSES], $http->requestLines());
+    }
+
     public function testTextAtTheServersLimitIsSent(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
