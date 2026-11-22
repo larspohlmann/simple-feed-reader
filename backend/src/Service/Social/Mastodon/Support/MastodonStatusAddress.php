@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon\Support;
 
+use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Social\Mastodon\Model\MastodonStatusModel;
 
 /** Where a Mastodon status address's own instance serves the status to anyone: its two address shapes only. */
@@ -27,5 +28,22 @@ final class MastodonStatusAddress
         }
 
         return null;
+    }
+
+    public static function isStatusAddress(?string $address): bool
+    {
+        return null !== $address && null !== self::parseAddress($address);
+    }
+
+    public static function pickEntryAddress(?string $guid, ?string $url): ?string
+    {
+        if (self::isStatusAddress($guid)) {
+            return $guid;
+        }
+        if (self::isStatusAddress($url)) {
+            return $url;
+        }
+
+        return AbsoluteHttpUrl::keepIfAbsolute($guid) ?? AbsoluteHttpUrl::keepIfAbsolute($url);
     }
 }
