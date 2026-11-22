@@ -9,7 +9,7 @@ use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Curation\Recommendation\Pool\Model\RecommendationHistoryModel;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
-/** The reader's weighted history: four capped, newest-first sections. */
+/** The reader's weighted history: five capped, newest-first sections. */
 final readonly class RecommendationHistoryLoader
 {
     public function __construct(
@@ -27,6 +27,7 @@ final readonly class RecommendationHistoryLoader
             kept: $this->articleLines->loadLines($this->history->kept($userId, $caps->kept)),
             viewed: $this->articleLines->loadLines($this->history->viewed($userId, $caps->viewed)),
             shared: $this->articleLines->loadLines($this->history->shared($userId, $caps->shared)),
+            liked: $this->articleLines->loadLines($this->history->liked($userId, $caps->liked)),
         );
     }
 

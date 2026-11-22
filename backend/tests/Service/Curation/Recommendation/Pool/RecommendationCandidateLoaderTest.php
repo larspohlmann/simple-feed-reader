@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Pool;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
@@ -12,10 +13,13 @@ use App\Entity\InclusionChange;
 use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
+use App\Enum\VoteScore;
 use App\Repository\LinkCardRepository;
 use App\Service\Curation\Recommendation\Pool\Model\CandidatePoolRequestModel;
 use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SharedLinks;
 
@@ -117,6 +121,57 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testAnUnreadLikedPostIsExcluded(): void
+    {
+        $liked = $this->entry('liked-post', '2026-07-10T00:00:00Z');
+        $this->likeAs($this->user, $liked);
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testAnUnreadUpvotedPostIsExcluded(): void
+    {
+        $this->voteOn($this->entry('upvoted-post', '2026-07-10T00:00:00Z'), VoteScore::Up);
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testADownvotedPostStaysACandidate(): void
+    {
+        $downvoted = $this->entry('downvoted-post', '2026-07-10T00:00:00Z');
+        $this->voteOn($downvoted, VoteScore::Down);
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([$downvoted->getId()], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testAnotherReadersLikeLeavesThePostACandidate(): void
+    {
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($stranger);
+        $post = $this->entry('their-like', '2026-07-10T00:00:00Z');
+        $this->likeAs($stranger, $post);
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([$post->getId()], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testAnEntryWithoutAnItemStaysACandidateBesideALikedPost(): void
+    {
+        $unlinked = $this->entry('no-item', '2026-07-10T00:00:00Z');
+        $this->likeAs($this->user, $this->entry('liked-post', '2026-07-10T00:00:00Z'));
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([$unlinked->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnUnreadViewedEntryIsExcluded(): void
@@ -639,6 +694,34 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function linkNewItem(Entry $entry, CanonicalItemKind $kind): CanonicalItem
+    {
+        return LikedPostFixtures::linkNewItem($this->entityManager, $entry, $kind, 'item-' . $entry->requireId());
+    }
+
+    private function likeAs(User $reader, Entry $entry): void
+    {
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $reader,
+            $this->linkNewItem($entry, CanonicalItemKind::Mastodon),
+            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
+        );
+        $this->entityManager->flush();
+    }
+
+    private function voteOn(Entry $entry, VoteScore $score): void
+    {
+        LikedPostFixtures::persistVote(
+            $this->entityManager,
+            $this->user,
+            $this->linkNewItem($entry, CanonicalItemKind::Lemmy),
+            $score,
+            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
+        );
+        $this->entityManager->flush();
     }
 
     private function userId(): int

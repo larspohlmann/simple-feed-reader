@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CanonicalItem;
+use App\Entity\DiscussionVote;
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
+use App\Enum\VoteScore;
 use App\Repository\ReadingHistoryRepository;
 use App\Repository\TitledEntry;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
+use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\SavedPostFixtures;
 
 /** The reader's history reads break a tie on the instant by the newest entry (#2007). */
@@ -61,9 +67,289 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertSame([$newer->requireId(), $older->requireId()], $this->entryIds($viewed));
     }
 
+    public function testLikesAndUpvotesComeBackInOneCastOrder(): void
+    {
+        $first = $this->persistEntry('first');
+        $upvoted = $this->persistEntry('upvoted');
+        $third = $this->persistEntry('third');
+        $this->likeEntry($first, '2026-10-02 10:00:00');
+        $this->upvoteEntry($upvoted, '2026-10-02 11:00:00');
+        $this->likeEntry($third, '2026-10-02 12:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame(
+            [$third->requireId(), $upvoted->requireId(), $first->requireId()],
+            $this->entryIds($liked),
+        );
+    }
+
+    public function testTheLikedCapCutsTheMergedList(): void
+    {
+        $likedEarly = $this->persistEntry('liked-early');
+        $upvotedEarly = $this->persistEntry('upvoted-early');
+        $likedLate = $this->persistEntry('liked-late');
+        $upvotedLate = $this->persistEntry('upvoted-late');
+        $this->likeEntry($likedEarly, '2026-10-02 10:00:00');
+        $this->upvoteEntry($upvotedEarly, '2026-10-02 11:00:00');
+        $this->likeEntry($likedLate, '2026-10-02 12:00:00');
+        $this->upvoteEntry($upvotedLate, '2026-10-02 13:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 3);
+
+        self::assertSame(
+            [$upvotedLate->requireId(), $likedLate->requireId(), $upvotedEarly->requireId()],
+            $this->entryIds($liked),
+        );
+    }
+
+    public function testTwoLikesFromTheSameInstantComeBackHighestIdFirst(): void
+    {
+        $older = $this->persistEntry('a');
+        $newer = $this->persistEntry('b');
+        $this->likeEntry($older, '2026-10-02 10:00:00');
+        $this->likeEntry($newer, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$newer->requireId(), $older->requireId()], $this->entryIds($liked));
+    }
+
+    public function testADownvoteIsNotLiked(): void
+    {
+        $entry = $this->persistEntry('downvoted');
+        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        LikedPostFixtures::persistVote(
+            $this->entityManager,
+            $this->user,
+            $this->linkNewItem($entry, CanonicalItemKind::Lemmy),
+            VoteScore::Down,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+        self::assertSame([$entry->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+    }
+
+    public function testAnUpvoteRecastToADownvoteReturnsToKept(): void
+    {
+        $entry = $this->persistEntry('recast');
+        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        $vote = $this->upvoteEntry($entry, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->kept($this->user->requireId(), 10));
+        self::assertSame([$entry->requireId()], $this->entryIds($this->history()->liked($this->user->requireId(), 10)));
+
+        $vote->recast(VoteScore::Down, new \DateTimeImmutable('2026-10-02 11:00:00'));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+        self::assertSame([$entry->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+    }
+
+    public function testALikedFavoriteIsNotInLiked(): void
+    {
+        $entry = $this->persistEntry('favorite');
+        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markFavorite();
+        $this->likeEntry($entry, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$entry->requireId()],
+            $this->entryIds($this->history()->favorites($this->user->requireId(), 10)),
+        );
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+    }
+
+    public function testALikedSharedEntryIsNotInLiked(): void
+    {
+        $entry = $this->persistEntry('shared');
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $entry,
+            new \DateTimeImmutable('2026-10-02 09:00:00'),
+        );
+        $this->likeEntry($entry, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$entry->requireId()],
+            $this->entryIds($this->history()->shared($this->user->requireId(), 10)),
+        );
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+    }
+
+    public function testALikedEntryLeavesKeptAndViewed(): void
+    {
+        $kept = $this->persistEntry('kept');
+        $viewed = $this->persistEntry('viewed');
+        SavedPostFixtures::state($this->entityManager, $this->user, $kept)->markKept();
+        SavedPostFixtures::state($this->entityManager, $this->user, $viewed)
+            ->markViewed(new \DateTimeImmutable('2026-10-02 09:00:00'));
+        $this->likeEntry($kept, '2026-10-02 10:00:00');
+        $this->upvoteEntry($viewed, '2026-10-02 11:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->kept($this->user->requireId(), 10));
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+    }
+
+    public function testAnEntryWithoutAnItemStaysInKeptAndViewed(): void
+    {
+        $kept = $this->persistEntry('kept');
+        $viewed = $this->persistEntry('viewed');
+        SavedPostFixtures::state($this->entityManager, $this->user, $kept)->markKept();
+        SavedPostFixtures::state($this->entityManager, $this->user, $viewed)
+            ->markViewed(new \DateTimeImmutable('2026-10-02 09:00:00'));
+        $this->likeEntry($this->persistEntry('liked'), '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([$kept->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+        self::assertSame(
+            [$viewed->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAStrangersLikeIsNotMine(): void
+    {
+        $stranger = $this->persistStranger();
+        $entry = $this->persistEntry('kept');
+        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $stranger,
+            $this->linkNewItem($entry, CanonicalItemKind::Mastodon),
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+        self::assertSame([$entry->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+    }
+
+    public function testTwoCopiesOfALikedPostGiveOneLine(): void
+    {
+        $otherFeed = $this->persistSubscribedFeed($this->user, 'https://copies.example.com/feed.xml');
+        $lower = $this->persistEntry('copy');
+        $higher = SavedPostFixtures::entry($this->entityManager, $otherFeed, 'copy', 'https://copies.example.com/copy');
+        $item = $this->linkNewItem($lower, CanonicalItemKind::Mastodon);
+        $higher->linkTo($item);
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            $item,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$lower->requireId()], $this->entryIds($liked));
+    }
+
+    public function testALowerCopyInAFeedOnlyAStrangerFollowsDoesNotHideMine(): void
+    {
+        $strangersFeed = $this->persistSubscribedFeed(
+            $this->persistStranger(),
+            'https://stranger.example.com/feed.xml',
+        );
+        $lower = SavedPostFixtures::entry(
+            $this->entityManager,
+            $strangersFeed,
+            'copy',
+            'https://stranger.example.com/copy',
+        );
+        $higher = $this->persistEntry('copy');
+        $item = $this->linkNewItem($lower, CanonicalItemKind::Mastodon);
+        $higher->linkTo($item);
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            $item,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$higher->requireId()], $this->entryIds($liked));
+    }
+
+    public function testALikedPostInAFeedTheReaderLeftHasNoLine(): void
+    {
+        $leftFeed = new Feed('https://left.example.com/feed.xml');
+        $this->entityManager->persist($leftFeed);
+        $entry = SavedPostFixtures::entry($this->entityManager, $leftFeed, 'left', 'https://left.example.com/left');
+        $this->likeEntry($entry, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+    }
+
     private function history(): ReadingHistoryRepository
     {
         return new ReadingHistoryRepository($this->entityManager);
+    }
+
+    private function persistEntry(string $guid): Entry
+    {
+        $url = 'https://history.example.com/' . $guid;
+
+        return SavedPostFixtures::entry($this->entityManager, $this->feed, $guid, $url);
+    }
+
+    private function persistStranger(): User
+    {
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($stranger);
+        $this->entityManager->flush();
+
+        return $stranger;
+    }
+
+    private function persistSubscribedFeed(User $subscriber, string $url): Feed
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($subscriber, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
+
+        return $feed;
+    }
+
+    private function linkNewItem(Entry $entry, CanonicalItemKind $kind): CanonicalItem
+    {
+        return LikedPostFixtures::linkNewItem($this->entityManager, $entry, $kind, 'item-' . $entry->requireId());
+    }
+
+    private function likeEntry(Entry $entry, string $likedAt): void
+    {
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            $this->linkNewItem($entry, CanonicalItemKind::Mastodon),
+            new \DateTimeImmutable($likedAt),
+        );
+    }
+
+    private function upvoteEntry(Entry $entry, string $votedAt): DiscussionVote
+    {
+        return LikedPostFixtures::persistVote(
+            $this->entityManager,
+            $this->user,
+            $this->linkNewItem($entry, CanonicalItemKind::Lemmy),
+            VoteScore::Up,
+            new \DateTimeImmutable($votedAt),
+        );
     }
 
     /**

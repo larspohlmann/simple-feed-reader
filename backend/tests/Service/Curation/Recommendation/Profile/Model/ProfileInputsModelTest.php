@@ -31,4 +31,13 @@ final class ProfileInputsModelTest extends TestCase
 
         self::assertFalse((new ProfileInputsModel($history, []))->isEmpty());
     }
+
+    public function testAHistoryOfOnlyLikesIsNotEmpty(): void
+    {
+        $line = new ArticleLineModel(8, 'Liked', 'Feed', '2026-10-01', null);
+
+        $history = new RecommendationHistoryModel([], [], [], [], [$line]);
+
+        self::assertFalse((new ProfileInputsModel($history, []))->isEmpty());
+    }
 }

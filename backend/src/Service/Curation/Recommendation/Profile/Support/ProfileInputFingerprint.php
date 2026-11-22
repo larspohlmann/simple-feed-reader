@@ -23,10 +23,11 @@ final class ProfileInputFingerprint
         return hash('sha256', json_encode([
             'favorites' => self::entryIds($inputs->history->favorites),
             'shared' => self::entryIds($inputs->history->shared),
+            'liked' => self::entryIds($inputs->history->liked),
             'kept' => self::entryIds($inputs->history->kept),
             'viewed' => self::entryIds($inputs->history->viewed),
             'savedSearches' => self::sorted($inputs->savedSearchTerms),
-            'caps' => [$caps->favorites, $caps->shared, $caps->kept, $caps->viewed],
+            'caps' => [$caps->favorites, $caps->shared, $caps->liked, $caps->kept, $caps->viewed],
             'connection' => $connection->getId(),
             'model' => $connection->getModel(),
         ], \JSON_THROW_ON_ERROR));

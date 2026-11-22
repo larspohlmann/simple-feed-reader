@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-/** How many of the reader's favorite, shared, kept and viewed posts a recommendation prompt carries. */
+/** How many of the reader's favorite, shared, liked, kept and viewed posts a recommendation prompt carries. */
 final readonly class RecommendationHistoryCaps
 {
     public const int SHARED_CAP = 40;
+    public const int LIKED_CAP = 40;
 
     public function __construct(
         public int $favorites,
         public int $kept,
         public int $viewed,
         public int $shared = self::SHARED_CAP,
+        public int $liked = self::LIKED_CAP,
     ) {
     }
 

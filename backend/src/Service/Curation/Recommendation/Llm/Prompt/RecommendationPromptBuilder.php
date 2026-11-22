@@ -158,8 +158,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * The profile when there is one, FAVORITES only (SHARED, KEPT and VIEWED shaped the profile), the whole pool's
-     * frame (each batch is a random sample of it), then the candidates.
+     * The profile when there is one, FAVORITES only (SHARED, LIKED, KEPT and VIEWED shaped the profile), the whole
+     * pool's frame (each batch is a random sample of it), then the candidates.
      *
      * @param list<ArticleLineModel> $candidateLines
      *
@@ -199,8 +199,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * The only call that sees SAVED SEARCHES, SHARED, KEPT and VIEWED; every later phase gets the profile it writes
-     * plus FAVORITES.
+     * The only call that sees SAVED SEARCHES, SHARED, LIKED, KEPT and VIEWED; every later phase gets the profile it
+     * writes plus FAVORITES.
      *
      * @return list<array{role: string, content: string}>
      */
@@ -326,12 +326,13 @@ final readonly class RecommendationPromptBuilder
         return null !== $value && '' !== trim($value);
     }
 
-    /** FAVORITES, SHARED, KEPT, then VIEWED, newest first within each. */
+    /** FAVORITES, SHARED, LIKED, KEPT, then VIEWED, newest first within each. */
     private function historySections(RecommendationHistoryModel $history): string
     {
         return implode("\n\n", [
             $this->favoritesSection($history),
             $this->historySection('SHARED (newest first):', $history->shared),
+            $this->historySection('LIKED (newest first):', $history->liked),
             $this->historySection('KEPT (newest first):', $history->kept),
             $this->historySection('VIEWED (newest first):', $history->viewed),
         ]);

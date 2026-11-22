@@ -14,12 +14,14 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CanonicalItemKind;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\LinkCardRepository;
 use App\Service\Curation\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\SharedLinks;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase
@@ -150,6 +152,42 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $history = $this->loader()->load($this->userId(), $this->settings(sharedCap: 2));
 
         self::assertSame(['C', 'B'], array_map(static fn ($line) => $line->title, $history->shared));
+    }
+
+    public function testALikedPostAppearsInLikedNewestLikedFirst(): void
+    {
+        $this->likeEntry('Older', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
+        $this->likeEntry('Newer', '2026-07-09T00:00:00Z', '2026-07-13T00:00:00Z');
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Newer', 'Older'], array_map(static fn ($line) => $line->title, $history->liked));
+    }
+
+    public function testALikedAndKeptEntryAppearsInLikedNotKept(): void
+    {
+        $state = new EntryState($this->user, $this->likeEntry('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z'));
+        $state->markKept();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings());
+
+        self::assertSame(['Both'], array_map(static fn ($line) => $line->title, $history->liked));
+        self::assertSame([], $history->kept);
+    }
+
+    public function testTheLikedSectionReadsItsOwnCap(): void
+    {
+        foreach (['A', 'B', 'C'] as $index => $guid) {
+            $this->likeEntry($guid, '2026-07-10T00:00:00Z', '2026-07-1' . $index . 'T00:00:00Z');
+        }
+        $this->entityManager->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings(likedCap: 2));
+
+        self::assertSame(['C', 'B'], array_map(static fn ($line) => $line->title, $history->liked));
     }
 
     public function testCapsApplyNewestFirst(): void
@@ -337,15 +375,29 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         return new EntryState($this->user, $entry);
     }
 
+    private function likeEntry(string $guid, string $published, string $likedAt): Entry
+    {
+        $entry = $this->entry($guid, $published);
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            LikedPostFixtures::linkNewItem($this->entityManager, $entry, CanonicalItemKind::Mastodon, 'key-' . $guid),
+            new \DateTimeImmutable($likedAt),
+        );
+
+        return $entry;
+    }
+
     private function settings(
         int $favoritesCap = 40,
         int $keptCap = 40,
         int $viewedCap = 80,
         int $sharedCap = 40,
+        int $likedCap = 40,
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
-            historyCaps: new RecommendationHistoryCaps($favoritesCap, $keptCap, $viewedCap, $sharedCap),
+            historyCaps: new RecommendationHistoryCaps($favoritesCap, $keptCap, $viewedCap, $sharedCap, $likedCap),
             poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: 32768,

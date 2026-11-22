@@ -22,8 +22,8 @@ final readonly class RecommendationCandidateRepository
     }
 
     /**
-     * The newest entries since $since the reader has not favorited, kept or viewed, one copy per duplicate group.
-     * Read entries stay eligible.
+     * The newest entries since $since the reader has not favorited, kept, viewed, shared or liked, one copy per
+     * duplicate group. Read entries stay eligible.
      *
      * @return list<TitledEntry>
      */
@@ -91,9 +91,10 @@ final readonly class RecommendationCandidateRepository
             '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
             . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
             . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)'
-            . ' AND NOT %2$s',
+            . ' AND NOT %2$s AND NOT %3$s',
             $aliases->state,
             EntryShareDql::exists($aliases),
+            EntryLikeDql::exists($aliases),
         ));
         $inner->andWhere(\sprintf('%s.dates.effectiveDate >= :since', $aliases->entry));
     }

@@ -154,7 +154,8 @@ screenshots; the [gallery](screenshots.md) has more.
 ## "For you" — AI recommendations (optional)
 
 - A ranked selection of your unread articles, based on what you favorite,
-  keep, and read.
+  share, keep, and read, and on the posts you like or upvote on your social
+  networks.
 - You choose the provider: any OpenAI-compatible API works, including local
   models via LM Studio or Ollama — your data can stay on your own machine.
 - Or let TypeSafe's Jev (System One, directly or through OpenRouter) score
