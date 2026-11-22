@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -18,6 +18,9 @@ import {
 import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarNotificationsBellComponent } from './sidebar-notifications-bell.component';
+import { SidebarComposeButtonComponent } from './sidebar-compose-button.component';
+import { TEXT_POST_NETWORKS } from '../../social/composer/compose-request';
+import { TextPostComposer } from '../../social/text-post-composer.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
@@ -40,6 +43,7 @@ const groupCollapsedKey = (network: SocialNetworkName, kind: NetworkFeedKind): s
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
     SidebarNotificationsBellComponent,
+    SidebarComposeButtonComponent,
     SidebarGroupRowComponent,
     MenuCheckboxComponent,
     FeedExclusionMarkerComponent,
@@ -51,10 +55,13 @@ export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
   readonly organising = input(false);
+  /** A new post is about to open, so a drawer gives way to the composer. */
+  readonly composing = output<void>();
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
   private readonly dictionary = inject(ActiveDictionary);
+  private readonly textPosts = inject(TextPostComposer);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -83,6 +90,12 @@ export class SidebarSocialSectionComponent {
   protected readonly notificationsActive = computed(
     () => notificationsNetworkOf(this.selection()) === this.section().network,
   );
+  protected readonly composable = computed(() =>
+    TEXT_POST_NETWORKS.includes(this.section().network),
+  );
+  protected readonly canCompose = computed(() =>
+    this.section().networkAccounts.some((account) => account.status === 'connected'),
+  );
   protected readonly activeFeedKind = computed(() => this.selectionOnThisNetwork()?.feedKind);
   protected readonly selectionQueryParams = selectionQueryParams;
 
@@ -96,6 +109,11 @@ export class SidebarSocialSectionComponent {
     this.dictionary.loaded();
     return this.rows.networkSurfaceChecks(this.section());
   });
+
+  protected startPost(network: SocialNetworkName): void {
+    this.composing.emit();
+    this.textPosts.open(network);
+  }
 
   protected toggle(): void {
     this.collapsible.toggle();

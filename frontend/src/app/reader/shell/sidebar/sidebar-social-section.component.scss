@@ -32,9 +32,14 @@
   padding-left: var(--space-3);
 }
 
+.section-head app-sidebar-compose-button,
 .section-head app-sidebar-notifications-bell {
   flex: none;
   margin-left: calc(var(--space-2) - var(--space-3));
+}
+
+.section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
+  margin-left: var(--space-2);
 }
 
 .rows {

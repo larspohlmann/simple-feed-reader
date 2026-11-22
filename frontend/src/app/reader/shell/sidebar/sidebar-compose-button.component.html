@@ -1,0 +1,14 @@
+@let networkName = 'settings.social.' + network() | transloco;
+@let label =
+  (disabled() ? 'reader.compose.reconnect' : 'reader.compose.button')
+    | transloco: { network: networkName };
+<button
+  class="compose"
+  type="button"
+  [disabled]="disabled()"
+  [attr.aria-label]="label"
+  [attr.title]="disabled() ? label : null"
+  (click)="compose.emit(network())"
+>
+  <app-icon name="add" size="dense" />
+</button>

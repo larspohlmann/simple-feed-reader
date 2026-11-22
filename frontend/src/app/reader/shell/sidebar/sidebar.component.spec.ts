@@ -1,3 +1,4 @@
+import { TextPostComposer } from '../../social/text-post-composer.service';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -38,6 +39,8 @@ import { TagActions } from '../../feeds/manage/tag-actions.service';
 import { SHARING_EVERYTHING } from '../../../core/preferences/sharing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 import { ExclusionSurface, INCLUSION_FLAG } from '../../feed-exclusions';
+
+const textPosts = { open: jest.fn() };
 
 const manageActions = {
   editSubscription: jest.fn(),
@@ -206,6 +209,7 @@ function mount(
         },
       },
       { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
+      { provide: TextPostComposer, useValue: textPosts },
     ],
   });
   TestBed.inject(TagsStore).tags.set(flattenTagTree(over.tagTree ?? []).map((node) => node.tag));
@@ -2906,6 +2910,36 @@ describe('organise mode', () => {
 
     beforeEach(() => localStorage.clear());
     afterEach(() => localStorage.clear());
+
+    it("start a post on a network from its '+', giving the drawer way first", () => {
+      textPosts.open.mockReset();
+      const order: string[] = [];
+      textPosts.open.mockImplementation((network: string) => order.push(`open ${network}`));
+      const fixture = mount({
+        narrow: true,
+        socialSections: [
+          {
+            ...section,
+            networkAccounts: [
+              {
+                id: 3,
+                network: 'bluesky',
+                handle: '@alice.bsky.social',
+                status: 'connected',
+                serviceUrl: 'https://bsky.social',
+              },
+            ],
+          },
+        ],
+      });
+      fixture.componentInstance.closeDrawer.subscribe(() => order.push('close drawer'));
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('app-sidebar-compose-button button')!
+        .click();
+
+      expect(order).toEqual(['close drawer', 'open bluesky']);
+    });
 
     it('come last, after the tags and the untagged feeds', () => {
       const element = mount({ tagTree: [node], untagged: [sub(4)], socialSections: [section] })

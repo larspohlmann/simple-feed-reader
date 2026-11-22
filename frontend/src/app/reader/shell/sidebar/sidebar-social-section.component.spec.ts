@@ -1,3 +1,4 @@
+import { TextPostComposer } from '../../social/text-post-composer.service';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -122,6 +123,8 @@ const rowActions = {
   },
 };
 
+const textPosts = { open: jest.fn() };
+
 function mount(
   section: SocialSection,
   selection: Selection = ALL,
@@ -138,6 +141,7 @@ function mount(
       { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
       { provide: SidebarRowActions, useValue: rowActions },
+      { provide: TextPostComposer, useValue: textPosts },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -221,6 +225,69 @@ describe('SidebarSocialSectionComponent', () => {
       fixture.detectChanges();
 
       expect(bellOf(element(fixture))).toBeNull();
+    });
+  });
+
+  describe('New post button', () => {
+    const composeOf = (root: HTMLElement): HTMLButtonElement | null =>
+      root.querySelector('app-sidebar-compose-button button');
+    const lemmy: SocialSection = {
+      ...ONE_ACCOUNT,
+      network: 'lemmy',
+      networkAccounts: [{ ...ONE_ACCOUNT.networkAccounts[0]!, network: 'lemmy' }],
+    };
+
+    it('sits right before the bell and opens a post on its network, the drawer giving way first', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      const order: string[] = [];
+      fixture.componentInstance.composing.subscribe(() => order.push('composing'));
+      textPosts.open.mockImplementation((network: string) => order.push(`open ${network}`));
+      const root = element(fixture);
+      const button = composeOf(root)!;
+      const bell = root.querySelector('app-sidebar-notifications-bell') as HTMLElement;
+
+      expect(button.closest('app-sidebar-compose-button')!.nextElementSibling).toBe(bell);
+      expect(button.closest('a')).toBeNull();
+      button.click();
+
+      expect(order).toEqual(['composing', 'open bluesky']);
+    });
+
+    it('shows wherever the bell shows, and nowhere else', () => {
+      expect(composeOf(element(mount({ ...ONE_ACCOUNT, networkAccounts: [] })))).toBeNull();
+      const organising = mount(ONE_ACCOUNT);
+      organising.componentRef.setInput('organising', true);
+      organising.detectChanges();
+      expect(composeOf(element(organising))).toBeNull();
+    });
+
+    it('offers no post on Lemmy', () => {
+      const root = element(mount(lemmy));
+
+      expect(root.querySelector('app-sidebar-notifications-bell')).not.toBeNull();
+      expect(composeOf(root)).toBeNull();
+    });
+
+    it('is disabled, saying why, while no account of the network is connected', () => {
+      const fixture = mount({
+        ...ONE_ACCOUNT,
+        networkAccounts: [{ ...ONE_ACCOUNT.networkAccounts[0]!, status: 'needs_reconnect' }],
+      });
+      const button = composeOf(element(fixture))!;
+
+      expect(button.disabled).toBe(true);
+      expect(button.getAttribute('title')).toBe('Reconnect your Bluesky account to post');
+      expect(button.getAttribute('aria-label')).toBe('Reconnect your Bluesky account to post');
+      button.click();
+      expect(textPosts.open).not.toHaveBeenCalled();
+    });
+
+    it('is labelled by its network while it can post', () => {
+      const button = composeOf(element(mount(ONE_ACCOUNT)))!;
+
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute('aria-label')).toBe('New post on Bluesky');
+      expect(button.getAttribute('title')).toBeNull();
     });
   });
 

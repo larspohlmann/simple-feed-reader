@@ -1,0 +1,33 @@
+:host {
+  display: inline-flex;
+}
+
+.compose {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.compose:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .compose:not(:disabled):hover {
+    color: var(--text-secondary);
+  }
+}
+
+@media (pointer: coarse) {
+  .compose::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--icon-dense) - var(--tap-target)) / 2);
+  }
+}
