@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { TokenStore } from '../../core/auth/token.store';
 import { SentPost } from './composer/composed-post';
-import { PostRequest } from './composer/compose-request';
+import { ComposeRequest } from './composer/compose-request';
 import { Composer } from './composer/composer.service';
 import { TextPostComposer } from './text-post-composer.service';
 
@@ -16,7 +16,7 @@ describe('TextPostComposer', () => {
     return TestBed.inject(TextPostComposer);
   }
 
-  const lastRequest = (): PostRequest => composer.open.mock.calls.at(-1)![0] as PostRequest;
+  const lastRequest = (): ComposeRequest => composer.open.mock.calls.at(-1)![0] as ComposeRequest;
 
   beforeEach(() => {
     localStorage.clear();

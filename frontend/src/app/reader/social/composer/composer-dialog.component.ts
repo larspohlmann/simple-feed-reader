@@ -78,7 +78,7 @@ export class ComposerDialogComponent {
   protected readonly visibilities = MASTODON_VISIBILITIES;
   protected readonly names = SOCIAL_NETWORK_NAMES;
   protected readonly primary = this.lanes.primary;
-  private readonly draft = this.request.kind === 'post' ? this.request.draft : undefined;
+  private readonly draft = this.request.draft;
   /** A kept draft counts as typed, so the context's empty starting text never replaces it. */
   private textTouched = (this.draft?.() ?? '') !== '';
   protected readonly text = linkedSignal<string | undefined, string>({

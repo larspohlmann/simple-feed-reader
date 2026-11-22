@@ -22,11 +22,10 @@ export interface LinkRequest {
   quote: string | null;
 }
 
-/** A post of text alone; `draft` outlives the composer, which mirrors every edit into it. */
+/** A post of text alone. */
 export interface PostRequest {
   kind: 'post';
   network: SocialNetworkName;
-  draft?: WritableSignal<string>;
 }
 
 /** The networks a post of text alone goes to: Lemmy's posts need a title and a community. */
@@ -36,7 +35,10 @@ export const TEXT_POST_NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mas
 export type SharedLinkDto = Omit<LinkRequest, 'kind' | 'network'>;
 
 /** What the composer is asked to write. */
-export type ComposeRequest = ResponseRequest | LinkRequest | PostRequest;
+export type ComposeRequest = (ResponseRequest | LinkRequest | PostRequest) & {
+  /** Text that outlives the composer: it starts from it and mirrors every edit into it. */
+  draft?: WritableSignal<string>;
+};
 
 /** What the composer sends: a link post that names a post on its network quotes it. */
 export type ComposerKind = ComposeRequest['kind'];
