@@ -22,7 +22,7 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
     {
         return SocialPostAddressModel::fromNullable(
             SocialNetwork::Mastodon,
-            AbsoluteHttpUrl::keepIfAbsolute($entry->getGuid()) ?? AbsoluteHttpUrl::keepIfAbsolute($entry->getUrl()),
+            self::pickPostAddress($entry->getGuid(), $entry->getUrl()),
         );
     }
 
@@ -66,6 +66,17 @@ final readonly class MastodonPostAddressRule implements PostAddressRuleInterface
             ?? throw new SocialPostRefusedException('A reply in the thread names no Mastodon status.');
 
         return [$statusUri, $url];
+    }
+
+    private static function pickPostAddress(?string $guid, ?string $url): ?string
+    {
+        foreach ([$guid, $url] as $candidate) {
+            if (null !== $candidate && null !== MastodonStatusAddress::parseAddress($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return AbsoluteHttpUrl::keepIfAbsolute($guid) ?? AbsoluteHttpUrl::keepIfAbsolute($url);
     }
 
     private static function requireOwnStatusId(string $address, SocialAccount $account): string
