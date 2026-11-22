@@ -139,6 +139,32 @@ final class MastodonNotificationSourceTest extends TestCase
         );
     }
 
+    public function testAStatusWithoutAnAddressCarriesNoKey(): void
+    {
+        $author = ['id' => '109', 'acct' => 'alice'];
+        $actor = ['id' => '201', 'acct' => 'bob'];
+        $list = (string) json_encode([
+            [
+                'id' => '1300',
+                'type' => 'quote',
+                'created_at' => '2026-11-16T09:00:00.000Z',
+                'account' => $actor,
+                'status' => [
+                    'id' => '7010',
+                    'content' => '<p>quoting</p>',
+                    'account' => $actor,
+                    'quote' => ['state' => 'accepted', 'quoted_status' => ['id' => '7011', 'account' => $author]],
+                ],
+            ],
+        ]);
+
+        $keys = $this->source($this->http(listBody: $list))->fetch(SocialApiWiring::mastodonAccount())
+            ->notifications[0]->subject->keys;
+
+        self::assertNull($keys->postHash);
+        self::assertNull($keys->answeredHash);
+    }
+
     public function testAFollowCarriesNoKeys(): void
     {
         $follow = $this->source($this->http())->fetch(SocialApiWiring::mastodonAccount())->notifications[4];
