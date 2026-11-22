@@ -2,9 +2,9 @@ import { SocialNetworkName } from '../../../core/social-network';
 
 /** Mastodon counts every link as this many characters, whatever its length. */
 const MASTODON_LINK_LENGTH = 23;
-const LINK = /https?:\/\/\S+/g;
+const LINK = /https?:\/\/\S+/gi;
 /** Mastodon counts a mention of a remote account by its username alone. */
-const REMOTE_MENTION = /(^|[^\w/])@(\w+)@[\w.-]*\w/g;
+const REMOTE_MENTION = /(^|[^\w/])@(\w+(?:[.-]+\w+)*)@[\p{L}\p{N}_.-]*[\p{L}\p{N}_]/gu;
 
 let graphemes: Intl.Segmenter | null | undefined;
 
@@ -29,7 +29,8 @@ function graphemeCount(text: string): number {
 }
 
 function mastodonLength(contentWarning: string, text: string): number {
-  const links = text.match(LINK) ?? [];
-  const withoutLinks = text.replace(LINK, '').replace(REMOTE_MENTION, '$1@$2');
-  return graphemeCount(contentWarning + withoutLinks) + links.length * MASTODON_LINK_LENGTH;
+  const stripped = text.trim();
+  const links = stripped.match(LINK) ?? [];
+  const withoutLinks = stripped.replace(LINK, '').replace(REMOTE_MENTION, '$1@$2');
+  return graphemeCount(contentWarning.trim() + withoutLinks) + links.length * MASTODON_LINK_LENGTH;
 }

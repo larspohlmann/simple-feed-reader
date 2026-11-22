@@ -24,6 +24,7 @@ final class MastodonStatusLimitTest extends TestCase
         ))]);
 
         self::assertSame(1000, self::limit($http)->resolveMaxCharacters(SocialAccounts::mastodon()));
+        self::assertSame(1000, self::limit($http)->findMaxCharacters(SocialAccounts::mastodon()));
     }
 
     public function testAnInstanceThatDoesNotAnswerHoldsMastodonsDefault(): void
@@ -33,6 +34,7 @@ final class MastodonStatusLimitTest extends TestCase
         ]);
 
         self::assertSame(500, self::limit($http)->resolveMaxCharacters(SocialAccounts::mastodon()));
+        self::assertNull(self::limit($http)->findMaxCharacters(SocialAccounts::mastodon()));
     }
 
     public function testAnAnswerWithoutALimitHoldsMastodonsDefault(): void
@@ -40,6 +42,7 @@ final class MastodonStatusLimitTest extends TestCase
         $http = new RoutedHttpClient([self::INSTANCE => new MockResponse('{"configuration":{}}')]);
 
         self::assertSame(500, self::limit($http)->resolveMaxCharacters(SocialAccounts::mastodon()));
+        self::assertNull(self::limit($http)->findMaxCharacters(SocialAccounts::mastodon()));
     }
 
     private static function limit(RoutedHttpClient $http): MastodonStatusLimit

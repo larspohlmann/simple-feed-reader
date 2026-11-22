@@ -24,8 +24,12 @@ final readonly class MastodonStatusLimit
 
     public function resolveMaxCharacters(SocialAccount $account): int
     {
-        return $this->fetchInstance($account)->node('configuration')->node('statuses')->int('max_characters')
-            ?? self::DEFAULT_MAX_CHARACTERS;
+        return $this->findMaxCharacters($account) ?? self::DEFAULT_MAX_CHARACTERS;
+    }
+
+    public function findMaxCharacters(SocialAccount $account): ?int
+    {
+        return $this->fetchInstance($account)->node('configuration')->node('statuses')->int('max_characters');
     }
 
     private function fetchInstance(SocialAccount $account): JsonNodeModel

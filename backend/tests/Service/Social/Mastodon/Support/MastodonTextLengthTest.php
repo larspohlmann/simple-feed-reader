@@ -24,6 +24,11 @@ final class MastodonTextLengthTest extends TestCase
         );
     }
 
+    public function testTheContentWarningIsCountedStripped(): void
+    {
+        self::assertSame(2 + 2, MastodonTextLength::measureLength(" cw \n", 'hi'));
+    }
+
     public function testAGraphemeSplitBetweenWarningAndTextIsOne(): void
     {
         self::assertSame(1, MastodonTextLength::measureLength('👍', '🏽'));
@@ -41,6 +46,10 @@ final class MastodonTextLengthTest extends TestCase
         yield 'a byte order mark ends a link' => ["\u{FEFF}https://a.b/\u{FEFF}z", 1 + 23 + 1 + 1];
         yield 'a next-line character does not end a link' => ["https://a.b/\u{0085}x", 23];
         yield 'a tab ends a link' => ["https://a.b/\tx", 23 + 2];
+        yield 'a dotted remote mention counts as its username' => ['@first.last@friendica.example hi', 14];
+        yield 'a remote mention on an internationalised host' => ['@bob@münchen.social hi', 7];
+        yield 'an uppercase scheme is a link' => ['HTTPS://EXAMPLE.COM/' . str_repeat('A', 100), 23];
+        yield 'surrounding whitespace is not counted' => ["  \n Hallo \t\n", 5];
         yield 'a remote mention counts as its username' => ['@alice@example.social hi', 9];
         yield 'a remote mention after a letter outside ASCII' => ['é@bob@x.y', 5];
         yield 'a remote mention after an emoji' => ['😀@bob@x.y', 5];

@@ -29,6 +29,21 @@ describe('postLength', () => {
     expect(postLength('é😀', 'mastodon')).toBe(2);
   });
 
+  it('counts a dotted Mastodon mention and one on an internationalised host by the username', () => {
+    expect(postLength('@first.last@friendica.example hi', 'mastodon')).toBe(
+      '@first.last hi'.length,
+    );
+    expect(postLength('@bob@münchen.social hi', 'mastodon')).toBe('@bob hi'.length);
+  });
+
+  it('counts a Mastodon link with an uppercase scheme as 23 characters', () => {
+    expect(postLength('HTTPS://EXAMPLE.TEST/' + 'A'.repeat(100), 'mastodon')).toBe(23);
+  });
+
+  it('leaves out the whitespace Mastodon strips from the text and the warning', () => {
+    expect(postLength('  Hallo \n', 'mastodon', ' cw ')).toBe('cwHallo'.length);
+  });
+
   it('counts a Mastodon content warning as written, together with the text', () => {
     expect(postLength('a'.repeat(491), 'mastodon', 'spoilers!!')).toBe(501);
     expect(postLength('hi', 'mastodon', 'https://x.test')).toBe('https://x.testhi'.length);

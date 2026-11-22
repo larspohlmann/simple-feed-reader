@@ -284,6 +284,21 @@ final class MastodonPostWriterTest extends TestCase
         self::assertSame([self::STATUSES], $http->requestLines());
     }
 
+    public function testAnInstanceThatNamesNoLimitLeavesTheLengthToMastodon(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writerOnInstance(
+            $http,
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+        )->publish(
+            SocialAccounts::mastodon(),
+            PublicationModel::fromDraft(new PostDraftModel(str_repeat('a', 900))),
+        );
+
+        self::assertSame([self::STATUSES], $http->requestLines());
+    }
+
     public function testTextAtTheServersLimitIsSent(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
@@ -367,14 +382,17 @@ final class MastodonPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter
     {
-        $instance = (new RoutedHttpClient([self::INSTANCE => new MockResponse(json_encode(
+        return $this->writerOnInstance($http, new MockResponse(json_encode(
             ['configuration' => ['statuses' => ['max_characters' => self::MAX_CHARACTERS]]],
             \JSON_THROW_ON_ERROR,
-        ))]))->client();
+        )));
+    }
 
+    private function writerOnInstance(RoutedHttpClient $http, MockResponse $instance): MastodonPostWriter
+    {
         return new MastodonPostWriter(
             SocialApiWiring::mastodonAccountApi($http->client()),
-            SocialApiWiring::mastodonStatusLimit($instance),
+            SocialApiWiring::mastodonStatusLimit((new RoutedHttpClient([self::INSTANCE => $instance]))->client()),
         );
     }
 
