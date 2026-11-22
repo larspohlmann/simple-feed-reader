@@ -16,6 +16,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { HandednessService } from '../../../core/preferences/handedness.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
+import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
@@ -39,6 +40,7 @@ import { NotificationsStore } from '../notifications.store';
     TranslocoPipe,
     ListFrameComponent,
     IconComponent,
+    PendingDotsComponent,
     ListActionDirective,
     SkeletonComponent,
     WarningBoxComponent,
