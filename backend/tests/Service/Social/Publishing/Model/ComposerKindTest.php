@@ -22,8 +22,19 @@ final class ComposerKindTest extends TestCase
         self::assertFalse(ComposerKind::Quote->isAllowedBy(new PostContextModel(canQuote: false)));
     }
 
-    public function testALinkNeedsNoPermission(): void
+    public function testALinkAndATextPostNeedNoPermission(): void
     {
-        self::assertTrue(ComposerKind::Link->isAllowedBy(new PostContextModel(canReply: false, canQuote: false)));
+        $closed = new PostContextModel(canReply: false, canQuote: false);
+
+        self::assertTrue(ComposerKind::Link->isAllowedBy($closed));
+        self::assertTrue(ComposerKind::Post->isAllowedBy($closed));
+    }
+
+    public function testOnlyAReplyAndAQuoteAnswerAPost(): void
+    {
+        self::assertTrue(ComposerKind::Reply->isResponse());
+        self::assertTrue(ComposerKind::Quote->isResponse());
+        self::assertFalse(ComposerKind::Link->isResponse());
+        self::assertFalse(ComposerKind::Post->isResponse());
     }
 }

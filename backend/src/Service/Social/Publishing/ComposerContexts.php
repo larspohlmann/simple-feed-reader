@@ -84,6 +84,25 @@ final readonly class ComposerContexts
         );
     }
 
+    public function buildTextPostContext(SocialAccount $account): ComposerContextModel
+    {
+        $defaults = $this->selectDefaults($account)->resolveDefaults(
+            $account,
+            self::startPublication(),
+            self::noThreadStarter(),
+        );
+
+        return new ComposerContextModel(
+            $this->connectedBeside($account),
+            $account,
+            canSend: true,
+            defaults: $defaults,
+            subject: null,
+            kind: ComposerKind::Post,
+            text: '',
+        );
+    }
+
     private static function buildLinkText(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
     {
         if (null !== $defaults->lemmyPost) {
