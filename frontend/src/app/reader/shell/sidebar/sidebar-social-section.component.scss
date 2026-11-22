@@ -42,6 +42,13 @@
   margin-left: var(--space-2);
 }
 
+/* Each glyph's tap area reaches past it; the gap keeps the two from overlapping. */
+@media (pointer: coarse) {
+  .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
+    margin-left: calc(var(--tap-target) - var(--icon-dense));
+  }
+}
+
 .rows {
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);

@@ -294,7 +294,8 @@ So `Service/Curation/Recommendation/Llm` holds the LLM engine, which depends on 
 - **A network's account side is its module** (#2359). `Social/Bluesky`, `Social/Mastodon` and `Social/Lemmy` hold what
   one network's account does, and depend on `Social/Social`, `Social/Publishing`, `Social/Notification` and the other
   lower Social modules (`BlueskyPost`, `Completion`, `Share`), none of which names them. `Social/Publishing` owns what
-  a post says and how it goes out, on top of `Social/Social`, which never names it: deleting a post stays in
+  a post says and how it goes out (a reply, a quote, a shared link or a post of text alone, all through one
+  `publish()`), on top of `Social/Social`, which never names it: deleting a post stays in
   `Social/Social` (`PostDeleterInterface`).
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by

@@ -39,7 +39,7 @@ import { postLength } from './post-length';
 /**
  * Writes a reply to a Lemmy post or comment, a reply to or a quote of a Bluesky or Mastodon post, a post of a shared
  * URL, or a post of text alone.
- * Closing never asks: typed text is discarded.
+ * Closing never asks: typed text is discarded, unless the request carries a draft that keeps it.
  * It stays open while a post is on the wire, and once one went out it closes only with it, so
  * the reader always learns what was published.
  * Send posts to every active network still to post. A failed send keeps the text and says why;
