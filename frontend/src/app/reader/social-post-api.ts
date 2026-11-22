@@ -111,11 +111,18 @@ export class SocialPostApi {
   }
 
   send(target: PostTargetDto, draft: PostDraftDto): Observable<PublishedPostDto> {
-    const path =
-      target.kind === 'link'
-        ? this.socialPath('links')
-        : this.entryPath(target.entryId, `social/${RESPONSE_PATHS[target.kind]}`);
-    return this.http.post<PublishedPostDto>(path, draft, { params: targetParams(target) });
+    if (target.kind === 'link') {
+      return this.http.post<PublishedPostDto>(this.socialPath('links'), {
+        ...draft,
+        network: target.network,
+        url: target.url,
+      });
+    }
+    return this.http.post<PublishedPostDto>(
+      this.entryPath(target.entryId, `social/${RESPONSE_PATHS[target.kind]}`),
+      draft,
+      { params: addressParam(target.address) },
+    );
   }
 
   deleteReply(entryId: number, address: string): Observable<void> {

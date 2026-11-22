@@ -187,7 +187,7 @@ describe('SocialPostApi', () => {
     mastodon.flush({});
   });
 
-  it('POSTs a link post with the shared URL on its network in the query and the draft as the body', () => {
+  it('POSTs a link post with the shared URL and its network in the body beside the draft', () => {
     const draft = { text: 'Read this', accountId: 4, language: 'en', idempotencyKey: 'k-3' };
     api
       .send(
@@ -198,10 +198,8 @@ describe('SocialPostApi', () => {
 
     const toPost = ctrl.expectOne((request) => request.url === 'https://api.test/api/social/links');
     expect(toPost.request.method).toBe('POST');
-    expect(toPost.request.params.get('network')).toBe('mastodon');
-    expect(toPost.request.params.get('url')).toBe(SHARED_URL);
-    expect(toPost.request.params.has('title')).toBe(false);
-    expect(toPost.request.body).toEqual(draft);
+    expect(toPost.request.params.keys()).toEqual([]);
+    expect(toPost.request.body).toEqual({ ...draft, network: 'mastodon', url: SHARED_URL });
     toPost.flush({ address: 'https://x/1', url: null });
   });
 

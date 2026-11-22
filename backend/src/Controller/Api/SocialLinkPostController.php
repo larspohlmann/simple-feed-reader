@@ -51,15 +51,10 @@ final readonly class SocialLinkPostController
     public function link(
         #[CurrentUser] User $user,
         #[MapRequestPayload] LinkPostDraftRequest $request,
-        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)] LinkTargetQuery $query,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        $published = $this->links->publish(
-            $user,
-            $query->toLinkTarget($request->accountId),
-            $request->toPublication(),
-        );
+        $published = $this->links->publish($user, $request->toLinkTarget(), $request->toPublication());
 
         return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
     }
