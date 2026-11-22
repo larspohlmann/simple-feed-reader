@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.0] - 2026-11-22
+
 ### Highlights
 
 This release adds Lemmy, Trending stories with their own headlines and synopses,
@@ -24,6 +26,131 @@ bell in the sidebar for likes, replies and mentions.
 started and when its last article joined. Follow it to keep it in the sidebar,
 or hide it. With an LLM connected, each story gets its own headline and a short
 synopsis.
+
+## What's Changed
+* feat(#2221): clamp the feed intro description to two lines by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2222
+* Lemmy posts render from the feed, with link cards and threaded comments by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2220
+* refactor(#2219): group the service modules into ten navigation folders by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2223
+* feat(#2217): show Lemmy post and comment scores by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2224
+* Trending: equivalence table for abbreviations and cross-language names, French/Spanish seed stems (#2225) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2228
+* feat(#2218): connect a Lemmy account to vote and reply by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2226
+* Trending: language-aware stemming, feed and post languages (#2227) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2232
+* feat(#2230): split German compounds in Trending by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2233
+* feat(#2231): seed Trending from news-independent word lists by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2234
+* feat(#2229): trending reads link cards, one row per article with its shares by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2242
+* docs(#2235): audit french and spanish trending after #2227 — no rule change by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2244
+* feat(#2237): strip tracking parameters from article URLs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2245
+* feat(#2239): store each linked article once, as a shared link by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2246
+* feat(#2236): resolve short links for Trending's article key by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2247
+* feat(#2243): give short posts a language by stopword vote by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2250
+* fix(#2248): strip only URL keys that never name content by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2251
+* refactor(#2252): simplify across the Trending/link-card run by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2253
+* fix(#2254): drop and restore the shared link foreign key around the column change by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2255
+* chore(#2257): delete the one-off url, language and short-link commands by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2259
+* ci(#2256): run the MySQL legs with ALGORITHM=COPY forced by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2260
+* fix(#2262): open a Lemmy post at its post page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2263
+* feat(#2238): For you reads social posts' link cards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2266
+* Mastodon links open on the reader's own instance (#2261) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2265
+* Mastodon: "Boosted by" names the booster by handle (#2267) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2268
+* fix(#2269): count a self-reply thread's full length for its n/N pill by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2270
+* Stable Trending stories: identity, history, follow, hide by id (#2128) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2274
+* fix(#2275): name a short link's card after the site it lands on by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2276
+* feat(#2277): Lemmy search subscriptions take the full search syntax by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2278
+* docs(#2279): CLAUDE.md prompt-audit cleanup by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2280
+* docs(#2281): run npm run check inside the Docker frontend container by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2282
+* Trending stories: structural follow-ups from #2128 (#2272) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2283
+* fix(#2284): let a Lemmy search wait 25 s for its answer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2285
+* feat(#2240): notifications from connected social accounts — backend by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2286
+* Notifications from connected social accounts: frontend (#2240) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2288
+* Tab title names the notifications' network; shared list frame (#2289, #2290) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2292
+* feat(#2291): Trending story counts on the button line, toggle reads "x more" by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2293
+* Notifications: bell with count in the network head, magazine-width list (#2294) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2297
+* fix(#2298): Lemmy feeds get their instance favicon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2299
+* feat(#2296): notification context by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2301
+* fix(#2302): name the context migration file after its class by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2303
+* Composer: Bluesky and Mastodon pills to crosspost a shared link (#2287) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2305
+* fix(#2304): notifications about your comment say so by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2306
+* Lemmy link posts and a Lemmy pill in the share composer (#2295) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2307
+* refactor(#2300): notification context sources return contexts, not whole rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2308
+* feat(#2309): one labelled action row for Lemmy, Bluesky and Mastodon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2310
+* feat(#2313): every cut-off ellipsis text shows its full text on hover by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2314
+* fix(#2273): mark-read sends until at second precision by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2315
+* fix(#2317): name Lemmy community feeds community first, then site by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2318
+* fix(#2316): Lemmy community and user feeds show their own icon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2319
+* refactor(#2320): lemmy pictures come from the lemmy api by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2321
+* feat(#2323): magazine link posts hide the link their card shows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2324
+* fix(#2322): a network subscription's run never folds into a group widget by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2325
+* fix(#2326): the Trending title names its time window by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2327
+* fix(#2330): magazine link posts hide every link, not only the trailing one by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2331
+* chore(#2332): infection:diff collects coverage over ParaTest first by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2333
+* refactor(#2328): Trending stories per user, story-first API and SPA by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2334
+* ci(#2335): skip the mutation run when a PR leaves backend/src alone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2336
+* chore(#2338): stop announcing releases on LinkedIn by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2339
+* refactor(#2337): Trending story card keeps row and magazine blocks story-agnostic by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2340
+* feat(#2342): searchable release root post from a lead sentence in the highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2343
+* fix(#2341): retry social lookups after a pause; say whether a post was sent by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2344
+* fix(#2345): one Lemmy vote pill for list and article by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2346
+* feat(#2329): Trending stories get their own title by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2349
+* feat(#2347): Lemmy posts name their community; entry_lemmy_post holds Lemmy-only data by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2350
+* fix(#2351): the kicker spaces the Lemmy community separator evenly by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2352
+* Link-card drain endpoint for installs without the worker (#2354) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2357
+* feat(#2348): store Bluesky and Mastodon reply counts as the entry's comment count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2356
+* feat(#2353): Trending story synopsis, and the title wraps in bold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2361
+* fix(#2363): story list opens with its synopsis below the header on touch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2364
+* fix(#2365): Lemmy link-post title wraps over lines by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2366
+* refactor(#2358): per-network facts behind keyed adapters by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2368
+* fix(#2370): story title card text two steps larger by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2371
+* fix(#2372): story title card icon at md size by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2373
+* refactor(#2367): generic social code names no network class by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2374
+* refactor(#2359): a module per social network by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2376
+* refactor(#2377): social module leftovers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2379
+* chore(#2378): sorted use blocks behind a phpcs gate by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2380
+* refactor(#2375): social import and link-post leftovers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2381
+* refactor(#2369): a network's search is built once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2382
+* refactor(#2360): Identity, Sourcing and Outbound methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2383
+* fix(#2384): keep a story synopsis up to 900 characters by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2385
+* refactor(#2360): Foundation, Ingestion and Operations methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2386
+* refactor(#2360): Library, persistence and command methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2387
+* refactor(#2360): Http and Content methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2389
+* refactor(#2360): Curation methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2390
+* refactor(#2360): Social core methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2392
+* refactor(#2360): Bluesky methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2393
+* refactor(#2360): Mastodon and Lemmy methods say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2396
+* docs(#2394): naming rule after the Of sweep by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2397
+* fix(#2395): story page heads its list with the Trending card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2401
+* refactor(#2394): methods with Of in the middle say what they do by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2403
+* refactor(#2400): Foundation, Identity, Sourcing, Outbound and Operations methods start with their verb by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2406
+* refactor(#2400): Ingestion, Library and persistence methods start with their verb by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2407
+* refactor(#2400): Content methods start with their verb by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2408
+* refactor(#2400): Curation methods start with their verb by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2409
+* refactor(#2400): Social methods start with their verb by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2410
+* feat(#2414): the Comments heading shows the comment count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2415
+* feat(#2416): a dot between Comments and its count in the heading by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2418
+* feat(#2417): sort Lemmy comments by interest by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2419
+* Canonical items: one row behind every feed copy of a post (#2404) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2421
+* Lemmy cross-posts: one list row per group, counted once in Trending (#2420) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2423
+* feat(#2362): Bluesky and Mastodon like counts on social rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2424
+* fix(#2425): the like button carries the live like count; votes take the live score by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2426
+* feat(#2427): pending dots while a like is on the wire; like counts that add up by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2428
+* feat(#2429): pending dots on every vote and like control; votes wait for the server's score by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2430
+* feat(#2431): the list's like sits before the comment count, like the vote pill by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2432
+* fix(#2433): list rows show the comment total of the thread the reader opened by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2434
+* Social notifications open the matching reader entry (#2391) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2437
+* feat(#2435): Trending story counts and actions sit in its title card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2438
+* fix(#2405): a feed's first refresh commits once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2439
+* Every AI run in the run history and the debug log (#2355) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2440
+* feat(#2442): story page title card with counts, Follow and Hide by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2443
+* fix(#2411): the notifications list loads every group's newest rows in a fixed number of queries by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2441
+* Story runs name their provider; debug-log picker fits a phone (#2444) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2445
+* Fewer Trending story re-titles: after doubling, at most every 6 hours (#2446) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2448
+* refactor(#2412): one connection-pick check for both AI settings editors by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2449
+* fix(#2413): one home for the media extensions a browser plays by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2450
+* feat(#2447): one Trending story card, with when it was created and its last article joined by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2451
+* Homepage, README and feature list for v1.10.0, with a full screenshot and tour retake by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2454
+* docs(#2455): v1.10.0 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2456
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.9.4...v1.10.0
 
 ## [v1.9.4] - 2026-11-13
 
