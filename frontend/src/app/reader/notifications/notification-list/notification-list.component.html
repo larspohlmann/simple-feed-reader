@@ -57,8 +57,13 @@
     (click)="store.markAllSeen()"
     [attr.aria-label]="'reader.notifications.markAllSeen' | transloco"
     [attr.title]="'reader.notifications.markAllSeen' | transloco"
+    [attr.aria-busy]="store.marking() || null"
   >
-    <app-icon name="done_all" size="sm" />
+    @if (store.marking()) {
+      <app-pending-dots />
+    } @else {
+      <app-icon name="done_all" size="sm" />
+    }
     <span class="txt">{{ 'reader.notifications.markAllSeen' | transloco }}</span>
   </button>
 </ng-template>

@@ -39,7 +39,7 @@
 }
 
 // Icon-only actions get the sidebar chevron treatment: a full tap target around
-// a smaller bordered glyph box.
+// a smaller bordered glyph box, kept while pending dots stand in for the icon.
 @mixin icon-only-box($action) {
   #{$action} {
     justify-content: center;
@@ -47,8 +47,10 @@
     height: var(--tap-target);
   }
 
-  #{$action} app-icon {
+  #{$action} app-icon,
+  #{$action} app-pending-dots {
     display: inline-flex;
+    box-sizing: content-box;
     padding: var(--space-2);
     border-radius: var(--radius-sm);
 

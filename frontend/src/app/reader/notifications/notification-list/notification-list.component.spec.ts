@@ -176,12 +176,19 @@ describe('NotificationListComponent (#2240)', () => {
     expect(element.querySelector('.dot')).not.toBeNull();
 
     markSeen?.click();
+    fixture.detectChanges();
+    expect(markSeen?.querySelector('app-pending-dots')).not.toBeNull();
+    expect(markSeen?.querySelector('app-icon')).toBeNull();
+    expect(markSeen?.getAttribute('aria-busy')).toBe('true');
     const request = http.expectOne(seenUrl);
     expect(request.request.body).toEqual({ network: 'bluesky', upTo: 9 });
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
     expect(element.querySelector('.dot')).toBeNull();
+    expect(markSeen?.querySelector('app-pending-dots')).toBeNull();
+    expect(markSeen?.querySelector('app-icon')?.getAttribute('name')).toBe('done_all');
+    expect(markSeen?.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('shows a reconnect hint per problem', () => {
