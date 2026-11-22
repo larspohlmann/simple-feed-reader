@@ -31,8 +31,6 @@ use App\Service\Social\Social\SocialCountsCache;
 /** Opens the composer for the user's replies and quotes, and publishes them. */
 final readonly class SocialResponses
 {
-    private const string LINK_ANSWERS_NO_POST = 'A link post answers no post.';
-
     public function __construct(
         private ResponseTargetFinder $targets,
         private ComposerContexts $contexts,
@@ -55,13 +53,12 @@ final readonly class SocialResponses
      */
     public function prepareContext(User $user, ResponseTargetModel $target, ComposerKind $kind): ComposerContextModel
     {
+        self::refuseLink($kind);
         $post = $this->targets->find($user, $target);
 
-        return match ($kind) {
-            ComposerKind::Reply => $this->contexts->buildReplyContext($post, $target),
-            ComposerKind::Quote => $this->contexts->buildQuoteContext($post),
-            ComposerKind::Link => throw new SocialPostRefusedException(self::LINK_ANSWERS_NO_POST),
-        };
+        return ComposerKind::Quote === $kind
+            ? $this->contexts->buildQuoteContext($post)
+            : $this->contexts->buildReplyContext($post, $target);
     }
 
     /**
@@ -83,6 +80,7 @@ final readonly class SocialResponses
         ComposerKind $kind,
         PublicationModel $publication,
     ): PublishedPostModel {
+        self::refuseLink($kind);
         $post = $this->allowedTarget($user, $target, $kind);
         $published = $this->writing->publish($post->account, self::buildResponse($publication, $kind, $post));
         $this->forgetWhatChanged($user, $target->entry);
@@ -94,16 +92,21 @@ final readonly class SocialResponses
     }
 
     /** @throws SocialPostRefusedException */
+    private static function refuseLink(ComposerKind $kind): void
+    {
+        if (ComposerKind::Link === $kind) {
+            throw new SocialPostRefusedException('A link post answers no post.');
+        }
+    }
+
     private static function buildResponse(
         PublicationModel $publication,
         ComposerKind $kind,
         SocialPostModel $post,
     ): PublicationModel {
-        return match ($kind) {
-            ComposerKind::Reply => $publication->withReplyTo($post),
-            ComposerKind::Quote => $publication->withEmbed(new QuotedPostEmbedModel($post)),
-            ComposerKind::Link => throw new SocialPostRefusedException(self::LINK_ANSWERS_NO_POST),
-        };
+        return ComposerKind::Quote === $kind
+            ? $publication->withEmbed(new QuotedPostEmbedModel($post))
+            : $publication->withReplyTo($post);
     }
 
     /** @throws SocialPostRefusedException when the author does not allow this kind of response to the post */

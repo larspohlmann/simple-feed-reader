@@ -49,15 +49,6 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
         return new PublishedPostModel($address, AbsoluteHttpUrl::keepIfAbsolute($status->string('url')));
     }
 
-    private static function textCarrying(string $url, string $text): string
-    {
-        return match (true) {
-            '' === trim($text) => $url,
-            str_contains($text, $url) => $text,
-            default => $text . "\n\n" . $url,
-        };
-    }
-
     public function delete(SocialAccount $account, string $postId): PostDeletion
     {
         $url = $account->getServiceUrl() . MastodonStatusAction::statusPath($postId);
@@ -97,5 +88,14 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
     private static function readQuotedStatusId(?PostEmbedModelInterface $embed): ?string
     {
         return $embed instanceof QuotedPostEmbedModel ? $embed->post->postId : null;
+    }
+
+    private static function textCarrying(string $url, string $text): string
+    {
+        return match (true) {
+            '' === trim($text) => $url,
+            str_contains($text, $url) => $text,
+            default => $text . "\n\n" . $url,
+        };
     }
 }

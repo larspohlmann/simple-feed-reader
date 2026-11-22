@@ -331,6 +331,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         yield 'unknown visibility' => [['text' => 'Hi', 'visibility' => 'friends']];
         yield 'no language code' => [['text' => 'Hi', 'language' => 'German']];
         yield 'no uuid key' => [['text' => 'Hi', 'idempotencyKey' => 'again']];
+        yield 'an account id that is no number' => [['text' => 'Hi', 'accountId' => 'abc']];
     }
 
     public function testAReplyTheUsersAccountWroteIsDeleted(): void

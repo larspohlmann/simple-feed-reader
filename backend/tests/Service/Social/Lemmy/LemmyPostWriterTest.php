@@ -223,6 +223,10 @@ final class LemmyPostWriterTest extends TestCase
             self::linkPost(new PostDraftModel(str_repeat('ä', 10001)), 'Title', 7),
             SocialPostTooLongException::class,
         ];
+        yield 'no Lemmy choices at all' => [
+            PublicationModel::fromDraft(new PostDraftModel('Hi'))->withEmbed(new LinkEmbedModel(self::ARTICLE, 'A')),
+            SocialPostCommunityMissingException::class,
+        ];
         yield 'the community is checked before the title' => [
             self::linkPost(new PostDraftModel('Hi'), null, null),
             SocialPostCommunityMissingException::class,

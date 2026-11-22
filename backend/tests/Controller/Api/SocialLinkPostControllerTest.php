@@ -446,6 +446,22 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testALinkPostWithAnAccountIdThatIsNoNumberIsRejectedBeforeAnyCall(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-invalid-account-id@example.test');
+        $this->mastodonAccountOf($user);
+
+        $this->send(
+            $client,
+            self::LINKS . 'mastodon&url=' . rawurlencode(self::ARTICLE_URL),
+            ['text' => 'Hi', 'accountId' => 'abc'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame([], $this->http->requests);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function invalidComposerQueries(): iterable
     {

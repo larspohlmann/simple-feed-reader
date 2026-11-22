@@ -146,12 +146,12 @@ final class FakeMastodonNetwork implements
 
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        $this->record(self::describe($publication) . ' ' . $publication->draft->text);
+        $this->record(self::formatCall($publication) . ' ' . $publication->draft->text);
 
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
-    private static function describe(PublicationModel $publication): string
+    private static function formatCall(PublicationModel $publication): string
     {
         $embed = $publication->embed;
 
