@@ -7,6 +7,9 @@ namespace App\Tests\Service\Social\Mastodon;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\MastodonPostWriter;
 use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
@@ -26,16 +29,50 @@ final class MastodonPostWriterTest extends TestCase
     private const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
     private const string REPLY_URL = 'https://mastodon.example/@alice/120';
 
+    public function testPublishesAStandaloneStatus(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            PublicationModel::fromDraft(new PostDraftModel('Hallo', visibility: 'unlisted', language: 'de')),
+        );
+
+        self::assertSame(
+            ['status' => 'Hallo', 'visibility' => 'unlisted', 'language' => 'de'],
+            json_decode($http->requests[0]['body'], true),
+        );
+    }
+
+    public function testAReplyThatQuotesCarriesBothIds(): void
+    {
+        $http = new RoutedHttpClient([self::STATUSES => self::published()]);
+        $quoted = SocialPostModel::onMastodon(SocialAccounts::mastodon(), '111');
+
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::replying(self::post(), new PostDraftModel('Both'))->withEmbed(new QuotedPostEmbedModel($quoted)),
+        );
+
+        self::assertSame(
+            ['status' => 'Both', 'in_reply_to_id' => '110', 'quoted_status_id' => '111'],
+            json_decode($http->requests[0]['body'], true),
+        );
+    }
+
     public function testAReplyIsAStatusAnsweringTheTargetWithTheComposersChoices(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $published = $this->writer($http)->reply(self::post(), new PostDraftModel(
-            '@ann Thanks',
-            visibility: 'unlisted',
-            contentWarning: 'spoilers',
-            language: 'de',
-            idempotencyKey: 'key-1',
+        $published = $this->writer($http)->publish(SocialAccounts::mastodon(), self::replying(
+            self::post(),
+            new PostDraftModel(
+                '@ann Thanks',
+                visibility: 'unlisted',
+                contentWarning: 'spoilers',
+                language: 'de',
+                idempotencyKey: 'key-1',
+            ),
         ));
 
         self::assertSame([
@@ -53,10 +90,9 @@ final class MastodonPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $published = $this->writer($http)->quote(self::post(), new PostDraftModel(
-            'Worth reading',
-            visibility: 'unlisted',
-            idempotencyKey: 'key-2',
+        $published = $this->writer($http)->publish(SocialAccounts::mastodon(), self::quoting(
+            self::post(),
+            new PostDraftModel('Worth reading', visibility: 'unlisted', idempotencyKey: 'key-2'),
         ));
 
         self::assertSame(
@@ -71,8 +107,7 @@ final class MastodonPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $published = $this->writer($http)->share(
-            SocialAccounts::mastodon(),
+        $published = $this->writer($http)->publish(SocialAccounts::mastodon(), self::sharing(
             'https://example.com/article',
             new PostDraftModel(
                 'Read this https://example.com/article',
@@ -80,7 +115,7 @@ final class MastodonPostWriterTest extends TestCase
                 language: 'de',
                 idempotencyKey: 'key-3',
             ),
-        );
+        ));
 
         self::assertSame(
             ['status' => 'Read this https://example.com/article', 'visibility' => 'unlisted', 'language' => 'de'],
@@ -110,8 +145,14 @@ final class MastodonPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
-        $this->writer($http)->quote(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::replying(self::post(), new PostDraftModel('Hi')),
+        );
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::quoting(self::post(), new PostDraftModel('Hi')),
+        );
 
         self::assertSame(['status' => 'Hi', 'in_reply_to_id' => '110'], json_decode($http->requests[0]['body'], true));
         self::assertSame(
@@ -129,14 +170,20 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->expectException(SocialPostRefusedException::class);
 
-        $this->writer($http)->quote(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::quoting(self::post(), new PostDraftModel('Hi')),
+        );
     }
 
     public function testChoicesTheComposerLeftOpenAreNotSent(): void
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi', contentWarning: ''));
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::replying(self::post(), new PostDraftModel('Hi', contentWarning: '')),
+        );
 
         self::assertSame(['status' => 'Hi', 'in_reply_to_id' => '110'], json_decode($http->requests[0]['body'], true));
         self::assertEmpty(array_filter(
@@ -153,7 +200,10 @@ final class MastodonPostWriterTest extends TestCase
         )]);
 
         try {
-            $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+            $this->writer($http)->publish(
+                SocialAccounts::mastodon(),
+                self::replying(self::post(), new PostDraftModel('Hi')),
+            );
             self::fail('A token without the scope cannot reply.');
         } catch (SocialTokenScopeMissingException $exception) {
             self::assertSame('write:statuses', $exception->missingScope);
@@ -166,7 +216,10 @@ final class MastodonPostWriterTest extends TestCase
             json_encode(['id' => '120', 'url' => self::REPLY_URL], \JSON_THROW_ON_ERROR),
         )]);
 
-        $published = $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+        $published = $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::replying(self::post(), new PostDraftModel('Hi')),
+        );
 
         self::assertSame(self::REPLY_URL, $published->address);
     }
@@ -177,7 +230,10 @@ final class MastodonPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::replying(self::post(), new PostDraftModel('Hi')),
+        );
     }
 
     public function testDeletingAStatusReportsWhetherMastodonStillHadIt(): void
@@ -198,12 +254,30 @@ final class MastodonPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::STATUSES => self::published()]);
 
-        $this->writer($http)->share(SocialAccounts::mastodon(), 'https://e.x/a', new PostDraftModel($text));
+        $this->writer($http)->publish(
+            SocialAccounts::mastodon(),
+            self::sharing('https://e.x/a', new PostDraftModel($text)),
+        );
 
         $status = JsonNodeModel::fromValue(json_decode($http->requests[0]['body'], true))->string('status');
         self::assertNotNull($status);
 
         return $status;
+    }
+
+    private static function replying(SocialPostModel $post, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withReplyTo($post);
+    }
+
+    private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withEmbed(new QuotedPostEmbedModel($post));
+    }
+
+    private static function sharing(string $url, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
     }
 
     private function writer(RoutedHttpClient $http): MastodonPostWriter

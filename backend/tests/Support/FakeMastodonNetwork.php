@@ -6,7 +6,9 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Model\PostContextModel;
@@ -142,25 +144,23 @@ final class FakeMastodonNetwork implements
         $this->record('unrepost ' . $repostId);
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        $this->record('reply ' . $target->postId . ' ' . $draft->text);
+        $this->record(self::describe($publication) . ' ' . $publication->draft->text);
 
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    private static function describe(PublicationModel $publication): string
     {
-        $this->record('quote ' . $target->postId . ' ' . $draft->text);
+        $embed = $publication->embed;
 
-        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        $this->record('share ' . $url . ' ' . $draft->text);
-
-        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+        return match (true) {
+            null !== $publication->inReplyTo => 'reply ' . $publication->inReplyTo->postId,
+            $embed instanceof QuotedPostEmbedModel => 'quote ' . $embed->post->postId,
+            $embed instanceof LinkEmbedModel => 'share ' . $embed->url,
+            default => 'post',
+        };
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion

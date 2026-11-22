@@ -4,40 +4,30 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
-use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\LemmyCommunityPostModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
-final readonly class LinkPostDraftRequest
+final class LinkPostDraftRequest
 {
+    use PostDraftFields;
+
     public function __construct(
         #[Assert\Length(max: 10000)]
-        public string $text,
-        #[Assert\Choice(choices: PostDraftModel::VISIBILITIES)]
-        public ?string $visibility = null,
-        #[Assert\Length(max: 500)]
-        public ?string $contentWarning = null,
-        #[Assert\Regex('/^[a-z]{2,3}$/')]
-        public ?string $language = null,
-        #[Assert\Uuid]
-        public ?string $idempotencyKey = null,
+        public readonly string $text,
+        public readonly ?string $title = null,
         #[Assert\Positive]
-        public ?int $accountId = null,
-        public ?string $title = null,
-        #[Assert\Positive]
-        public ?int $communityId = null,
+        public readonly ?int $communityId = null,
     ) {
     }
 
-    public function toDraft(): PostDraftModel
+    public function toPublication(): PublicationModel
     {
-        return new PostDraftModel(
-            $this->text,
-            $this->visibility,
-            $this->contentWarning,
-            $this->language,
-            $this->idempotencyKey,
-            $this->title,
-            $this->communityId,
-        );
+        $publication = PublicationModel::fromDraft($this->buildDraft($this->text));
+        if (null === $this->title && null === $this->communityId) {
+            return $publication;
+        }
+
+        return $publication->withLemmy(new LemmyCommunityPostModel($this->communityId, $this->title));
     }
 }

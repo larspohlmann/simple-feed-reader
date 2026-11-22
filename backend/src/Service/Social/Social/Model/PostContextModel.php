@@ -21,12 +21,4 @@ final readonly class PostContextModel
         public PostPreviewModel $preview = new PostPreviewModel(),
     ) {
     }
-
-    public function allows(ResponseKind $kind): bool
-    {
-        return match ($kind) {
-            ResponseKind::Reply => $this->canReply,
-            ResponseKind::Quote => $this->canQuote,
-        };
-    }
 }

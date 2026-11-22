@@ -13,6 +13,9 @@ use App\Service\Social\Bluesky\BlueskyFacets;
 use App\Service\Social\Bluesky\BlueskyPostWriter;
 use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
 use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
@@ -51,11 +54,51 @@ final class BlueskyPostWriterTest extends TestCase
         $this->postKeyCache = new ArrayAdapter();
     }
 
+    public function testPublishesAStandalonePost(): void
+    {
+        $http = $this->creating();
+
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            PublicationModel::fromDraft(new PostDraftModel('Hallo', language: 'de')),
+        );
+
+        $record = self::recordSent($http);
+        self::assertSame('Hallo', $record['text']);
+        self::assertSame(['de'], $record['langs']);
+        self::assertArrayNotHasKey('reply', $record);
+        self::assertArrayNotHasKey('embed', $record);
+    }
+
+    public function testAReplyThatQuotesCarriesBothTheReplyRefsAndTheRecordEmbed(): void
+    {
+        $http = $this->creating();
+        $quoted = SocialPostModel::onBluesky(SocialApiWiring::blueskyAccount(), self::ROOT_URI, 'bafy-root');
+
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), new PostDraftModel('Both'))->withEmbed(new QuotedPostEmbedModel($quoted)),
+        );
+
+        $record = self::recordSent($http);
+        self::assertSame([
+            'root' => ['uri' => self::POST_URI, 'cid' => 'bafy-post'],
+            'parent' => ['uri' => self::POST_URI, 'cid' => 'bafy-post'],
+        ], $record['reply']);
+        self::assertSame(
+            ['$type' => 'app.bsky.embed.record', 'record' => ['uri' => self::ROOT_URI, 'cid' => 'bafy-root']],
+            $record['embed'],
+        );
+    }
+
     public function testAReplyToATopLevelPostNamesThePostAsRootAndParent(): void
     {
         $http = $this->creating();
 
-        $published = $this->writer($http)->reply(self::post(), new PostDraftModel('Thanks #news', language: 'de'));
+        $published = $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), new PostDraftModel('Thanks #news', language: 'de')),
+        );
 
         self::assertSame([
             'repo' => 'did:plc:alice',
@@ -88,7 +131,10 @@ final class BlueskyPostWriterTest extends TestCase
             new PostContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
-        $this->writer($http)->reply($post, new PostDraftModel('Yes'));
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying($post, new PostDraftModel('Yes')),
+        );
 
         $record = self::recordSent($http);
         self::assertSame([
@@ -104,12 +150,18 @@ final class BlueskyPostWriterTest extends TestCase
         $http = $this->creating();
         $family = '👨‍👩‍👧';
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel(str_repeat($family, 300)));
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), new PostDraftModel(str_repeat($family, 300))),
+        );
 
         $this->expectException(SocialPostTooLongException::class);
 
         try {
-            $this->writer($http)->reply(self::post(), new PostDraftModel(str_repeat($family, 301)));
+            $this->writer($http)->publish(
+                SocialApiWiring::blueskyAccount(),
+                self::replying(self::post(), new PostDraftModel(str_repeat($family, 301))),
+            );
         } finally {
             self::assertCount(2, $http->requests);
         }
@@ -122,7 +174,10 @@ final class BlueskyPostWriterTest extends TestCase
             new PostContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
-        $published = $this->writer($http)->quote($post, new PostDraftModel('Look #news', language: 'en'));
+        $published = $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::quoting($post, new PostDraftModel('Look #news', language: 'en')),
+        );
 
         $record = self::recordSent($http);
         self::assertSame(
@@ -141,17 +196,22 @@ final class BlueskyPostWriterTest extends TestCase
     {
         $this->expectException(SocialPostTooLongException::class);
 
-        $this->writer(new RoutedHttpClient([]))->quote(self::post(), new PostDraftModel(str_repeat('a', 301)));
+        $this->writer(new RoutedHttpClient([]))->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::quoting(self::post(), new PostDraftModel(str_repeat('a', 301))),
+        );
     }
 
     public function testASharedLinkIsAPostWithTheLinksCardAndAnswersNothing(): void
     {
         $http = $this->creating();
 
-        $published = $this->writer($http)->share(
+        $published = $this->writer($http)->publish(
             SocialApiWiring::blueskyAccount(),
-            self::ARTICLE_URL,
-            new PostDraftModel('Read this #news https://example.com/article', language: 'en'),
+            self::sharing(
+                self::ARTICLE_URL,
+                new PostDraftModel('Read this #news https://example.com/article', language: 'en'),
+            ),
         );
 
         $record = self::recordSent($http);
@@ -178,7 +238,10 @@ final class BlueskyPostWriterTest extends TestCase
         $this->expectException(SocialPostTooLongException::class);
 
         $this->writerReadingPagesWith(new RoutedHttpClient([]), $pageCards)
-            ->share(SocialApiWiring::blueskyAccount(), self::ARTICLE_URL, new PostDraftModel(str_repeat('a', 301)));
+            ->publish(
+                SocialApiWiring::blueskyAccount(),
+                self::sharing(self::ARTICLE_URL, new PostDraftModel(str_repeat('a', 301))),
+            );
     }
 
     public function testAnAnswerWithoutTheNewPostsUriIsAnUnreachableNetwork(): void
@@ -190,7 +253,10 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), new PostDraftModel('Hi')),
+        );
     }
 
     public function testDeletingAPostDeletesItsRecordInTheAccountsRepo(): void
@@ -232,7 +298,10 @@ final class BlueskyPostWriterTest extends TestCase
     {
         $http = $this->creating();
 
-        $published = $this->writer($http)->reply(self::post(), self::keyedDraft());
+        $published = $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), self::keyedDraft()),
+        );
 
         $body = self::createRecordBody($http);
         self::assertSame($this->rememberedRecordKey(), $body['rkey']);
@@ -248,7 +317,10 @@ final class BlueskyPostWriterTest extends TestCase
             self::getRecordLine($recordKey) => self::recordFound($recordKey),
         ]);
 
-        $published = $this->writer($http)->reply(self::post(), self::keyedDraft());
+        $published = $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), self::keyedDraft()),
+        );
 
         self::assertEquals(new PublishedPostModel(
             self::ownPostUri($recordKey),
@@ -267,10 +339,12 @@ final class BlueskyPostWriterTest extends TestCase
         $pageCards = $this->createMock(PageCardReaderInterface::class);
         $pageCards->expects($this->never())->method('read');
 
-        $published = $this->writerReadingPagesWith($http, $pageCards)->share(
+        $published = $this->writerReadingPagesWith($http, $pageCards)->publish(
             SocialApiWiring::blueskyAccount(),
-            self::ARTICLE_URL,
-            new PostDraftModel('Hi @bob.bsky.social', idempotencyKey: self::IDEMPOTENCY_KEY),
+            self::sharing(
+                self::ARTICLE_URL,
+                new PostDraftModel('Hi @bob.bsky.social', idempotencyKey: self::IDEMPOTENCY_KEY),
+            ),
         );
 
         self::assertSame(self::ownPostUri($recordKey), $published->address);
@@ -287,7 +361,7 @@ final class BlueskyPostWriterTest extends TestCase
         ]);
 
         $published = $this->writer($http)
-            ->share(SocialApiWiring::blueskyAccount(), self::ARTICLE_URL, self::keyedDraft());
+            ->publish(SocialApiWiring::blueskyAccount(), self::sharing(self::ARTICLE_URL, self::keyedDraft()));
 
         self::assertSame($recordKey, self::createRecordBody($http)['rkey']);
         self::assertSame(self::REPLY_URI, $published->address);
@@ -301,7 +375,10 @@ final class BlueskyPostWriterTest extends TestCase
             default => self::recordFound($this->rememberedRecordKey()),
         });
 
-        $published = $this->writer($http)->quote(self::post(), self::keyedDraft());
+        $published = $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::quoting(self::post(), self::keyedDraft()),
+        );
 
         $recordKey = $this->rememberedRecordKey();
         self::assertSame(self::ownPostUri($recordKey), $published->address);
@@ -325,7 +402,10 @@ final class BlueskyPostWriterTest extends TestCase
             . 'Check before trying again.',
         );
 
-        $this->writer($http)->reply(self::post(), self::keyedDraft());
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), self::keyedDraft()),
+        );
     }
 
     public function testAnUnknownCreateOutcomeOutlivesALookupBlueskyCannotAnswer(): void
@@ -336,7 +416,10 @@ final class BlueskyPostWriterTest extends TestCase
         });
 
         try {
-            $this->writer($http)->reply(self::post(), self::keyedDraft());
+            $this->writer($http)->publish(
+                SocialApiWiring::blueskyAccount(),
+                self::replying(self::post(), self::keyedDraft()),
+            );
             self::fail('The create should have failed.');
         } catch (SocialWriteOutcomeUnknownException $exception) {
             self::assertSame('Bluesky answered 503.', $exception->getPrevious()?->getMessage());
@@ -362,7 +445,10 @@ final class BlueskyPostWriterTest extends TestCase
         $this->expectException(SocialPostRefusedException::class);
 
         try {
-            $this->writer($http)->reply(self::post(), self::keyedDraft());
+            $this->writer($http)->publish(
+                SocialApiWiring::blueskyAccount(),
+                self::replying(self::post(), self::keyedDraft()),
+            );
         } finally {
             self::assertSame([self::SESSION, self::CREATE_RECORD], $http->requestLines());
         }
@@ -381,7 +467,10 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->reply(self::post(), self::keyedDraft());
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), self::keyedDraft()),
+        );
     }
 
     public function testAFoundRecordWithoutItsAddressIsAnUnreachableNetwork(): void
@@ -394,14 +483,20 @@ final class BlueskyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->reply(self::post(), self::keyedDraft());
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), self::keyedDraft()),
+        );
     }
 
     public function testWithoutAKeyNothingChanges(): void
     {
         $http = $this->creating();
 
-        $this->writer($http)->reply(self::post(), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            SocialApiWiring::blueskyAccount(),
+            self::replying(self::post(), new PostDraftModel('Hi')),
+        );
 
         self::assertArrayNotHasKey('rkey', self::createRecordBody($http));
         self::assertSame([self::SESSION, self::CREATE_RECORD], $http->requestLines());
@@ -412,6 +507,21 @@ final class BlueskyPostWriterTest extends TestCase
         return SocialApiWiring::blueskyPostKeys($this->postKeyCache)
             ->ensureRecordKey(SocialApiWiring::blueskyAccount(), self::IDEMPOTENCY_KEY)
             ->recordKey;
+    }
+
+    private static function replying(SocialPostModel $post, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withReplyTo($post);
+    }
+
+    private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withEmbed(new QuotedPostEmbedModel($post));
+    }
+
+    private static function sharing(string $url, PostDraftModel $draft): PublicationModel
+    {
+        return PublicationModel::fromDraft($draft)->withEmbed(new LinkEmbedModel($url, 'An article'));
     }
 
     private static function keyedDraft(): PostDraftModel

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Publishing\Model;
 
-/** What the user wrote in the composer; each network ignores the parts only Mastodon or only Lemmy takes. */
+/** What the user wrote in the composer; each network ignores the parts only Mastodon takes. */
 final readonly class PostDraftModel
 {
     /** From the most open to the most closed. */
@@ -12,9 +12,7 @@ final readonly class PostDraftModel
 
     /**
      * @param string|null $language       a language code such as "de"
-     * @param string|null $idempotencyKey minted when the composer opened, so a resent reply is published once
-     * @param string|null $title          the Lemmy link post's title
-     * @param int|null    $communityId    the Lemmy community a link post goes to
+     * @param string|null $idempotencyKey minted when the composer opened, so a resent post is published once
      */
     public function __construct(
         public string $text,
@@ -22,8 +20,6 @@ final readonly class PostDraftModel
         public ?string $contentWarning = null,
         public ?string $language = null,
         public ?string $idempotencyKey = null,
-        public ?string $title = null,
-        public ?int $communityId = null,
     ) {
     }
 

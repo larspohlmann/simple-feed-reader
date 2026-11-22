@@ -17,7 +17,6 @@ use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\SharedPageCards;
 use App\Service\Social\Social\SocialPostAddresses;
@@ -44,7 +43,7 @@ final readonly class ComposerContexts
             ->resolveDefaults($post, $this->buildThreadStarterLookup($target, $post));
         $text = ComposerStartingText::mentioning($defaults->mentions);
 
-        return $this->buildContext($post, ResponseKind::Reply, $defaults, $text);
+        return $this->buildContext($post, ComposerKind::Reply, $defaults, $text);
     }
 
     public function buildQuoteContext(SocialPostModel $post): ComposerContextModel
@@ -90,22 +89,22 @@ final readonly class ComposerContexts
             ->withoutMentions();
         $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
 
-        return $this->buildContext($post, ResponseKind::Quote, $defaults, $text);
+        return $this->buildContext($post, ComposerKind::Quote, $defaults, $text);
     }
 
     private function buildContext(
         SocialPostModel $post,
-        ResponseKind $kind,
+        ComposerKind $kind,
         ComposerDefaultsModel $defaults,
         string $text,
     ): ComposerContextModel {
         return new ComposerContextModel(
             $this->connectedBeside($post->account),
             $post->account,
-            $post->postContext->allows($kind),
+            $kind->isAllowedBy($post->postContext),
             $defaults,
             $post->postContext->preview,
-            ComposerKind::from($kind->value),
+            $kind,
             $text,
         );
     }

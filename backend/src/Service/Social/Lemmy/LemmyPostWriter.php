@@ -15,6 +15,10 @@ use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
 use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
 use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -36,22 +40,16 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
     {
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
-        $answer = $this->lemmy->post($target->account, '/api/v3/comment', self::buildCommentPayload($target, $draft));
+        if ($publication->embed instanceof QuotedPostEmbedModel) {
+            throw new SocialPostRefusedException(self::NO_QUOTES);
+        }
+        if (null !== $publication->inReplyTo) {
+            return $this->publishComment($account, $publication->inReplyTo, $publication->draft);
+        }
 
-        return self::requirePublishedPost($answer, 'comment_view', 'comment');
-    }
-
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        throw new SocialPostRefusedException(self::NO_QUOTES);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        $answer = $this->lemmy->post($account, '/api/v3/post', self::buildLinkPostPayload($url, $draft));
+        $answer = $this->lemmy->post($account, '/api/v3/post', self::buildPostPayload($publication));
 
         return self::requirePublishedPost($answer, 'post_view', 'post');
     }
@@ -61,22 +59,41 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         throw new SocialPostRefusedException('Deleting a Lemmy comment is not supported here.');
     }
 
-    /** @return array<string, string|int> */
-    private static function buildLinkPostPayload(string $url, PostDraftModel $draft): array
-    {
-        $communityId = $draft->communityId
-            ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
-        $title = self::requireValidTitle($draft);
-        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
+    private function publishComment(
+        SocialAccount $account,
+        SocialPostModel $target,
+        PostDraftModel $draft,
+    ): PublishedPostModel {
+        self::guardLength($draft->text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy comment holds %d characters.');
+        $answer = $this->lemmy->post($account, '/api/v3/comment', self::buildCommentPayload($target, $draft));
 
-        return ['name' => $title, 'url' => $url]
-            + ('' === trim($draft->text) ? [] : ['body' => $draft->text])
+        return self::requirePublishedPost($answer, 'comment_view', 'comment');
+    }
+
+    /** @return array<string, string|int> */
+    private static function buildPostPayload(PublicationModel $publication): array
+    {
+        $text = $publication->draft->text;
+        $communityId = $publication->lemmy->communityId
+            ?? throw new SocialPostCommunityMissingException('A Lemmy link post goes to a community.');
+        $title = self::requireValidTitle($publication->lemmy->title);
+        self::guardLength($text, LemmyComposerDefaults::MAX_CHARACTERS, 'A Lemmy post holds %d characters.');
+
+        return ['name' => $title]
+            + self::buildUrlField($publication->embed)
+            + ('' === trim($text) ? [] : ['body' => $text])
             + ['community_id' => $communityId];
     }
 
-    private static function requireValidTitle(PostDraftModel $draft): string
+    /** @return array{url?: string} */
+    private static function buildUrlField(?PostEmbedModelInterface $embed): array
     {
-        $title = trim($draft->title ?? '');
+        return $embed instanceof LinkEmbedModel ? ['url' => $embed->url] : [];
+    }
+
+    private static function requireValidTitle(?string $title): string
+    {
+        $title = trim($title ?? '');
         if (mb_strlen($title) < self::MIN_TITLE_CHARACTERS) {
             throw new SocialPostTitleTooShortException(
                 sprintf('A Lemmy title needs at least %d characters.', self::MIN_TITLE_CHARACTERS),

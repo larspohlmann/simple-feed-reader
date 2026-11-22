@@ -11,13 +11,15 @@ use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\Support\MastodonStatusAction;
-use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -30,19 +32,21 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
     {
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['in_reply_to_id' => $target->postId]);
-    }
+        $idempotencyKey = $publication->draft->idempotencyKey;
+        $request = ApiRequestModel::postJson(
+            $account->getServiceUrl() . self::STATUSES,
+            self::buildStatusPayload($publication),
+            null === $idempotencyKey ? [] : ['Idempotency-Key' => $idempotencyKey],
+        );
+        $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
+        $status = JsonNodeModel::fromValue($answer->json());
+        $address = AbsoluteHttpUrl::keepIfAbsolute($status->string('uri'))
+            ?? AbsoluteHttpUrl::keepIfAbsolute($status->string('url'))
+            ?? throw new SocialNetworkUnreachableException('Mastodon took the post but named no address for it.');
 
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($target->account, $draft, ['quoted_status_id' => $target->postId]);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($account, $draft->withText(self::textCarrying($url, $draft->text)), []);
+        return new PublishedPostModel($address, AbsoluteHttpUrl::keepIfAbsolute($status->string('url')));
     }
 
     private static function textCarrying(string $url, string $text): string
@@ -52,23 +56,6 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
             str_contains($text, $url) => $text,
             default => $text . "\n\n" . $url,
         };
-    }
-
-    /** @param array<string, string> $attachment the id the status answers or quotes */
-    private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
-    {
-        $request = ApiRequestModel::postJson(
-            $account->getServiceUrl() . self::STATUSES,
-            self::buildStatusPayload($draft, $attachment),
-            null === $draft->idempotencyKey ? [] : ['Idempotency-Key' => $draft->idempotencyKey],
-        );
-        $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
-        $status = JsonNodeModel::fromValue($answer->json());
-        $address = AbsoluteHttpUrl::keepIfAbsolute($status->string('uri'))
-            ?? AbsoluteHttpUrl::keepIfAbsolute($status->string('url'))
-            ?? throw new SocialNetworkUnreachableException('Mastodon took the post but named no address for it.');
-
-        return new PublishedPostModel($address, AbsoluteHttpUrl::keepIfAbsolute($status->string('url')));
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
@@ -83,19 +70,32 @@ final readonly class MastodonPostWriter implements PostWriterInterface, PostDele
         return PostDeletion::Deleted;
     }
 
-    /**
-     * @param array<string, string> $attachment
-     *
-     * @return array<string, string>
-     */
-    private static function buildStatusPayload(PostDraftModel $draft, array $attachment): array
+    /** @return array<string, string> */
+    private static function buildStatusPayload(PublicationModel $publication): array
     {
+        $draft = $publication->draft;
+
         return array_filter([
-            'status' => $draft->text,
-            ...$attachment,
+            'status' => self::buildStatusText($publication),
+            'in_reply_to_id' => $publication->inReplyTo?->postId,
+            'quoted_status_id' => self::readQuotedStatusId($publication->embed),
             'visibility' => $draft->visibility,
             'spoiler_text' => $draft->contentWarning,
             'language' => $draft->language,
         ], static fn (?string $value): bool => null !== $value && '' !== $value);
+    }
+
+    private static function buildStatusText(PublicationModel $publication): string
+    {
+        $embed = $publication->embed;
+
+        return $embed instanceof LinkEmbedModel
+            ? self::textCarrying($embed->url, $publication->draft->text)
+            : $publication->draft->text;
+    }
+
+    private static function readQuotedStatusId(?PostEmbedModelInterface $embed): ?string
+    {
+        return $embed instanceof QuotedPostEmbedModel ? $embed->post->postId : null;
     }
 }

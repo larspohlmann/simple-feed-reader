@@ -11,7 +11,9 @@ use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
 use App\Service\Social\Publishing\Model\ComposerContextModel;
 use App\Service\Social\Publishing\Model\LinkShareModel;
 use App\Service\Social\Publishing\Model\LinkTargetModel;
-use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\Model\SharedLinkModel;
 use App\Service\Social\Social\ActingAccountChooser;
@@ -23,9 +25,8 @@ use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Social\Model\ResponseKind;
 
-final readonly class LinkPosts
+final readonly class LinkSharing
 {
     public function __construct(
         private ActingAccountChooser $actingAccounts,
@@ -66,19 +67,23 @@ final readonly class LinkPosts
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function share(User $user, LinkTargetModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(User $user, LinkTargetModel $target, PublicationModel $publication): PublishedPostModel
     {
         $share = $this->resolve($user, $target);
 
         if (null === $share->quoted) {
-            return $this->writing->share($share->account, $share->link->url, $draft);
+            $link = new LinkEmbedModel($share->link->url, $share->link->title);
+
+            return $this->writing->publish($share->account, $publication->withEmbed($link));
         }
 
-        if ('' === trim($draft->text)) {
+        if ('' === trim($publication->draft->text)) {
             throw new SocialPostTextMissingException('A quote of a post needs some text of its own.');
         }
 
-        return $this->writing->respond(ResponseKind::Quote, $share->quoted, $draft);
+        $quote = new QuotedPostEmbedModel($share->quoted);
+
+        return $this->writing->publish($share->quoted->account, $publication->withEmbed($quote));
     }
 
     /**

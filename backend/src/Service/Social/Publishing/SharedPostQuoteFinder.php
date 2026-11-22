@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Social\Publishing;
 
 use App\Entity\SocialAccount;
+use App\Service\Social\Publishing\Model\ComposerKind;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\SocialPostAddresses;
 use App\Service\Social\Social\SocialPostFinder;
@@ -42,6 +42,6 @@ final readonly class SharedPostQuoteFinder
             return null;
         }
 
-        return $post->postContext->allows(ResponseKind::Quote) ? $post : null;
+        return ComposerKind::Quote->isAllowedBy($post->postContext) ? $post : null;
     }
 }

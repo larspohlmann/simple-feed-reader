@@ -18,11 +18,12 @@ use App\Service\Social\Bluesky\BlueskyPostResolver;
 use App\Service\Social\Bluesky\BlueskyPostWriter;
 use App\Service\Social\Publishing\ComposerContexts;
 use App\Service\Social\Publishing\Exception\SocialPostTextMissingException;
-use App\Service\Social\Publishing\LinkPosts;
+use App\Service\Social\Publishing\LinkSharing;
 use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
 use App\Service\Social\Publishing\Model\ComposerKind;
 use App\Service\Social\Publishing\Model\LinkTargetModel;
 use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Publishing\PostWriting;
@@ -57,7 +58,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final class LinkPostsTest extends DbTestCase
+final class LinkSharingTest extends DbTestCase
 {
     use AssertsRefusal;
     use SeedsUsers;
@@ -96,7 +97,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->owner));
         $this->entityManager->flush();
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target(null));
 
         self::assertSame([$default, $first], $context->accounts);
         self::assertSame($default, $context->account);
@@ -110,7 +111,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::ARTICLE_URL . '&utm_source=x', 'A story');
 
-        $context = $this->linkPosts()->prepareContext($this->owner, $target);
+        $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
         self::assertSame('A story', $context->text);
@@ -122,7 +123,7 @@ final class LinkPostsTest extends DbTestCase
         $page = 'https://news.example/page';
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page . '?utm_source=x#comment-5', 'A story');
 
-        $context = $this->linkPosts()->prepareContext($this->owner, $target);
+        $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame('A story', $context->text);
         self::assertSame([$page . '#comment-5'], $this->pages->readUrls());
@@ -132,7 +133,7 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target(null));
 
         self::assertEquals(
             new LinkCardContent(self::ARTICLE_URL, 'Card for ' . self::ARTICLE_URL, null, null, 'example.com'),
@@ -146,7 +147,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $missing = 'https://news.example/missing';
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, $missing));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, $missing));
 
         self::assertEquals(new LinkCardContent($missing, 'news.example', null, null, 'news.example'), $context->target);
     }
@@ -159,7 +160,7 @@ final class LinkPostsTest extends DbTestCase
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target($chosen->requireId()));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target($chosen->requireId()));
 
         self::assertSame($chosen, $context->account);
     }
@@ -168,10 +169,10 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $published = $this->linkPosts()->share(
+        $published = $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::ARTICLE_URL . '&utm_source=x'),
-            new PostDraftModel('Worth reading'),
+            PublicationModel::fromDraft(new PostDraftModel('Worth reading')),
         );
 
         self::assertSame(['share ' . self::ARTICLE_URL . ' Worth reading'], $this->mastodon->calls);
@@ -188,7 +189,7 @@ final class LinkPostsTest extends DbTestCase
         $preview = new PostPreviewModel('Eugen', '@Gargron@mastodon.social', 'Hello');
         $this->mastodon->knowsThePostContext(new PostContextModel(preview: $preview));
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertSame($preview, $context->target);
         self::assertSame(ComposerKind::Quote, $context->kind);
@@ -208,7 +209,7 @@ final class LinkPostsTest extends DbTestCase
             'A line worth sharing',
         );
 
-        $context = $this->linkPosts()->prepareContext($this->owner, $target);
+        $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Link, $context->kind);
         self::assertSame('“A line worth sharing”', $context->text);
@@ -220,8 +221,8 @@ final class LinkPostsTest extends DbTestCase
         $withoutQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story');
         $withQuote = new LinkTargetModel(SocialNetwork::Lemmy, null, self::ARTICLE_URL, 'A story', 'foo');
 
-        $plain = $this->linkPosts()->prepareContext($this->owner, $withoutQuote);
-        $quoting = $this->linkPosts()->prepareContext($this->owner, $withQuote);
+        $plain = $this->linkSharing()->prepareContext($this->owner, $withoutQuote);
+        $quoting = $this->linkSharing()->prepareContext($this->owner, $withQuote);
 
         self::assertSame('', $plain->text);
         self::assertSame('“foo”', $quoting->text);
@@ -234,7 +235,7 @@ final class LinkPostsTest extends DbTestCase
         $page = 'https://news.example/page#:~:text=A%20line%20worth%20sharing';
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, $page, 'A story', 'A line worth sharing');
 
-        $context = $this->linkPosts()->prepareContext($this->owner, $target);
+        $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame('“A line worth sharing”', $context->text);
     }
@@ -246,7 +247,7 @@ final class LinkPostsTest extends DbTestCase
         $this->mastodon->knowsThePostContext(new PostContextModel(preview: $preview));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::STATUS_URL, '', 'A line worth sharing');
 
-        $context = $this->linkPosts()->prepareContext($this->owner, $target);
+        $context = $this->linkSharing()->prepareContext($this->owner, $target);
 
         self::assertSame(ComposerKind::Quote, $context->kind);
         self::assertSame($preview, $context->target);
@@ -258,7 +259,7 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
 
-        $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
+        $context = $this->linkSharing()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
         self::assertInstanceOf(LinkCardContent::class, $context->target);
         self::assertSame(self::STATUS_URL, $context->target->url);
@@ -268,10 +269,10 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $published = $this->linkPosts()->share(
+        $published = $this->linkSharing()->publish(
             $this->owner,
             self::target(null, self::STATUS_URL),
-            new PostDraftModel('Look'),
+            PublicationModel::fromDraft(new PostDraftModel('Look')),
         );
 
         self::assertSame(
@@ -289,10 +290,10 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
         $this->assertRefused(
-            fn () => $this->linkPosts()->share(
+            fn () => $this->linkSharing()->publish(
                 $this->owner,
                 self::target(null, self::STATUS_URL),
-                new PostDraftModel('  '),
+                PublicationModel::fromDraft(new PostDraftModel('  ')),
             ),
             SocialPostTextMissingException::class,
             'A quote of a post needs some text of its own.',
@@ -305,7 +306,11 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
 
-        $this->linkPosts()->share($this->owner, self::target(null, self::STATUS_URL), new PostDraftModel('Look'));
+        $this->linkSharing()->publish(
+            $this->owner,
+            self::target(null, self::STATUS_URL),
+            PublicationModel::fromDraft(new PostDraftModel('Look')),
+        );
 
         self::assertSame(
             ['resolve ' . self::STATUS_URL, 'share ' . self::STATUS_URL . ' Look'],
@@ -326,7 +331,11 @@ final class LinkPostsTest extends DbTestCase
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $this->mastodon->onResolve(static fn () => throw $failure);
 
-        $this->linkPosts()->share($this->owner, self::target(null, self::STATUS_URL), new PostDraftModel('Look'));
+        $this->linkSharing()->publish(
+            $this->owner,
+            self::target(null, self::STATUS_URL),
+            PublicationModel::fromDraft(new PostDraftModel('Look')),
+        );
 
         self::assertSame(
             ['resolve ' . self::STATUS_URL, 'share ' . self::STATUS_URL . ' Look'],
@@ -338,7 +347,11 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
 
-        $this->linkPosts()->share($this->owner, self::target(null, self::BLUESKY_POST_URL), new PostDraftModel('Look'));
+        $this->linkSharing()->publish(
+            $this->owner,
+            self::target(null, self::BLUESKY_POST_URL),
+            PublicationModel::fromDraft(new PostDraftModel('Look')),
+        );
 
         self::assertSame(['share ' . self::BLUESKY_POST_URL . ' Look'], $this->mastodon->calls);
     }
@@ -359,10 +372,10 @@ final class LinkPostsTest extends DbTestCase
         $pageCards = $this->createMock(PageCardReaderInterface::class);
         $pageCards->expects($this->never())->method('read');
 
-        $this->blueskyLinkPosts($http, $pageCards)->share(
+        $this->blueskyLinkSharing($http, $pageCards)->publish(
             $this->owner,
             new LinkTargetModel(SocialNetwork::Bluesky, null, self::BLUESKY_POST_URL),
-            new PostDraftModel('Look'),
+            PublicationModel::fromDraft(new PostDraftModel('Look')),
         );
 
         $lastRequest = array_last($http->requests);
@@ -388,10 +401,10 @@ final class LinkPostsTest extends DbTestCase
 
         foreach ([$bluesky, $foreign] as $account) {
             $this->assertRefused(
-                fn (): mixed => $this->linkPosts()->share(
+                fn (): mixed => $this->linkSharing()->publish(
                     $this->owner,
                     self::target($account->requireId()),
-                    self::draft(),
+                    self::publication(),
                 ),
                 SocialAccountNotFoundException::class,
                 'Only an account of the user on the asked network can post the link.',
@@ -406,7 +419,7 @@ final class LinkPostsTest extends DbTestCase
 
         $this->expectException(NoSocialAccountForNetworkException::class);
 
-        $this->linkPosts()->prepareContext($this->owner, self::target(null));
+        $this->linkSharing()->prepareContext($this->owner, self::target(null));
     }
 
     /** @return iterable<string, array{string}> */
@@ -422,10 +435,10 @@ final class LinkPostsTest extends DbTestCase
         $missingAccountId = 999999;
 
         $this->assertRefused(
-            fn (): mixed => $this->linkPosts()->share(
+            fn (): mixed => $this->linkSharing()->publish(
                 $this->owner,
                 self::target($missingAccountId, $url),
-                self::draft(),
+                self::publication(),
             ),
             SocialPostRefusedException::class,
             'An address that is no link is refused before the account is looked for.',
@@ -438,20 +451,20 @@ final class LinkPostsTest extends DbTestCase
         return new LinkTargetModel(SocialNetwork::Mastodon, $accountId, $url);
     }
 
-    private static function draft(): PostDraftModel
+    private static function publication(): PublicationModel
     {
-        return new PostDraftModel('Hi');
+        return PublicationModel::fromDraft(new PostDraftModel('Hi'));
     }
 
-    private function linkPosts(): LinkPosts
+    private function linkSharing(): LinkSharing
     {
         $mastodon = $this->mastodon;
         $network = new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]);
 
-        return $this->linkPostsOver($network, $network, $this->pages);
+        return $this->linkSharingOver($network, $network, $this->pages);
     }
 
-    private function blueskyLinkPosts(RoutedHttpClient $http, PageCardReaderInterface $pageCards): LinkPosts
+    private function blueskyLinkSharing(RoutedHttpClient $http, PageCardReaderInterface $pageCards): LinkSharing
     {
         $client = $http->client();
         $resolver = new BlueskyPostResolver(
@@ -471,7 +484,7 @@ final class LinkPostsTest extends DbTestCase
             SocialApiWiring::blueskyPostKeys(new ArrayAdapter()),
         );
 
-        return $this->linkPostsOver(
+        return $this->linkSharingOver(
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostResolver => $resolver]),
             new ServiceLocator(['bluesky' => static fn (): BlueskyPostWriter => $writer]),
             $pageCards,
@@ -479,11 +492,11 @@ final class LinkPostsTest extends DbTestCase
     }
 
     /** @param ServiceLocator<PostWriterInterface> $writers */
-    private function linkPostsOver(
+    private function linkSharingOver(
         ContainerInterface $resolvers,
         ServiceLocator $writers,
         PageCardReaderInterface $pageCards,
-    ): LinkPosts {
+    ): LinkSharing {
         /** @var SocialAccountRepository $accounts */
         $accounts = $this->entityManager->getRepository(SocialAccount::class);
         $guard = new ActingAccountGuard($this->entityManager);
@@ -497,7 +510,7 @@ final class LinkPostsTest extends DbTestCase
         $postAddresses = SocialRuleWiring::postAddresses();
         $posts = new SocialPostFinder($chooser, $guard, $resolvers, $postAddresses);
 
-        return new LinkPosts(
+        return new LinkSharing(
             $chooser,
             new UrlNormalizer(),
             new PostWriting($guard, $writers),

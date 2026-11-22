@@ -6,6 +6,8 @@ namespace App\Tests\Service\Social\Publishing;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\PostWriting;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
@@ -35,9 +37,9 @@ final class PostWritingTest extends DbTestCase
         );
     }
 
-    public function testALinkIsSharedByTheAccountsNetwork(): void
+    public function testPublishesThroughTheWriterOfTheAccountsNetwork(): void
     {
-        $published = $this->writing()->share($this->account, self::URL, new PostDraftModel('Read this'));
+        $published = $this->writing()->publish($this->account, self::linkPost());
 
         self::assertSame(['share ' . self::URL . ' Read this'], $this->mastodon->calls);
         self::assertSame(FakeMastodonNetwork::REPLY_URI, $published->address);
@@ -48,11 +50,17 @@ final class PostWritingTest extends DbTestCase
         $this->account->markNeedsReconnect();
 
         try {
-            $this->writing()->share($this->account, self::URL, new PostDraftModel('Read this'));
+            $this->writing()->publish($this->account, self::linkPost());
             self::fail('An account that needs reconnecting must not share.');
         } catch (SocialAccountNeedsReconnectException) {
             self::assertSame([], $this->mastodon->calls);
         }
+    }
+
+    private static function linkPost(): PublicationModel
+    {
+        return PublicationModel::fromDraft(new PostDraftModel('Read this'))
+            ->withEmbed(new LinkEmbedModel(self::URL, 'An article'));
     }
 
     private function writing(): PostWriting
