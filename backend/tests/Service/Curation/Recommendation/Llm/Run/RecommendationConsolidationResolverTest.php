@@ -289,7 +289,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $this->startRecordingQueries();
         $this->resolver()->resolve($tick);
 
-        self::assertSame([], $this->recordedHistorySectionQueries());
+        $this->assertReadFavoritesAloneFromTheHistory();
     }
 
     public function testAnUnusableReplySettlesItsCallAsUnusable(): void

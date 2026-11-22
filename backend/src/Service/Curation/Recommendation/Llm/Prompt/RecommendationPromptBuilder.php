@@ -72,13 +72,14 @@ final readonly class RecommendationPromptBuilder
         EffectiveRecommendationSettingsModel $settings,
     ): array {
         $favoritesSection = $this->favoritesSection($favorites);
-        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::estimateTokens($favoritesSection);
+        $profileAndFavoritesTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::estimateTokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = $this->answerBudget->answerBoundTokens(
             $cap,
             RecommendationResponseSchema::BatchScore,
         );
-        $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
+        $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve
+            - $profileAndFavoritesTokens;
 
         $batches = [];
         $current = [];

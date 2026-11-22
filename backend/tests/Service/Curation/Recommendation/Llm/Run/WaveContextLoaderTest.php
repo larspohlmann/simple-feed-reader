@@ -84,7 +84,7 @@ final class WaveContextLoaderTest extends DbTestCase
         $this->startRecordingQueries();
         $this->loader()->load($tick, $batches);
 
-        self::assertSame([], $this->recordedHistorySectionQueries());
+        $this->assertReadFavoritesAloneFromTheHistory();
     }
 
     /** @return list<int> */

@@ -13,14 +13,16 @@ use App\Entity\User;
 use App\Enum\SocialNotificationKind;
 use App\Repository\SocialNotificationRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordsQueries;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;
 use App\Tests\Support\UserFactory;
-use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialNotificationRepositoryTest extends DbTestCase
 {
+    use RecordsQueries;
+
     private SocialNotificationRepository $notifications;
     private SocialNotificationRows $rows;
     private UserFactory $users;
@@ -243,14 +245,10 @@ final class SocialNotificationRepositoryTest extends DbTestCase
 
     private function statementsFor(\Closure $act): int
     {
-        /** @var DebugDataHolder $queries */
-        $queries = self::getContainer()->get('doctrine.debug_data_holder');
-        $queries->reset();
+        $this->startRecordingQueries();
         $act();
-        /** @var list<array{sql: string}> $statements */
-        $statements = $queries->getData()['default'] ?? [];
 
-        return count($statements);
+        return count($this->recordedQueries());
     }
 
     private function persisted(SocialAccount $account): SocialAccount

@@ -1141,7 +1141,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /** A generous window, no profile, and no history — the baseline context tests reach for by default. */
+    /** A generous window, no profile, and no favorites — the baseline context tests reach for by default. */
     private function defaultContext(): PromptContext
     {
         return new PromptContext([], $this->settings(32768, 100), null);

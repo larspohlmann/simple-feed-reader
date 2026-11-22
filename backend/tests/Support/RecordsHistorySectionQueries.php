@@ -4,35 +4,24 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
-
-/** Records the SQL a call runs and picks out the shared, liked, kept and viewed history-section queries. */
+/** Tells the favorites history query apart from the shared, liked, kept and viewed ones in the recorded SQL. */
 trait RecordsHistorySectionQueries
 {
-    private const string HISTORY_SECTION_SQL = '/(shared_at|liked_at|voted_at|viewed_at) DESC|is_kept = \?/';
+    use RecordsQueries;
 
-    private function startRecordingQueries(): void
-    {
-        $this->debugDataHolder()->reset();
-    }
+    private const string FAVORITES_SQL = '/is_favorite = \? ORDER BY \w+\.effective_date DESC/';
+    private const string HISTORY_SECTION_SQL
+        = '/(shared_at|liked_at|voted_at|viewed_at) DESC|is_kept = \? AND \w+\.is_favorite = \?/';
 
     /** @return list<string> */
     private function recordedHistorySectionQueries(): array
     {
-        /** @var list<array{sql: string}> $statements */
-        $statements = $this->debugDataHolder()->getData()['default'] ?? [];
-
-        return array_values(array_filter(
-            array_column($statements, 'sql'),
-            static fn (string $sql): bool => 1 === preg_match(self::HISTORY_SECTION_SQL, $sql),
-        ));
+        return $this->recordedQueriesMatching(self::HISTORY_SECTION_SQL);
     }
 
-    private function debugDataHolder(): DebugDataHolder
+    private function assertReadFavoritesAloneFromTheHistory(): void
     {
-        /** @var DebugDataHolder $queries */
-        $queries = self::getContainer()->get('doctrine.debug_data_holder');
-
-        return $queries;
+        self::assertCount(1, $this->recordedQueriesMatching(self::FAVORITES_SQL));
+        self::assertSame([], $this->recordedHistorySectionQueries());
     }
 }

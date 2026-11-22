@@ -55,7 +55,7 @@ final class LlmRecommendationEngineTest extends DbTestCase
         $this->startRecordingQueries();
         $this->engine()->packBatches(self::candidates([101, 102]), $tick);
 
-        self::assertSame([], $this->recordedHistorySectionQueries());
+        $this->assertReadFavoritesAloneFromTheHistory();
     }
 
     /**
