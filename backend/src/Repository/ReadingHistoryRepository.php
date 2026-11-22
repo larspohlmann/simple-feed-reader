@@ -64,8 +64,8 @@ final readonly class ReadingHistoryRepository
         $rows = [...$this->readLikedRows($likes), ...$this->readLikedRows($upvotes)];
         usort(
             $rows,
-            static fn (array $left, array $right): int => [$right['likedAt'], $right['entryId']]
-                <=> [$left['likedAt'], $left['entryId']],
+            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
+                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
         );
 
         return array_column(array_slice($rows, 0, $cap), 'titled');
@@ -82,8 +82,7 @@ final readonly class ReadingHistoryRepository
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN)
-            ->setParameter('false', false, Types::BOOLEAN)
-            ->setParameter('upvote', VoteScore::Up);
+            ->setParameter('false', false, Types::BOOLEAN);
 
         return $this->titledEntries($qb);
     }
@@ -99,8 +98,7 @@ final readonly class ReadingHistoryRepository
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
             ->setParameter('true', true, Types::BOOLEAN)
-            ->setParameter('false', false, Types::BOOLEAN)
-            ->setParameter('upvote', VoteScore::Up);
+            ->setParameter('false', false, Types::BOOLEAN);
 
         return $this->titledEntries($qb);
     }
@@ -152,7 +150,7 @@ final readonly class ReadingHistoryRepository
             ->setParameter('false', false, Types::BOOLEAN);
     }
 
-    /** @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable, entryId: int}> */
+    /** @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> */
     private function readLikedRows(QueryBuilder $qb): array
     {
         /** @var list<array{0: Entry, customTitle: ?string, likedAt: \DateTimeImmutable}> $rows feed folds into row 0's graph */
@@ -162,7 +160,6 @@ final readonly class ReadingHistoryRepository
             static fn (array $row): array => [
                 'titled' => TitledEntry::fromEntry($row[0], $row['customTitle']),
                 'likedAt' => $row['likedAt'],
-                'entryId' => $row[0]->requireId(),
             ],
             $rows,
         );

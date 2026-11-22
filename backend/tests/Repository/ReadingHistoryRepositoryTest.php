@@ -219,9 +219,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
 
     public function testAStrangersLikeIsNotMine(): void
     {
-        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($stranger);
-        $this->entityManager->flush();
+        $stranger = $this->persistStranger();
         $entry = $this->persistEntry('kept');
         SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
         LikedPostFixtures::persistLike(
@@ -238,7 +236,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
 
     public function testTwoCopiesOfALikedPostGiveOneLine(): void
     {
-        $otherFeed = $this->persistSubscribedFeed('https://copies.example.com/feed.xml');
+        $otherFeed = $this->persistSubscribedFeed($this->user, 'https://copies.example.com/feed.xml');
         $lower = $this->persistEntry('copy');
         $higher = SavedPostFixtures::entry($this->entityManager, $otherFeed, 'copy', 'https://copies.example.com/copy');
         $item = $this->linkNewItem($lower, CanonicalItemKind::Mastodon);
@@ -258,12 +256,9 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
 
     public function testALowerCopyInAFeedOnlyAStrangerFollowsDoesNotHideMine(): void
     {
-        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($stranger);
-        $strangersFeed = new Feed('https://stranger.example.com/feed.xml');
-        $this->entityManager->persist($strangersFeed);
-        $this->entityManager->persist(
-            new Subscription($stranger, $strangersFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        $strangersFeed = $this->persistSubscribedFeed(
+            $this->persistStranger(),
+            'https://stranger.example.com/feed.xml',
         );
         $lower = SavedPostFixtures::entry(
             $this->entityManager,
@@ -310,12 +305,21 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         return SavedPostFixtures::entry($this->entityManager, $this->feed, $guid, $url);
     }
 
-    private function persistSubscribedFeed(string $url): Feed
+    private function persistStranger(): User
+    {
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($stranger);
+        $this->entityManager->flush();
+
+        return $stranger;
+    }
+
+    private function persistSubscribedFeed(User $subscriber, string $url): Feed
     {
         $feed = new Feed($url);
         $this->entityManager->persist($feed);
         $this->entityManager->persist(
-            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+            new Subscription($subscriber, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
         $this->entityManager->flush();
 

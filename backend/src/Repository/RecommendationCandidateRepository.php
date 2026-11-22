@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Enum\InclusionSurface;
-use App\Enum\VoteScore;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -35,8 +34,7 @@ final readonly class RecommendationCandidateRepository
             ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('since', $since)
-            ->setParameter('notInteracted', false, Types::BOOLEAN)
-            ->setParameter('upvote', VoteScore::Up);
+            ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $this->poolScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, CollapseScope::fromScope($this->poolScope(...)), $userId);

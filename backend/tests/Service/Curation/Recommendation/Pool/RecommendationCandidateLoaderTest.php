@@ -126,13 +126,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testAnUnreadLikedPostIsExcluded(): void
     {
         $liked = $this->entry('liked-post', '2026-07-10T00:00:00Z');
-        LikedPostFixtures::persistLike(
-            $this->entityManager,
-            $this->user,
-            $this->linkNewItem($liked, CanonicalItemKind::Mastodon),
-            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
-        );
-        $this->entityManager->flush();
+        $this->likeAs($this->user, $liked);
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -163,13 +157,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($stranger);
         $post = $this->entry('their-like', '2026-07-10T00:00:00Z');
-        LikedPostFixtures::persistLike(
-            $this->entityManager,
-            $stranger,
-            $this->linkNewItem($post, CanonicalItemKind::Mastodon),
-            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
-        );
-        $this->entityManager->flush();
+        $this->likeAs($stranger, $post);
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -179,13 +167,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testAnEntryWithoutAnItemStaysACandidateBesideALikedPost(): void
     {
         $unlinked = $this->entry('no-item', '2026-07-10T00:00:00Z');
-        LikedPostFixtures::persistLike(
-            $this->entityManager,
-            $this->user,
-            $this->linkNewItem($this->entry('liked-post', '2026-07-10T00:00:00Z'), CanonicalItemKind::Mastodon),
-            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
-        );
-        $this->entityManager->flush();
+        $this->likeAs($this->user, $this->entry('liked-post', '2026-07-10T00:00:00Z'));
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -717,6 +699,17 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     private function linkNewItem(Entry $entry, CanonicalItemKind $kind): CanonicalItem
     {
         return LikedPostFixtures::linkNewItem($this->entityManager, $entry, $kind, 'item-' . $entry->requireId());
+    }
+
+    private function likeAs(User $reader, Entry $entry): void
+    {
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $reader,
+            $this->linkNewItem($entry, CanonicalItemKind::Mastodon),
+            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
+        );
+        $this->entityManager->flush();
     }
 
     private function voteOn(Entry $entry, VoteScore $score): void
