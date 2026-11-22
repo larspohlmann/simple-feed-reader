@@ -1,0 +1,32 @@
+<app-overlay-panel fillOnMobile [heading]="heading" cdkTrapFocus>
+  @for (posted of posts; track posted.address) {
+    <section class="post">
+      @if (posted.authorHandle; as handle) {
+        <p class="account">{{ 'social.posted.as' | transloco: { handle } }}</p>
+      }
+      <p class="text">{{ posted.text }}</p>
+      @if (posted.subject; as subject) {
+        <app-composer-subject [subject]="subject" />
+      }
+      @if (posts.length > 1 && posted.url; as url) {
+        <app-button
+          class="open"
+          [focusInitial]="posted === firstOpenable"
+          variant="primary"
+          (click)="open(url)"
+        >
+          {{ 'social.posted.open' | transloco }}
+        </app-button>
+      }
+    </section>
+  }
+
+  <app-button footer variant="ghost" [focusInitial]="!firstOpenable" (click)="ref.close()">
+    {{ 'dialog.close' | transloco }}
+  </app-button>
+  @if (single?.url; as url) {
+    <app-button footer focusInitial variant="primary" (click)="open(url)">
+      {{ 'social.posted.open' | transloco }}
+    </app-button>
+  }
+</app-overlay-panel>

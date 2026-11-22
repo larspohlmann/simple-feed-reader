@@ -6,24 +6,28 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Social\Model\SocialPostModel;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use App\Service\Social\Social\PostLiker\PostLikerInterface;
 use App\Service\Social\Social\PostReposter\PostReposterInterface;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
 
 /** A Mastodon that resolves every address to status 110, records each call and can be told to fail. */
 final class FakeMastodonNetwork implements
     PostResolverInterface,
     PostLikerInterface,
     PostReposterInterface,
-    PostWriterInterface
+    PostWriterInterface,
+    PostDeleterInterface
 {
     public const string STATUS_ID = '110';
     public const string REPLY_URI = 'https://mastodon.example/users/alice/statuses/120';
@@ -49,11 +53,11 @@ final class FakeMastodonNetwork implements
 
     private ?\Closure $resolveHook = null;
 
-    private ResponseContextModel $responseContext;
+    private PostContextModel $postContext;
 
     public function __construct()
     {
-        $this->responseContext = new ResponseContextModel();
+        $this->postContext = new PostContextModel();
     }
 
     public static function network(): string
@@ -91,9 +95,9 @@ final class FakeMastodonNetwork implements
         $this->canRepost = false;
     }
 
-    public function knowsTheResponseContext(ResponseContextModel $responseContext): void
+    public function knowsThePostContext(PostContextModel $postContext): void
     {
-        $this->responseContext = $responseContext;
+        $this->postContext = $postContext;
     }
 
     public function onResolve(\Closure $hook): void
@@ -110,7 +114,7 @@ final class FakeMastodonNetwork implements
         }
         $post = SocialPostModel::onMastodon($account, self::STATUS_ID)
             ->withCounts($this->counts)
-            ->inResponseContext($this->responseContext);
+            ->withPostContext($this->postContext);
         $liked = null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
         $reposted = null === $this->existingRepostId ? $liked : $liked->alreadyRepostedAs($this->existingRepostId);
 
@@ -140,25 +144,23 @@ final class FakeMastodonNetwork implements
         $this->record('unrepost ' . $repostId);
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        $this->record('reply ' . $target->postId . ' ' . $draft->text);
+        $this->record(self::formatCall($publication) . ' ' . $publication->draft->text);
 
         return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
     }
 
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    private static function formatCall(PublicationModel $publication): string
     {
-        $this->record('quote ' . $target->postId . ' ' . $draft->text);
+        $embed = $publication->embed;
 
-        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        $this->record('share ' . $url . ' ' . $draft->text);
-
-        return new PublishedPostModel(self::REPLY_URI, self::REPLY_URI);
+        return match (true) {
+            null !== $publication->inReplyTo => 'reply ' . $publication->inReplyTo->postId,
+            $embed instanceof QuotedPostEmbedModel => 'quote ' . $embed->post->postId,
+            $embed instanceof LinkEmbedModel => 'share ' . $embed->url,
+            default => 'post',
+        };
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion

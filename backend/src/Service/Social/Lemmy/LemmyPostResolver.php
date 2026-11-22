@@ -10,7 +10,7 @@ use App\Service\Content\Comments\Model\LemmyPostModel;
 use App\Service\Foundation\Url\Support\LemmyPostUrl;
 use App\Service\Social\Lemmy\LemmyPosts;
 use App\Service\Social\Lemmy\Model\LemmyTargetModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -34,12 +34,12 @@ final readonly class LemmyPostResolver implements PostResolverInterface
             $account,
             (string) $target->postId,
             null === $target->commentId ? null : (string) $target->commentId,
-        )->inResponseContext(self::buildResponseContext($target));
+        )->withPostContext(self::buildPostContext($target));
     }
 
-    private static function buildResponseContext(LemmyTargetModel $target): ResponseContextModel
+    private static function buildPostContext(LemmyTargetModel $target): PostContextModel
     {
-        return new ResponseContextModel(
+        return new PostContextModel(
             authorIdentity: $target->authorIdentity,
             canReply: !$target->isLocked,
             canQuote: false,

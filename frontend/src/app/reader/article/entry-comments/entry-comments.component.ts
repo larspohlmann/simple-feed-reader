@@ -21,7 +21,7 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
 import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { buildItemKey } from '../../state/item-key';
 import { CommentsService, commentTotal } from './comments.service';
@@ -76,7 +76,7 @@ export class EntryCommentsComponent {
     EntryCommentDto,
     (to: VoteValue) => Observable<void>
   >();
-  private readonly responses = inject(PostActions);
+  private readonly responses = inject(ArticlePostActions);
   private readonly language = inject(LanguageService);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());

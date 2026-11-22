@@ -104,7 +104,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             'lemmy' => null,
             'kind' => 'reply',
             'text' => '@gargron@mastodon.social ',
-            'target' => [
+            'subject' => [
                 'kind' => 'post',
                 'authorName' => 'Eugen',
                 'authorHandle' => '@Gargron@mastodon.social',
@@ -160,8 +160,8 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         self::assertSame(10000, $payload['maxCharacters']);
         self::assertNull($payload['visibility']);
         self::assertSame('', $payload['text']);
-        self::assertIsArray($payload['target']);
-        self::assertSame('Ada', $payload['target']['authorName']);
+        self::assertIsArray($payload['subject']);
+        self::assertSame('Ada', $payload['subject']['authorName']);
         self::assertSame([self::LEMMY_POST], $this->routesAsked());
     }
 
@@ -268,6 +268,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110']),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => new MockResponse(json_encode(
                 ['id' => '200', 'uri' => self::REPLY, 'url' => 'https://mastodon.example/@alice/200'],
                 \JSON_THROW_ON_ERROR,
@@ -288,14 +289,14 @@ final class EntrySocialPostControllerTest extends ApiTestCase
             ['address' => self::REPLY, 'url' => 'https://mastodon.example/@alice/200'],
             $this->payload($client),
         );
-        self::assertSame([self::SEARCH, self::STATUSES], $this->routesAsked());
+        self::assertSame([self::SEARCH, self::INSTANCE, self::STATUSES], $this->routesAsked());
         self::assertSame([
             'status' => '@gargron@mastodon.social Thanks',
             'in_reply_to_id' => '110',
             'visibility' => 'unlisted',
             'language' => 'de',
-        ], json_decode($this->http->requests[1]['body'], true));
-        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[1]['headers']);
+        ], json_decode($this->http->requests[2]['body'], true));
+        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[2]['headers']);
     }
 
     /** @param array<string, string> $body */
@@ -331,6 +332,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         yield 'unknown visibility' => [['text' => 'Hi', 'visibility' => 'friends']];
         yield 'no language code' => [['text' => 'Hi', 'language' => 'German']];
         yield 'no uuid key' => [['text' => 'Hi', 'idempotencyKey' => 'again']];
+        yield 'an account id that is no number' => [['text' => 'Hi', 'accountId' => 'abc']];
     }
 
     public function testAReplyTheUsersAccountWroteIsDeleted(): void
@@ -385,6 +387,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => new MockResponse(json_encode(
                 ['id' => '201', 'uri' => self::QUOTE, 'url' => 'https://mastodon.example/@alice/201'],
                 \JSON_THROW_ON_ERROR,
@@ -405,15 +408,16 @@ final class EntrySocialPostControllerTest extends ApiTestCase
         );
         self::assertSame(
             ['status' => 'Worth reading', 'quoted_status_id' => '110'],
-            json_decode($this->http->requests[1]['body'], true),
+            json_decode($this->http->requests[2]['body'], true),
         );
-        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[1]['headers']);
+        self::assertContains('Idempotency-Key: ' . self::IDEMPOTENCY_KEY, $this->http->requests[2]['headers']);
     }
 
     public function testAQuoteOfTheEntrysPostRecordsItAsShared(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published('201'),
         ]);
         $user = $this->signIn($client, 'quote-shares@example.test');
@@ -432,6 +436,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published('201'),
         ]);
         $user = $this->signIn($client, sprintf('quote-forgetful-%s@example.test', md5((string) $this->dataName())));
@@ -457,6 +462,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::REPLY_SEARCH => self::statuses(['id' => '200', 'quote_approval' => ['current_user' => 'automatic']]),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published('201'),
         ]);
         $user = $this->signIn($client, 'quote-reply-unshared@example.test');
@@ -475,6 +481,7 @@ final class EntrySocialPostControllerTest extends ApiTestCase
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::statuses(['id' => '110']),
+            self::INSTANCE => new MockResponse('{}'),
             self::STATUSES => self::published('200'),
         ]);
         $user = $this->signIn($client, 'reply-unshared@example.test');

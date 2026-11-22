@@ -8,7 +8,7 @@ import { Lang } from '../../../core/i18n/language';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntrySocialDto, PostActionsView, SocialCountsDto } from '../../entry-social';
 import { EntryDto } from '../../models';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
 
@@ -40,7 +40,7 @@ describe('SocialCountsComponent', () => {
         { provide: SocialCountsService, useValue: service },
         { provide: EntryActionHandler, useValue: actions },
         { provide: LanguageService, useValue: language },
-        { provide: PostActions, useValue: responses },
+        { provide: ArticlePostActions, useValue: responses },
       ],
     });
     fixture = TestBed.createComponent(SocialCountsComponent);

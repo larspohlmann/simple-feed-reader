@@ -11,10 +11,11 @@ use App\Http\PostDeletionJson;
 use App\Http\PublishedPostJson;
 use App\Repository\EntryListRepository;
 use App\Service\Foundation\RateLimit\RateLimitGuard;
-use App\Service\Social\Social\Model\ResponseKind;
-use App\Service\Social\Social\Model\ResponseTargetModel;
+use App\Service\Social\Publishing\Model\ComposerKind;
+use App\Service\Social\Publishing\Model\ResponseTargetModel;
+use App\Service\Social\Publishing\SocialResponses;
 use App\Service\Social\Social\OwnPostDeletion;
-use App\Service\Social\Social\SocialResponses;
+use App\Service\Social\Social\OwnReplyDeletion;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +32,7 @@ final readonly class EntrySocialPostController
         private EntryListRepository $entryList,
         private SocialResponses $responses,
         private OwnPostDeletion $ownPosts,
+        private OwnReplyDeletion $ownReplies,
         private RateLimitGuard $rateLimitGuard,
         #[Target]
         private RateLimiterFactoryInterface $socialViewerLimiter,
@@ -50,14 +52,18 @@ final readonly class EntrySocialPostController
         #[CurrentUser] User $user,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?string $address = null,
         #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] ?int $accountId = null,
-        #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
-        ResponseKind $kind = ResponseKind::Reply,
+        #[MapQueryParameter(
+            filter: \FILTER_VALIDATE_REGEXP,
+            options: ['regexp' => '/^(reply|quote)$/'],
+            validationFailedStatusCode: Response::HTTP_BAD_REQUEST,
+        )]
+        string $kind = 'reply',
     ): JsonResponse {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
         $target = new ResponseTargetModel($entry, $address, $accountId);
-        $context = $this->responses->prepareContext($user, $target, $kind);
+        $context = $this->responses->prepareContext($user, $target, ComposerKind::from($kind));
 
         return new JsonResponse(ComposerContextJson::from($context));
     }
@@ -75,8 +81,8 @@ final readonly class EntrySocialPostController
         $published = $this->responses->respond(
             $user,
             $request->toTarget($entry, $address),
-            ResponseKind::Reply,
-            $request->toDraft(),
+            ComposerKind::Reply,
+            $request->toPublication(),
         );
 
         return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
@@ -95,8 +101,8 @@ final readonly class EntrySocialPostController
         $published = $this->responses->respond(
             $user,
             $request->toTarget($entry, $address),
-            ResponseKind::Quote,
-            $request->toDraft(),
+            ComposerKind::Quote,
+            $request->toPublication(),
         );
 
         return new JsonResponse(PublishedPostJson::from($published), Response::HTTP_CREATED);
@@ -116,7 +122,7 @@ final readonly class EntrySocialPostController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialWritesLimiter, $user);
 
-        $this->responses->delete($user, $entry, $address);
+        $this->ownReplies->delete($user, $entry, $address);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

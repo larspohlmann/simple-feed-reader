@@ -14,7 +14,7 @@ import { SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { buildItemKey } from '../../state/item-key';
 import { SocialCountsService } from './social-counts.service';
 
@@ -30,7 +30,7 @@ export class SocialCountsComponent {
   protected readonly actions = inject(EntryActionHandler);
   protected readonly likeEntry = (): Observable<void> => this.actions.like(this.entry());
   private readonly service = inject(SocialCountsService);
-  private readonly responses = inject(PostActions);
+  private readonly responses = inject(ArticlePostActions);
   readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly key = computed(() => buildItemKey(this.entry()));
   private readonly loaded = computed(() => {

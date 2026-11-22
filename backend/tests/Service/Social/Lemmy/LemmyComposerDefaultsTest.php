@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Lemmy;
 
+use App\Entity\SocialAccount;
 use App\Service\Social\Lemmy\LemmyCommunities;
 use App\Service\Social\Lemmy\LemmyComposerDefaults;
-use App\Service\Social\Lemmy\LemmyPostWriter;
-use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Lemmy\Support\LemmyPostLimits;
+use App\Service\Social\Publishing\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -33,27 +37,25 @@ final class LemmyComposerDefaultsTest extends TestCase
         return new LemmyComposerDefaults(new LemmyCommunities(SocialApiWiring::lemmyAccountApi($http->client())));
     }
 
-    public function testAPlainPostHoldsTheSameTenThousandCharactersAndOffersNoLinkChoices(): void
+    public function testAPlainPostHoldsTheSameTenThousandCharactersAndOffersNoPostFields(): void
     {
         self::assertEquals(
-            new ComposerDefaultsModel(LemmyComposerDefaults::MAX_CHARACTERS),
+            new ComposerDefaultsModel(LemmyPostLimits::MAX_CHARACTERS),
             (new LemmyComposerDefaults(new LemmyCommunities(SocialApiWiring::lemmyAccountApi(
                 (new RoutedHttpClient([]))->client(),
-            ))))->forAccount(SocialAccounts::lemmyOf(SocialAccounts::owner())),
+            ))))->resolveDefaults(self::account(), self::standalone(), self::noThreadStarter()),
         );
     }
 
-    public function testALinkCarriesThePostableCommunitiesAndThePageTitle(): void
+    public function testALinkPostOffersCommunitiesAndAClippedTitle(): void
     {
-        $defaults = self::defaults()->forLinkFrom(
-            SocialAccounts::lemmyOf(SocialAccounts::owner()),
-            new SharedLinkModel(self::ARTICLE, 'The article'),
-        );
+        $defaults = self::defaults()
+            ->resolveDefaults(self::account(), self::linkTo('The article'), self::noThreadStarter());
 
         self::assertEquals(
             new ComposerDefaultsModel(
-                LemmyComposerDefaults::MAX_CHARACTERS,
-                linkPost: new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 3, 200),
+                LemmyPostLimits::MAX_CHARACTERS,
+                lemmyPost: new LemmyPostFieldsModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 3, 200),
             ),
             $defaults,
         );
@@ -63,13 +65,42 @@ final class LemmyComposerDefaultsTest extends TestCase
     {
         $title = trim(str_repeat('wordy ', 40));
 
-        $link = self::defaults()->forLinkFrom(
-            SocialAccounts::lemmyOf(SocialAccounts::owner()),
-            new SharedLinkModel(self::ARTICLE, $title),
-        )->linkPost;
+        $fields = self::defaults()->resolveDefaults(self::account(), self::linkTo($title), self::noThreadStarter())
+            ->lemmyPost;
 
-        self::assertNotNull($link);
-        self::assertLessThanOrEqual(LemmyPostWriter::MAX_TITLE_CHARACTERS, mb_strlen($link->title));
-        self::assertMatchesRegularExpression('/^(wordy )+wordy…$/u', $link->title);
+        self::assertNotNull($fields);
+        self::assertLessThanOrEqual(LemmyPostLimits::MAX_TITLE_CHARACTERS, mb_strlen($fields->title));
+        self::assertMatchesRegularExpression('/^(wordy )+wordy…$/u', $fields->title);
+    }
+
+    public function testAReplyOffersNoPostFields(): void
+    {
+        $post = SocialPostModel::onLemmy(self::account(), '42', null);
+        $reply = self::linkTo('The article')->withReplyTo($post);
+
+        $defaults = self::defaults()->resolveDefaults(self::account(), $reply, self::noThreadStarter());
+
+        self::assertNull($defaults->lemmyPost);
+    }
+
+    private static function account(): SocialAccount
+    {
+        return SocialAccounts::lemmyOf(SocialAccounts::owner());
+    }
+
+    private static function standalone(): PublicationModel
+    {
+        return new PublicationModel(new PostDraftModel(''));
+    }
+
+    private static function linkTo(string $title): PublicationModel
+    {
+        return self::standalone()->withEmbed(new LinkEmbedModel(self::ARTICLE, $title));
+    }
+
+    /** @return \Closure(): ?SocialPostModel */
+    private static function noThreadStarter(): \Closure
+    {
+        return static fn (): ?SocialPostModel => null;
     }
 }

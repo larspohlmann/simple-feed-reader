@@ -1,0 +1,42 @@
+import { SentPost } from '../../social/composer/composed-post';
+import { sentComment } from './sent-comment';
+
+describe('sentComment', () => {
+  const sent: SentPost = {
+    address: 'at://did:plc:alice/app.bsky.feed.post/3',
+    url: 'https://bsky.app/profile/did:plc:alice/post/3',
+    text: '<b>Hi</b> & bye\nsee you\n\nlater ',
+    authorHandle: '@alice.bsky.social',
+    kind: 'reply',
+    network: 'bluesky',
+    subject: { kind: 'post', authorName: null, authorHandle: null, excerpt: '', card: null },
+  };
+
+  it('shows the text escaped, in paragraphs, as the reader’s own fresh reply', () => {
+    const comment = sentComment(sent, new Date('2026-11-01T12:00:00Z'));
+
+    expect(comment.html).toBe('<p>&lt;b&gt;Hi&lt;/b&gt; &amp; bye<br>see you</p><p>later</p>');
+    expect(comment.authorHandle).toBe('@alice.bsky.social');
+    expect(comment.url).toBe(sent.url);
+    expect(comment.publishedAt).toBe('2026-11-01T12:00:00.000Z');
+    expect(comment.post).toMatchObject({ address: sent.address, isOwn: true, canReply: true });
+    expect(comment.post?.counts).toEqual({ likes: 0, reposts: 0, replies: 0, quotes: null });
+    expect(comment.vote).toBeNull();
+    expect(comment.score).toBeNull();
+  });
+
+  it('shows a Lemmy reply with its author’s upvote and no like or repost controls', () => {
+    const comment = sentComment(
+      { ...sent, network: 'lemmy', address: 'https://origin.example/comment/9' },
+      new Date('2026-11-01T12:00:00Z'),
+    );
+
+    expect(comment.post).toBeNull();
+    expect(comment.score).toBe(1);
+    expect(comment.vote).toEqual({
+      address: 'https://origin.example/comment/9',
+      myVote: 1,
+      canReply: true,
+    });
+  });
+});

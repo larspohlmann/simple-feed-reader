@@ -10,13 +10,17 @@ use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyPostWriter;
+use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
+use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\LemmyCommunityPostModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
-use App\Service\Social\Social\Exception\SocialPostTitleTooShortException;
-use App\Service\Social\Social\Exception\SocialPostTooLongException;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
@@ -41,9 +45,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
-        $published = $this->writer($http)->reply(
-            SocialPostModel::onLemmy($this->account(), '42', null),
-            new PostDraftModel('Hello **there**'),
+        $published = $this->writer($http)->publish(
+            $this->account(),
+            $this->replying('42', null, new PostDraftModel('Hello **there**')),
         );
 
         self::assertSame('{"content":"Hello **there**","post_id":42}', $http->requests[0]['body']);
@@ -55,9 +59,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
-        $this->writer($http)->reply(
-            SocialPostModel::onLemmy($this->account(), '990', '77'),
-            new PostDraftModel('Agreed'),
+        $this->writer($http)->publish(
+            $this->account(),
+            $this->replying('990', '77', new PostDraftModel('Agreed')),
         );
 
         self::assertSame('{"content":"Agreed","post_id":990,"parent_id":77}', $http->requests[0]['body']);
@@ -68,9 +72,9 @@ final class LemmyPostWriterTest extends TestCase
         $http = new RoutedHttpClient([]);
 
         try {
-            $this->writer($http)->reply(
-                SocialPostModel::onLemmy($this->account(), '42', null),
-                new PostDraftModel(str_repeat('ä', 10001)),
+            $this->writer($http)->publish(
+                $this->account(),
+                $this->replying('42', null, new PostDraftModel(str_repeat('ä', 10001))),
             );
             self::fail('A text over the limit is not sent.');
         } catch (SocialPostTooLongException) {
@@ -82,9 +86,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::COMMENT => $this->created()]);
 
-        $this->writer($http)->reply(
-            SocialPostModel::onLemmy($this->account(), '42', null),
-            new PostDraftModel(str_repeat('ä', 10000)),
+        $this->writer($http)->publish(
+            $this->account(),
+            $this->replying('42', null, new PostDraftModel(str_repeat('ä', 10000))),
         );
 
         self::assertCount(1, $http->requests);
@@ -96,16 +100,19 @@ final class LemmyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->reply(SocialPostModel::onLemmy($this->account(), '42', null), new PostDraftModel('Hi'));
+        $this->writer($http)->publish(
+            $this->account(),
+            $this->replying('42', null, new PostDraftModel('Hi')),
+        );
     }
 
-    public function testAQuoteIsRefused(): void
+    public function testRefusesAQuote(): void
     {
         $this->expectExceptionObject(new SocialPostRefusedException('Lemmy takes no quotes.'));
 
-        $this->writer(new RoutedHttpClient([]))->quote(
-            SocialPostModel::onLemmy($this->account(), '42', null),
-            new PostDraftModel('Hi'),
+        $this->writer(new RoutedHttpClient([]))->publish(
+            $this->account(),
+            self::quoting(SocialPostModel::onLemmy($this->account(), '42', null), new PostDraftModel('Hi')),
         );
     }
 
@@ -113,10 +120,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::POST => self::postCreated()]);
 
-        $published = $this->writer($http)->share(
+        $published = $this->writer($http)->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel('Worth a read.', language: 'de', title: 'Title', communityId: 7),
+            self::linkPost(new PostDraftModel('Worth a read.', language: 'de'), 'Title', 7),
         );
 
         self::assertSame(
@@ -130,14 +136,29 @@ final class LemmyPostWriterTest extends TestCase
         );
     }
 
+    public function testATopLevelPostWithoutALinkSendsNoUrl(): void
+    {
+        $http = new RoutedHttpClient([self::POST => self::postCreated()]);
+
+        $this->writer($http)->publish(
+            $this->account(),
+            new PublicationModel(new PostDraftModel('Just text'))
+                ->withLemmy(new LemmyCommunityPostModel(7, 'Title')),
+        );
+
+        self::assertSame(
+            ['name' => 'Title', 'body' => 'Just text', 'community_id' => 7],
+            json_decode($http->requests[0]['body'], true),
+        );
+    }
+
     public function testABlankTextLeavesOutTheBody(): void
     {
         $http = new RoutedHttpClient([self::POST => self::postCreated()]);
 
-        $this->writer($http)->share(
+        $this->writer($http)->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel(" \n", title: 'Title', communityId: 7),
+            self::linkPost(new PostDraftModel(" \n"), 'Title', 7),
         );
 
         self::assertSame(
@@ -152,21 +173,22 @@ final class LemmyPostWriterTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->writer($http)->share(
+        $this->writer($http)->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel('', title: 'Title', communityId: 7),
+            self::linkPost(new PostDraftModel(''), 'Title', 7),
         );
     }
 
     /** @param class-string<\Throwable> $exception */
     #[DataProvider('refusedLinkDrafts')]
-    public function testAnIncompleteOrOverlongLinkIsRefusedAndNeverSent(PostDraftModel $draft, string $exception): void
-    {
+    public function testAnIncompleteOrOverlongLinkIsRefusedAndNeverSent(
+        PublicationModel $publication,
+        string $exception,
+    ): void {
         $http = new RoutedHttpClient([]);
 
         try {
-            $this->writer($http)->share($this->account(), self::ARTICLE, $draft);
+            $this->writer($http)->publish($this->account(), $publication);
             self::fail('The link is not sent.');
         } catch (\Throwable $thrown) {
             self::assertInstanceOf($exception, $thrown);
@@ -174,32 +196,39 @@ final class LemmyPostWriterTest extends TestCase
         }
     }
 
-    /** @return iterable<string, array{PostDraftModel, class-string<\Throwable>}> */
+    /** @return iterable<string, array{PublicationModel, class-string<\Throwable>}> */
     public static function refusedLinkDrafts(): iterable
     {
         yield 'without a community' => [
-            new PostDraftModel('Hi', title: 'Title'),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', null),
             SocialPostCommunityMissingException::class,
         ];
         yield 'a whitespace title' => [
-            new PostDraftModel('Hi', title: "  \n", communityId: 7),
+            self::linkPost(new PostDraftModel('Hi'), "  \n", 7),
             SocialPostTitleTooShortException::class,
         ];
-        yield 'no title' => [new PostDraftModel('Hi', communityId: 7), SocialPostTitleTooShortException::class];
+        yield 'no title' => [
+            self::linkPost(new PostDraftModel('Hi'), null, 7),
+            SocialPostTitleTooShortException::class,
+        ];
         yield 'a title of two characters once trimmed' => [
-            new PostDraftModel('Hi', title: ' äb ', communityId: 7),
+            self::linkPost(new PostDraftModel('Hi'), ' äb ', 7),
             SocialPostTitleTooShortException::class,
         ];
         yield 'a title over two hundred' => [
-            new PostDraftModel('Hi', title: str_repeat('ä', 201), communityId: 7),
+            self::linkPost(new PostDraftModel('Hi'), str_repeat('ä', 201), 7),
             SocialPostTooLongException::class,
         ];
         yield 'a body over ten thousand' => [
-            new PostDraftModel(str_repeat('ä', 10001), title: 'Title', communityId: 7),
+            self::linkPost(new PostDraftModel(str_repeat('ä', 10001)), 'Title', 7),
             SocialPostTooLongException::class,
         ];
+        yield 'no Lemmy choices at all' => [
+            new PublicationModel(new PostDraftModel('Hi'))->withEmbed(new LinkEmbedModel(self::ARTICLE, 'A')),
+            SocialPostCommunityMissingException::class,
+        ];
         yield 'the community is checked before the title' => [
-            new PostDraftModel('Hi'),
+            self::linkPost(new PostDraftModel('Hi'), null, null),
             SocialPostCommunityMissingException::class,
         ];
     }
@@ -210,10 +239,9 @@ final class LemmyPostWriterTest extends TestCase
             new SocialPostTitleTooShortException('A Lemmy title needs at least 3 characters.'),
         );
 
-        $this->writer(new RoutedHttpClient([]))->share(
+        $this->writer(new RoutedHttpClient([]))->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel('', title: 'Hi', communityId: 7),
+            self::linkPost(new PostDraftModel(''), 'Hi', 7),
         );
     }
 
@@ -221,10 +249,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $this->expectExceptionObject(new SocialPostTooLongException('A Lemmy post title holds 200 characters.'));
 
-        $this->writer(new RoutedHttpClient([]))->share(
+        $this->writer(new RoutedHttpClient([]))->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel('', title: str_repeat('ä', 201), communityId: 7),
+            self::linkPost(new PostDraftModel(''), str_repeat('ä', 201), 7),
         );
     }
 
@@ -232,10 +259,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::POST => self::postCreated()]);
 
-        $this->writer($http)->share(
+        $this->writer($http)->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel('', title: ' Hey ', communityId: 7),
+            self::linkPost(new PostDraftModel(''), ' Hey ', 7),
         );
 
         self::assertSame(
@@ -248,10 +274,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::POST => self::postCreated()]);
 
-        $this->writer($http)->share(
+        $this->writer($http)->publish(
             $this->account(),
-            self::ARTICLE,
-            new PostDraftModel(str_repeat('ä', 10000), title: str_repeat('ä', 200), communityId: 7),
+            self::linkPost(new PostDraftModel(str_repeat('ä', 10000)), str_repeat('ä', 200), 7),
         );
 
         self::assertCount(1, $http->requests);
@@ -269,6 +294,24 @@ final class LemmyPostWriterTest extends TestCase
     private function account(): SocialAccount
     {
         return SocialAccounts::lemmyOf(SocialAccounts::owner());
+    }
+
+    private function replying(string $postId, ?string $commentId, PostDraftModel $draft): PublicationModel
+    {
+        return new PublicationModel($draft)
+            ->withReplyTo(SocialPostModel::onLemmy($this->account(), $postId, $commentId));
+    }
+
+    private static function quoting(SocialPostModel $post, PostDraftModel $draft): PublicationModel
+    {
+        return new PublicationModel($draft)->withEmbed(new QuotedPostEmbedModel($post));
+    }
+
+    private static function linkPost(PostDraftModel $draft, ?string $title, ?int $communityId): PublicationModel
+    {
+        return new PublicationModel($draft)
+            ->withEmbed(new LinkEmbedModel(self::ARTICLE, 'An article'))
+            ->withLemmy(new LemmyCommunityPostModel($communityId, $title));
     }
 
     private function writer(RoutedHttpClient $http): LemmyPostWriter

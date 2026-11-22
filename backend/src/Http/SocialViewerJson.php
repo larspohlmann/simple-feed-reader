@@ -15,8 +15,8 @@ final class SocialViewerJson
             'isLiked' => null !== $post->existingLikeId,
             'isReposted' => null !== $post->existingRepostId,
             'canRepost' => $post->canRepost,
-            'canReply' => $post->responseContext->canReply,
-            'canQuote' => $post->responseContext->canQuote,
+            'canReply' => $post->postContext->canReply,
+            'canQuote' => $post->postContext->canQuote,
         ];
     }
 }

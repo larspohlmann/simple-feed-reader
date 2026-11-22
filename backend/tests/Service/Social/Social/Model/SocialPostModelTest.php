@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\SocialAccounts;
@@ -50,7 +50,7 @@ final class SocialPostModelTest extends TestCase
             ->alreadyLikedAs('110')
             ->alreadyRepostedAs('110')
             ->notRepostable()
-            ->inResponseContext(new ResponseContextModel('alice@mastodon.example', null, 'private', true));
+            ->withPostContext(new PostContextModel('alice@mastodon.example', null, 'private', true));
 
         self::assertSame('110', $post->existingLikeId);
         self::assertSame('110', $post->existingRepostId);
@@ -58,9 +58,9 @@ final class SocialPostModelTest extends TestCase
         self::assertSame($counts, $post->counts);
         self::assertSame('110', $post->withCounts(null)->existingRepostId);
         self::assertFalse($post->withCounts(null)->canRepost);
-        self::assertSame('private', $post->withCounts(null)->responseContext->visibility);
-        self::assertSame('private', $post->alreadyLikedAs('111')->responseContext->visibility);
-        self::assertSame('110', $post->inResponseContext(new ResponseContextModel())->existingLikeId);
-        self::assertSame($counts, $post->inResponseContext(new ResponseContextModel())->counts);
+        self::assertSame('private', $post->withCounts(null)->postContext->visibility);
+        self::assertSame('private', $post->alreadyLikedAs('111')->postContext->visibility);
+        self::assertSame('110', $post->withPostContext(new PostContextModel())->existingLikeId);
+        self::assertSame($counts, $post->withPostContext(new PostContextModel())->counts);
     }
 }

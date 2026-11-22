@@ -7,30 +7,39 @@ namespace App\Tests\Http;
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
 use App\Http\ComposerContextJson;
-use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Social\Model\ComposerContextModel;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\ComposerKind;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
+use App\Service\Social\Publishing\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\ComposerContextModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\ComposerKind;
+use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
+use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 
 final class ComposerContextJsonTest extends TestCase
 {
-    private static function linkContext(ComposerDefaultsModel $defaults): ComposerContextModel
-    {
+    private static function context(
+        ComposerDefaultsModel $defaults,
+        PostPreviewModel|LinkCardContent|null $subject,
+    ): ComposerContextModel {
         $account = SocialAccounts::lemmyOf(SocialAccounts::owner());
         (new \ReflectionProperty(SocialAccount::class, 'id'))->setValue($account, 5);
-        $card = new LinkCardContent('https://news.example/article', 'Title', null, null, 'news.example');
 
-        return new ComposerContextModel([], $account, true, $defaults, $card, ComposerKind::Link, '');
+        return new ComposerContextModel([], $account, true, $defaults, $subject, ComposerKind::Link, '');
+    }
+
+    private static function card(): LinkCardContent
+    {
+        return new LinkCardContent('https://news.example/article', 'Title', null, null, 'news.example');
     }
 
     public function testALemmyLinkListsItsCommunitiesItsTitleAndTheTitleLimit(): void
     {
-        $linkPost = new LinkPostChoicesModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 4, 150);
+        $lemmyPost = new LemmyPostFieldsModel([new CommunityModel(7, '!rss@lemmy.world')], 'The article', 4, 150);
 
-        $row = ComposerContextJson::from(self::linkContext(new ComposerDefaultsModel(10000, linkPost: $linkPost)));
+        $row = ComposerContextJson::from(
+            self::context(new ComposerDefaultsModel(10000, lemmyPost: $lemmyPost), self::card()),
+        );
 
         self::assertSame(
             [
@@ -45,8 +54,23 @@ final class ComposerContextJsonTest extends TestCase
 
     public function testAComposerOnAnyOtherNetworkHasNoLemmyRow(): void
     {
-        $row = ComposerContextJson::from(self::linkContext(new ComposerDefaultsModel(300)));
+        $row = ComposerContextJson::from(self::context(new ComposerDefaultsModel(300), self::card()));
 
         self::assertNull($row['lemmy']);
+    }
+
+    public function testALinkContextSendsItsCardAsTheSubject(): void
+    {
+        $row = ComposerContextJson::from(self::context(new ComposerDefaultsModel(300), self::card()));
+
+        self::assertSame('link', $row['subject']['kind'] ?? null);
+    }
+
+    public function testAContextWithoutSubjectSendsNull(): void
+    {
+        $row = ComposerContextJson::from(self::context(new ComposerDefaultsModel(300), null));
+
+        self::assertArrayHasKey('subject', $row);
+        self::assertNull($row['subject']);
     }
 }

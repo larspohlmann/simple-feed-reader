@@ -28,7 +28,7 @@ final readonly class SocialPostModel
         public ?string $existingRepostId,
         public bool $canRepost,
         public ?SocialCountsModel $counts,
-        public ResponseContextModel $responseContext,
+        public PostContextModel $postContext,
         public ?string $commentId = null,
     ) {
     }
@@ -73,9 +73,9 @@ final readonly class SocialPostModel
     }
 
     #[\NoDiscard]
-    public function inResponseContext(ResponseContextModel $responseContext): self
+    public function withPostContext(PostContextModel $postContext): self
     {
-        return $this->with(responseContext: $responseContext);
+        return $this->with(postContext: $postContext);
     }
 
     private static function fresh(SocialAccount $account, string $postId, ?string $contentId): self
@@ -88,7 +88,7 @@ final readonly class SocialPostModel
             existingRepostId: null,
             canRepost: true,
             counts: null,
-            responseContext: new ResponseContextModel(),
+            postContext: new PostContextModel(),
         );
     }
 
@@ -98,14 +98,14 @@ final readonly class SocialPostModel
         ?string $existingRepostId = null,
         ?bool $canRepost = null,
         ?SocialCountsModel $counts = null,
-        ?ResponseContextModel $responseContext = null,
+        ?PostContextModel $postContext = null,
     ): self {
         return clone($this, [
             'existingLikeId' => $existingLikeId ?? $this->existingLikeId,
             'existingRepostId' => $existingRepostId ?? $this->existingRepostId,
             'canRepost' => $canRepost ?? $this->canRepost,
             'counts' => $counts ?? $this->counts,
-            'responseContext' => $responseContext ?? $this->responseContext,
+            'postContext' => $postContext ?? $this->postContext,
         ]);
     }
 }

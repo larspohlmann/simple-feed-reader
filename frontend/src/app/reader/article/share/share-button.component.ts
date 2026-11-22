@@ -28,10 +28,10 @@ import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS, stepMenu } from '../../..
 import { SharingService } from '../../../core/preferences/sharing.service';
 import { SocialNetworkName } from '../../../core/social-network';
 import { LayoutService } from '../../layout.service';
-import { PostActions } from '../composer/post-actions.service';
+import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { ArticleSelection } from '../selection-share/article-selection.service';
 import { SelectedQuote } from '../selection-share/selected-quote';
-import { PostNetworks } from './post-networks.service';
+import { PostNetworks } from '../../social/post-networks.service';
 import {
   ShareContent,
   SharedPage,
@@ -92,7 +92,7 @@ export class ShareButtonComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
-  private readonly postActions = inject(PostActions);
+  private readonly postActions = inject(ArticlePostActions);
   private readonly selection = inject(ArticleSelection, { optional: true });
   private readonly networks = inject(PostNetworks).connected;
   private readonly sharing = inject(SharingService);

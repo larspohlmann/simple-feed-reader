@@ -1,4 +1,4 @@
-import { SharedLinkDto } from '../../entry-social';
+import { SharedLinkDto } from '../../social/composer/compose-request';
 import { SelectedQuote } from '../selection-share/selected-quote';
 import { quoteShareUrl } from './quote-share-url';
 import { stripTracking } from './tracking-params';

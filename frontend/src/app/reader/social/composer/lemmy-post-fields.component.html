@@ -1,0 +1,43 @@
+@if (lemmy().communities.length === 0) {
+  <p class="note">{{ 'social.composer.noCommunities' | transloco }}</p>
+} @else {
+  <app-field [label]="'social.composer.community' | transloco">
+    <select
+      [id]="controlId('community')"
+      [disabled]="disabled()"
+      (change)="chooseCommunity($event)"
+    >
+      <option value="" disabled [selected]="lane().community() === null">
+        {{ 'social.composer.chooseCommunity' | transloco }}
+      </option>
+      @for (community of lemmy().communities; track community.id) {
+        <option [value]="community.id" [selected]="community.id === lane().community()">
+          {{ community.handle }}
+        </option>
+      }
+    </select>
+  </app-field>
+}
+<app-field [label]="'social.composer.title' | transloco">
+  <textarea
+    class="title"
+    rows="2"
+    [id]="controlId('title')"
+    [attr.aria-describedby]="controlId('title-counter')"
+    [value]="lane().title()"
+    [disabled]="disabled()"
+    (keydown.enter)="$event.preventDefault()"
+    (input)="writeTitle($event)"
+  ></textarea>
+</app-field>
+<p
+  class="title-counter"
+  [id]="controlId('title-counter')"
+  [class.over]="lane().titleLength() > lemmy().maxTitleCharacters"
+  aria-live="polite"
+>
+  {{
+    'social.composer.counter'
+      | transloco: { used: lane().titleLength(), max: lemmy().maxTitleCharacters }
+  }}
+</p>

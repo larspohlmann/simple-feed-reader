@@ -5,29 +5,33 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Bluesky;
 
 use App\Service\Social\Bluesky\BlueskyComposerDefaults;
-use App\Service\Social\Social\Model\ComposerDefaultsModel;
-use App\Service\Social\Social\Model\SharedLinkModel;
+use App\Service\Social\Publishing\Model\ComposerDefaultsModel;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Social\Model\SocialPostModel;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyComposerDefaultsTest extends TestCase
 {
-    public function testAnAccountsOwnPostHoldsThreeHundredGraphemes(): void
+    public function testEveryPublicationHolds300Graphemes(): void
     {
-        self::assertEquals(
-            new ComposerDefaultsModel(300),
-            (new BlueskyComposerDefaults())->forAccount(SocialApiWiring::blueskyAccount()),
-        );
-    }
+        $account = SocialApiWiring::blueskyAccount();
+        $standalone = new PublicationModel(new PostDraftModel(''));
+        $post = SocialPostModel::onBluesky($account, 'at://did:plc:ann/app.bsky.feed.post/1', 'cid');
+        $publications = [
+            $standalone,
+            $standalone->withEmbed(new LinkEmbedModel('https://example.com', 'A title')),
+            $standalone->withReplyTo($post),
+        ];
 
-    public function testALinkPostKeepsTheFullLimitBecauseTheLinkRidesInTheCard(): void
-    {
-        self::assertEquals(
-            new ComposerDefaultsModel(300),
-            (new BlueskyComposerDefaults())->forLinkFrom(
-                SocialApiWiring::blueskyAccount(),
-                new SharedLinkModel('https://example.com', 'A title'),
-            ),
-        );
+        foreach ($publications as $publication) {
+            self::assertEquals(
+                new ComposerDefaultsModel(300),
+                (new BlueskyComposerDefaults())
+                    ->resolveDefaults($account, $publication, static fn (): ?SocialPostModel => null),
+            );
+        }
     }
 }

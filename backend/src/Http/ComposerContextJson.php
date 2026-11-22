@@ -6,22 +6,22 @@ namespace App\Http;
 
 use App\Entity\LinkCardContent;
 use App\Entity\SocialAccount;
-use App\Service\Social\Social\Model\CommunityModel;
-use App\Service\Social\Social\Model\ComposerContextModel;
-use App\Service\Social\Social\Model\LinkPostChoicesModel;
+use App\Service\Social\Publishing\Model\CommunityModel;
+use App\Service\Social\Publishing\Model\ComposerContextModel;
+use App\Service\Social\Publishing\Model\LemmyPostFieldsModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 
 /**
  * @phpstan-import-type LinkCardFields from LinkCardJson
  *
- * @phpstan-type PostTargetRow array{
+ * @phpstan-type PostSubjectRow array{
  *     kind: 'post', authorName: string|null, authorHandle: string|null, excerpt: string, card: LinkCardFields|null
  * }
- * @phpstan-type LinkPostRow array{
+ * @phpstan-type LemmyPostRow array{
  *     communities: list<array{id: int, handle: string}>, title: string,
  *     minTitleCharacters: int, maxTitleCharacters: int
  * }
- * @phpstan-type LinkTargetRow array{kind: 'link', card: LinkCardFields}
+ * @phpstan-type LinkSubjectRow array{kind: 'link', card: LinkCardFields}
  */
 final class ComposerContextJson
 {
@@ -32,10 +32,10 @@ final class ComposerContextJson
      *     canSend: bool,
      *     maxCharacters: int,
      *     visibility: string|null,
-     *     lemmy: LinkPostRow|null,
+     *     lemmy: LemmyPostRow|null,
      *     kind: 'reply'|'quote'|'link',
      *     text: string,
-     *     target: PostTargetRow|LinkTargetRow,
+     *     subject: PostSubjectRow|LinkSubjectRow|null,
      * }
      */
     public static function from(ComposerContextModel $context): array
@@ -52,19 +52,27 @@ final class ComposerContextJson
             'canSend' => $context->canSend,
             'maxCharacters' => $context->defaults->maxCharacters,
             'visibility' => $context->defaults->visibility,
-            'lemmy' => null === $context->defaults->linkPost
+            'lemmy' => null === $context->defaults->lemmyPost
                 ? null
-                : self::buildLinkPostRow($context->defaults->linkPost),
+                : self::buildLemmyPostRow($context->defaults->lemmyPost),
             'kind' => $context->kind->value,
             'text' => $context->text,
-            'target' => $context->target instanceof PostPreviewModel
-                ? self::buildPostTargetRow($context->target)
-                : self::buildLinkTargetRow($context->target),
+            'subject' => self::buildSubjectRow($context->subject),
         ];
     }
 
-    /** @return LinkPostRow */
-    private static function buildLinkPostRow(LinkPostChoicesModel $link): array
+    /** @return PostSubjectRow|LinkSubjectRow|null */
+    private static function buildSubjectRow(PostPreviewModel|LinkCardContent|null $subject): ?array
+    {
+        return match (true) {
+            $subject instanceof PostPreviewModel => self::buildPostSubjectRow($subject),
+            $subject instanceof LinkCardContent => self::buildLinkSubjectRow($subject),
+            default => null,
+        };
+    }
+
+    /** @return LemmyPostRow */
+    private static function buildLemmyPostRow(LemmyPostFieldsModel $fields): array
     {
         return [
             'communities' => array_map(
@@ -72,16 +80,16 @@ final class ComposerContextJson
                     'id' => $community->id,
                     'handle' => $community->handle,
                 ],
-                $link->communities,
+                $fields->communities,
             ),
-            'title' => $link->title,
-            'minTitleCharacters' => $link->minTitleCharacters,
-            'maxTitleCharacters' => $link->maxTitleCharacters,
+            'title' => $fields->title,
+            'minTitleCharacters' => $fields->minTitleCharacters,
+            'maxTitleCharacters' => $fields->maxTitleCharacters,
         ];
     }
 
-    /** @return PostTargetRow */
-    private static function buildPostTargetRow(PostPreviewModel $post): array
+    /** @return PostSubjectRow */
+    private static function buildPostSubjectRow(PostPreviewModel $post): array
     {
         return [
             'kind' => 'post',
@@ -92,8 +100,8 @@ final class ComposerContextJson
         ];
     }
 
-    /** @return LinkTargetRow */
-    private static function buildLinkTargetRow(LinkCardContent $card): array
+    /** @return LinkSubjectRow */
+    private static function buildLinkSubjectRow(LinkCardContent $card): array
     {
         return ['kind' => 'link', 'card' => LinkCardJson::toFields($card)];
     }

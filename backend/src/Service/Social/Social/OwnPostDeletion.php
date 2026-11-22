@@ -25,7 +25,7 @@ final readonly class OwnPostDeletion
     public function __construct(
         private SocialAccountRepository $socialAccounts,
         private ThreadPostRepository $threadPosts,
-        private PostWriting $writing,
+        private PostDeletions $deletions,
         private LocalPostRemoval $localRemoval,
         private SocialPostAddresses $postAddresses,
     ) {
@@ -53,7 +53,7 @@ final readonly class OwnPostDeletion
         ];
         $replyGuids = $this->requireReplyGuids($replyUrls, $author);
         foreach ($postIds as $postId) {
-            $deletion = $this->writing->delete($author, $postId);
+            $deletion = $this->deletions->delete($author, $postId);
         }
         $this->localRemoval->remove($entry, $replyGuids);
 

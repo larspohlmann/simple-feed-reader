@@ -10,56 +10,45 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Mastodon\MastodonAccountApi;
+use App\Service\Social\Mastodon\MastodonStatusLimit;
 use App\Service\Social\Mastodon\Support\MastodonStatusAction;
+use App\Service\Social\Mastodon\Support\MastodonTextLength;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Mastodon->value)]
-final readonly class MastodonPostWriter implements PostWriterInterface
+final readonly class MastodonPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     private const string STATUSES = '/api/v1/statuses';
+    private const int BLANK_LINE_LENGTH = 2;
+    /** What a link post sets aside for the blank line and the link this writer appends. */
+    public const int LINK_ROOM = self::BLANK_LINE_LENGTH + MastodonTextLength::LINK_LENGTH;
 
-    public function __construct(private MastodonAccountApi $mastodon)
-    {
+    public function __construct(
+        private MastodonAccountApi $mastodon,
+        private MastodonStatusLimit $statusLimit,
+    ) {
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        return $this->published($target->account, $draft, ['in_reply_to_id' => $target->postId]);
-    }
-
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($target->account, $draft, ['quoted_status_id' => $target->postId]);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($account, $draft->withText(self::textCarrying($url, $draft->text)), []);
-    }
-
-    private static function textCarrying(string $url, string $text): string
-    {
-        return match (true) {
-            '' === trim($text) => $url,
-            str_contains($text, $url) => $text,
-            default => $text . "\n\n" . $url,
-        };
-    }
-
-    /** @param array<string, string> $attachment the id the status answers or quotes */
-    private function published(SocialAccount $account, PostDraftModel $draft, array $attachment): PublishedPostModel
-    {
+        $statusText = self::buildStatusText($publication);
+        $this->guardLength($account, $publication->draft->contentWarning ?? '', $statusText);
+        $idempotencyKey = $publication->draft->idempotencyKey;
         $request = ApiRequestModel::postJson(
             $account->getServiceUrl() . self::STATUSES,
-            self::buildStatusPayload($draft, $attachment),
-            null === $draft->idempotencyKey ? [] : ['Idempotency-Key' => $draft->idempotencyKey],
+            self::buildStatusPayload($publication, $statusText),
+            null === $idempotencyKey ? [] : ['Idempotency-Key' => $idempotencyKey],
         );
         $answer = $this->mastodon->writeAs($account, $request, MastodonAccountApi::STATUSES_SCOPE);
         $status = JsonNodeModel::fromValue($answer->json());
@@ -82,19 +71,54 @@ final readonly class MastodonPostWriter implements PostWriterInterface
         return PostDeletion::Deleted;
     }
 
-    /**
-     * @param array<string, string> $attachment
-     *
-     * @return array<string, string>
-     */
-    private static function buildStatusPayload(PostDraftModel $draft, array $attachment): array
+    private function guardLength(SocialAccount $account, string $contentWarning, string $statusText): void
     {
+        $maxCharacters = $this->statusLimit->findMaxCharacters($account);
+        if (null === $maxCharacters) {
+            return;
+        }
+        if (MastodonTextLength::measureLength($contentWarning, $statusText) > $maxCharacters) {
+            throw new SocialPostTooLongException(
+                sprintf('A Mastodon post on this server holds %d characters.', $maxCharacters),
+            );
+        }
+    }
+
+    /** @return array<string, string> */
+    private static function buildStatusPayload(PublicationModel $publication, string $status): array
+    {
+        $draft = $publication->draft;
+
         return array_filter([
-            'status' => $draft->text,
-            ...$attachment,
+            'status' => $status,
+            'in_reply_to_id' => $publication->inReplyTo?->postId,
+            'quoted_status_id' => self::readQuotedStatusId($publication->embed),
             'visibility' => $draft->visibility,
             'spoiler_text' => $draft->contentWarning,
             'language' => $draft->language,
         ], static fn (?string $value): bool => null !== $value && '' !== $value);
+    }
+
+    private static function buildStatusText(PublicationModel $publication): string
+    {
+        $embed = $publication->embed;
+
+        return $embed instanceof LinkEmbedModel
+            ? self::textCarrying($embed->url, $publication->draft->text)
+            : $publication->draft->text;
+    }
+
+    private static function readQuotedStatusId(?PostEmbedModelInterface $embed): ?string
+    {
+        return $embed instanceof QuotedPostEmbedModel ? $embed->post->postId : null;
+    }
+
+    private static function textCarrying(string $url, string $text): string
+    {
+        return match (true) {
+            '' === trim($text) => $url,
+            str_contains($text, $url) => $text,
+            default => $text . "\n\n" . $url,
+        };
     }
 }

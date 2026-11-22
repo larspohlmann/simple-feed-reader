@@ -1,0 +1,113 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Publishing;
+
+use App\Entity\User;
+use App\Service\Foundation\Url\UrlNormalizer;
+use App\Service\Social\Publishing\Exception\SocialPostTextMissingException;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\ComposerContextModel;
+use App\Service\Social\Publishing\Model\LinkShareModel;
+use App\Service\Social\Publishing\Model\LinkTargetModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\Model\SharedLinkModel;
+use App\Service\Social\Social\ActingAccountChooser;
+use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
+use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Social\Exception\SocialAccountNotFoundException;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialTokenScopeMissingException;
+
+final readonly class LinkSharing
+{
+    public function __construct(
+        private ActingAccountChooser $actingAccounts,
+        private UrlNormalizer $urls,
+        private PostWriting $writing,
+        private SharedPostQuoteFinder $quotes,
+        private ComposerContexts $contexts,
+    ) {
+    }
+
+    /**
+     * @throws SocialPostRefusedException when the URL is no link to share
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
+     */
+    public function prepareContext(User $user, LinkTargetModel $target): ComposerContextModel
+    {
+        $share = $this->resolve($user, $target);
+
+        return null === $share->quoted
+            ? $this->contexts->buildLinkContext($share->account, $share->link)
+            : $this->contexts->buildQuoteContext($share->quoted, $share->link->quote);
+    }
+
+    /**
+     * Quotes the post the URL names on the network it goes to, else shares the URL as a link.
+     *
+     * @throws SocialPostRefusedException when the URL is no link to share
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostTextMissingException when the URL resolves to a quote and the text is blank
+     * @throws SocialPostTooLongException
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function publish(User $user, LinkTargetModel $target, PublicationModel $publication): PublishedPostModel
+    {
+        $share = $this->resolve($user, $target);
+
+        if (null === $share->quoted) {
+            $link = new LinkEmbedModel($share->link->url, $share->link->title);
+
+            return $this->writing->publish($share->account, $publication->withEmbed($link));
+        }
+
+        if ('' === trim($publication->draft->text)) {
+            throw new SocialPostTextMissingException('A quote of a post needs some text of its own.');
+        }
+
+        $quote = new QuotedPostEmbedModel($share->quoted);
+
+        return $this->writing->publish($share->quoted->account, $publication->withEmbed($quote));
+    }
+
+    /**
+     * @throws SocialPostRefusedException when the URL is no link to share
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNotFoundException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
+     */
+    private function resolve(User $user, LinkTargetModel $target): LinkShareModel
+    {
+        $url = $this->sharable($target->url);
+        $account = $this->actingAccounts->chosenOrDefault($user, $target->accountId, $target->network);
+
+        return new LinkShareModel(
+            $account,
+            new SharedLinkModel($url, $target->title, $target->quote),
+            $this->quotes->findQuotable($account, $url),
+        );
+    }
+
+    /** @throws SocialPostRefusedException */
+    private function sharable(string $url): string
+    {
+        return $this->urls->withoutTracking($url) ?? throw new SocialPostRefusedException('This is no link to share.');
+    }
+}

@@ -14,17 +14,22 @@ use App\Service\Social\Bluesky\Model\BlueskyPostKeyModel;
 use App\Service\Social\Bluesky\Support\BlueskyRecordUri;
 use App\Service\Social\Bluesky\Support\BlueskyStrongRef;
 use App\Service\Social\BlueskyPost\Support\AtPostUri;
+use App\Service\Social\Publishing\Exception\SocialPostTooLongException;
+use App\Service\Social\Publishing\Model\PostDraftModel;
+use App\Service\Social\Publishing\Model\PostEmbed\LinkEmbedModel;
+use App\Service\Social\Publishing\Model\PostEmbed\PostEmbedModelInterface;
+use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
+use App\Service\Social\Publishing\Model\PublicationModel;
+use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Model\PostDeletion;
-use App\Service\Social\Social\Model\PostDraftModel;
-use App\Service\Social\Social\Model\PublishedPostModel;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\PostWriter\PostWriterInterface;
+use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Bluesky->value)]
-final readonly class BlueskyPostWriter implements PostWriterInterface
+final readonly class BlueskyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     public const int MAX_GRAPHEMES = 300;
     private const string QUOTE_EMBED = 'app.bsky.embed.record';
@@ -37,45 +42,16 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     ) {
     }
 
-    public function reply(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
+    public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
     {
-        return $this->published($target->account, $draft, static fn (): array => [
-            'reply' => self::buildReplyRefs($target),
-        ]);
-    }
+        $draft = $publication->draft;
+        self::guardLength($draft);
 
-    public function quote(SocialPostModel $target, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($target->account, $draft, static fn (): array => ['embed' => [
-            '$type' => self::QUOTE_EMBED,
-            'record' => BlueskyStrongRef::fromPost($target),
-        ]]);
-    }
-
-    public function share(SocialAccount $account, string $url, PostDraftModel $draft): PublishedPostModel
-    {
-        return $this->published($account, $draft, fn (): array => [
-            'embed' => $this->externalEmbeds->prepareEmbed($account, $url),
-        ]);
-    }
-
-    public function delete(SocialAccount $account, string $postId): PostDeletion
-    {
-        return $this->records->delete($account, BlueskyRecordUri::POST, $postId);
-    }
-
-    /**
-     * Built only when a post is created, so a resend that finds its post uploads no thumbnail.
-     *
-     * @param \Closure(): array<string, mixed> $attachment
-     */
-    private function published(SocialAccount $account, PostDraftModel $draft, \Closure $attachment): PublishedPostModel
-    {
-        self::assertFits($draft);
-
+        // Built only when a post is created, so a resend that finds its post uploads no thumbnail.
         $fields = fn (): array => [
             'text' => $draft->text,
-            ...$attachment(),
+            ...self::buildReplyField($publication->inReplyTo),
+            ...$this->buildEmbedField($account, $publication->embed),
             ...$this->buildFacetsField($draft->text),
             ...(null === $draft->language ? [] : ['langs' => [$draft->language]]),
         ];
@@ -88,6 +64,11 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
             );
 
         return new PublishedPostModel($uri, AtPostUri::webUrl($uri));
+    }
+
+    public function delete(SocialAccount $account, string $postId): PostDeletion
+    {
+        return $this->records->delete($account, BlueskyRecordUri::POST, $postId);
     }
 
     /**
@@ -117,23 +98,44 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     }
 
     /** @throws SocialPostTooLongException */
-    private static function assertFits(PostDraftModel $draft): void
+    private static function guardLength(PostDraftModel $draft): void
     {
         if (grapheme_strlen($draft->text) > self::MAX_GRAPHEMES) {
             throw new SocialPostTooLongException(sprintf('A Bluesky post holds %d characters.', self::MAX_GRAPHEMES));
         }
     }
 
-    /** @return array{root: array{uri: string, cid: ?string}, parent: array{uri: string, cid: ?string}} */
-    private static function buildReplyRefs(SocialPostModel $target): array
+    /**
+     * @return array{reply?: array{
+     *     root: array{uri: string, cid: ?string},
+     *     parent: array{uri: string, cid: ?string},
+     * }}
+     */
+    private static function buildReplyField(?SocialPostModel $target): array
     {
+        if (null === $target) {
+            return [];
+        }
         $parent = BlueskyStrongRef::fromPost($target);
-        $root = $target->responseContext->threadRoot;
+        $root = $target->postContext->threadRoot;
 
-        return [
+        return ['reply' => [
             'root' => null === $root ? $parent : ['uri' => $root->uri, 'cid' => $root->contentId],
             'parent' => $parent,
-        ];
+        ]];
+    }
+
+    /** @return array{embed?: array<string, mixed>} */
+    private function buildEmbedField(SocialAccount $account, ?PostEmbedModelInterface $embed): array
+    {
+        return match (true) {
+            $embed instanceof QuotedPostEmbedModel => ['embed' => [
+                '$type' => self::QUOTE_EMBED,
+                'record' => BlueskyStrongRef::fromPost($embed->post),
+            ]],
+            $embed instanceof LinkEmbedModel => ['embed' => $this->externalEmbeds->prepareEmbed($account, $embed->url)],
+            default => [],
+        };
     }
 
     /** @return array{facets?: non-empty-list<mixed>} */

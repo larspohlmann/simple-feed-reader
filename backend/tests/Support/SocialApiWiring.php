@@ -32,6 +32,7 @@ use App\Service\Social\Mastodon\MastodonAccountApi;
 use App\Service\Social\Mastodon\MastodonApiClient;
 use App\Service\Social\Mastodon\MastodonPrivateFeedRule;
 use App\Service\Social\Mastodon\MastodonSearchSource;
+use App\Service\Social\Mastodon\MastodonStatusLimit;
 use App\Service\Social\Mastodon\MastodonTimelineSource;
 use App\Service\Social\Social\SearchAnswers;
 use App\Service\Social\Social\StoredCredential;
@@ -114,6 +115,11 @@ final class SocialApiWiring
     public static function mastodonAccountApi(HttpClientInterface $http): MastodonAccountApi
     {
         return new MastodonAccountApi(self::mastodonApiClient($http), new StoredCredential(SocialAccounts::cipher()));
+    }
+
+    public static function mastodonStatusLimit(HttpClientInterface $http): MastodonStatusLimit
+    {
+        return new MastodonStatusLimit(self::mastodonAccountApi($http), self::mastodonApiClient($http));
     }
 
     public static function lemmyAccountApi(HttpClientInterface $http): LemmyAccountApi

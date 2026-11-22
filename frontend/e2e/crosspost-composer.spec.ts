@@ -1,5 +1,8 @@
 import { expect, Page, test } from '@playwright/test';
-import type { ComposerContextDto, PublishedPostDto } from '../src/app/reader/entry-social';
+import type {
+  ComposerContextDto,
+  PublishedPostDto,
+} from '../src/app/reader/social/composer/composer-dto';
 import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { presetLocalStorage } from './support/auth';
 import {
@@ -49,7 +52,7 @@ function composerContext(network: 'bluesky' | 'mastodon' | 'lemmy'): ComposerCon
     maxCharacters: { bluesky: 300, mastodon: 500, lemmy: 10000 }[network],
     visibility: network === 'mastodon' ? 'public' : null,
     text: '',
-    target: {
+    subject: {
       kind: 'link',
       card: {
         url: `https://fixtures.invalid/${ENTRY.id}`,
@@ -116,7 +119,7 @@ test('a crosspost sends to Bluesky once and retries only Mastodon', async ({ pag
   await page.route(
     (url) => url.pathname === '/api/social/links',
     (route) => {
-      const requested = new URL(route.request().url()).searchParams.get('network');
+      const requested = route.request().postDataJSON().network;
       const network = requested === 'mastodon' ? 'mastodon' : 'bluesky';
       sends.push(network);
       if (network === 'mastodon' && ++mastodonAttempts === 1) {
@@ -169,7 +172,7 @@ test('a crosspost to all three networks sends one Lemmy post with its title and 
   await page.route(
     (url) => url.pathname === '/api/social/links',
     (route) => {
-      const requested = new URL(route.request().url()).searchParams.get('network') ?? 'bluesky';
+      const requested: string = route.request().postDataJSON().network ?? 'bluesky';
       sends.push({ network: requested, body: route.request().postDataJSON() });
       return route.fulfill({ status: 201, json: published(requested) });
     },

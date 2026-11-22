@@ -1331,7 +1331,11 @@
     "trendingSharesOne": "1 share",
     "storyCreated": "created {{time}}",
     "storyLastAdded": "last article {{time}}",
-    "trendingWindow": { "label": "Time window", "day": "24 h", "week": "7 days" },
+    "trendingWindow": {
+      "label": "Time window",
+      "day": "24 h",
+      "week": "7 days"
+    },
     "trendingEmptyDay": "A story shows up here once several of your feeds cover it within 24 hours.",
     "trendingEmptyWeek": "A story shows up here once several of your feeds cover it within 7 days. Stories in your 24 h list don't repeat here.",
     "narrationPlayer": "Listen — machine-generated narration",
@@ -1817,6 +1821,38 @@
       "mastodon": "Reply on Mastodon",
       "lemmy": "Reply on Lemmy"
     },
+    "deleteReply": {
+      "action": "Delete reply",
+      "title": "Delete this reply?",
+      "message": "It is deleted on {{ network }} as well.",
+      "confirm": "Delete"
+    },
+    "deletePost": {
+      "action": "Delete post",
+      "title": "Delete this post?",
+      "titleWithOneReply": "Delete this post and its reply?",
+      "titleWithReplies": "Delete this post and its {{ count }} replies?",
+      "message": "It is deleted on {{ network }} as well.",
+      "confirm": "Delete",
+      "alreadyGone": "Already deleted on {{ network }} — removed here."
+    },
+    "postDeletedThere": "Deleted on {{ network }} — removed here.",
+    "quote": {
+      "bluesky": "Quote on Bluesky",
+      "mastodon": "Quote on Mastodon",
+      "lemmy": "Quote on Lemmy"
+    },
+    "quoteForbidden": {
+      "bluesky": "The author doesn’t allow quotes of this post",
+      "mastodon": "You can’t quote this post"
+    },
+    "link": {
+      "bluesky": "Post on Bluesky",
+      "mastodon": "Post on Mastodon",
+      "lemmy": "Post on Lemmy"
+    }
+  },
+  "social": {
     "composer": {
       "counter": "{{ used }} / {{ max }}",
       "namedCounter": "{{ network }} {{ used }} / {{ max }}",
@@ -1859,40 +1895,10 @@
         "loading": "Getting the post ready",
         "account": "Post as",
         "text": "Your post",
-        "send": "Post",
-        "sendBoth": "Post to both"
-      }
-    },
-    "deleteReply": {
-      "action": "Delete reply",
-      "title": "Delete this reply?",
-      "message": "It is deleted on {{ network }} as well.",
-      "confirm": "Delete"
-    },
-    "deletePost": {
-      "action": "Delete post",
-      "title": "Delete this post?",
-      "titleWithOneReply": "Delete this post and its reply?",
-      "titleWithReplies": "Delete this post and its {{ count }} replies?",
-      "message": "It is deleted on {{ network }} as well.",
-      "confirm": "Delete",
-      "alreadyGone": "Already deleted on {{ network }} — removed here."
-    },
-    "postDeletedThere": "Deleted on {{ network }} — removed here.",
-    "quote": {
-      "bluesky": "Quote on Bluesky",
-      "mastodon": "Quote on Mastodon",
-      "lemmy": "Quote on Lemmy"
-    },
-    "quoteForbidden": {
-      "bluesky": "The author doesn’t allow quotes of this post",
-      "mastodon": "You can’t quote this post"
-    },
-    "link": {
-      "bluesky": "Post on Bluesky",
-      "mastodon": "Post on Mastodon",
-      "lemmy": "Post on Lemmy",
-      "many": "Post to {{ networks }}"
+        "send": "Post"
+      },
+      "crosspostHeading": "Post to {{ networks }}",
+      "sendToBoth": "Post to both"
     },
     "posted": {
       "link": {
