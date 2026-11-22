@@ -44,10 +44,11 @@ final class RecommendationPromptText
     public const int PROFILE_WORD_CAP = 500;
 
     public const string DISTILL_ROLE = 'You read one reader\'s history from an RSS reader and write a short '
-        . 'preference profile for them. The user message holds four sections — FAVORITES, SHARED, KEPT and VIEWED, '
-        . 'newest first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search terms '
-        . 'they saved to keep following a subject. SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then '
-        . 'KEPT, VIEWED least. ' . self::SHARED_ARTICLE_NOTE
+        . 'preference profile for them. The user message holds five sections — FAVORITES, SHARED, LIKED, KEPT and '
+        . 'VIEWED, newest first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search '
+        . 'terms they saved to keep following a subject. LIKED holds the posts the reader liked or upvoted on a '
+        . 'social network. SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then LIKED, then KEPT, VIEWED '
+        . 'least. ' . self::SHARED_ARTICLE_NOTE
         . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
         . 'profile, at most about ' . self::PROFILE_WORD_CAP . ' words, that names the reader\'s specific, '
         . 'repeated interests — topics, '

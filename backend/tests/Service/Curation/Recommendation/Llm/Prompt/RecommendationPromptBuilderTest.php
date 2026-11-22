@@ -1011,7 +1011,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheDistillRoleWeighsSavedSearchesWithFavourites(): void
     {
         self::assertStringContainsString(
-            'SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then KEPT, VIEWED least',
+            'SAVED SEARCHES and FAVORITES weigh strongest, SHARED next, then LIKED, then KEPT, VIEWED least',
             RecommendationPromptText::DISTILL_ROLE,
         );
     }
@@ -1019,9 +1019,27 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheDistillRoleNamesTheSharedSection(): void
     {
         self::assertStringContainsString(
-            'FAVORITES, SHARED, KEPT and VIEWED',
+            'five sections — FAVORITES, SHARED, LIKED, KEPT and VIEWED',
             RecommendationPromptText::DISTILL_ROLE,
         );
+    }
+
+    public function testTheDistillRoleSaysWhatLikedHolds(): void
+    {
+        self::assertStringContainsString(
+            'LIKED holds the posts the reader liked or upvoted on a social network.',
+            RecommendationPromptText::DISTILL_ROLE,
+        );
+    }
+
+    public function testAnEmptyLikedSectionReadsNone(): void
+    {
+        $messages = $this->builder->distillMessages(new ProfileInputsModel(
+            new RecommendationHistoryModel(favorites: [self::line(1, 'Fav one', 10)], kept: [], viewed: []),
+            [],
+        ));
+
+        self::assertStringContainsString("LIKED (newest first):\n- none", $messages[1]['content']);
     }
 
     public function testTheDistillRoleStatesTheProfileWordCap(): void
@@ -1039,6 +1057,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             kept: [self::line(2, 'Kept one', 10)],
             viewed: [self::line(3, 'Viewed one', 10)],
             shared: [self::line(4, 'Shared one', 10)],
+            liked: [self::line(5, 'Liked one', 10)],
         );
 
         $messages = $this->builder->distillMessages(new ProfileInputsModel($history, []));
@@ -1048,6 +1067,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $expectedUser = implode("\n\n", [
             "FAVORITES (newest first):\n- Fav one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
             "SHARED (newest first):\n- Shared one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
+            "LIKED (newest first):\n- Liked one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
             "KEPT (newest first):\n- Kept one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
             "VIEWED (newest first):\n- Viewed one — Example Feed — 2026-08-01 — " . str_repeat('x', 10),
         ]);
