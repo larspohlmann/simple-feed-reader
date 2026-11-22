@@ -7,7 +7,6 @@ namespace App\Service\Social\Mastodon\Support;
 use App\Enum\CanonicalItemKind;
 use App\Service\Foundation\CanonicalItem\Model\CanonicalKeyModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 
 final class MastodonStatusKey
 {
@@ -17,30 +16,19 @@ final class MastodonStatusKey
 
     public static function parseEntryKey(?string $guid, ?string $url): ?CanonicalKeyModel
     {
-        $status = self::parseAddressKey($guid) ?? self::parseAddressKey($url);
+        $address = MastodonStatusAddress::pickEntryAddress($guid, $url);
+        if (null === $address) {
+            return null;
+        }
 
-        return $status ?? self::parseAbsoluteKey($guid) ?? self::parseAbsoluteKey($url);
+        return new CanonicalKeyModel(
+            CanonicalItemKind::Mastodon,
+            MastodonStatusAddress::parseAddress($address)?->uri() ?? $address,
+        );
     }
 
     public static function parseStatusKey(JsonNodeModel $status): ?CanonicalKeyModel
     {
         return self::parseEntryKey($status->string('uri'), $status->string('url'));
-    }
-
-    private static function parseAddressKey(?string $address): ?CanonicalKeyModel
-    {
-        if (null === $address) {
-            return null;
-        }
-        $status = MastodonStatusAddress::parseAddress($address);
-
-        return null === $status ? null : new CanonicalKeyModel(CanonicalItemKind::Mastodon, $status->uri());
-    }
-
-    private static function parseAbsoluteKey(?string $address): ?CanonicalKeyModel
-    {
-        $absolute = AbsoluteHttpUrl::keepIfAbsolute($address);
-
-        return null === $absolute ? null : new CanonicalKeyModel(CanonicalItemKind::Mastodon, $absolute);
     }
 }
