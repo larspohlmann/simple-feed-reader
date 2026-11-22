@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\CanonicalItem;
 use App\Entity\DiscussionVote;
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -293,6 +294,163 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
     }
 
+    public function testTwoViewedCopiesOfAPostGiveOneLine(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->markViewed($lower, '2026-10-02 09:00:00');
+        $this->markViewed($higher, '2026-10-02 09:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$lower->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAViewedLowerCopyInAFeedOnlyAStrangerFollowsDoesNotHideMine(): void
+    {
+        $strangersFeed = $this->persistSubscribedFeed(
+            $this->persistStranger(),
+            'https://stranger.example.com/feed.xml',
+        );
+        $lower = SavedPostFixtures::entry(
+            $this->entityManager,
+            $strangersFeed,
+            'copy',
+            'https://stranger.example.com/copy',
+        );
+        $higher = $this->persistEntry('copy');
+        $higher->linkTo($this->linkNewItem($lower, CanonicalItemKind::Mastodon));
+        $this->markViewed($lower, '2026-10-02 09:00:00');
+        $this->markViewed($higher, '2026-10-02 09:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$higher->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAViewedPostWithAFavoriteCopyIsOnlyInFavorites(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->markViewed($lower, '2026-10-02 09:00:00');
+        $this->markViewed($higher, '2026-10-02 09:00:00')->markFavorite();
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+        self::assertSame(
+            [$higher->requireId()],
+            $this->entryIds($this->history()->favorites($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAViewedPostWithAKeptCopyIsOnlyInKept(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->markViewed($lower, '2026-10-02 09:00:00');
+        $this->markViewed($higher, '2026-10-02 09:00:00')->markKept();
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+        self::assertSame([$higher->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+    }
+
+    public function testAViewedPostWithASharedCopyIsOnlyInShared(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->markViewed($lower, '2026-10-02 09:00:00');
+        $this->markViewed($higher, '2026-10-02 09:00:00');
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $higher,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+        self::assertSame(
+            [$higher->requireId()],
+            $this->entryIds($this->history()->shared($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testAViewedAndKeptLowerCopyKeepsThePostOutOfViewed(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->markViewed($lower, '2026-10-02 09:00:00')->markKept();
+        $this->markViewed($higher, '2026-10-02 09:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([$lower->requireId()], $this->entryIds($this->history()->kept($this->user->requireId(), 10)));
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+    }
+
+    public function testAFavoriteCopyInAFeedTheReaderLeftDoesNotHideTheViewedCopy(): void
+    {
+        $leftFeed = new Feed('https://left.example.com/feed.xml');
+        $this->entityManager->persist($leftFeed);
+        $followed = $this->persistEntry('copy');
+        $left = SavedPostFixtures::entry($this->entityManager, $leftFeed, 'copy', 'https://left.example.com/copy');
+        $left->linkTo($this->linkNewItem($followed, CanonicalItemKind::Mastodon));
+        $this->markViewed($followed, '2026-10-02 09:00:00');
+        $this->markViewed($left, '2026-10-02 09:00:00')->markFavorite();
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$followed->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testViewedEntriesWithoutAnItemEachKeepTheirLine(): void
+    {
+        $older = SavedPostFixtures::entry($this->entityManager, $this->feed, 'a', 'https://history.example.com/same');
+        $newer = SavedPostFixtures::entry($this->entityManager, $this->feed, 'b', 'https://history.example.com/same');
+        $this->markViewed($older, '2026-10-02 09:00:00');
+        $this->markViewed($newer, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$newer->requireId(), $older->requireId()],
+            $this->entryIds($this->history()->viewed($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testALikedPostWithAFavoriteHigherCopyIsOnlyInFavorites(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        SavedPostFixtures::state($this->entityManager, $this->user, $higher)->markFavorite();
+        $this->likeItemOf($lower);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+        self::assertSame(
+            [$higher->requireId()],
+            $this->entryIds($this->history()->favorites($this->user->requireId(), 10)),
+        );
+    }
+
+    public function testALikedPostWithASharedHigherCopyIsOnlyInShared(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $higher,
+            new \DateTimeImmutable('2026-10-02 09:00:00'),
+        );
+        $this->likeItemOf($lower);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+        self::assertSame(
+            [$higher->requireId()],
+            $this->entryIds($this->history()->shared($this->user->requireId(), 10)),
+        );
+    }
+
     private function history(): ReadingHistoryRepository
     {
         return new ReadingHistoryRepository($this->entityManager);
@@ -303,6 +461,37 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $url = 'https://history.example.com/' . $guid;
 
         return SavedPostFixtures::entry($this->entityManager, $this->feed, $guid, $url);
+    }
+
+    /** @return array{Entry, Entry} the lower copy in the reader's main feed, the higher in a second followed feed */
+    private function persistPostInTwoFollowedFeeds(): array
+    {
+        $otherFeed = $this->persistSubscribedFeed($this->user, 'https://copies.example.com/feed.xml');
+        $lower = $this->persistEntry('copy');
+        $higher = SavedPostFixtures::entry($this->entityManager, $otherFeed, 'copy', 'https://copies.example.com/copy');
+        $higher->linkTo($this->linkNewItem($lower, CanonicalItemKind::Mastodon));
+
+        return [$lower, $higher];
+    }
+
+    private function markViewed(Entry $entry, string $viewedAt): EntryState
+    {
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $entry);
+        $state->markViewed(new \DateTimeImmutable($viewedAt));
+
+        return $state;
+    }
+
+    private function likeItemOf(Entry $entry): void
+    {
+        $item = $entry->getCanonicalItem();
+        self::assertNotNull($item);
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            $item,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
     }
 
     private function persistStranger(): User
