@@ -1,3 +1,4 @@
+@use '../app/theme/icon-scale';
 @use '../app/theme/type-scale';
 
 .text-scaled {
@@ -9,8 +10,13 @@
 // One element of specificity: beats _reset's `button { font: inherit }` by source order,
 // loses to any class rule. The 1em division undoes one scaling, so it holds only for
 // non-nested controls.
-:where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills) {
+:where(.text-scaled)
+  :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *)) {
   @include type-scale.fixed;
 
   font-size: calc(1em / var(--text-scale, 1));
+}
+
+:where(.text-scaled) .scales-with-text {
+  @include icon-scale.scaled;
 }

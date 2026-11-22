@@ -33,6 +33,7 @@ import { CommentTotals } from '../../state/comment-totals';
     TranslocoPipe,
   ],
   templateUrl: './entry-meta.component.html',
+  host: { class: 'scales-with-text' },
   styleUrl: './entry-meta.component.scss',
 })
 export class EntryMetaComponent {
