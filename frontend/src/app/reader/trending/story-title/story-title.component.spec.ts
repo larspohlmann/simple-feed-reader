@@ -96,6 +96,18 @@ it("links to the story's list and opens it when clicked", async () => {
   expect(TestBed.inject(Router).url).toBe('/trending/stories/12');
 });
 
+it('opens the story over the current list but closes the open article (#2479)', async () => {
+  const element = mount('Any event', 12);
+  await TestBed.inject(Router).navigateByUrl(
+    '/trending/stories/3?tag=56&entry=12-an-article&link=abc',
+  );
+  TestBed.tick();
+
+  expect(element.querySelector('a.story-link')!.getAttribute('href')).toBe(
+    '/trending/stories/12?tag=56',
+  );
+});
+
 describe("the card's counts and actions (#2435)", () => {
   it('names how many feeds covered the story and how often it was shared', () => {
     const counts = mountStory(aStory({ outletCount: 7, shareCount: 2 })).querySelector(
