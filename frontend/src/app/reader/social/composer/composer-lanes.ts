@@ -11,10 +11,10 @@ import { Observable, catchError, defer, forkJoin, map, of } from 'rxjs';
 import { SocialNetworkName } from '../../../core/social-network';
 import { PostNetworks } from '../post-networks.service';
 import { SentPost } from './composed-post';
-import { ComposeRequest, crossposts } from './compose-request';
+import { ComposeRequest, crosspostNetworks } from './compose-request';
 import { ComposerLane, SharedDraft } from './composer-lane';
 
-/** The lanes of one open composer: a link post gets one per connected link network, anything else one. */
+/** The lanes of one open composer: one per connected network the post may go to, an answer one. */
 @Injectable()
 export class ComposerLanes {
   private readonly injector = inject(Injector);
@@ -84,8 +84,11 @@ export class ComposerLanes {
   }
 
   private networksFor(request: ComposeRequest): SocialNetworkName[] {
-    if (!crossposts(request)) return [request.network];
-    const connected = this.postNetworks.connected().map(({ network }) => network);
+    const reachable = crosspostNetworks(request);
+    const connected = this.postNetworks
+      .connected()
+      .map(({ network }) => network)
+      .filter((network) => reachable.includes(network));
     return connected.includes(request.network) ? connected : [request.network];
   }
 

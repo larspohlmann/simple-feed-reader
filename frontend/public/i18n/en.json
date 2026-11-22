@@ -1850,6 +1850,14 @@
       "bluesky": "Post on Bluesky",
       "mastodon": "Post on Mastodon",
       "lemmy": "Post on Lemmy"
+    },
+    "post": {
+      "bluesky": "New post on Bluesky",
+      "mastodon": "New post on Mastodon"
+    },
+    "compose": {
+      "button": "New post on {{network}}",
+      "reconnect": "Reconnect your {{network}} account to post"
     }
   },
   "social": {
@@ -1898,7 +1906,13 @@
         "send": "Post"
       },
       "crosspostHeading": "Post to {{ networks }}",
-      "sendToBoth": "Post to both"
+      "sendToBoth": "Post to both",
+      "post": {
+        "loading": "Getting the post ready",
+        "account": "Post as",
+        "text": "Your post",
+        "send": "Post"
+      }
     },
     "posted": {
       "link": {

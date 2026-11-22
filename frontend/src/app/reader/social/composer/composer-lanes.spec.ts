@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { LinkRequest, ComposeRequest, ResponseRequest } from './compose-request';
+import { LinkRequest, ComposeRequest, PostRequest, ResponseRequest } from './compose-request';
 import { ComposerContextDto, PostComposerSubjectDto, PublishedPostDto } from './composer-dto';
 import { ComposerApi } from './composer-api';
 import { PostNetwork, PostNetworks } from '../post-networks.service';
@@ -251,6 +251,30 @@ describe('ComposerLanes', () => {
 
     expect(networksOf(lanes.lanes())).toEqual(['mastodon']);
     expect(lanes.showsPills()).toBe(false);
+  });
+
+  describe('for a text post', () => {
+    const POST: PostRequest = { kind: 'post', network: 'mastodon' };
+
+    it('builds a lane for Bluesky and Mastodon only, the clicked one active', () => {
+      const lanes = initialised(POST, [
+        ...BOTH,
+        { network: 'lemmy', handles: ['@alice@lemmy.world'] },
+      ]);
+
+      expect(networksOf(lanes.lanes())).toEqual(['bluesky', 'mastodon']);
+      expect(networksOf(lanes.active())).toEqual(['mastodon']);
+      expect(lanes.showsPills()).toBe(true);
+    });
+
+    it('shows no pills when only the clicked network is connected', () => {
+      const lanes = initialised(POST, [
+        { network: 'mastodon', handles: ['@alice@mastodon.example'] },
+      ]);
+
+      expect(networksOf(lanes.lanes())).toEqual(['mastodon']);
+      expect(lanes.showsPills()).toBe(false);
+    });
   });
 
   describe('for a link post', () => {

@@ -1,4 +1,5 @@
-import { SocialNetworkName } from '../../../core/social-network';
+import { WritableSignal } from '@angular/core';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../../core/social-network';
 
 /** What the composer writes about a post. */
 export type ResponseKind = 'reply' | 'quote';
@@ -21,16 +22,33 @@ export interface LinkRequest {
   quote: string | null;
 }
 
+/** A post of text alone; `draft` outlives the composer, which mirrors every edit into it. */
+export interface PostRequest {
+  kind: 'post';
+  network: SocialNetworkName;
+  draft?: WritableSignal<string>;
+}
+
+/** The networks a post of text alone goes to: Lemmy's posts need a title and a community. */
+export const TEXT_POST_NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon'];
+
 /** What a link post shares, before a network is chosen. */
 export type SharedLinkDto = Omit<LinkRequest, 'kind' | 'network'>;
 
 /** What the composer is asked to write. */
-export type ComposeRequest = ResponseRequest | LinkRequest;
+export type ComposeRequest = ResponseRequest | LinkRequest | PostRequest;
 
 /** What the composer sends: a link post that names a post on its network quotes it. */
 export type ComposerKind = ComposeRequest['kind'];
 
-/** Whether the post may go to every network the reader is connected to, not only the one it was opened for. */
-export function crossposts(request: ComposeRequest): boolean {
-  return request.kind === 'link';
+/** The networks the post may go to besides the one it was opened for, where the reader is connected; none for an answer. */
+export function crosspostNetworks(request: ComposeRequest): readonly SocialNetworkName[] {
+  switch (request.kind) {
+    case 'link':
+      return SOCIAL_NETWORKS;
+    case 'post':
+      return TEXT_POST_NETWORKS;
+    default:
+      return [];
+  }
 }

@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -1525,6 +1525,68 @@ describe('ComposerDialogComponent', () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       expect(sendButton(fixture).disabled).toBe(true);
+    });
+  });
+
+  describe('for a text post', () => {
+    const postContext = (overrides: Partial<ComposerContextDto> = {}) =>
+      context({ kind: 'post', text: '', subject: null, ...overrides });
+    const post = (draft: WritableSignal<string> = signal('')): ComposeRequest => ({
+      kind: 'post',
+      network: 'mastodon',
+      draft,
+    });
+
+    beforeEach(() => api.context.mockReturnValue(of(postContext())));
+
+    it('starts empty under its own heading with no subject, and needs some text to send', () => {
+      const fixture = mount(post());
+
+      expect(element(fixture).textContent).toContain('New post on Mastodon');
+      expect(element(fixture).querySelector('app-composer-subject')).toBeNull();
+      expect(textArea(fixture).value).toBe('');
+      expect(sendButton(fixture).disabled).toBe(true);
+      type(fixture, '   ');
+      expect(sendButton(fixture).disabled).toBe(true);
+      type(fixture, 'Just a thought');
+      expect(sendButton(fixture).disabled).toBe(false);
+    });
+
+    it('starts from the kept draft and mirrors every edit into it', () => {
+      const draft = signal('Half a thought');
+      const fixture = mount(post(draft));
+
+      expect(textArea(fixture).value).toBe('Half a thought');
+      type(fixture, 'A whole thought');
+      expect(draft()).toBe('A whole thought');
+      (element(fixture).querySelector('.clear button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(draft()).toBe('');
+    });
+
+    it('leaves the draft as it is once the post went out', () => {
+      const draft = signal('');
+      const fixture = mount(post(draft));
+      type(fixture, 'Just a thought');
+
+      submit(fixture);
+
+      expect(api.send).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'post', network: 'mastodon' }),
+        expect.objectContaining({ text: 'Just a thought' }),
+      );
+      expect(close).toHaveBeenCalled();
+      expect(draft()).toBe('Just a thought');
+    });
+
+    it('blocks a text over the limit', () => {
+      api.context.mockReturnValue(of(postContext({ maxCharacters: 5 })));
+      const fixture = mount(post());
+
+      type(fixture, 'Hello!');
+
+      expect(sendButton(fixture).disabled).toBe(true);
+      expect(element(fixture).querySelector('.counter')!.classList).toContain('over');
     });
   });
 });

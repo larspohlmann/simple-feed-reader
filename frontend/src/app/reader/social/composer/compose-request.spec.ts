@@ -1,6 +1,6 @@
-import { ComposeRequest, crossposts } from './compose-request';
+import { ComposeRequest, crosspostNetworks } from './compose-request';
 
-describe('crossposts', () => {
+describe('crosspostNetworks', () => {
   const link: ComposeRequest = {
     kind: 'link',
     network: 'mastodon',
@@ -9,11 +9,18 @@ describe('crossposts', () => {
     quote: null,
   };
 
-  it('is true for a link request', () => {
-    expect(crossposts(link)).toBe(true);
+  it('lets a link go to every network', () => {
+    expect(crosspostNetworks(link)).toEqual(['bluesky', 'mastodon', 'lemmy']);
   });
 
-  it.each(['reply', 'quote'] as const)('is false for a %s request', (kind) => {
-    expect(crossposts({ kind, entryId: 1, network: 'mastodon', address: null })).toBe(false);
+  it('lets a text post go to Bluesky and Mastodon, never Lemmy', () => {
+    expect(crosspostNetworks({ kind: 'post', network: 'bluesky' })).toEqual([
+      'bluesky',
+      'mastodon',
+    ]);
+  });
+
+  it.each(['reply', 'quote'] as const)('lets a %s go nowhere else', (kind) => {
+    expect(crosspostNetworks({ kind, entryId: 1, network: 'mastodon', address: null })).toEqual([]);
   });
 });

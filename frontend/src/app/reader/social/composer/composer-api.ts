@@ -56,6 +56,14 @@ export class ComposerApi {
           sendBody: (draft) => ({ ...draft, network: request.network, url: request.url }),
         };
       }
+      case 'post':
+        return {
+          contextPath: `${this.base}/api/social/post-composer`,
+          contextParams: { network: request.network },
+          sendPath: `${this.base}/api/social/posts`,
+          sendParams: {},
+          sendBody: (draft) => ({ ...draft, network: request.network }),
+        };
       case 'reply':
       case 'quote': {
         const address = addressParam(request.address);

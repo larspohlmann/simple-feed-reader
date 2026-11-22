@@ -1850,6 +1850,14 @@
       "bluesky": "Publier sur Bluesky",
       "mastodon": "Publier sur Mastodon",
       "lemmy": "Publier sur Lemmy"
+    },
+    "post": {
+      "bluesky": "Nouvelle publication sur Bluesky",
+      "mastodon": "Nouvelle publication sur Mastodon"
+    },
+    "compose": {
+      "button": "Nouvelle publication sur {{network}}",
+      "reconnect": "Reconnectez votre compte {{network}} pour publier"
     }
   },
   "social": {
@@ -1898,7 +1906,13 @@
         "send": "Publier"
       },
       "crosspostHeading": "Publier sur {{ networks }}",
-      "sendToBoth": "Publier sur les deux"
+      "sendToBoth": "Publier sur les deux",
+      "post": {
+        "loading": "Préparation de la publication",
+        "account": "Publier en tant que",
+        "text": "Votre publication",
+        "send": "Publier"
+      }
     },
     "posted": {
       "link": {
