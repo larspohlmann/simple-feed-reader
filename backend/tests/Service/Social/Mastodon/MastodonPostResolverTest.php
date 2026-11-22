@@ -88,7 +88,7 @@ final class MastodonPostResolverTest extends TestCase
             'quote_approval' => ['current_user' => 'automatic'],
         ]])]);
 
-        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->postContext;
 
         self::assertSame($identity, $context->authorIdentity);
         self::assertSame('unlisted', $context->visibility);
@@ -112,7 +112,7 @@ final class MastodonPostResolverTest extends TestCase
             'content' => '<p>Hello <b>world</b></p><p>&amp; more</p>',
         ]])]);
 
-        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->postContext;
 
         self::assertEquals(new PostPreviewModel('Ann', '@ann@hachyderm.io', 'Hello world & more'), $context->preview);
     }
@@ -131,7 +131,7 @@ final class MastodonPostResolverTest extends TestCase
             ],
         ]])]);
 
-        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->postContext;
 
         self::assertEquals(
             new LinkCardContent(
@@ -149,7 +149,7 @@ final class MastodonPostResolverTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
 
-        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->postContext;
 
         self::assertEquals(new PostPreviewModel(), $context->preview);
     }
@@ -158,7 +158,7 @@ final class MastodonPostResolverTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876']])]);
 
-        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL)->postContext;
 
         self::assertNull($context->authorIdentity);
         self::assertNull($context->visibility);

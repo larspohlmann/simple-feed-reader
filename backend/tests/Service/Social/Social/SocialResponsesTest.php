@@ -25,10 +25,10 @@ use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ComposerKind;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\ResponseKind;
 use App\Service\Social\Social\Model\ResponseTargetModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
@@ -100,7 +100,7 @@ final class SocialResponsesTest extends DbTestCase
         );
         $broken->markNeedsReconnect();
         $this->entityManager->flush();
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canReply: false));
 
         $context = $this->responses()->prepareContext(
             $this->owner,
@@ -125,7 +125,7 @@ final class SocialResponsesTest extends DbTestCase
             'Hello',
             new LinkCardContent('https://example.org/story', 'The story', null, null, 'Example'),
         );
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+        $this->mastodon->knowsThePostContext(new PostContextModel(preview: $preview));
 
         $context = $this->responses()->prepareContext(
             $this->owner,
@@ -168,7 +168,7 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAQuoteMaySendOnlyWhereTheAuthorAllowsQuotes(): void
     {
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
         $target = new ResponseTargetModel($this->post());
 
         self::assertFalse($this->responses()->prepareContext($this->owner, $target, ResponseKind::Quote)->canSend);
@@ -262,7 +262,7 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAPostThatTakesNoRepliesIsRefusedBeforeTheReply(): void
     {
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canReply: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canReply: false));
 
         $this->assertRefused(
             fn (): mixed => $this->responses()->respond(
@@ -361,7 +361,7 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAPostItsAuthorKeepsFromQuotesIsRefusedBeforeTheQuote(): void
     {
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
 
         $this->assertRefused(
             fn (): mixed => $this->responses()->respond(
@@ -379,7 +379,7 @@ final class SocialResponsesTest extends DbTestCase
     public function testAReplyAConnectedAccountWroteIsDeletedAndTheCachesDropped(): void
     {
         $entry = $this->post();
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'Alice@Mastodon.Example'));
+        $this->mastodon->knowsThePostContext(new PostContextModel(authorIdentity: 'Alice@Mastodon.Example'));
         $this->countsCache->remember($entry, new SocialCountsModel(4, 1, 1, null));
         $this->comments->load($this->owner, $entry);
 
@@ -393,7 +393,7 @@ final class SocialResponsesTest extends DbTestCase
 
     public function testAReplySomeoneElseWroteIsNotDeleted(): void
     {
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->knowsThePostContext(new PostContextModel(authorIdentity: 'ann@hachyderm.io'));
 
         $this->assertRefused(
             fn () => $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI),
@@ -409,7 +409,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'bea@mastodon.example'));
+        $this->mastodon->knowsThePostContext(new PostContextModel(authorIdentity: 'bea@mastodon.example'));
         $this->mastodon->onResolve(function (SocialAccount $account): void {
             if ($account === $this->account) {
                 throw new SocialNetworkUnreachableException('The instance is down.');
@@ -444,7 +444,7 @@ final class SocialResponsesTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonAs($this->owner, 'bea@mastodon.example'),
         );
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'ann@hachyderm.io'));
+        $this->mastodon->knowsThePostContext(new PostContextModel(authorIdentity: 'ann@hachyderm.io'));
         $this->mastodon->onResolve(function (SocialAccount $account): void {
             if ($account !== $this->account) {
                 throw new SocialNetworkUnreachableException('The instance is down.');
@@ -460,7 +460,7 @@ final class SocialResponsesTest extends DbTestCase
     {
         $this->account->markNeedsReconnect();
         $this->entityManager->flush();
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(authorIdentity: 'alice@mastodon.example'));
+        $this->mastodon->knowsThePostContext(new PostContextModel(authorIdentity: 'alice@mastodon.example'));
 
         $this->assertRefused(
             fn () => $this->responses()->delete($this->owner, $this->post(), self::REPLY_URI),

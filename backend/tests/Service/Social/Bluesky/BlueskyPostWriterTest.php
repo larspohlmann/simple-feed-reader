@@ -15,11 +15,11 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialPostTooLongException;
 use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PostReferenceModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\SharedPageCards;
 use App\Tests\Support\RoutedHttpClient;
@@ -84,8 +84,8 @@ final class BlueskyPostWriterTest extends TestCase
     public function testAReplyInsideAThreadNamesTheThreadsRoot(): void
     {
         $http = $this->creating();
-        $post = self::post()->inResponseContext(
-            new ResponseContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
+        $post = self::post()->withPostContext(
+            new PostContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
         $this->writer($http)->reply($post, new PostDraftModel('Yes'));
@@ -118,8 +118,8 @@ final class BlueskyPostWriterTest extends TestCase
     public function testAQuoteEmbedsThePostItQuotesAndAnswersNothing(): void
     {
         $http = $this->creating();
-        $post = self::post()->inResponseContext(
-            new ResponseContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
+        $post = self::post()->withPostContext(
+            new PostContextModel(threadRoot: new PostReferenceModel(self::ROOT_URI, 'bafy-root')),
         );
 
         $published = $this->writer($http)->quote($post, new PostDraftModel('Look #news', language: 'en'));

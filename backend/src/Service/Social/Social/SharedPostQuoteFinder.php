@@ -40,6 +40,6 @@ final readonly class SharedPostQuoteFinder
             return null;
         }
 
-        return $post->responseContext->allows(ResponseKind::Quote) ? $post : null;
+        return $post->postContext->allows(ResponseKind::Quote) ? $post : null;
     }
 }

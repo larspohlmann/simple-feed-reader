@@ -18,9 +18,9 @@ use App\Service\Social\BlueskyPost\Support\BlueskyExternalCard;
 use App\Service\Social\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\PostReferenceModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -50,7 +50,7 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $resolved = SocialPostModel::onBluesky($account, $postUri, $contentId)
             ->withCounts(BlueskyPostCounts::parsePost($post));
 
-        return self::withViewer($resolved, $post->node('viewer'))->inResponseContext(self::buildResponseContext($post));
+        return self::withViewer($resolved, $post->node('viewer'))->withPostContext(self::buildPostContext($post));
     }
 
     /**
@@ -73,9 +73,9 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         }
     }
 
-    private static function buildResponseContext(JsonNodeModel $post): ResponseContextModel
+    private static function buildPostContext(JsonNodeModel $post): PostContextModel
     {
-        return new ResponseContextModel(
+        return new PostContextModel(
             authorIdentity: $post->node('author')->string('did'),
             threadRoot: self::parseReference($post->node('record')->node('reply')->node('root')),
             canReply: !$post->node('viewer')->isTrue('replyDisabled'),

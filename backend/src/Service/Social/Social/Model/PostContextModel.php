@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Social\Model;
 
-/** What replying to or quoting a post needs to know about it beyond its id. */
-final readonly class ResponseContextModel
+/** What a post carries beyond its id: author, thread root, visibility, permissions, preview. */
+final readonly class PostContextModel
 {
     /**
      * @param string|null             $authorIdentity the author as a SocialAccount identity: a DID, or user@host

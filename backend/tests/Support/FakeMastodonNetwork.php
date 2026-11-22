@@ -6,10 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Social\Model\SocialPostModel;
@@ -49,11 +49,11 @@ final class FakeMastodonNetwork implements
 
     private ?\Closure $resolveHook = null;
 
-    private ResponseContextModel $responseContext;
+    private PostContextModel $postContext;
 
     public function __construct()
     {
-        $this->responseContext = new ResponseContextModel();
+        $this->postContext = new PostContextModel();
     }
 
     public static function network(): string
@@ -91,9 +91,9 @@ final class FakeMastodonNetwork implements
         $this->canRepost = false;
     }
 
-    public function knowsTheResponseContext(ResponseContextModel $responseContext): void
+    public function knowsThePostContext(PostContextModel $postContext): void
     {
-        $this->responseContext = $responseContext;
+        $this->postContext = $postContext;
     }
 
     public function onResolve(\Closure $hook): void
@@ -110,7 +110,7 @@ final class FakeMastodonNetwork implements
         }
         $post = SocialPostModel::onMastodon($account, self::STATUS_ID)
             ->withCounts($this->counts)
-            ->inResponseContext($this->responseContext);
+            ->withPostContext($this->postContext);
         $liked = null === $this->existingLikeId ? $post : $post->alreadyLikedAs($this->existingLikeId);
         $reposted = null === $this->existingRepostId ? $liked : $liked->alreadyRepostedAs($this->existingRepostId);
 

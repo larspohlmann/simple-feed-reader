@@ -16,8 +16,8 @@ use App\Service\Social\Mastodon\Support\MastodonQuoting;
 use App\Service\Social\Mastodon\Support\MastodonVisibility;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostResolver\PostResolverInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -45,12 +45,12 @@ final readonly class MastodonPostResolver implements PostResolverInterface
 
         $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(MastodonPostCounts::parseStatus($status));
 
-        return self::withViewer($post, $status, $statusId)->inResponseContext(self::buildResponseContext($status));
+        return self::withViewer($post, $status, $statusId)->withPostContext(self::buildPostContext($status));
     }
 
-    private static function buildResponseContext(JsonNodeModel $status): ResponseContextModel
+    private static function buildPostContext(JsonNodeModel $status): PostContextModel
     {
-        return new ResponseContextModel(
+        return new PostContextModel(
             authorIdentity: MastodonAuthor::identity($status->node('account')),
             visibility: $status->string('visibility'),
             canQuote: MastodonQuoting::allows($status),

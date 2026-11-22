@@ -133,7 +133,7 @@ final readonly class SocialResponses
                 $failure ??= $exception;
                 continue;
             }
-            if (SocialIdentity::isAccount($post->responseContext->authorIdentity, $account)) {
+            if (SocialIdentity::isAccount($post->postContext->authorIdentity, $account)) {
                 return $post;
             }
             $writtenByAnother = true;
@@ -150,7 +150,7 @@ final readonly class SocialResponses
     private function allowedTarget(User $user, ResponseTargetModel $target, ResponseKind $kind): SocialPostModel
     {
         $post = $this->targets->find($user, $target);
-        if (!$post->responseContext->allows($kind)) {
+        if (!$post->postContext->allows($kind)) {
             throw new SocialPostRefusedException(sprintf('The author does not allow a %s of this post.', $kind->value));
         }
 

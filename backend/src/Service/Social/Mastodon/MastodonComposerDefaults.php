@@ -41,7 +41,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
         return new ComposerDefaultsModel(
             $this->resolveMaxCharacters($account),
             MastodonVisibility::pickStricter(
-                $target->responseContext->visibility ?? self::DEFAULT_VISIBILITY,
+                $target->postContext->visibility ?? self::DEFAULT_VISIBILITY,
                 $this->resolvePrivacy($account),
             ),
             self::collectMentions($target, $threadStarter),
@@ -82,7 +82,7 @@ final readonly class MastodonComposerDefaults implements ComposerDefaultsInterfa
     private static function collectMentions(SocialPostModel $target, \Closure $threadStarter): array
     {
         $account = $target->account;
-        $authors = [$target->responseContext->authorIdentity, $threadStarter()?->responseContext->authorIdentity];
+        $authors = [$target->postContext->authorIdentity, $threadStarter()?->postContext->authorIdentity];
         $others = array_filter(
             array_map(static fn (?string $author): string => mb_strtolower($author ?? ''), $authors),
             static fn (string $author): bool => '' !== $author && !SocialIdentity::isAccount($author, $account),

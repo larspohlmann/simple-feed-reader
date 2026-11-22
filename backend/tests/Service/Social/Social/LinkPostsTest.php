@@ -28,10 +28,10 @@ use App\Service\Social\Social\LinkPosts;
 use App\Service\Social\Social\Model\ComposerDefaultsModel;
 use App\Service\Social\Social\Model\ComposerKind;
 use App\Service\Social\Social\Model\LinkTargetModel;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\PostDraftModel;
 use App\Service\Social\Social\Model\PostPreviewModel;
 use App\Service\Social\Social\Model\PublishedPostModel;
-use App\Service\Social\Social\Model\ResponseContextModel;
 use App\Service\Social\Social\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\PostWriting;
 use App\Service\Social\Social\SharedPageCards;
@@ -186,7 +186,7 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $preview = new PostPreviewModel('Eugen', '@Gargron@mastodon.social', 'Hello');
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+        $this->mastodon->knowsThePostContext(new PostContextModel(preview: $preview));
 
         $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
@@ -243,7 +243,7 @@ final class LinkPostsTest extends DbTestCase
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
         $preview = new PostPreviewModel('Eugen', '@Gargron@mastodon.social', 'Hello');
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(preview: $preview));
+        $this->mastodon->knowsThePostContext(new PostContextModel(preview: $preview));
         $target = new LinkTargetModel(SocialNetwork::Mastodon, null, self::STATUS_URL, '', 'A line worth sharing');
 
         $context = $this->linkPosts()->prepareContext($this->owner, $target);
@@ -256,7 +256,7 @@ final class LinkPostsTest extends DbTestCase
     public function testTheComposerForAStatusThatTakesNoQuoteShowsItsPageCard(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
 
         $context = $this->linkPosts()->prepareContext($this->owner, self::target(null, self::STATUS_URL));
 
@@ -303,7 +303,7 @@ final class LinkPostsTest extends DbTestCase
     public function testAStatusWhoseAuthorForbidsQuotingIsSharedAsALink(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
-        $this->mastodon->knowsTheResponseContext(new ResponseContextModel(canQuote: false));
+        $this->mastodon->knowsThePostContext(new PostContextModel(canQuote: false));
 
         $this->linkPosts()->share($this->owner, self::target(null, self::STATUS_URL), new PostDraftModel('Look'));
 

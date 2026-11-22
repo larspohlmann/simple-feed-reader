@@ -59,7 +59,7 @@ final class BlueskyPostResolverTest extends TestCase
             'viewer' => ['replyDisabled' => true, 'embeddingDisabled' => true],
         ]]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertSame('did:plc:bob', $context->authorIdentity);
         self::assertEquals(
@@ -80,7 +80,7 @@ final class BlueskyPostResolverTest extends TestCase
             'record' => ['text' => 'Hello world'],
         ]]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertEquals(new PostPreviewModel('Bob', '@bob.test', 'Hello world'), $context->preview);
     }
@@ -96,7 +96,7 @@ final class BlueskyPostResolverTest extends TestCase
             'embed' => $embed,
         ]]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertEquals(
             new LinkCardContent(
@@ -137,7 +137,7 @@ final class BlueskyPostResolverTest extends TestCase
     {
         $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid', 'embed' => $embed]]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertNull($context->preview->card);
     }
@@ -164,7 +164,7 @@ final class BlueskyPostResolverTest extends TestCase
     {
         $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertEquals(new PostPreviewModel(), $context->preview);
     }
@@ -173,7 +173,7 @@ final class BlueskyPostResolverTest extends TestCase
     {
         $http = $this->answering(['posts' => [['uri' => self::POST_URI, 'cid' => 'bafy-cid']]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertNull($context->threadRoot);
         self::assertNull($context->authorIdentity);
@@ -191,7 +191,7 @@ final class BlueskyPostResolverTest extends TestCase
             'record' => ['reply' => ['root' => $root]],
         ]]]);
 
-        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->responseContext;
+        $context = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI)->postContext;
 
         self::assertNull($context->threadRoot);
     }

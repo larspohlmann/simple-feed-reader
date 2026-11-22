@@ -99,9 +99,9 @@ final readonly class ComposerContexts
         return new ComposerContextModel(
             $this->connectedBeside($post->account),
             $post->account,
-            $post->responseContext->allows($kind),
+            $post->postContext->allows($kind),
             $defaults,
-            $post->responseContext->preview,
+            $post->postContext->preview,
             ComposerKind::from($kind->value),
             $text,
         );

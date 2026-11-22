@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Social\Model;
 
-use App\Service\Social\Social\Model\ResponseContextModel;
+use App\Service\Social\Social\Model\PostContextModel;
 use App\Service\Social\Social\Model\ResponseKind;
 use PHPUnit\Framework\TestCase;
 
-final class ResponseContextModelTest extends TestCase
+final class PostContextModelTest extends TestCase
 {
     public function testEachKindIsAllowedByItsOwnGate(): void
     {
-        $repliesOnly = new ResponseContextModel(canReply: true, canQuote: false);
-        $quotesOnly = new ResponseContextModel(canReply: false, canQuote: true);
+        $repliesOnly = new PostContextModel(canReply: true, canQuote: false);
+        $quotesOnly = new PostContextModel(canReply: false, canQuote: true);
 
         self::assertTrue($repliesOnly->allows(ResponseKind::Reply));
         self::assertFalse($repliesOnly->allows(ResponseKind::Quote));

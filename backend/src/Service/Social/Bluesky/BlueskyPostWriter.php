@@ -128,7 +128,7 @@ final readonly class BlueskyPostWriter implements PostWriterInterface
     private static function buildReplyRefs(SocialPostModel $target): array
     {
         $parent = BlueskyStrongRef::fromPost($target);
-        $root = $target->responseContext->threadRoot;
+        $root = $target->postContext->threadRoot;
 
         return [
             'root' => null === $root ? $parent : ['uri' => $root->uri, 'cid' => $root->contentId],
