@@ -31,7 +31,7 @@ final class ComposerContextsTest extends DbTestCase
     private const string INSTANCE = 'GET https://mastodon.example/api/v2/instance';
     private const string OWN_ACCOUNT = 'GET https://mastodon.example/api/v1/accounts/verify_credentials';
 
-    public function testAMastodonLinkContextStartsFromTheTitleWithinTheLinkBudget(): void
+    public function testAMastodonLinkContextLeavesRoomForTheLinkAndStartsFromTheTitle(): void
     {
         $account = SocialFeeds::persistedAccount(
             $this->entityManager,
@@ -42,8 +42,7 @@ final class ComposerContextsTest extends DbTestCase
         $context = $this->contexts()->buildLinkContext($account, new SharedLinkModel('https://news.example/a', $title));
 
         self::assertSame(475, $context->defaults->maxCharacters);
-        self::assertLessThanOrEqual(475, mb_strlen($context->text));
-        self::assertStringStartsWith('title title', $context->text);
+        self::assertSame($title, $context->text);
     }
 
     private function contexts(): ComposerContexts

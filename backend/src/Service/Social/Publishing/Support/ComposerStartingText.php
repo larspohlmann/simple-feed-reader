@@ -23,14 +23,14 @@ final class ComposerStartingText
         return [] === $mentions ? '' : implode(' ', $mentions) . ' ';
     }
 
-    /** The title, or the quote, alone, cut to fit: a link post carries its link outside the text. */
+    /** The title, or the quote, alone: a link post carries its link outside the text, in the card or the status. */
     public static function sharing(SharedLinkModel $link, int $maxCharacters): string
     {
         if ('' !== $link->quote) {
             return self::quoting($link->quote, $maxCharacters);
         }
 
-        return WordBoundary::clipped($link->title, $maxCharacters);
+        return $link->title;
     }
 
     /** The quote in typographic quotes, cut at a word so the whole fits $room characters; nothing without a quote. */

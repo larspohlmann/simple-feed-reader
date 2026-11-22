@@ -226,7 +226,7 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         $client->request('GET', self::LINK_COMPOSER . 'bluesky&title=' . rawurlencode(str_repeat('ä', 1000)));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(str_repeat('ä', BlueskyPostWriter::MAX_GRAPHEMES - 1) . '…', $this->payload($client)['text']);
+        self::assertSame(str_repeat('ä', LinkCardContent::TITLE_MAX), $this->payload($client)['text']);
     }
 
     public function testTheLinkComposerWritesAsTheAccountTheReaderChose(): void

@@ -33,11 +33,6 @@ final class ComposerStartingTextTest extends TestCase
         self::assertSame('Title', ComposerStartingText::sharing(new SharedLinkModel(self::URL, 'Title'), 475));
     }
 
-    public function testALongTitleIsCutAtAWordToTheLimitItIsGiven(): void
-    {
-        self::assertSame('one two…', ComposerStartingText::sharing(new SharedLinkModel(self::URL, 'one two three'), 9));
-    }
-
     public function testALinkPostWithoutATitleStartsEmpty(): void
     {
         self::assertSame('', ComposerStartingText::sharing(new SharedLinkModel(self::URL, ''), 475));
