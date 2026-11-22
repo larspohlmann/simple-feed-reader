@@ -8,7 +8,8 @@
   <a
     class="story-link"
     [routerLink]="storyLink()"
-    queryParamsHandling="preserve"
+    [queryParams]="storyListQueryParams"
+    queryParamsHandling="merge"
     [attr.aria-labelledby]="titleId()"
     [attr.aria-describedby]="synopsisId()"
   >

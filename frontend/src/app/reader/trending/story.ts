@@ -17,6 +17,9 @@ export function storyListLink(storyId: number): [string, number] {
   return ['/trending/stories', storyId];
 }
 
+/** Merged into the current query, so a story opens over the current list but closes an open article (#2479). */
+export const STORY_LIST_QUERY_PARAMS = { entry: null, link: null } as const;
+
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts
  *  entries the card does not show, or because one of its articles was opened here (#2017). */
 export function isStoryViewed(story: TrendingStoryDto): boolean {
