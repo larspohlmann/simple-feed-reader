@@ -9,7 +9,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
@@ -50,6 +50,7 @@ import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
+import { PageScrollbar } from '../../../shared/page-scrollbar/page-scrollbar';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
 import { FeedLanguage } from '../../feed-language';
@@ -323,10 +324,9 @@ export class EntryListComponent {
     layout: this.listBottom.layout,
   });
 
-  private readonly root = inject(DOCUMENT).documentElement;
+  private readonly pageScrollbar = inject(PageScrollbar);
   private readonly _hidePageScrollbar = effect((onCleanup) => {
-    this.root.classList.toggle('page-scrollbar-hidden', this.progressRail.replacesScrollbar());
-    onCleanup(() => this.root.classList.remove('page-scrollbar-hidden'));
+    if (this.progressRail.replacesScrollbar()) onCleanup(this.pageScrollbar.hide());
   });
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
