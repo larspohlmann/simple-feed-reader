@@ -36,6 +36,9 @@
   .bell::before {
     content: '';
     position: absolute;
+
+    /* A '+' or the label sits one --space-2 to the left: the tap area stops halfway across that gap. */
     inset: calc((var(--icon-dense) - var(--tap-target)) / 2);
+    left: calc(var(--space-2) / -2);
   }
 }

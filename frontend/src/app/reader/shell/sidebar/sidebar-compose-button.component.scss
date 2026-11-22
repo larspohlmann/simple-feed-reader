@@ -28,6 +28,9 @@
   .compose::before {
     content: '';
     position: absolute;
+
+    /* The bell sits one --space-2 to the right: each tap area stops halfway across that gap. */
     inset: calc((var(--icon-dense) - var(--tap-target)) / 2);
+    right: calc(var(--space-2) / -2);
   }
 }
