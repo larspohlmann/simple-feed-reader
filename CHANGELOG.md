@@ -10,6 +10,22 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.2] - 2026-11-22
+
+## What's Changed
+* perf(#2470): recommendation runs load favorites alone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2472
+* fix(#2471): VIEWED and LIKED list each post once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2473
+* fix(#2477): a Bluesky link card's thumbnail stays off the post's own media by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2478
+* fix(#2479): a story link closes the open article by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2480
+* refactor(#2476): one general publish path for social posts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2481
+* feat(#2474): compose a new text post on Bluesky or Mastodon from the sidebar by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2482
+* fix(#2474): equal spacing between the label, '+' and bell in the sidebar card head by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2483
+* fix(#2474): '+' and bell as chevron-style buttons, aligned before a four-digit count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2484
+* feat(#2485): pending dots while marking all notifications seen by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2486
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.1...v1.10.2
+
 ## [v1.10.1] - 2026-11-22
 
 ## What's Changed
