@@ -256,6 +256,37 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertSame([$lower->requireId()], $this->entryIds($liked));
     }
 
+    public function testALowerCopyInAFeedOnlyAStrangerFollowsDoesNotHideMine(): void
+    {
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($stranger);
+        $strangersFeed = new Feed('https://stranger.example.com/feed.xml');
+        $this->entityManager->persist($strangersFeed);
+        $this->entityManager->persist(
+            new Subscription($stranger, $strangersFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $lower = SavedPostFixtures::entry(
+            $this->entityManager,
+            $strangersFeed,
+            'copy',
+            'https://stranger.example.com/copy',
+        );
+        $higher = $this->persistEntry('copy');
+        $item = $this->linkNewItem($lower, CanonicalItemKind::Mastodon);
+        $higher->linkTo($item);
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $this->user,
+            $item,
+            new \DateTimeImmutable('2026-10-02 10:00:00'),
+        );
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$higher->requireId()], $this->entryIds($liked));
+    }
+
     public function testALikedPostInAFeedTheReaderLeftHasNoLine(): void
     {
         $leftFeed = new Feed('https://left.example.com/feed.xml');
