@@ -1,0 +1,58 @@
+[
+  {
+    "id": "1200",
+    "type": "favourite",
+    "created_at": "2026-11-16T09:00:00.000Z",
+    "account": {
+      "id": "201",
+      "acct": "bob",
+      "display_name": "Bob",
+      "avatar": "https://cdn.example/bob.png"
+    },
+    "status": {
+      "id": "7001",
+      "uri": "https://mastodon.example/ap/users/1174/statuses/7001",
+      "url": "https://mastodon.example/@alice/7001",
+      "content": "<p>First post</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "109",
+        "acct": "alice"
+      }
+    }
+  },
+  {
+    "id": "1190",
+    "type": "quote",
+    "created_at": "2026-11-16T08:00:00.000Z",
+    "account": {
+      "id": "207",
+      "acct": "gus",
+      "display_name": "Gus",
+      "avatar": "https://cdn.example/gus.png"
+    },
+    "status": {
+      "id": "7003",
+      "uri": "https://other.example/users/gus/statuses/7003",
+      "content": "<p>quoting</p>",
+      "in_reply_to_account_id": null,
+      "account": {
+        "id": "207",
+        "acct": "gus"
+      },
+      "quote": {
+        "state": "accepted",
+        "quoted_status": {
+          "id": "7002",
+          "uri": "https://mastodon.example/ap/users/1174/statuses/7002",
+          "url": "https://mastodon.example/@alice/7002",
+          "content": "<p>The post they quoted</p>",
+          "account": {
+            "id": "109",
+            "acct": "alice"
+          }
+        }
+      }
+    }
+  }
+]

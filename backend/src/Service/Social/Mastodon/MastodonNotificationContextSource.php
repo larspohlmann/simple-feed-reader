@@ -99,7 +99,7 @@ final readonly class MastodonNotificationContextSource implements NotificationCo
             $context = $context->withOnComment();
         }
 
-        $keys = $row->subject->keys->withAnswered(MastodonStatusKey::parseKey($answered->string('uri'))?->keyHash());
+        $keys = $row->subject->keys->withAnswered(MastodonStatusKey::parseStatusKey($answered)?->keyHash());
 
         return $row->subject->withContext($context)->withKeys($keys);
     }

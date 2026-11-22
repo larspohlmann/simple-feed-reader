@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Mastodon\Support;
 
+use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Mastodon\Support\MastodonStatusKey;
 use PHPUnit\Framework\TestCase;
 
@@ -11,8 +12,8 @@ final class MastodonStatusKeyTest extends TestCase
 {
     public function testStatusPageAndUriShareOneKey(): void
     {
-        $page = MastodonStatusKey::parseKey('https://mastodon.example/@alice/123');
-        $uri = MastodonStatusKey::parseKey('https://mastodon.example/users/alice/statuses/123');
+        $page = MastodonStatusKey::parseEntryKey('https://mastodon.example/@alice/123', null);
+        $uri = MastodonStatusKey::parseEntryKey('https://mastodon.example/users/alice/statuses/123', null);
 
         self::assertSame('https://mastodon.example/users/alice/statuses/123', $page?->key);
         self::assertNotNull($uri);
@@ -23,13 +24,13 @@ final class MastodonStatusKeyTest extends TestCase
     {
         $address = 'https://pl.example/objects/9f1c';
 
-        self::assertSame($address, MastodonStatusKey::parseKey($address)?->key);
+        self::assertSame($address, MastodonStatusKey::parseEntryKey($address, null)?->key);
     }
 
     public function testNoAddressIsNoKey(): void
     {
-        self::assertNull(MastodonStatusKey::parseKey(null));
-        self::assertNull(MastodonStatusKey::parseKey('not a url'));
+        self::assertNull(MastodonStatusKey::parseEntryKey(null, null));
+        self::assertNull(MastodonStatusKey::parseEntryKey('not a url', null));
     }
 
     public function testEntryKeyPrefersAStatusAddressOverAnEarlierAbsoluteOne(): void
@@ -51,5 +52,28 @@ final class MastodonStatusKeyTest extends TestCase
             MastodonStatusKey::parseEntryKey(null, 'https://pl.example/other')?->key,
         );
         self::assertNull(MastodonStatusKey::parseEntryKey('not a url', null));
+    }
+
+    public function testAStatusOnAnApAddressTakesItsKeyFromItsPage(): void
+    {
+        $status = JsonNodeModel::fromValue([
+            'uri' => 'https://mastodon.example/ap/users/1174/statuses/123',
+            'url' => 'https://mastodon.example/@alice/123',
+        ]);
+
+        self::assertSame(
+            'https://mastodon.example/users/alice/statuses/123',
+            MastodonStatusKey::parseStatusKey($status)?->key,
+        );
+    }
+
+    public function testAStatusWithoutAPageKeepsItsUri(): void
+    {
+        $status = JsonNodeModel::fromValue(['uri' => 'https://mastodon.example/users/alice/statuses/123']);
+
+        self::assertSame(
+            'https://mastodon.example/users/alice/statuses/123',
+            MastodonStatusKey::parseStatusKey($status)?->key,
+        );
     }
 }
