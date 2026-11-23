@@ -191,7 +191,7 @@ export class EntryRowCache {
   private adoptHomeUrl(entryId: number, homeUrl: string | null | undefined): void {
     if (homeUrl == null) return;
     this.patch(this.collectIdsWithCopies([entryId]), (entry) =>
-      entry.discussionHomeUrl === homeUrl ? entry : { ...entry, discussionHomeUrl: homeUrl },
+      entry.discussionHomeUrl === null ? { ...entry, discussionHomeUrl: homeUrl } : entry,
     );
   }
 

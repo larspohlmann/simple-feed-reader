@@ -1311,6 +1311,25 @@ describe('EntriesStore', () => {
       expect(store.entries().map((row) => row.discussionHomeUrl)).toEqual([homeUrl, homeUrl]);
     });
 
+    it('keepsTheHomeAddressACopyAlreadyHas', () => {
+      const ownHome = 'https://own.test/post/3';
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            entry(1, { score: 10, myVote: 0, canonicalItemId: 7 }),
+            entry(2, { score: 10, myVote: 0, canonicalItemId: 7, discussionHomeUrl: ownHome }),
+          ],
+          nextCursor: null,
+        });
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 10, discussionHomeUrl: homeUrl });
+
+      expect(store.entries().map((row) => row.discussionHomeUrl)).toEqual([homeUrl, ownHome]);
+    });
+
     it('adoptsTheHomeAddressACastVoteReports', () => {
       loadVotable(0);
 
