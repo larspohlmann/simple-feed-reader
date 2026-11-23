@@ -102,6 +102,6 @@
 }
 
 // The airy sidebar's search band is the sheet itself: no well.
-:host-context(.airy).inset .row {
+:host-context(.sidebar-airy).inset .row {
   background: none;
 }

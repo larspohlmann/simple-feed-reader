@@ -33,7 +33,7 @@
   }
 
   // The airy sidebar (#2493) draws no box: a faint rule above each section.
-  :host-context(.airy) .card {
+  :host-context(.sidebar-airy) .card {
     padding-block: var(--space-3);
     border-color: var(--airy-hrule) transparent transparent;
     border-radius: 0;
@@ -58,8 +58,8 @@
   }
 }
 
-// A host row passes `:host-context(.airy).current`: Angular compiles `:host-context(.airy):host(.current)` to `.airy.current`.
-@mixin row-states($row, $current, $airy-current: ':host-context(.airy) #{$current}') {
+// A host row passes `:host-context(.sidebar-airy).current`: Angular compiles `:host-context(.sidebar-airy):host(.current)` to `.sidebar-airy.current`.
+@mixin row-states($row, $current, $airy-current: ':host-context(.sidebar-airy) #{$current}') {
   @media (hover: hover) {
     #{$row}:hover {
       --dots-color: var(--text-primary);
@@ -402,7 +402,7 @@
   }
 
   // The airy sidebar: a head is a heading at the row size, an open one draws no band.
-  :host-context(.airy) .section-head:has(> [aria-expanded='true']) {
+  :host-context(.sidebar-airy) .section-head:has(> [aria-expanded='true']) {
     margin-top: 0;
     padding-block: 0;
     border-bottom-color: transparent;
@@ -414,18 +414,18 @@
   }
 
   @media (pointer: fine) {
-    :host-context(.airy) .section-head {
+    :host-context(.sidebar-airy) .section-head {
       height: var(--sidebar-row-h);
     }
   }
 
-  :host-context(.airy) .section-head .label {
+  :host-context(.sidebar-airy) .section-head .label {
     top: 0;
     color: var(--text-primary);
     font-size: var(--fs-base);
   }
 
-  :host-context(.airy) .section-head.current .label {
+  :host-context(.sidebar-airy) .section-head.current .label {
     color: var(--accent);
   }
 }
@@ -463,7 +463,7 @@
     background: var(--surface-sunken);
   }
 
-  :host-context(.airy) .group.open {
+  :host-context(.sidebar-airy) .group.open {
     background: none;
   }
 }

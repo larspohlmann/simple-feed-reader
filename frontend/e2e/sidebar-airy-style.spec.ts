@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page, Route } from '@playwright/test';
 import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
@@ -48,7 +48,7 @@ const TOTALS = {
  */
 async function stubSidebar(page: Page, initialStyle: SidebarStyle): Promise<void> {
   let sidebarStyle = initialStyle;
-  const getOnly = (body: () => unknown) => (route: import('@playwright/test').Route) =>
+  const getOnly = (body: () => unknown) => (route: Route) =>
     route.request().method() === 'GET' ? route.fulfill({ json: body() }) : route.fallback();
 
   await page.route(
@@ -152,13 +152,14 @@ test.describe('the airy sidebar on a desktop', () => {
     test.skip(!(await openReader(page, 'airy')), SKIP);
 
     const aside = page.locator('aside.sidebar');
-    await expect(aside).toHaveClass(/\bairy\b/);
+    await expect(aside).toHaveClass(/\bsidebar-airy\b/);
     expect(await aside.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
       await tokenColor(page, '--surface-2'),
     );
 
     const search = page.locator('.search-card');
-    expect((await search.boundingBox())!.height).toBe(56);
+    const header = page.locator('.list-header');
+    expect((await search.boundingBox())!.height).toBe((await header.boundingBox())!.height);
     const searchRule = await bottomBorderEdge(page, '.search-card');
     const headerRule = await bottomBorderEdge(page, '.list-header');
     expect(
@@ -166,19 +167,19 @@ test.describe('the airy sidebar on a desktop', () => {
       'the search rule runs into the header rule',
     ).toBeLessThanOrEqual(0.5);
 
-    const boxed = await page
-      .locator('aside.sidebar .card')
-      .evaluateAll(
-        (cards) =>
-          cards
-            .map((card) => getComputedStyle(card))
-            .filter(
-              (style) =>
-                style.backgroundImage !== 'none' ||
-                style.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
-                style.borderTopLeftRadius !== '0px',
-            ).length,
-      );
+    const cards = page.locator('aside.sidebar .card');
+    expect(await cards.count(), 'the sidebar draws cards to check').toBeGreaterThan(0);
+    const boxed = await cards.evaluateAll(
+      (elements) =>
+        elements
+          .map((card) => getComputedStyle(card))
+          .filter(
+            (style) =>
+              style.backgroundImage !== 'none' ||
+              style.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+              style.borderTopLeftRadius !== '0px',
+          ).length,
+    );
     expect(boxed, 'a card still draws a fill or a rounded box').toBe(0);
 
     const mastodon = page.getByTestId('sidebar-social-mastodon').locator('.label');
@@ -190,7 +191,7 @@ test.describe('the airy sidebar on a desktop', () => {
   test('boxed keeps its filled cards', async ({ page }) => {
     test.skip(!(await openReader(page, 'boxed')), SKIP);
 
-    await expect(page.locator('aside.sidebar')).not.toHaveClass(/\bairy\b/);
+    await expect(page.locator('aside.sidebar')).not.toHaveClass(/\bsidebar-airy\b/);
     const background = await page
       .locator('aside.sidebar .card')
       .first()
@@ -200,7 +201,7 @@ test.describe('the airy sidebar on a desktop', () => {
 
   test('picking Airy in Settings redraws the sidebar without a reload', async ({ page }) => {
     test.skip(!(await openReader(page, 'boxed')), SKIP);
-    await expect(page.locator('aside.sidebar')).not.toHaveClass(/\bairy\b/);
+    await expect(page.locator('aside.sidebar')).not.toHaveClass(/\bsidebar-airy\b/);
     await page.evaluate(() => ((window as unknown as { unreloaded: boolean }).unreloaded = true));
 
     await page.locator('.account > button[aria-haspopup="menu"]').click();
@@ -212,7 +213,7 @@ test.describe('the airy sidebar on a desktop', () => {
       .click();
     await page.locator('app-settings-shell a.back').click();
 
-    await expect(page.locator('aside.sidebar')).toHaveClass(/\bairy\b/);
+    await expect(page.locator('aside.sidebar')).toHaveClass(/\bsidebar-airy\b/);
     expect(
       await page.evaluate(() => (window as unknown as { unreloaded?: boolean }).unreloaded),
       'the page reloaded',
@@ -228,7 +229,7 @@ test.describe('the airy sidebar on a phone', () => {
 
     await page.getByRole('button', { name: 'Toggle sidebar' }).click();
     const aside = page.locator('aside.sidebar');
-    await expect(aside).toHaveClass(/\bairy\b/);
+    await expect(aside).toHaveClass(/\bsidebar-airy\b/);
     await expect(page.getByRole('navigation', { name: 'Feeds' })).toBeVisible();
 
     const tapTarget = await aside.evaluate((element) =>

@@ -13,7 +13,7 @@
 @include row.row-states('.nav', '.nav.active');
 
 /* The airy sheet's first section: no rule under the search band or the drawer's title. */
-:host-context(.airy) .card {
+:host-context(.sidebar-airy) .card {
   padding-top: var(--space-1);
   border-top-color: transparent;
 }
