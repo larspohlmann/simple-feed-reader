@@ -35,6 +35,20 @@ final class ProfileMergesTest extends TestCase
         self::assertSame([range(1, 14)], $this->merged($this->chainRun(), self::chainGroups()));
     }
 
+    public function testTheMostAlikePairMergesFirst(): void
+    {
+        $run = $this->runOf([
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip Kalbo'),
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip Kalbo Gimbor Hodrin'),
+            ...array_fill(0, 3, 'Gimbor Hodrin'),
+        ]);
+
+        self::assertSame(
+            [[1, 2, 3, 4, 5, 6], [7, 8, 9]],
+            $this->merged($run, [[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+        );
+    }
+
     public function testGroupsSharingOneStemAmongManyStayApart(): void
     {
         $run = $this->runOf([
