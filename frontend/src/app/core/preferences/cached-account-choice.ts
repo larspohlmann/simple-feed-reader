@@ -6,7 +6,7 @@ interface CachedAccountChoiceOptions<T extends string> {
   key: string;
   choices: readonly T[];
   fallback: T;
-  field: 'magazineStyle' | 'handedness';
+  field: 'magazineStyle' | 'handedness' | 'sidebarStyle';
 }
 
 /**

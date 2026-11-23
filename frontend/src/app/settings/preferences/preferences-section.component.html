@@ -90,6 +90,23 @@
     }
 
     <app-settings-row
+      [title]="'settings.sidebarStyle' | transloco"
+      [description]="'settings.sidebarStyleHint' | transloco"
+      [stackable]="true"
+    >
+      <app-segmented-choice
+        [options]="sidebarStyles"
+        [selected]="sidebarStyle.style()"
+        ariaLabelKey="settings.sidebarStyle"
+        labelPrefix="settings.sidebarStyleOption."
+        (pick)="sidebarStyle.set($event)"
+      />
+    </app-settings-row>
+    @if (sidebarStyle.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.sidebarStyleSaveFailed' | transloco" />
+    }
+
+    <app-settings-row
       [title]="'settings.handedness' | transloco"
       [description]="'settings.handednessHint' | transloco"
       [stackable]="true"

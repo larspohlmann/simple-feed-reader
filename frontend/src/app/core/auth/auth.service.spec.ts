@@ -13,6 +13,8 @@ import { HttpLocaleWriter } from '../i18n/http-locale-writer';
 import { PreferencesService } from '../preferences/preferences.service';
 import { DigestService } from '../preferences/digest.service';
 import { SHARING_KEY, SharingSettings } from '../preferences/sharing';
+import { SIDEBAR_STYLE_KEY } from '../preferences/sidebar-style';
+import { SidebarStyleService } from '../preferences/sidebar-style.service';
 import { SharingService } from '../preferences/sharing.service';
 import { SHARING_WRITER } from '../preferences/sharing-writer';
 import { AiAvailabilityService } from '../ai-availability.service';
@@ -265,6 +267,25 @@ describe('AuthService', () => {
     expect(sharing.enabled()).toBe(false);
     expect([...sharing.hidden()]).toEqual(['reddit']);
     expect(writeSharing).not.toHaveBeenCalled();
+  });
+
+  it('loadMe adopts the account sidebar style', () => {
+    service.loadMe().subscribe();
+    const body = meFixture({ passkeyOfferAnswered: true });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush({ ...body, preferences: { ...body.preferences, sidebarStyle: 'airy' } });
+
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('airy');
+  });
+
+  it('logout clears the cached sidebar style, so the next account never inherits it', () => {
+    TestBed.inject(SidebarStyleService).set('airy');
+
+    service.logout();
+
+    expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBeNull();
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
   });
 
   it('logout resets the sharing settings', () => {
