@@ -155,7 +155,7 @@ final class StoryGroupingTest extends TestCase
         $run = TrendingRuns::of(TrendingWindow::Day);
         for ($entryId = 1; $entryId <= $entryCount; $entryId++) {
             $publishedAt = \sprintf('2031-05-14 %02d:00:00', $hourOf($entryId));
-            $run->add(TrendingRuns::entry($entryId, $entryId, 'Entry', $publishedAt), [], null);
+            $run->add(TrendingRuns::entry($entryId, $entryId, \sprintf('Zl%03d', $entryId), $publishedAt), [], null);
         }
 
         return $run;

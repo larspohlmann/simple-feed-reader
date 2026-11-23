@@ -522,6 +522,32 @@ final class HeadlineWindowTest extends TestCase
         self::assertSame([1], array_keys($this->window->sharedWeightsWithEarlier(2)));
     }
 
+    public function testHeadlineStemIdsLeaveOutBodyStems(): void
+    {
+        $this->add(1, 10, 'Storm floods', 'Harbour warning');
+
+        self::assertCount(2, $this->window->collectHeadlineStemIds(1));
+    }
+
+    public function testHeadlineStemIdsLeaveOutFeedFiller(): void
+    {
+        for ($index = 1; $index <= 4; $index++) {
+            $this->add($index, 10, 'Briefing ' . self::uniqueWord($index), '');
+        }
+
+        self::assertSame([0], array_keys($this->window->collectHeadlineStemIds(1)));
+    }
+
+    public function testRarityFollowsDocumentFrequency(): void
+    {
+        $this->add(1, 10, 'Storm', '');
+        $this->add(2, 20, 'Storm', '');
+
+        [$stemId] = $this->window->collectHeadlineStemIds(1);
+
+        self::assertEqualsWithDelta(self::TWICE, $this->window->computeRarity($stemId), 0.0001);
+    }
+
     private function add(int $entryId, int $feedId, string $headline, string $body): void
     {
         $this->window->add(self::entry($entryId, $feedId, null, $headline), $body, null);
