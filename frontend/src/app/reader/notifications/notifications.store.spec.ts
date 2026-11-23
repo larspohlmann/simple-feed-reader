@@ -233,4 +233,66 @@ describe('NotificationsStore (#2240)', () => {
     http.expectOne(`${list('bluesky')}&cursor=9`).flush(page([group(5)]));
     expect(ids()).toEqual([9, 5]);
   });
+
+  describe('refresh (#2502)', () => {
+    const refreshUrl = 'https://api.test/api/me/notifications/refresh';
+
+    it('polls the network, then reads the list and the counts', () => {
+      store.open('bluesky');
+      http.expectOne(list('bluesky')).flush(page([group(7)]));
+
+      store.refresh();
+      const poll = http.expectOne(refreshUrl);
+      expect(poll.request.method).toBe('POST');
+      expect(poll.request.body).toEqual({ network: 'bluesky' });
+      expect(store.loading()).toBe(true);
+      http.expectNone(list('bluesky'));
+      expect(reloadCountsQuietly).not.toHaveBeenCalled();
+
+      poll.flush(null, { status: 204, statusText: 'No Content' });
+      expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+      http.expectOne(list('bluesky')).flush(page([group(9), group(7)]));
+      expect(ids()).toEqual([9, 7]);
+      expect(store.loading()).toBe(false);
+    });
+
+    it('still reloads the list and the counts when the poll fails', () => {
+      store.open('bluesky');
+      http.expectOne(list('bluesky')).flush(page([group(7)]));
+
+      store.refresh();
+      http
+        .expectOne(refreshUrl)
+        .flush(
+          { type: 'rate_limited', title: 'Too many requests', status: 429 },
+          { status: 429, statusText: 'Too Many Requests' },
+        );
+
+      expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 429 }));
+      expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+      http.expectOne(list('bluesky')).flush(page([group(7)]));
+      expect(ids()).toEqual([7]);
+      expect(store.error()).toBeNull();
+    });
+
+    it('drops a poll answered after switching networks', () => {
+      store.open('bluesky');
+      http.expectOne(list('bluesky')).flush(page([group(7)]));
+
+      store.refresh();
+      const poll = http.expectOne(refreshUrl);
+      store.open('mastodon');
+
+      expect(poll.cancelled).toBe(true);
+      http.expectOne(list('mastodon')).flush(page([group(3)]));
+      http.expectNone(list('bluesky'));
+      expect(ids()).toEqual([3]);
+    });
+
+    it('does nothing before a network is open', () => {
+      store.refresh();
+
+      http.expectNone(refreshUrl);
+    });
+  });
 });

@@ -23,6 +23,7 @@ import { NotificationListComponent } from './notification-list.component';
 
 describe('NotificationListComponent (#2240)', () => {
   const listUrl = 'https://api.test/api/me/notifications';
+  const refreshUrl = `${listUrl}/refresh`;
   const seenUrl = 'https://api.test/api/me/notifications/seen';
 
   const group = (id: number, over: Partial<NotificationGroupDto> = {}): NotificationGroupDto => ({
@@ -151,6 +152,7 @@ describe('NotificationListComponent (#2240)', () => {
     element.querySelector<HTMLButtonElement>('.refresh')?.click();
     fixture.detectChanges();
     expect(element.querySelector<HTMLButtonElement>('.mark-seen')?.disabled).toBe(true);
+    http.expectOne(refreshUrl).flush(null, { status: 204, statusText: 'No Content' });
     flushList(page([group(9, { seen: false })]));
   });
 
@@ -166,15 +168,19 @@ describe('NotificationListComponent (#2240)', () => {
     expect(element.querySelector('.unread-switch')).toBeNull();
   });
 
-  it('refresh reads the stored list again', () => {
+  it('refresh polls the network, then reads the list and the counts (#2502)', () => {
     const element = showing(page([group(9)]));
 
     element.querySelector<HTMLButtonElement>('.refresh')?.click();
     fixture.detectChanges();
 
-    flushList(page([group(9)]));
-    http.expectNone((request) => request.url.includes('/refresh'));
-    expect(reloadCountsQuietly).toHaveBeenCalled();
+    const poll = http.expectOne(refreshUrl);
+    expect(poll.request.body).toEqual({ network: 'bluesky' });
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
+    poll.flush(null, { status: 204, statusText: 'No Content' });
+    flushList(page([group(11), group(9)]));
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+    expect(element.querySelectorAll('app-notification-row')).toHaveLength(2);
   });
 
   it('marks all seen from the header', () => {

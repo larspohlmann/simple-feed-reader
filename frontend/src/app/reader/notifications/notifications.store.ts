@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { EMPTY, Subscription, catchError } from 'rxjs';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { Problem, parseProblem } from '../../core/problem';
 import { SocialNetworkName } from '../../core/social-network';
@@ -58,6 +58,23 @@ export class NotificationsStore {
     if (network !== null) this.loadFirstPage(network);
   }
 
+  refresh(): void {
+    const network = this.openNetwork();
+    if (network === null) return;
+    this.isLoading.set(true);
+    this.failure.set(null);
+    this.listRequest?.unsubscribe();
+    this.listRequest = this.api
+      .refresh(network)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          this.toast.showProblem(parseProblem(error));
+          return EMPTY;
+        }),
+      )
+      .subscribe({ complete: () => this.reloadListAndCounts(network) });
+  }
+
   loadMore(): void {
     const network = this.openNetwork();
     const cursor = this.cursor();
@@ -95,9 +112,7 @@ export class NotificationsStore {
       error: (error: HttpErrorResponse) => {
         this.toast.showProblem(parseProblem(error));
         this.isMarking.set(false);
-        if (this.openNetwork() !== network) return;
-        this.subscriptions.reloadCountsQuietly();
-        this.reload();
+        this.reloadListAndCounts(network);
       },
     });
   }
@@ -115,6 +130,12 @@ export class NotificationsStore {
     this.shownGroups.set([]);
     this.missingScope.set([]);
     this.reconnectNeeded.set([]);
+  }
+
+  private reloadListAndCounts(network: SocialNetworkName): void {
+    if (this.openNetwork() !== network) return;
+    this.subscriptions.reloadCountsQuietly();
+    this.loadFirstPage(network);
   }
 
   private loadFirstPage(network: SocialNetworkName): void {

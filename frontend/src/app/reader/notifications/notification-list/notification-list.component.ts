@@ -96,9 +96,4 @@ export class NotificationListComponent {
     this.store.nextCursor();
     if (node && scroller) onCleanup(observeSentinel(scroller, node, () => this.store.loadMore()));
   });
-
-  refresh(): void {
-    this.store.reload();
-    this.subscriptions.reloadCountsQuietly();
-  }
 }

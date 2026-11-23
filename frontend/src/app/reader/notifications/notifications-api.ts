@@ -16,6 +16,10 @@ export class NotificationsApi {
     return this.http.get<NotificationsPageDto>(`${this.base}/api/me/notifications`, { params });
   }
 
+  refresh(network: SocialNetworkName): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/me/notifications/refresh`, { network });
+  }
+
   markSeen(network: SocialNetworkName, upTo: number): Observable<void> {
     return this.http.post<void>(`${this.base}/api/me/notifications/seen`, { network, upTo });
   }
