@@ -48,6 +48,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     pending: false,
     social: null,
     discussionUrl: null,
+    discussionHomeUrl: null,
     comments: null,
     score: null,
     myVote: null,

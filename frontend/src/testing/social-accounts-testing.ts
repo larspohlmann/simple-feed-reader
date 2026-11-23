@@ -13,5 +13,8 @@ export function aMastodonAccount(serviceUrl = 'https://home.example'): SocialAcc
 }
 
 export function provideSocialAccounts(accounts: SocialAccountRefDto[] = []) {
-  return { provide: SubscriptionsStore, useValue: { socialAccounts: signal(accounts) } };
+  return {
+    provide: SubscriptionsStore,
+    useValue: { lemmyHosts: signal([]), socialAccounts: signal(accounts) },
+  };
 }

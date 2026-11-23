@@ -8,7 +8,7 @@
     />
     <a
       class="open"
-      [href]="links.open(post.url, network())"
+      [href]="links.open(post.url, { network: network() })"
       target="_blank"
       rel="noopener noreferrer"
     >
@@ -40,7 +40,7 @@
   @if (post.nestedQuote; as nested) {
     <a
       class="nested"
-      [href]="links.open(nested.url, network())"
+      [href]="links.open(nested.url, { network: network() })"
       target="_blank"
       rel="noopener noreferrer"
     >

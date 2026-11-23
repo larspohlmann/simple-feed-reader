@@ -215,7 +215,10 @@ describe('ReaderViewComponent', () => {
           provide: ArticlePostActions,
           useValue: { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() },
         },
-        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { lemmyHosts: signal([]), socialAccounts: signal([]) },
+        },
         {
           provide: CommentsService,
           useValue: { state: () => signal<CommentsState>({ status: 'idle' }), load: jest.fn() },
@@ -261,6 +264,7 @@ describe('ReaderViewComponent', () => {
       const lemmyAccount = (status: 'connected' | 'needs_reconnect') =>
         TestBed.overrideProvider(SubscriptionsStore, {
           useValue: {
+            lemmyHosts: signal([]),
             socialAccounts: signal([
               { id: 1, network: 'lemmy', handle: '@ann@lemmy.example', status },
             ]),
@@ -356,6 +360,7 @@ describe('ReaderViewComponent', () => {
   it('opens a Mastodon post on the reader’s own instance', () => {
     TestBed.overrideProvider(SubscriptionsStore, {
       useValue: {
+        lemmyHosts: signal([]),
         socialAccounts: signal([aMastodonAccount('https://home.test')]),
       },
     });
@@ -597,7 +602,10 @@ describe('ReaderViewComponent', () => {
     describe("the quoted post's link on the reader's instance", () => {
       const quotedOpenLink = (network: 'mastodon' | 'bluesky') => {
         TestBed.overrideProvider(SubscriptionsStore, {
-          useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+          useValue: {
+            lemmyHosts: signal([]),
+            socialAccounts: signal([aMastodonAccount('https://home.test')]),
+          },
         });
         const element = mount(
           entryWithBody('<p>Just a post</p>', {

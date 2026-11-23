@@ -61,7 +61,10 @@ describe('EntryQuotingComponent', () => {
 
   it("opens a Mastodon entry's quoted post on the reader's instance", () => {
     TestBed.overrideProvider(SubscriptionsStore, {
-      useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
+      useValue: {
+        lemmyHosts: signal([]),
+        socialAccounts: signal([aMastodonAccount('https://home.test')]),
+      },
     });
     const element = mount(
       quoting({

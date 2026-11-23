@@ -9,7 +9,10 @@ import { failingImageProxy } from './image-proxy-testing';
 export function provideArticlePageStubs(): Provider[] {
   return [
     { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-    { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
+    {
+      provide: SubscriptionsStore,
+      useValue: { lemmyHosts: signal([]), socialAccounts: signal([]) },
+    },
     { provide: ArticlePostActions, useValue: {} },
     { provide: ImageProxyService, useValue: failingImageProxy() },
   ];

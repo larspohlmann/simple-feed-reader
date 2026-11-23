@@ -56,7 +56,7 @@
                 @if (c.authorUrl) {
                   <a
                     class="author"
-                    [href]="links.open(c.authorUrl, socialNetwork())"
+                    [href]="links.open(c.authorUrl, { network: socialNetwork() })"
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ c.author }}</a
@@ -75,7 +75,7 @@
                   @if (c.url) {
                     <a
                       class="when"
-                      [href]="links.open(c.url, socialNetwork())"
+                      [href]="links.open(c.url, { network: socialNetwork() })"
                       target="_blank"
                       rel="noopener noreferrer"
                       >{{ when(publishedAt) }}</a

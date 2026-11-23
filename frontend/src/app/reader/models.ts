@@ -172,6 +172,7 @@ export interface SidebarTotalsDto {
 export interface SubscriptionsResponse extends SidebarTotalsDto {
   subscriptions: SubscriptionDto[];
   socialAccounts: SocialAccountRefDto[];
+  lemmyHosts: string[];
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -283,6 +284,7 @@ export interface EntryDto {
   social: EntrySocialDto | null;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
+  discussionHomeUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */
   comments: CommentsLoad | null;
   /** A Lemmy post's vote score, 0 and negatives included; null on every other source (#2217). */

@@ -4,6 +4,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { embedTrackOrigin } from '../../audio/embed-track';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
+import { entryOpenUrl } from '../../own-instance/entry-link-facts';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { ArticleSource } from '../content/article-source.service';
 import { ReaderModeService } from '../content/reader-mode.service';
@@ -41,10 +42,7 @@ export class EntryArticlePage implements ArticlePageSource {
 
   readonly key = computed(() => entryPageKey(this.entry().id));
   readonly url = computed(() => this.entry().url);
-  readonly openUrl = computed(() => {
-    const { url, social, discussionUrl } = this.entry();
-    return url === null ? discussionUrl : this.links.open(url, social?.network ?? null);
-  });
+  readonly openUrl = computed(() => entryOpenUrl(this.entry(), this.links));
   readonly title = computed(() => entryDisplayTitle(this.entry()));
   readonly shareTitle = computed(() => this.entry().title);
   readonly titleHidden = computed(() => {

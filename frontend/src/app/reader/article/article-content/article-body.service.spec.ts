@@ -136,7 +136,10 @@ describe('ArticleBody', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
-        { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { lemmyHosts: signal([]), socialAccounts: accounts },
+        },
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],

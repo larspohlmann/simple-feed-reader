@@ -139,7 +139,7 @@ export class ArticleBody {
     effect(
       (onCleanup) => {
         parts.html();
-        const instance = this.links.instanceFor(parts.network());
+        const instance = parts.network() === 'mastodon' ? this.links.instances().mastodon : null;
         if (!parts.content()?.nativeElement) return;
         let cancelled = false;
         onCleanup(() => (cancelled = true));
