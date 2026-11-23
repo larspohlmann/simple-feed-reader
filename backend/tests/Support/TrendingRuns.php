@@ -25,6 +25,20 @@ final class TrendingRuns
         );
     }
 
+    /** @param list<string> $headlines one entry per headline, ids from 1, each in its own feed */
+    public static function buildHeadlineRun(
+        TrendingWindow $window,
+        array $headlines,
+        string $effectiveDate,
+    ): TrendingRun {
+        $run = self::of($window);
+        foreach ($headlines as $index => $headline) {
+            $run->add(self::entry($index + 1, $index + 1, $headline, $effectiveDate), [], null);
+        }
+
+        return $run;
+    }
+
     public static function entry(int $id, int $feedId, string $title, string $effectiveDate): WindowEntryModel
     {
         return self::entryIn(null, $id, $feedId, $title, $effectiveDate);

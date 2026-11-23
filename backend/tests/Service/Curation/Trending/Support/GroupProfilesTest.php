@@ -22,10 +22,7 @@ final class GroupProfilesTest extends TestCase
 
         $profile = GroupProfiles::build($run, [1, 2, 3]);
 
-        $sharedStemIds = array_values(array_intersect(
-            $run->headlines->collectHeadlineStemIds(1),
-            $run->headlines->collectHeadlineStemIds(2),
-        ));
+        $sharedStemIds = $this->collectStemIdsTheFirstTwoShare($run);
         self::assertCount(2, $sharedStemIds);
         self::assertEqualsCanonicalizing($sharedStemIds, array_keys($profile->stemWeights));
         foreach ($sharedStemIds as $stemId) {
@@ -46,10 +43,7 @@ final class GroupProfilesTest extends TestCase
 
         $profile = GroupProfiles::build($run, [1, 2, 3, 4, 5]);
 
-        $sharedStemIds = array_values(array_intersect(
-            $run->headlines->collectHeadlineStemIds(1),
-            $run->headlines->collectHeadlineStemIds(2),
-        ));
+        $sharedStemIds = $this->collectStemIdsTheFirstTwoShare($run);
         self::assertCount(1, $sharedStemIds);
         self::assertSame($sharedStemIds, array_keys($profile->stemWeights));
     }
@@ -95,11 +89,15 @@ final class GroupProfilesTest extends TestCase
      */
     private function runOf(array $headlines): TrendingRun
     {
-        $run = TrendingRuns::of(TrendingWindow::Day);
-        foreach ($headlines as $index => $headline) {
-            $run->add(TrendingRuns::entry($index + 1, $index + 1, $headline, '2031-05-07 08:00:00'), [], null);
-        }
+        return TrendingRuns::buildHeadlineRun(TrendingWindow::Day, $headlines, '2031-05-07 08:00:00');
+    }
 
-        return $run;
+    /** @return list<int> */
+    private function collectStemIdsTheFirstTwoShare(TrendingRun $run): array
+    {
+        return array_values(array_intersect(
+            $run->headlines->collectHeadlineStemIds(1),
+            $run->headlines->collectHeadlineStemIds(2),
+        ));
     }
 }

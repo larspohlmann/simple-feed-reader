@@ -161,11 +161,6 @@ final class ProfileMergesTest extends TestCase
     /** @param list<string> $headlines */
     private function runOf(array $headlines): TrendingRun
     {
-        $run = TrendingRuns::of(TrendingWindow::Day);
-        foreach ($headlines as $index => $headline) {
-            $run->add(TrendingRuns::entry($index + 1, $index + 1, $headline, self::SAME_TIME), [], null);
-        }
-
-        return $run;
+        return TrendingRuns::buildHeadlineRun(TrendingWindow::Day, $headlines, self::SAME_TIME);
     }
 }

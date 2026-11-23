@@ -9,6 +9,8 @@ use App\Service\Curation\Trending\Pass\TrendingRun;
 
 final class GroupProfiles
 {
+    private const int MORE_THAN_ONE_MEMBER_IN = 3;
+
     /**
      * @param non-empty-list<int> $entryIds
      */
@@ -26,7 +28,7 @@ final class GroupProfiles
 
         $stemWeights = [];
         foreach ($membersPerStem as $stemId => $members) {
-            if ($members * 3 > $memberCount) {
+            if ($members * self::MORE_THAN_ONE_MEMBER_IN > $memberCount) {
                 $stemWeights[$stemId] = $members / $memberCount * $run->headlines->computeRarity($stemId);
             }
         }
