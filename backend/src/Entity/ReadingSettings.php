@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\SidebarStyle;
 use App\Repository\ReadingSettingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -23,6 +24,9 @@ final class ReadingSettings
     #[ORM\Column(length: 10, enumType: MagazineStyle::class, options: ['default' => 'boxed'])]
     private MagazineStyle $magazineStyle = MagazineStyle::Boxed;
 
+    #[ORM\Column(length: 10, enumType: SidebarStyle::class, options: ['default' => 'boxed'])]
+    private SidebarStyle $sidebarStyle = SidebarStyle::Boxed;
+
     #[ORM\Column(length: 5, enumType: Handedness::class, options: ['default' => 'right'])]
     private Handedness $handedness = Handedness::Right;
 
@@ -33,6 +37,7 @@ final class ReadingSettings
     {
         $this->scrapeFallbackEnabled = $change->scrapeFallbackEnabled ?? $this->scrapeFallbackEnabled;
         $this->magazineStyle = $change->magazineStyle ?? $this->magazineStyle;
+        $this->sidebarStyle = $change->sidebarStyle ?? $this->sidebarStyle;
         $this->handedness = $change->handedness ?? $this->handedness;
         $this->trendingEnabled = $change->trendingEnabled ?? $this->trendingEnabled;
     }
@@ -55,6 +60,16 @@ final class ReadingSettings
     public function setMagazineStyle(MagazineStyle $magazineStyle): void
     {
         $this->magazineStyle = $magazineStyle;
+    }
+
+    public function getSidebarStyle(): SidebarStyle
+    {
+        return $this->sidebarStyle;
+    }
+
+    public function setSidebarStyle(SidebarStyle $sidebarStyle): void
+    {
+        $this->sidebarStyle = $sidebarStyle;
     }
 
     public function getHandedness(): Handedness

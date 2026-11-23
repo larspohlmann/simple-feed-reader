@@ -9,6 +9,7 @@ use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\SidebarStyle;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,23 @@ final class ReadingSettingsTest extends TestCase
 
         self::assertFalse($settings->isScrapeFallbackEnabled());
         self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
+        self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
         self::assertTrue($settings->isTrendingEnabled());
+    }
+
+    public function testApplyingASidebarStyleLeavesTheMagazineStyleAlone(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->apply(new ReadingSettingsChange(sidebarStyle: SidebarStyle::Airy));
+
+        self::assertSame(SidebarStyle::Airy, $settings->getSidebarStyle());
+        self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
+    }
+
+    public function testAChangeNamingOnlyTheSidebarStyleIsNotEmpty(): void
+    {
+        self::assertFalse((new ReadingSettingsChange(sidebarStyle: SidebarStyle::Airy))->isEmpty());
     }
 
     public function testScrapeFallbackCanBeEnabled(): void

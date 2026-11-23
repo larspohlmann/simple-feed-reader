@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Enum\MagazineStyle;
+use App\Enum\SidebarStyle;
 use App\Repository\ReadingSettingsRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -27,6 +28,19 @@ final class ReadingSettingsRepositoryTest extends DbTestCase
         $untouchedSettings = $this->repository()->forUser($this->reload($untouched));
         self::assertSame(MagazineStyle::Airy, $changedSettings->getMagazineStyle());
         self::assertSame(MagazineStyle::Boxed, $untouchedSettings->getMagazineStyle());
+    }
+
+    public function testTheSidebarStyleIsPerUser(): void
+    {
+        $changed = $this->user('sidebar-changed@example.test');
+        $untouched = $this->user('sidebar-untouched@example.test');
+        $this->repository()->forUser($changed)->setSidebarStyle(SidebarStyle::Airy);
+        $this->entityManager->flush();
+
+        $changedSettings = $this->repository()->forUser($this->reload($changed));
+        $untouchedSettings = $this->repository()->forUser($this->reload($untouched));
+        self::assertSame(SidebarStyle::Airy, $changedSettings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Boxed, $untouchedSettings->getSidebarStyle());
     }
 
     public function testAUserWhoseRowIsGoneIsCorruption(): void
