@@ -95,13 +95,14 @@ final class RestoreLoadPass
     private function loadAccount(AccountLine $line): void
     {
         $this->user->setLocale($line->locale);
-        $this->accountSettings->reading->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
-        $this->accountSettings->reading->setMagazineStyle($line->magazineStyle);
-        $this->accountSettings->reading->setHandedness($line->handedness);
+        $this->accountSettings->reading->setScrapeFallbackEnabled($line->reading->scrapeFallbackEnabled);
+        $this->accountSettings->reading->setMagazineStyle($line->reading->magazineStyle);
+        $this->accountSettings->reading->setSidebarStyle($line->reading->sidebarStyle);
+        $this->accountSettings->reading->setHandedness($line->reading->handedness);
         $this->accountSettings->sharing->setEnabled($line->sharingEnabled);
         $this->accountSettings->sharing->setHiddenTargets($line->hiddenShareTargets);
         $this->accountSettings->sharing->setRememberingShares($line->rememberShares);
-        $this->accountSettings->reading->setTrendingEnabled($line->trendingEnabled);
+        $this->accountSettings->reading->setTrendingEnabled($line->reading->trendingEnabled);
         $this->accountSettings->feedDirectoryScope->change(
             $line->feedDirectoryScope->countries,
             $line->feedDirectoryScope->languages,

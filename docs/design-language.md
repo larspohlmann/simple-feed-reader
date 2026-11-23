@@ -81,7 +81,7 @@ The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar
 
 | Token | Value | For |
 |---|---|---|
-| `--sidebar-nav-w` | `316px` | the desktop card column; the column adds an 8px gutter each side (332px) |
+| `--sidebar-nav-w` | `316px` | the desktop card column; the column adds an 8px gutter each side (332px), `--space-3` each side (340px) under the airy style |
 | `--sidebar-drawer-nav-w` | `336px` | the phone sheet's card column; with its 12/12/12/10 padding and right border the sheet is 359px, inside a 390pt iPhone |
 | `--sidebar-row-h` | `36px` | a row straight on a card: the smart views, a root tag |
 | `--sidebar-sub-row-h` | `32px` | a section head, a row in a section (feeds, saved searches, a network's feeds), a child tag, a group's own feeds |
@@ -1426,7 +1426,7 @@ The field emits; it never navigates. The shell owns the navigation, so both
 mount points — the desktop sidebar and the mobile header bar — drive one code
 path.
 
-In the desktop sidebar the field sits in the search card as `<app-search-field class="inset">`: the card draws the rim, and the field becomes a `--surface-0` well 38px tall with its left corners following the card's (#1749).
+In the desktop sidebar the field sits in the search card as `<app-search-field class="inset">`: the card draws the rim, and the field becomes a `--surface-0` well 38px tall with its left corners following the card's (#1749). The airy sidebar draws no well: the field sits straight on the sheet (#2493).
 
 `search` emits the settled term after the debounce, but a **clear** emits `''`
 at once: waiting 300 ms to leave a search makes the view feel stuck. The
@@ -1771,6 +1771,8 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 **Nesting** (two levels below the top, #1736, #1790). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box, and a grandchild's box is a `.tag-child` inside that one, on the same background and marked only by the compounded margin; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
 
 **Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
+
+**Airy** (#2493). The Settings choice `sidebarStyle` (`boxed` by default, under the magazine style) puts `.sidebar-airy` on the shell's `aside.sidebar`, and every airy rule is scoped by that class; the magazine's `.airy` is a separate choice. The column is one sheet (`--airy-sheet`: `--surface-2` in light, `--surface-read` in dark) with no card boxes, drawn with hairline rules (`--airy-rule`, and the fainter `--airy-hrule` between sections). The search row is the list header's band, its height and one inset rule running into the header's own. A network head is a heading and its rows hang `--space-5` in on a hairline; the other section heads are heading-only, with no band when open. The current row is accent text plus a 3px inset accent bar, and hover keeps today's fill.
 
 ### Notifications list (#2240)
 

@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
 import { HandednessService } from '../../core/preferences/handedness.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
+import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { PREFERENCES_WRITER } from '../../core/preferences/preferences-writer';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
@@ -44,13 +45,37 @@ describe('PreferencesSectionComponent', () => {
     );
   });
 
-  it('offers a segmented choice for the language, the magazine style and the handedness', () => {
+  it('offers a segmented choice for the language, the magazine style, the sidebar style and the handedness', () => {
     const element = mount().nativeElement as HTMLElement;
     const labels = Array.from(element.querySelectorAll('app-segmented-choice [role="group"]')).map(
       (group) => group.getAttribute('aria-label'),
     );
 
-    expect(labels).toEqual(['Language', 'Magazine style', 'Handedness']);
+    expect(labels).toEqual(['Language', 'Magazine style', 'Sidebar style', 'Handedness']);
+  });
+
+  it('writes the sidebar style picked in its segmented choice', () => {
+    const fixture = mount();
+    const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
+    const airy = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '[aria-label="Sidebar style"] button',
+      ),
+    ).find((button) => button.textContent?.trim() === en.settings.sidebarStyleOption.airy)!;
+
+    airy.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('airy');
+    expect(write).toHaveBeenCalledWith({ sidebarStyle: 'airy' });
+  });
+
+  it('surfaces a banner when the sidebar style write failed', () => {
+    const fixture = mount();
+    TestBed.inject(SidebarStyleService).saveFailed.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(en.settings.sidebarStyleSaveFailed);
   });
 
   it('writes the handedness picked in its segmented choice', () => {

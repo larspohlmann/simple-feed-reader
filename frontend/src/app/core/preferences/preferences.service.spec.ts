@@ -42,6 +42,7 @@ function account(preferences: Partial<UserPreferences> = {}): CurrentUser {
       },
       passkeyOfferAnswered: true,
       magazineStyle: 'boxed',
+      sidebarStyle: 'boxed',
       handedness: 'right',
       sharing: SHARING_EVERYTHING,
       trendingEnabled: true,

@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use 'sidebar-row' as row;
 
 :host {
   @include glass-rim.filled(var(--surface-1), var(--border));
@@ -150,4 +151,8 @@
 :host(.organising) .meta {
   min-height: var(--space-6);
   padding: 0 var(--space-1) 0 var(--space-3);
+}
+
+:host-context(.sidebar-airy) {
+  @include row.airy-section-rule;
 }

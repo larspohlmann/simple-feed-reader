@@ -91,6 +91,30 @@
   text-overflow: ellipsis;
 }
 
+/* The airy sidebar: the network's name is its heading, and its rows hang one step in on a hairline. */
+:host-context(.sidebar-airy) .section-head app-network-logo {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+/* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon". */
+:host-context(.sidebar-airy) .section-head app-sidebar-compose-button {
+  margin-left: calc(var(--space-1) * -1.5);
+}
+
+:host-context(.sidebar-airy) .rows {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+:host-context(.sidebar-airy) .rows::before {
+  @include row.airy-rail(var(--space-0));
+}
+
+:host-context(.sidebar-airy) .divider {
+  border-top-color: var(--airy-hrule);
+}
+
 .organising .section-head {
   gap: calc(var(--space-2) + var(--space-0));
 }

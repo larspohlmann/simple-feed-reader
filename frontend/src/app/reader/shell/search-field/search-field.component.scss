@@ -100,3 +100,8 @@
 :host(.inset) .hint {
   margin-inline-start: var(--sidebar-row-inset);
 }
+
+// The airy sidebar's search band is the sheet itself: no well.
+:host-context(.sidebar-airy).inset .row {
+  background: none;
+}

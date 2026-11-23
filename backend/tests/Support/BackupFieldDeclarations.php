@@ -44,6 +44,7 @@ final class BackupFieldDeclarations
         ReadingSettings::class => [
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
+            'sidebarStyle' => 'sidebarStyle',
             'handedness' => 'handedness',
             'trendingEnabled' => 'trendingEnabled',
         ],

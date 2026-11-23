@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Operations\Backup\Dto;
 
 use App\Entity\User;
-use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
-use App\Enum\MagazineStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Identity\Account\Model\AccountSettingsModel;
 use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
+use App\Service\Operations\Backup\Model\ReadingSettingsLineModel;
 use App\Service\Operations\Backup\Support\BackupLineFormat;
 use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Service\Operations\Backup\Support\LineField;
@@ -33,13 +32,10 @@ final readonly class AccountLine
      */
     public function __construct(
         public string $locale,
-        public bool $scrapeFallbackEnabled,
-        public MagazineStyle $magazineStyle,
-        public Handedness $handedness,
+        public ReadingSettingsLineModel $reading,
         public bool $sharingEnabled,
         public array $hiddenShareTargets,
         public bool $rememberShares,
-        public bool $trendingEnabled,
         public FeedDirectoryScopeModel $feedDirectoryScope,
         public AccountNetworkSwitchesModel $networks,
     ) {
@@ -52,18 +48,10 @@ final readonly class AccountLine
     {
         return new self(
             locale: LineField::string($line, 'locale'),
-            scrapeFallbackEnabled: LineField::bool($line, 'scrapeFallbackEnabled'),
-            // An unknown style falls back to default: restore over reject.
-            magazineStyle: MagazineStyle::tryFrom(
-                LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
-            ) ?? MagazineStyle::Boxed,
-            handedness: Handedness::tryFrom(
-                LineFieldWithDefault::string($line, 'handedness', Handedness::Right->value),
-            ) ?? Handedness::Right,
+            reading: ReadingSettingsLineModel::fromLine($line),
             sharingEnabled: LineFieldWithDefault::bool($line, 'sharingEnabled', true),
             hiddenShareTargets: LineFieldWithDefault::stringList($line, 'hiddenShareTargets'),
             rememberShares: LineFieldWithDefault::bool($line, 'rememberShares', true),
-            trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
             feedDirectoryScope: self::feedDirectoryScope(LineField::objectOrNull($line, 'feedDirectoryScope') ?? []),
             networks: new AccountNetworkSwitchesModel(
                 self::networks($line, 'savedSearchIncludedNetworks'),
@@ -79,13 +67,10 @@ final readonly class AccountLine
     ): self {
         return new self(
             locale: $user->getLocale(),
-            scrapeFallbackEnabled: $settings->reading->isScrapeFallbackEnabled(),
-            magazineStyle: $settings->reading->getMagazineStyle(),
-            handedness: $settings->reading->getHandedness(),
+            reading: ReadingSettingsLineModel::fromSettings($settings->reading),
             sharingEnabled: $settings->sharing->isEnabled(),
             hiddenShareTargets: $settings->sharing->getHiddenTargets(),
             rememberShares: $settings->sharing->isRememberingShares(),
-            trendingEnabled: $settings->reading->isTrendingEnabled(),
             feedDirectoryScope: new FeedDirectoryScopeModel(
                 $settings->feedDirectoryScope->getCountries(),
                 $settings->feedDirectoryScope->getLanguages(),
@@ -99,13 +84,14 @@ final readonly class AccountLine
         return BackupLineFormat::encode([...[
             'kind' => BackupSchema::KIND_ACCOUNT,
             'locale' => $this->locale,
-            'scrapeFallbackEnabled' => $this->scrapeFallbackEnabled,
-            'magazineStyle' => $this->magazineStyle->value,
-            'handedness' => $this->handedness->value,
+            'scrapeFallbackEnabled' => $this->reading->scrapeFallbackEnabled,
+            'magazineStyle' => $this->reading->magazineStyle->value,
+            'sidebarStyle' => $this->reading->sidebarStyle->value,
+            'handedness' => $this->reading->handedness->value,
             'sharingEnabled' => $this->sharingEnabled,
             'hiddenShareTargets' => $this->hiddenShareTargets,
             'rememberShares' => $this->rememberShares,
-            'trendingEnabled' => $this->trendingEnabled,
+            'trendingEnabled' => $this->reading->trendingEnabled,
             'feedDirectoryScope' => [
                 'countries' => $this->feedDirectoryScope->countries,
                 'languages' => $this->feedDirectoryScope->languages,

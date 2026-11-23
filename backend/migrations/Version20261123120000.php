@@ -5,37 +5,51 @@ declare(strict_types=1);
 namespace DoctrineMigrations;
 
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * A text column, as entry's VARCHAR(2048) columns already fill MySQL's 65,535-byte row; a plain ADD COLUMN, so SQLite
- * keeps the entry table and its entry_search triggers.
- */
 final class Version20261123120000 extends AbstractMigration
 {
-    private const string COLUMN = 'discussion_home_url';
+    private const string TABLE = 'user_reading_settings';
+    private const string COLUMN = 'sidebar_style';
 
     public function getDescription(): string
     {
-        return 'Store a Lemmy account post\'s address on the reader\'s own instance (#2496).';
+        return 'Let an account choose the airy sidebar (#2493).';
     }
 
     public function up(Schema $schema): void
     {
-        $this->skipIf($schema->getTable('entry')->hasColumn(self::COLUMN), self::COLUMN . ' exists.');
-        $text = $this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? 'LONGTEXT' : 'CLOB';
-        $this->addSql('ALTER TABLE entry ADD ' . self::COLUMN . ' ' . $text . ' DEFAULT NULL');
+        $this->skipIf($schema->getTable(self::TABLE)->hasColumn(self::COLUMN), 'Already applied.');
+
+        $this->abortIfUnsupportedPlatform();
+        $this->addSql(\sprintf(
+            'ALTER TABLE %s ADD COLUMN %s VARCHAR(10) DEFAULT \'boxed\' NOT NULL',
+            self::TABLE,
+            self::COLUMN,
+        ));
     }
 
     public function down(Schema $schema): void
     {
-        $this->skipIf(!$schema->getTable('entry')->hasColumn(self::COLUMN), self::COLUMN . ' does not exist.');
-        $this->addSql('ALTER TABLE entry DROP COLUMN ' . self::COLUMN);
+        $this->skipIf(!$schema->getTable(self::TABLE)->hasColumn(self::COLUMN), 'Not applied.');
+
+        $this->abortIfUnsupportedPlatform();
+        $this->addSql(\sprintf('ALTER TABLE %s DROP COLUMN %s', self::TABLE, self::COLUMN));
     }
 
     public function isTransactional(): bool
     {
         return false;
+    }
+
+    private function abortIfUnsupportedPlatform(): void
+    {
+        $platform = $this->connection->getDatabasePlatform();
+        $this->abortIf(
+            !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
+            \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
+        );
     }
 }

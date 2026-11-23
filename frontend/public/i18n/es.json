@@ -28,6 +28,9 @@
     "magazineStyle": "Estilo de revista",
     "magazineStyleHint": "Cómo dibuja la vista de revista cada entrada.",
     "magazineStyleSaveFailed": "No se pudo guardar el estilo de revista en tu cuenta.",
+    "sidebarStyle": "Estilo de la barra lateral",
+    "sidebarStyleHint": "Cómo se dibuja la barra lateral.",
+    "sidebarStyleSaveFailed": "No se pudo guardar el estilo de la barra lateral en tu cuenta.",
     "sharing": "Compartir",
     "sharingEnabled": "Compartir artículos",
     "sharingEnabledHint": "El botón de compartir y compartir una selección de texto. Si lo desactivas, o si todos los destinos de abajo están desactivados, ambos desaparecen.",
@@ -35,6 +38,10 @@
     "sharingRememberHint": "Muestra lo que compartes en una red social en Compartidos y lo tiene en cuenta en Para ti.",
     "sharingSaveFailed": "No se pudo guardar tu configuración de compartir en tu cuenta.",
     "magazineStyleOption": {
+      "boxed": "En recuadros",
+      "airy": "Espaciado"
+    },
+    "sidebarStyleOption": {
       "boxed": "En recuadros",
       "airy": "Espaciado"
     },
