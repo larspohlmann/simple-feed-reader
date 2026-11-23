@@ -181,9 +181,9 @@ final readonly class EntryJson
     private static function findHomeUrl(EntryListRow $row): ?string
     {
         $itemId = $row->entry->getCanonicalItemId();
-        $sameItemCopies = array_filter(
+        $sameItemCopies = null === $itemId ? [] : array_filter(
             $row->duplicates,
-            static fn (EntryListRow $copy): bool => null !== $itemId && $copy->entry->getCanonicalItemId() === $itemId,
+            static fn (EntryListRow $copy): bool => $copy->entry->getCanonicalItemId() === $itemId,
         );
         foreach ([$row, ...$sameItemCopies] as $copy) {
             $homeUrl = $copy->entry->getDiscussion()->homeUrl;

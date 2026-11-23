@@ -24,41 +24,71 @@ final class LemmyHostsTest extends DbTestCase
     public function testCollectsAccountFeedAndCommunityHostsOnce(): void
     {
         $reader = $this->persistUser('reader@example.com');
-        $this->entityManager->persist(SocialAccounts::lemmyOf($reader, 'Home.Example'));
+        $account = SocialAccounts::lemmyOf($reader, 'Home.Example');
         $communityFeed = $this->subscribe($reader, 'https://lemmy.world/feeds/c/rust.xml', SocialNetwork::Lemmy);
         $this->persistPostIn($communityFeed, 'one', 'https://programming.dev/c/php');
         $this->persistPostIn($communityFeed, 'two', 'https://lemmy.world/c/rust');
 
-        self::assertSame(['home.example', 'lemmy.world', 'programming.dev'], $this->hosts()->collectForUser($reader));
+        self::assertSame(
+            ['home.example', 'lemmy.world', 'programming.dev'],
+            $this->hosts()->collectFor($reader->requireId(), [$account], [$communityFeed]),
+        );
     }
 
     public function testSortsTheHostsAndDropsAddressesWithoutOne(): void
     {
         $reader = $this->persistUser('reader@example.com');
-        $this->entityManager->persist(SocialAccounts::lemmyOf($reader, 'zeta.example'));
+        $account = SocialAccounts::lemmyOf($reader, 'zeta.example');
         $feed = $this->subscribe($reader, 'https://alpha.example/feeds/c/rust.xml', SocialNetwork::Lemmy);
         $this->persistPostIn($feed, 'four', 'not an address');
 
-        self::assertSame(['alpha.example', 'zeta.example'], $this->hosts()->collectForUser($reader));
+        self::assertSame(
+            ['alpha.example', 'zeta.example'],
+            $this->hosts()->collectFor($reader->requireId(), [$account], [$feed]),
+        );
     }
 
-    public function testIgnoresOtherUsersFeedsAndCommunities(): void
+    public function testNamesNoHostsWithoutALemmyAccount(): void
+    {
+        $reader = $this->persistUser('reader@example.com');
+        $feed = $this->subscribe($reader, 'https://lemmy.world/feeds/c/rust.xml', SocialNetwork::Lemmy);
+        $this->persistPostIn($feed, 'five', 'https://programming.dev/c/php');
+
+        self::assertSame(
+            [],
+            $this->hosts()->collectFor($reader->requireId(), [SocialAccounts::mastodonOf($reader)], [$feed]),
+        );
+    }
+
+    public function testIgnoresOtherUsersCommunities(): void
     {
         $reader = $this->persistUser('reader@example.com');
         $stranger = $this->persistUser('stranger@example.com');
         $strangersFeed = $this->subscribe($stranger, 'https://feddit.org/feeds/c/news.xml', SocialNetwork::Lemmy);
         $this->persistPostIn($strangersFeed, 'three', 'https://sh.itjust.works/c/news');
 
-        self::assertSame([], $this->hosts()->collectForUser($reader));
+        self::assertSame(
+            ['home.example'],
+            $this->hosts()->collectFor($reader->requireId(), [SocialAccounts::lemmyOf($reader, 'home.example')], []),
+        );
     }
 
     public function testIgnoresNonLemmyFeeds(): void
     {
         $reader = $this->persistUser('reader@example.com');
-        $this->subscribe($reader, 'https://mastodon.social/@alice.rss', SocialNetwork::Mastodon);
-        $this->subscribe($reader, 'https://example.com/feed.xml', null);
+        $subscriptions = [
+            $this->subscribe($reader, 'https://mastodon.social/@alice.rss', SocialNetwork::Mastodon),
+            $this->subscribe($reader, 'https://example.com/feed.xml', null),
+        ];
 
-        self::assertSame([], $this->hosts()->collectForUser($reader));
+        self::assertSame(
+            ['home.example'],
+            $this->hosts()->collectFor(
+                $reader->requireId(),
+                [SocialAccounts::lemmyOf($reader, 'home.example')],
+                $subscriptions,
+            ),
+        );
     }
 
     private function hosts(): LemmyHosts
@@ -78,24 +108,25 @@ final class LemmyHostsTest extends DbTestCase
         return $user;
     }
 
-    private function subscribe(User $user, string $feedUrl, ?SocialNetwork $network): Feed
+    private function subscribe(User $user, string $feedUrl, ?SocialNetwork $network): Subscription
     {
         $feed = new Feed($feedUrl);
         $feed->classifyAs($network);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable(self::CREATED_AT));
         $this->entityManager->persist($feed);
-        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable(self::CREATED_AT)));
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
-        return $feed;
+        return $subscription;
     }
 
-    private function persistPostIn(Feed $feed, string $name, string $communityUrl): void
+    private function persistPostIn(Subscription $subscription, string $name, string $communityUrl): void
     {
         $address = 'https://lemmy.test/post/' . $name;
         $item = CanonicalItems::buildItem(CanonicalItemKind::Lemmy, $address);
         $this->entityManager->persist($item);
         $entry = new Entry(
-            $feed,
+            $subscription->getFeed(),
             $address,
             null,
             $name,

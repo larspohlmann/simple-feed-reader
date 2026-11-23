@@ -120,7 +120,7 @@ final readonly class LemmyPostEntries
             return null;
         }
         $thread = Discussion::platformThread(LemmyPostKey::resolvePostPage($address, $homeInstance, $postId))
-            ->withHomeUrl($homeInstance . '/post/' . $postId);
+            ->withHomeUrl(LemmyPostKey::buildPostPage($homeInstance, $postId));
 
         return $this->buildPostEntry($postView, $address)
             ->asDiscussionThread($thread)

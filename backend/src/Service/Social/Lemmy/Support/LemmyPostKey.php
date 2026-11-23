@@ -35,6 +35,11 @@ final class LemmyPostKey
             return $address;
         }
 
-        return rtrim($homeInstance, '/') . '/post/' . $postId;
+        return self::buildPostPage($homeInstance, $postId);
+    }
+
+    public static function buildPostPage(string $instance, int $postId): string
+    {
+        return rtrim($instance, '/') . '/post/' . $postId;
     }
 }

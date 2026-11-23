@@ -54,12 +54,15 @@ final readonly class SubscriptionController
         #[MapQueryParameter] ?string $trendingWindow = null,
     ): JsonResponse {
         $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
+        $userId = $user->requireId();
+        $subscriptions = $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All);
+        $socialAccounts = $this->socialAccounts->findAllForUserIdInActingOrder($userId);
 
         return new JsonResponse(SubscriptionJson::list(
-            $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
+            $subscriptions,
             $this->tallies->buildTallies($user, $window),
-            $this->socialAccounts->findAllForUserIdInActingOrder($user->requireId()),
-            $this->lemmyHosts->collectForUser($user),
+            $socialAccounts,
+            $this->lemmyHosts->collectFor($userId, $socialAccounts, $subscriptions),
         ));
     }
 
