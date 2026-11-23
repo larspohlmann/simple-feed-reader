@@ -3195,7 +3195,7 @@ describe('ReaderShellComponent', () => {
     it('refreshes again when the failure banner is retried', () => {
       const { fixture, banner } = refreshAnsweredWith(serverError);
 
-      (banner()!.querySelector('button') as HTMLButtonElement).click();
+      (banner()!.querySelector('.fetch-banner-retry') as HTMLButtonElement).click();
       fixture.detectChanges();
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/refresh')
@@ -3203,6 +3203,30 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(banner()).toBeNull(); // a clean retry clears it
+    });
+
+    it('closes the failure banner without refreshing', () => {
+      const { fixture, banner } = refreshAnsweredWith(serverError);
+      const close = banner()!.querySelector('.fetch-banner-close') as HTMLButtonElement;
+      expect(close.getAttribute('aria-label')).toBe('Dismiss');
+
+      close.click();
+      fixture.detectChanges();
+
+      expect(banner()).toBeNull();
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/refresh');
+    });
+
+    it('shows the banner again on the next failure after closing it', () => {
+      const { fixture, banner } = refreshAnsweredWith(serverError);
+      (banner()!.querySelector('.fetch-banner-close') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      fixture.componentInstance.refresh.refreshAll();
+      serverError(ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh'));
+      fixture.detectChanges();
+
+      expect(banner()).not.toBeNull();
     });
 
     it('retries a failed list refresh with the list scope, not a full sweep', () => {
