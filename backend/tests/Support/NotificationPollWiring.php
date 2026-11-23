@@ -58,24 +58,44 @@ final class NotificationPollWiring
         return new NotificationPollSweep(
             $polls,
             $socialAccounts,
-            new NotificationPoll(
-                new ServiceLocator(array_map(
-                    static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
-                    $sources,
-                )),
-                new ActingAccountGuard($entityManager),
-                $store,
-                new NotificationContextLookup(self::contextSourcesOf($contextSource), $store),
-                $hostThrottle,
-                $polls,
-                $entityManager,
-                $naiveClock,
-            ),
+            self::poll($entityManager, $clock, $hostThrottle, $sources, $contextSource),
             $store,
             $entityManager,
             $doctrine,
             $naiveClock,
             $logger,
+        );
+    }
+
+    /** @param array<string, NotificationSourceInterface> $sources keyed by SocialNetwork value */
+    public static function poll(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+        HostThrottle $hostThrottle,
+        array $sources,
+        NotificationContextSourceInterface $contextSource = new RecordingContextSource(),
+    ): NotificationPoll {
+        $naiveClock = new NaiveUtcClock($clock);
+        $polls = $entityManager->getRepository(SocialNotificationPoll::class);
+        Assert::assertInstanceOf(SocialNotificationPollRepository::class, $polls);
+        $store = new NotificationStore(
+            $entityManager->getRepository(SocialNotification::class),
+            $entityManager,
+            $naiveClock,
+        );
+
+        return new NotificationPoll(
+            new ServiceLocator(array_map(
+                static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
+                $sources,
+            )),
+            new ActingAccountGuard($entityManager),
+            $store,
+            new NotificationContextLookup(self::contextSourcesOf($contextSource), $store),
+            $hostThrottle,
+            $polls,
+            $entityManager,
+            $naiveClock,
         );
     }
 
