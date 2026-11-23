@@ -68,7 +68,7 @@ describe('share content', () => {
     expect(sharedLink(PAGE, { text, words: 1, anchorable: false }).quote).toBe(text);
   });
 
-  it('sends a quote past the old 1000-character cap whole', () => {
+  it('sends a 1999-character quote whole', () => {
     const text = 'word '.repeat(400).trim();
     expect(sharedLink(PAGE, { text, words: 400, anchorable: false }).quote).toBe(text);
   });
