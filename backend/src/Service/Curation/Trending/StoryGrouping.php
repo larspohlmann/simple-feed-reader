@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\ProfileMerges;
 use App\Service\Curation\Trending\Pass\StoryGroups;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 
@@ -23,6 +24,6 @@ final readonly class StoryGrouping
             $groups->consider($link);
         }
 
-        return $groups->groups();
+        return new ProfileMerges($run, $groups->groups())->groups();
     }
 }
