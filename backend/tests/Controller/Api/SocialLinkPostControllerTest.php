@@ -183,6 +183,21 @@ final class SocialLinkPostControllerTest extends ApiTestCase
         self::assertSame('“A line worth sharing”', $this->payload($client)['text']);
     }
 
+    public function testTheLinkComposerStartsWithAQuoteLongerThanBlueskyTakesWhole(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'link-composer-long-quote-bluesky@example.test');
+        $this->entityManager()->persist(SocialAccounts::blueskyOf($user));
+        $this->entityManager()->flush();
+        $quote = trim(str_repeat('word ', 80));
+
+        $client->request('GET', self::LINK_COMPOSER . 'bluesky&title=The+article&quote=' . rawurlencode($quote));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('“' . $quote . '”', $this->payload($client)['text']);
+        self::assertSame(BlueskyPostWriter::MAX_GRAPHEMES, $this->payload($client)['maxCharacters']);
+    }
+
     public function testTheLinkComposerKeepsTheTextFragmentThatPointsAtTheQuote(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [

@@ -4,7 +4,7 @@ import { quoteShareUrl } from './quote-share-url';
 import { stripTracking } from './tracking-params';
 
 /** The longest quote the composer is sent; `LinkTargetQuery::QUOTE_MAX` refuses more. */
-export const QUOTE_MAX = 1000;
+export const QUOTE_MAX = 2500;
 
 export interface SharedPage {
   readonly url: string;
