@@ -32,6 +32,16 @@ final class LemmyHostsTest extends DbTestCase
         self::assertSame(['home.example', 'lemmy.world', 'programming.dev'], $this->hosts()->collectForUser($reader));
     }
 
+    public function testSortsTheHostsAndDropsAddressesWithoutOne(): void
+    {
+        $reader = $this->persistUser('reader@example.com');
+        $this->entityManager->persist(SocialAccounts::lemmyOf($reader, 'zeta.example'));
+        $feed = $this->subscribe($reader, 'https://alpha.example/feeds/c/rust.xml', SocialNetwork::Lemmy);
+        $this->persistPostIn($feed, 'four', 'not an address');
+
+        self::assertSame(['alpha.example', 'zeta.example'], $this->hosts()->collectForUser($reader));
+    }
+
     public function testIgnoresOtherUsersFeedsAndCommunities(): void
     {
         $reader = $this->persistUser('reader@example.com');

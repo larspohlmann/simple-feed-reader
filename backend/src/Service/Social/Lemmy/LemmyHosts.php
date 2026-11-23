@@ -34,7 +34,7 @@ final readonly class LemmyHosts
             ...$this->lemmyPosts->findCommunityUrlsForUser($userId),
         ];
 
-        $hosts = array_values(array_unique(array_filter(array_map(self::parseHost(...), $addresses))));
+        $hosts = array_unique(array_filter(array_map(self::parseHost(...), $addresses)));
         sort($hosts);
 
         return $hosts;
