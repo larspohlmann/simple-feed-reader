@@ -1,0 +1,19 @@
+@use '../../theme/breakpoints' as bp;
+@use '../../theme/frost';
+
+/* No position, transform or z-index: the pane places the bar and moves it. */
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+
+  @include frost.frosted(var(--surface-0), 80%);
+
+  @media (width >= bp.$bp-lg) {
+    min-block-size: var(--bar-h);
+    padding-block: 0;
+  }
+}
