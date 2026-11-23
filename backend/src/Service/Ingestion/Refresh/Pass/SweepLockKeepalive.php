@@ -83,6 +83,7 @@ final class SweepLockKeepalive
             $lock->refresh();
         } catch (LockConflictedException $conflict) {
             $this->lockLost = true;
+            $this->renewalStopped = true;
             $this->logger?->warning(self::LOCK_TAKEN_MESSAGE, ['exception' => $conflict]);
         } catch (LockExceptionInterface $failure) {
             $this->logger?->warning(self::RENEWAL_FAILED_MESSAGE, ['exception' => $failure]);

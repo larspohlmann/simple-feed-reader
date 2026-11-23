@@ -6,11 +6,9 @@ namespace App\Tests\Service\Ingestion\Refresh\Pass;
 
 use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Tests\Support\RecordingLogger;
-use App\Tests\Support\RenewalCountingLock;
+use App\Tests\Support\RefreshCountingLock;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\Lock\Exception\LockConflictedException;
-use Symfony\Component\Lock\Exception\LockStorageException;
 
 final class SweepLockKeepaliveTest extends TestCase
 {
@@ -26,29 +24,29 @@ final class SweepLockKeepaliveTest extends TestCase
 
     public function testABeatBeforeTheIntervalRenewsNothing(): void
     {
-        $lock = new RenewalCountingLock();
+        $lock = new RefreshCountingLock();
         $keepalive = $this->buildKeepalive($lock, 120);
 
         $this->clock->sleep(10);
         $keepalive->beat();
 
-        self::assertSame(0, $lock->renewals());
+        self::assertSame(0, $lock->refreshCount());
     }
 
     public function testABeatAfterTheIntervalRenewsTheLock(): void
     {
-        $lock = new RenewalCountingLock();
+        $lock = new RefreshCountingLock();
         $keepalive = $this->buildKeepalive($lock, 120);
 
         $this->clock->sleep(25);
         $keepalive->beat();
 
-        self::assertSame(1, $lock->renewals());
+        self::assertSame(1, $lock->refreshCount());
     }
 
     public function testBeatsInABurstRenewOncePerInterval(): void
     {
-        $lock = new RenewalCountingLock();
+        $lock = new RefreshCountingLock();
         $keepalive = $this->buildKeepalive($lock, 120);
 
         $this->clock->sleep(25);
@@ -56,17 +54,17 @@ final class SweepLockKeepaliveTest extends TestCase
         $this->clock->sleep(5);
         $keepalive->beat();
 
-        self::assertSame(1, $lock->renewals());
+        self::assertSame(1, $lock->refreshCount());
 
         $this->clock->sleep(20);
         $keepalive->beat();
 
-        self::assertSame(2, $lock->renewals());
+        self::assertSame(2, $lock->refreshCount());
     }
 
     public function testRenewalStopsAtTheCeiling(): void
     {
-        $lock = new RenewalCountingLock();
+        $lock = new RefreshCountingLock();
         $keepalive = $this->buildKeepalive($lock, 10);
 
         for ($beat = 1; $beat <= 6; ++$beat) {
@@ -74,20 +72,42 @@ final class SweepLockKeepaliveTest extends TestCase
             $keepalive->beat();
         }
 
-        $renewalsUpToTheCeiling = $lock->renewals();
+        $renewalsUpToTheCeiling = $lock->refreshCount();
 
         foreach ([20, 20, 340] as $seconds) {
             $this->clock->sleep($seconds);
             $keepalive->beat();
         }
 
-        self::assertSame([6, 6], [$renewalsUpToTheCeiling, $lock->renewals()]);
+        self::assertSame([6, 6], [$renewalsUpToTheCeiling, $lock->refreshCount()]);
+        self::assertSame(1, $this->countLogged(SweepLockKeepalive::CEILING_REACHED_MESSAGE));
+    }
+
+    public function testABeatAtTheCeilingRenewsAndOneSecondLaterDoesNot(): void
+    {
+        $secondsToDeadline = 20 - SweepLockKeepalive::MAX_OVERRUN_SECONDS;
+        $lockBeatenAtTheCeiling = new RefreshCountingLock();
+        $beatenAtTheCeiling = $this->buildKeepalive($lockBeatenAtTheCeiling, $secondsToDeadline);
+        $lockBeatenPastTheCeiling = new RefreshCountingLock();
+        $beatenPastTheCeiling = $this->buildKeepalive($lockBeatenPastTheCeiling, $secondsToDeadline);
+
+        $this->clock->sleep(20);
+        $beatenAtTheCeiling->beat();
+        $this->clock->sleep(1);
+        $beatenPastTheCeiling->beat();
+
+        self::assertSame(
+            [1, 0],
+            [$lockBeatenAtTheCeiling->refreshCount(), $lockBeatenPastTheCeiling->refreshCount()],
+        );
         self::assertSame(1, $this->countLogged(SweepLockKeepalive::CEILING_REACHED_MESSAGE));
     }
 
     public function testALockTakenByAnotherProcessIsRecorded(): void
     {
-        $keepalive = $this->buildKeepalive(new RenewalCountingLock(null, new LockConflictedException()), 120);
+        $lock = new RefreshCountingLock();
+        $lock->conflictOnNextRefresh();
+        $keepalive = $this->buildKeepalive($lock, 120);
 
         $this->clock->sleep(25);
         $keepalive->beat();
@@ -96,9 +116,26 @@ final class SweepLockKeepaliveTest extends TestCase
         self::assertSame(1, $this->countLogged(SweepLockKeepalive::LOCK_TAKEN_MESSAGE));
     }
 
+    public function testALockTakenByAnotherProcessIsNeverRenewedAgain(): void
+    {
+        $lock = new RefreshCountingLock();
+        $lock->conflictOnNextRefresh();
+        $keepalive = $this->buildKeepalive($lock, 120);
+
+        for ($beat = 1; $beat <= 3; ++$beat) {
+            $this->clock->sleep(25);
+            $keepalive->beat();
+        }
+
+        self::assertSame(1, $lock->refreshCount());
+        self::assertSame(1, $this->countLogged(SweepLockKeepalive::LOCK_TAKEN_MESSAGE));
+    }
+
     public function testAStoreFailureIsLoggedAndTheLockIsNotCountedLost(): void
     {
-        $keepalive = $this->buildKeepalive(new RenewalCountingLock(null, new LockStorageException()), 120);
+        $lock = new RefreshCountingLock();
+        $lock->throwOnNextRefresh();
+        $keepalive = $this->buildKeepalive($lock, 120);
 
         $this->clock->sleep(25);
         $keepalive->beat();
@@ -117,9 +154,10 @@ final class SweepLockKeepaliveTest extends TestCase
         $keepalive->beat();
 
         self::assertFalse($keepalive->hasLostTheLock());
+        self::assertSame([], $this->logger->records);
     }
 
-    private function buildKeepalive(RenewalCountingLock $lock, int $secondsToDeadline): SweepLockKeepalive
+    private function buildKeepalive(RefreshCountingLock $lock, int $secondsToDeadline): SweepLockKeepalive
     {
         $deadline = $this->clock->now()->getTimestamp() + $secondsToDeadline;
 
