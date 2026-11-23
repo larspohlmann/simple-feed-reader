@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
@@ -16,6 +17,7 @@ function mount(testEntry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [ThreadRepliesComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       { provide: LinkReaderNavigation, useValue: navigation },
       { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },
     ],

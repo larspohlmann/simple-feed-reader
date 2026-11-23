@@ -12,6 +12,7 @@ final readonly class Discussion
         public ?string $url,
         public ?string $commentsFeedUrl,
         public ?CommentsLoad $commentsLoad,
+        public ?string $homeUrl = null,
     ) {
     }
 
@@ -35,5 +36,11 @@ final readonly class Discussion
     public static function platformThread(string $pageUrl): self
     {
         return new self($pageUrl, null, CommentsLoad::Auto);
+    }
+
+    #[\NoDiscard]
+    public function withHomeUrl(?string $homeUrl): self
+    {
+        return clone($this, ['homeUrl' => $homeUrl]);
     }
 }

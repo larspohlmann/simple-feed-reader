@@ -337,6 +337,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'the old instance did.',
             'discussion.commentCount' => 'A Lemmy post\'s comment count (#2217), rewritten on every fetch '
                 . 'while its feed still lists the post; a restored one would be stale before the reader saw it.',
+            'discussion.homeUrl' => 'A Lemmy post\'s address on the instance of the account that fetched it (#2496); '
+                . 'the next timeline refresh writes it again.',
             'discussion.selfReplyCount' => 'The length of the thread whose replies, ThreadPost rows, stay out of '
                 . 'the file (#2269); a restored article shows its root post alone.',
             'canonicalItem' => 'The shared row of a social post\'s copies (#2404), which the file does not carry; '

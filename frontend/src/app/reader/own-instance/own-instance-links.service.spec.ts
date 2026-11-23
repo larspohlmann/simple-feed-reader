@@ -41,23 +41,54 @@ describe('OwnInstanceLinks', () => {
       account(3, 'mastodon', 'https://other.example'),
     ]);
 
-    expect(links.instance()).toBe('https://home.example');
-    expect(links.open(ADDRESS, 'mastodon')).toBe(
+    expect(links.instances().mastodon).toBe('https://home.example');
+    expect(links.open(ADDRESS, { network: 'mastodon' })).toBe(
       'https://home.example/authorize_interaction?uri=https%3A%2F%2Fmastodon.social%2F%40Gargron',
+    );
+  });
+
+  it('uses the first Lemmy account instance and the known Lemmy hosts', () => {
+    store.socialAccounts.set([
+      account(4, 'lemmy', 'https://l.home/'),
+      account(5, 'lemmy', 'https://second.home'),
+    ]);
+    store.lemmyHosts.set(['lemmy.world']);
+
+    expect(links.instances().lemmy).toBe('https://l.home');
+    expect(links.instances().lemmyHosts.has('lemmy.world')).toBe(true);
+    expect(links.open('https://lemmy.world/c/rust')).toBe('https://l.home/c/rust@lemmy.world');
+  });
+
+  it('keeps the same instances when a reload brings the same values', () => {
+    store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
+    store.lemmyHosts.set(['lemmy.world']);
+    const before = links.instances();
+
+    store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
+    store.lemmyHosts.set(['lemmy.world']);
+
+    expect(links.instances()).toBe(before);
+  });
+
+  it('forwards the stored home address', () => {
+    store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
+
+    expect(links.open('https://lemmy.world/post/9', { homeUrl: 'https://l.home/post/42' })).toBe(
+      'https://l.home/post/42',
     );
   });
 
   it('leaves other networks and unknown networks alone', () => {
     store.socialAccounts.set([account(2, 'mastodon', 'https://home.example/')]);
 
-    expect(links.open(ADDRESS, 'bluesky')).toBe(ADDRESS);
-    expect(links.open(ADDRESS, null)).toBe(ADDRESS);
+    expect(links.open(ADDRESS, { network: 'bluesky' })).toBe(ADDRESS);
+    expect(links.open(ADDRESS)).toBe(ADDRESS);
   });
 
   it('leaves the address alone without a Mastodon account', () => {
     store.socialAccounts.set([account(1, 'bluesky', 'https://bsky.social')]);
 
-    expect(links.instance()).toBeNull();
-    expect(links.open(ADDRESS, 'mastodon')).toBe(ADDRESS);
+    expect(links.instances().mastodon).toBeNull();
+    expect(links.open(ADDRESS, { network: 'mastodon' })).toBe(ADDRESS);
   });
 });

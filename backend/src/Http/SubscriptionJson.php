@@ -32,6 +32,7 @@ final class SubscriptionJson
     /**
      * @param list<Subscription>  $subscriptions
      * @param list<SocialAccount> $socialAccounts in acting order, with the handle, status and instance each shows
+     * @param list<string>        $lemmyHosts
      *
      * @return array<string, mixed>
      */
@@ -39,6 +40,7 @@ final class SubscriptionJson
         array $subscriptions,
         SurfaceTalliesModel $tallies,
         array $socialAccounts,
+        array $lemmyHosts,
     ): array {
         return [
             'subscriptions' => array_map(
@@ -51,6 +53,7 @@ final class SubscriptionJson
             ),
             ...SubscriptionCountsJson::surfaceTotals($tallies),
             'socialAccounts' => array_map(self::socialAccount(...), $socialAccounts),
+            'lemmyHosts' => $lemmyHosts,
         ];
     }
 

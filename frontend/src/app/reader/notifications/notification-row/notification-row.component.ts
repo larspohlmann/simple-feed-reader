@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -16,7 +17,14 @@ const MAX_AVATARS = 3;
 @Component({
   selector: 'app-notification-row',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AvatarComponent, IconComponent, NgTemplateOutlet, RouterLink, TranslocoPipe],
+  imports: [
+    OwnInstanceHrefDirective,
+    AvatarComponent,
+    IconComponent,
+    NgTemplateOutlet,
+    RouterLink,
+    TranslocoPipe,
+  ],
   templateUrl: './notification-row.component.html',
   styleUrl: './notification-row.component.scss',
 })

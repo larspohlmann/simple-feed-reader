@@ -3,6 +3,7 @@ import { injectIslands } from '../../../../testing/article-islands-testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { articleHost } from '../../../../testing/article-host-testing';
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ArticleIslands } from './article-islands';
 import { ArticleUnplayableVideos } from './article-unplayable-videos';
@@ -16,7 +17,7 @@ describe('ArticleUnplayableVideos', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [provideAccountIdentity()],
+      providers: [provideAccountIdentity(), provideSocialAccounts()],
     });
     islands = injectIslands();
     videos = new ArticleUnplayableVideos(islands, TestBed.inject(TranslocoService));

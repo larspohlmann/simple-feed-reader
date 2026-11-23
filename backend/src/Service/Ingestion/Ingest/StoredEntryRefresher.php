@@ -39,6 +39,7 @@ final readonly class StoredEntryRefresher
             $this->fillMissingImage($entry, $parsedEntry);
             $applied = $this->platformRules->apply($parsedEntry);
             $entry->selectDiscussionCounts()->recordCounts($applied->discussionCounts);
+            $entry->setDiscussion($entry->getDiscussion()->withHomeUrl($applied->discussion->homeUrl));
             $refreshed[] = [$entry, $applied];
         }
         $this->canonicalItemWriter->attach($refreshed);

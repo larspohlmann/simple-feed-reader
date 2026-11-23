@@ -3,7 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { provideArticlePageStubs } from '../../../../testing/article-page-testing';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 import { StubArticlePageSource } from '../../../../testing/article-page-source-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { SharingService } from '../../../core/preferences/sharing.service';
@@ -103,6 +108,20 @@ describe('ArticlePageComponent', () => {
     const element = mount((stub) => stub.titleHidden.set(true));
 
     expect(element.querySelector('h1.title')!.classList).toContain('sr-only');
+  });
+
+  it("opens a Mastodon post's original on the reader's instance, whatever the source", () => {
+    TestBed.overrideProvider(SubscriptionsStore, {
+      useValue: provideSocialAccounts([aMastodonAccount('https://home.test')]).useValue,
+    });
+    const element = mount((stub) => stub.openUrl.set('https://mastodon.social/@alice/1234'));
+
+    const original = element.querySelector<HTMLAnchorElement>(
+      '.meta a[href^="https://home.test/"]',
+    );
+    expect(original?.getAttribute('href')).toBe(
+      `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@alice/1234')}`,
+    );
   });
 
   it('reports the open-original click', () => {

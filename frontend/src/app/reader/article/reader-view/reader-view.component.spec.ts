@@ -48,7 +48,10 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
-import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -215,7 +218,7 @@ describe('ReaderViewComponent', () => {
           provide: ArticlePostActions,
           useValue: { reply: jest.fn(), quote: jest.fn(), delete: jest.fn() },
         },
-        { provide: SubscriptionsStore, useValue: { socialAccounts: signal([]) } },
+        provideSocialAccounts(),
         {
           provide: CommentsService,
           useValue: { state: () => signal<CommentsState>({ status: 'idle' }), load: jest.fn() },
@@ -261,6 +264,7 @@ describe('ReaderViewComponent', () => {
       const lemmyAccount = (status: 'connected' | 'needs_reconnect') =>
         TestBed.overrideProvider(SubscriptionsStore, {
           useValue: {
+            lemmyHosts: signal([]),
             socialAccounts: signal([
               { id: 1, network: 'lemmy', handle: '@ann@lemmy.example', status },
             ]),
@@ -354,11 +358,10 @@ describe('ReaderViewComponent', () => {
   });
 
   it('opens a Mastodon post on the reader’s own instance', () => {
-    TestBed.overrideProvider(SubscriptionsStore, {
-      useValue: {
-        socialAccounts: signal([aMastodonAccount('https://home.test')]),
-      },
-    });
+    TestBed.overrideProvider(
+      SubscriptionsStore,
+      provideSocialAccounts([aMastodonAccount('https://home.test')]),
+    );
     const fixture = mount(
       entry({
         url: 'https://mastodon.social/@Gargron/1',
@@ -596,9 +599,10 @@ describe('ReaderViewComponent', () => {
 
     describe("the quoted post's link on the reader's instance", () => {
       const quotedOpenLink = (network: 'mastodon' | 'bluesky') => {
-        TestBed.overrideProvider(SubscriptionsStore, {
-          useValue: { socialAccounts: signal([aMastodonAccount('https://home.test')]) },
-        });
+        TestBed.overrideProvider(
+          SubscriptionsStore,
+          provideSocialAccounts([aMastodonAccount('https://home.test')]),
+        );
         const element = mount(
           entryWithBody('<p>Just a post</p>', {
             titleDerived: true,
@@ -616,8 +620,10 @@ describe('ReaderViewComponent', () => {
         );
       });
 
-      it("leaves the quoted post of another network's entry alone", () => {
-        expect(quotedOpenLink('bluesky')).toBe('https://mastodon.social/@Gargron/9');
+      it("moves a Mastodon status quoted in another network's entry by its shape", () => {
+        expect(quotedOpenLink('bluesky')).toBe(
+          `https://home.test/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@Gargron/9')}`,
+        );
       });
     });
 

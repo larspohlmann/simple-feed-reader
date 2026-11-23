@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -70,6 +71,7 @@ const SEARCH_SYNTAX: Readonly<Record<SocialNetworkName, readonly SyntaxRule[]>> 
 @Component({
   selector: 'app-social-search-form',
   imports: [
+    OwnInstanceHrefDirective,
     AvatarComponent,
     ButtonComponent,
     DisclosureComponent,

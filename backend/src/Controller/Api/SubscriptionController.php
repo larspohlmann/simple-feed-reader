@@ -24,6 +24,7 @@ use App\Service\Library\Subscription\BulkSubscriptionUpdater;
 use App\Service\Library\Subscription\OwnedSubscriptions;
 use App\Service\Library\Subscription\SubscriptionEditor;
 use App\Service\Library\Subscription\SubscriptionService;
+use App\Service\Social\Lemmy\LemmyHosts;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -43,6 +44,7 @@ final readonly class SubscriptionController
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
         private SubscriptionEditor $editor,
+        private LemmyHosts $lemmyHosts,
     ) {
     }
 
@@ -52,11 +54,15 @@ final readonly class SubscriptionController
         #[MapQueryParameter] ?string $trendingWindow = null,
     ): JsonResponse {
         $window = TrendingWindow::fromRequestValue($trendingWindow, 'trendingWindow');
+        $userId = $user->requireId();
+        $subscriptions = $this->subscriptions->findForUserWithTags($userId, SubscriptionSet::All);
+        $socialAccounts = $this->socialAccounts->findAllForUserIdInActingOrder($userId);
 
         return new JsonResponse(SubscriptionJson::list(
-            $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
+            $subscriptions,
             $this->tallies->buildTallies($user, $window),
-            $this->socialAccounts->findAllForUserIdInActingOrder($user->requireId()),
+            $socialAccounts,
+            $this->lemmyHosts->collectFor($userId, $socialAccounts, $subscriptions),
         ));
     }
 

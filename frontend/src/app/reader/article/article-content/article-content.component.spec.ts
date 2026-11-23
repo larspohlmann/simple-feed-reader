@@ -3,13 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { ArticleContentComponent } from './article-content.component';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { embedTrackOrigin } from '../../audio/embed-track';
-import { SocialNetworkName } from '../../../core/social-network';
 import {
   aMastodonAccount,
   provideSocialAccounts,
@@ -35,7 +35,7 @@ class HostComponent {
   template: `<app-article-content [html]="html" [pageUrl]="null" [network]="network" />`,
 })
 class MentionHostComponent {
-  readonly html = '<a href="https://mastodon.social/tags/rust">#rust</a>';
+  html = '<a href="https://mastodon.social/tags/rust">#rust</a>';
   network: SocialNetworkName | null = 'mastodon';
 }
 
@@ -86,15 +86,41 @@ describe('ArticleContentComponent', () => {
     expect(link.getAttribute('href')).toBe('https://home.example/tags/rust');
   });
 
-  it("leaves another network's hashtag alone", async () => {
+  it("leaves an article's @-handle link to another site alone", async () => {
     const fixture = TestBed.createComponent(MentionHostComponent);
-    fixture.componentInstance.network = 'bluesky';
+    fixture.componentInstance.html = '<a href="https://www.youtube.com/@MKBHD">@MKBHD</a>';
+    fixture.componentInstance.network = null;
     fixture.detectChanges();
     await fixture.whenStable();
     await Promise.resolve();
 
     const link = (fixture.nativeElement as HTMLElement).querySelector('a')!;
-    expect(link.getAttribute('href')).toBe('https://mastodon.social/tags/rust');
+    expect(link.getAttribute('href')).toBe('https://www.youtube.com/@MKBHD');
+  });
+
+  it("still moves a Mastodon status link in an article's body", async () => {
+    const fixture = TestBed.createComponent(MentionHostComponent);
+    fixture.componentInstance.html = '<a href="https://mastodon.social/@alice/1234">a post</a>';
+    fixture.componentInstance.network = null;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a')!;
+    expect(link.getAttribute('href')).toBe(
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@alice/1234')}`,
+    );
+  });
+
+  it('leaves a Bluesky hashtag alone', async () => {
+    const fixture = TestBed.createComponent(MentionHostComponent);
+    fixture.componentInstance.html = '<a href="https://bsky.app/hashtag/rust">#rust</a>';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a')!;
+    expect(link.getAttribute('href')).toBe('https://bsky.app/hashtag/rust');
   });
 
   it("times the body audio's Listen row from markup that crossed Angular's sanitizer", async () => {

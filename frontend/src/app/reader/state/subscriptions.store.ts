@@ -72,6 +72,7 @@ export class SubscriptionsStore {
     equal: sameTrendingUnopened,
   });
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
+  readonly lemmyHosts = signal<readonly string[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -170,6 +171,7 @@ export class SubscriptionsStore {
     this.viewedCount.set(0);
     this.trendingUnopened.set(NO_TRENDING_UNOPENED);
     this.socialAccounts.set([]);
+    this.lemmyHosts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
     this.storedNotificationCounts.set(NO_NOTIFICATION_COUNTS);
     this.loading.set(false);
@@ -280,6 +282,7 @@ export class SubscriptionsStore {
     this.viewedCount.set(response.viewedCount);
     this.trendingUnopened.set(response.trending);
     this.socialAccounts.set(response.socialAccounts);
+    this.lemmyHosts.set(response.lemmyHosts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
     this.storedNotificationCounts.set(notificationCountsFrom(response.notifications));
   }

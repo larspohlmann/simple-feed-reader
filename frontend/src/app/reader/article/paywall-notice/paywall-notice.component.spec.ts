@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { PaywallNoticeComponent } from './paywall-notice.component';
@@ -14,6 +15,7 @@ class Host {
 describe('PaywallNoticeComponent', () => {
   const mount = async () => {
     await TestBed.configureTestingModule({
+      providers: [provideSocialAccounts()],
       imports: [Host, provideTranslocoTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(Host);

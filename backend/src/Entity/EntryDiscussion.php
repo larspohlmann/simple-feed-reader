@@ -14,6 +14,9 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
     #[ORM\Column(name: 'discussion_url', length: 2048, nullable: true)]
     private ?string $url = null;
 
+    #[ORM\Column(name: 'discussion_home_url', type: Types::TEXT, nullable: true)]
+    private ?string $homeUrl = null;
+
     #[ORM\Column(name: 'comments_feed_url', length: 2048, nullable: true)]
     private ?string $commentsFeedUrl = null;
 
@@ -36,6 +39,7 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
         $this->url = $bounded->url;
         $this->commentsFeedUrl = $bounded->commentsFeedUrl;
         $this->commentsLoad = $bounded->commentsLoad;
+        $this->homeUrl = self::bounded($discussion->homeUrl) ?? $this->homeUrl;
     }
 
     public function read(): Discussion
@@ -44,7 +48,7 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
             $this->url,
             $this->commentsFeedUrl,
             $this->commentsLoad ?? CommentsLoad::Manual,
-        );
+        )->withHomeUrl($this->homeUrl);
     }
 
     public function recordCounts(DiscussionCounts $counts): void

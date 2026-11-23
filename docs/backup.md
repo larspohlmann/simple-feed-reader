@@ -325,6 +325,7 @@ article mark, each included social network and each social network kept out of F
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 | `discussion.commentCount` | A Lemmy post's comment count, rewritten on every fetch while its feed still lists the post; a restored one would be stale before the reader saw it. |
+| `discussion.homeUrl` | A Lemmy post's address on the instance of the account that fetched it; the next timeline refresh writes it again. |
 | `discussion.selfReplyCount` | How many replies the author continued the post with. The replies themselves stay out of the file, so a restored article shows its root post alone. |
 | `canonicalItem` | The shared row of a social post's copies, which the file does not carry. A restore links each restored copy to it again. |
 

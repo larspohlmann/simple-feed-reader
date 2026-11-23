@@ -52,7 +52,7 @@ use App\Service\Foundation\Url\Support\YouTubeUrl;
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool, isOwn: bool}|null,
  *   myVote: int|null, community: array{name: string, url: string}|null,
  *   duplicates: list<array<string, mixed>>,
- *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
+ *   discussionUrl: string|null, discussionHomeUrl: string|null, comments: 'auto'|'manual'|null,
  *   score: int|null, commentCount: int|null, likeCount: int|null,
  * }
  * @phpstan-type CompletedEntryRow array{
@@ -156,7 +156,12 @@ final readonly class EntryJson
         ];
     }
 
-    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null, score: int|null, commentCount: int|null, likeCount: int|null} */
+    /**
+     * @return array{
+     *   discussionUrl: string|null, discussionHomeUrl: string|null, comments: 'auto'|'manual'|null,
+     *   score: int|null, commentCount: int|null, likeCount: int|null
+     * }
+     */
     private static function buildDiscussionRow(EntryListRow $row): array
     {
         $discussion = $row->enrichment->discussion
@@ -164,11 +169,30 @@ final readonly class EntryJson
 
         return [
             'discussionUrl' => $discussion->url,
+            'discussionHomeUrl' => self::findHomeUrl($row),
             'comments' => $discussion->commentsLoad?->value,
             'score' => $row->enrichment->lemmy?->score,
             'commentCount' => $row->entry->selectDiscussionCounts()->getCommentCount(),
             'likeCount' => $row->entry->getCanonicalItem()?->getLikeCount(),
         ];
+    }
+
+    /** Cross-post pills ride in the duplicates too; only a copy of the row's own item may lend its address. */
+    private static function findHomeUrl(EntryListRow $row): ?string
+    {
+        $itemId = $row->entry->getCanonicalItemId();
+        $sameItemCopies = null === $itemId ? [] : array_filter(
+            $row->duplicates,
+            static fn (EntryListRow $copy): bool => $copy->entry->getCanonicalItemId() === $itemId,
+        );
+        foreach ([$row, ...$sameItemCopies] as $copy) {
+            $homeUrl = $copy->entry->getDiscussion()->homeUrl;
+            if (null !== $homeUrl) {
+                return $homeUrl;
+            }
+        }
+
+        return null;
     }
 
     /** @return array{name: string, url: string}|null */

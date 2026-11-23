@@ -104,7 +104,7 @@ describe('EntrySourceComponent', () => {
       const links = TestBed.inject(OwnInstanceLinks);
 
       expect(host.querySelector('a.community')?.getAttribute('href')).toBe(
-        links.open(community.url, 'lemmy'),
+        links.open(community.url, { network: 'lemmy' }),
       );
     });
 

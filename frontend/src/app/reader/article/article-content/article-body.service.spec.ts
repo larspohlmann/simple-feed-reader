@@ -17,6 +17,7 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto } from '../../models';
 import { embedTrackOrigin, EmbedTrackOrigin } from '../../audio/embed-track';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
@@ -29,7 +30,6 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SocialAccountRefDto } from '../../social-feed';
-import { SocialNetworkName } from '../../../core/social-network';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -85,6 +85,7 @@ describe('ArticleBody', () => {
   const audioTrack = signal<AudioTrack | null>(null);
   const origin = signal<EmbedTrackOrigin | null>(null);
   const accounts = signal<SocialAccountRefDto[]>([]);
+  const lemmyHosts = signal<readonly string[]>([]);
 
   function connectBody(body: string, network: SocialNetworkName | null = null): void {
     content = articleHost(body);
@@ -130,13 +131,17 @@ describe('ArticleBody', () => {
     audioTrack.set(null);
     origin.set(null);
     accounts.set([]);
+    lemmyHosts.set([]);
     imageProxy = neverRecoveringImageProxy();
     embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
-        { provide: SubscriptionsStore, useValue: { socialAccounts: accounts } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { lemmyHosts, socialAccounts: accounts },
+        },
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],
@@ -202,6 +207,22 @@ describe('ArticleBody', () => {
 
     expect(content.querySelector('a')!.getAttribute('href')).toBe(
       `https://home.example/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@bob')}`,
+    );
+  });
+
+  it('moves a Lemmy link in an article once the Lemmy account and hosts arrive', async () => {
+    connectBody('<p><a href="https://lemmy.world/c/rust">a community</a></p>');
+    await Promise.resolve();
+
+    accounts.set([
+      { id: 9, network: 'lemmy', handle: 'me', status: 'connected', serviceUrl: 'https://l.home' },
+    ]);
+    lemmyHosts.set(['lemmy.world']);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(content.querySelector('a')!.getAttribute('href')).toBe(
+      'https://l.home/c/rust@lemmy.world',
     );
   });
 

@@ -31,7 +31,7 @@
       @if (data.siteUrl; as site) {
         <p class="lbl">{{ 'dialog.editFeed.siteUrl' | transloco }}</p>
         <p class="site">
-          <a [href]="site" target="_blank" rel="noopener noreferrer"
+          <a appOwnInstanceHref [href]="site" target="_blank" rel="noopener noreferrer"
             >{{ site }} <app-icon name="open_in_new" size="text"
           /></a>
         </p>

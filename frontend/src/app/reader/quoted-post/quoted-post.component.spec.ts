@@ -204,11 +204,16 @@ describe('QuotedPostComponent', () => {
       );
     });
 
-    it('leaves both links alone without a network', () => {
+    it('opens status-shaped links on the reader’s instance without a network', () => {
       const fixture = mount(quote);
 
-      expect(query(fixture, 'a.open')!.getAttribute('href')).toBe(quote.url);
-      expect(query(fixture, 'a.nested')!.getAttribute('href')).toBe(quote.nestedQuote.url);
+      expect(query(fixture, 'a.open')!.getAttribute('href')).toBe(rewritten(quote.url));
+    });
+
+    it('leaves a link that is no status alone without a network', () => {
+      const fixture = mount({ url: 'https://example.com/a', nestedQuote: null });
+
+      expect(query(fixture, 'a.open')!.getAttribute('href')).toBe('https://example.com/a');
     });
   });
 

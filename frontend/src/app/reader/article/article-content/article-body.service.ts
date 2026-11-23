@@ -19,9 +19,10 @@ import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
-import { SocialNetworkName } from '../../../core/social-network';
-import { openMastodonLinksOnOwnInstance } from '../decorators/own-instance-body-links';
+import { rewriteLinks } from '../decorators/own-instance-body-links';
+import { ownInstanceUrl } from '../../own-instance/own-instance-url';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
@@ -139,13 +140,17 @@ export class ArticleBody {
     effect(
       (onCleanup) => {
         parts.html();
-        const instance = this.links.instanceFor(parts.network());
+        const instances = this.links.instances();
+        const mentionsAreMastodon = parts.network() === 'mastodon';
         if (!parts.content()?.nativeElement) return;
         let cancelled = false;
         onCleanup(() => (cancelled = true));
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (host && !cancelled) openMastodonLinksOnOwnInstance(host, instance);
+          if (!host || cancelled) return;
+          rewriteLinks(host, (href, text) =>
+            ownInstanceUrl(href, mentionsAreMastodon ? { mastodonLinkText: text } : {}, instances),
+          );
         });
       },
       { injector: this.injector },

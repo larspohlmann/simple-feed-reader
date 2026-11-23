@@ -1,42 +1,87 @@
+import { SocialNetworkName } from '../../core/social-network';
 import { parseUrl } from '../../shared/url-host';
 
+export interface OwnInstances {
+  mastodon: string | null;
+  lemmy: string | null;
+  lemmyHosts: ReadonlySet<string>;
+}
+
+export interface LinkFacts {
+  network?: SocialNetworkName | null;
+  mastodonLinkText?: string;
+  homeUrl?: string | null;
+}
+
+const MASTODON_STATUS_PATHS = [/^\/@[^/]+\/\d+$/, /^\/users\/[^/]+\/statuses\/\d+$/];
 const MENTION_PATH = /^\/(?:@[^/]+|users\/[^/]+)$/;
 const HASHTAG_PATH = /^\/tags\/[^/]+$/;
+const LEMMY_THREAD_PATH = /^\/(?:post|comment)\/\d+$/;
+const LEMMY_ACTOR_PATH = /^\/([cu])\/([^/@]+)(?:@([^/]+))?$/;
 
 function parseHttpUrl(value: string): URL | null {
   const parsed = parseUrl(value);
   return parsed !== null && /^https?:$/.test(parsed.protocol) ? parsed : null;
 }
 
-function foreignTarget(address: string, instance: string | null): URL | null {
-  const target = parseHttpUrl(address);
-  return instance === null || target === null || target.origin === instance ? null : target;
-}
-
-function authorizeInteraction(instance: string, address: string): string {
-  return `${instance}/authorize_interaction?uri=${encodeURIComponent(address)}`;
-}
-
 export function instanceOrigin(serviceUrl: string): string | null {
   return parseHttpUrl(serviceUrl)?.origin ?? null;
 }
 
-export function ownInstancePostUrl(address: string, instance: string | null): string {
-  return instance !== null && foreignTarget(address, instance) !== null
-    ? authorizeInteraction(instance, address)
-    : address;
+interface Link {
+  address: string;
+  target: URL;
+  facts: LinkFacts;
 }
 
-export function ownInstanceBodyUrl(href: string, text: string, instance: string | null): string {
-  const target = foreignTarget(href, instance);
-  if (instance === null || target === null) {
-    return href;
+export function ownInstanceUrl(address: string, facts: LinkFacts, instances: OwnInstances): string {
+  if (instances.mastodon === null && instances.lemmy === null) return address;
+  const target = parseHttpUrl(address);
+  if (target === null) return address;
+  const homeUrl = pickHomeUrl(facts.homeUrl, instances.lemmy);
+  if (homeUrl !== null) return homeUrl;
+  const link: Link = { address, target, facts };
+  const isLemmy = isLemmyLink(link, instances);
+  const instance = isLemmy ? instances.lemmy : instances.mastodon;
+  if (instance === null || target.origin === instance) return address;
+  return (isLemmy ? lemmyTarget(link, instance) : mastodonTarget(link, instance)) ?? address;
+}
+
+function pickHomeUrl(homeUrl: string | null | undefined, instance: string | null): string | null {
+  if (homeUrl == null || instance === null) return null;
+  return parseHttpUrl(homeUrl)?.origin === instance ? homeUrl : null;
+}
+
+function isLemmyLink({ target, facts }: Link, instances: OwnInstances): boolean {
+  return (
+    facts.network === 'lemmy' ||
+    (facts.network == null && instances.lemmyHosts.has(target.hostname))
+  );
+}
+
+function lemmyTarget({ address, target }: Link, instance: string): string | null {
+  if (LEMMY_THREAD_PATH.test(target.pathname)) {
+    return `${instance}/search?q=${encodeURIComponent(address)}&type=All`;
   }
-  if (text.startsWith('#') && HASHTAG_PATH.test(target.pathname)) {
-    return `${instance}${target.pathname}`;
+  const actor = LEMMY_ACTOR_PATH.exec(target.pathname);
+  if (actor === null) return null;
+  const [, kind, name, domain] = actor;
+  return `${instance}/${kind}/${name}@${domain ?? target.host}`;
+}
+
+function mastodonTarget({ address, target, facts }: Link, instance: string): string | null {
+  const path = target.pathname;
+  const text = facts.mastodonLinkText ?? '';
+  if (facts.network === 'mastodon' || MASTODON_STATUS_PATHS.some((shape) => shape.test(path))) {
+    return authorizeInteraction(instance, address);
   }
-  if (text.startsWith('@') && MENTION_PATH.test(target.pathname)) {
-    return authorizeInteraction(instance, href);
+  if (text.startsWith('#') && HASHTAG_PATH.test(path)) return `${instance}${path}`;
+  if (text.startsWith('@') && MENTION_PATH.test(path)) {
+    return authorizeInteraction(instance, address);
   }
-  return href;
+  return null;
+}
+
+function authorizeInteraction(instance: string, address: string): string {
+  return `${instance}/authorize_interaction?uri=${encodeURIComponent(address)}`;
 }

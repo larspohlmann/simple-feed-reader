@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Entry;
 use App\Entity\LemmyPost;
 use App\Entity\PostCommunity;
+use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Query;
@@ -46,6 +48,27 @@ final class LemmyPostRepository extends ServiceEntityRepository
         }
 
         return $byItemId;
+    }
+
+    /** @return list<string> the community addresses of the Lemmy posts in the feeds this user subscribes to */
+    public function findCommunityUrlsForUser(int $userId): array
+    {
+        /** @var list<array{url: string}> $rows */
+        $rows = $this->createQueryBuilder('post')
+            ->select('DISTINCT post.communityUrl AS url')
+            ->join(Entry::class, 'entry', 'ON', 'entry.canonicalItem = post.canonicalItem')
+            ->join(
+                Subscription::class,
+                'subscription',
+                'ON',
+                'subscription.feed = entry.feed AND subscription.user = :userId',
+            )
+            ->andWhere('post.communityUrl IS NOT NULL')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_column($rows, 'url');
     }
 
     /**

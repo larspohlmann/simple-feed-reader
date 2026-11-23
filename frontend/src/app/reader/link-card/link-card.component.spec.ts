@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { aLinkCard } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -11,6 +12,7 @@ const card = aLinkCard({
 });
 
 function mount(layout: LinkCardLayout, siteLine: LinkCardSiteLine | null = null): HTMLElement {
+  TestBed.configureTestingModule({ providers: [provideSocialAccounts()] });
   const fixture = TestBed.createComponent(LinkCardComponent);
   fixture.componentRef.setInput('card', card);
   fixture.componentRef.setInput('layout', layout);
@@ -62,7 +64,7 @@ describe('LinkCardComponent', () => {
       navigation.openAlone.mockReset();
       TestBed.configureTestingModule({
         imports: [LinkCardComponent, provideTranslocoTesting()],
-        providers,
+        providers: [provideSocialAccounts(), ...providers],
       });
       const fixture = TestBed.createComponent(LinkCardComponent);
       fixture.componentRef.setInput('card', card);

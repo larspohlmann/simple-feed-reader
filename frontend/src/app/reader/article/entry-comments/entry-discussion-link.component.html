@@ -10,7 +10,14 @@
   /></a>
 } @else if (e.discussionUrl && e.discussionUrl !== e.url) {
   ·
-  <a class="discussion-link" [href]="e.discussionUrl" target="_blank" rel="noopener noreferrer"
+  <a
+    class="discussion-link"
+    appOwnInstanceHref
+    [href]="e.discussionUrl"
+    [linkNetwork]="linkNetwork()"
+    [linkHomeUrl]="e.discussionHomeUrl"
+    target="_blank"
+    rel="noopener noreferrer"
     >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
   /></a>
 }

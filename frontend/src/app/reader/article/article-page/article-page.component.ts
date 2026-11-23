@@ -35,6 +35,7 @@ import { TocEntry, collectToc } from '../reading/reading-toc';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { ARTICLE_PAGE_SOURCE, type ArticlePageBody } from './article-page-source';
 import { ArticlePageSlotDirective, ArticlePageSlotName } from './article-page-slot.directive';
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 
 function sameBody(left: ArticlePageBody | null, right: ArticlePageBody | null): boolean {
   if (left === null || right === null) return left === right;
@@ -47,6 +48,7 @@ function sameBody(left: ArticlePageBody | null, right: ArticlePageBody | null): 
 @Component({
   selector: 'app-article-page',
   imports: [
+    OwnInstanceHrefDirective,
     NgTemplateOutlet,
     TranslocoPipe,
     ProxiedImageDirective,

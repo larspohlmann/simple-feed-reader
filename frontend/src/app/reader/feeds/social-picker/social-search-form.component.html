@@ -79,7 +79,14 @@
       <ul class="posts">
         @for (post of found.posts; track $index) {
           <li>
-            <a class="post" target="_blank" rel="noopener noreferrer" [attr.href]="post.url">
+            <a
+              class="post"
+              target="_blank"
+              rel="noopener noreferrer"
+              appOwnInstanceHref
+              [href]="post.url"
+              [linkNetwork]="network()"
+            >
               <app-avatar size="md" [url]="post.authorAvatarUrl" [name]="post.author ?? ''" />
               <span class="body">
                 <span class="meta">

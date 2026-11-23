@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../own-instance/own-instance-href.directive';
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { LinkCardDto } from './link-card';
@@ -20,7 +21,7 @@ const SITE_LINE_OF_LAYOUT: Record<LinkCardLayout, LinkCardSiteLine> = {
 @Component({
   selector: 'app-link-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ProxiedImageDirective, OpenInReaderComponent],
+  imports: [OwnInstanceHrefDirective, ProxiedImageDirective, OpenInReaderComponent],
   templateUrl: './link-card.component.html',
   styleUrl: './link-card.component.scss',
   host: {

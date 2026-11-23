@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EntryDto } from '../../../models';
@@ -26,6 +27,7 @@ function mount(
   TestBed.configureTestingModule({
     imports: [StorySourcesComponent, provideTranslocoTesting()],
     providers: [
+      provideSocialAccounts(),
       provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open } },
       ...(reader ? [{ provide: LinkReaderNavigation, useValue: reader }] : []),

@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import {
   afterRenderEffect,
   ChangeDetectionStrategy,
@@ -29,7 +30,7 @@ const CLAMPED_LINES = 2;
  */
 @Component({
   selector: 'app-feed-intro',
-  imports: [FaviconComponent, IconComponent, TranslocoPipe],
+  imports: [OwnInstanceHrefDirective, FaviconComponent, IconComponent, TranslocoPipe],
   templateUrl: './feed-intro.component.html',
   styleUrl: './feed-intro.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

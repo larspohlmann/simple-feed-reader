@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
@@ -9,7 +10,7 @@ describe('LinkCardsComponent', () => {
     const navigation = { layer: jest.fn() };
     TestBed.configureTestingModule({
       imports: [LinkCardsComponent, provideTranslocoTesting()],
-      providers: [{ provide: LinkReaderNavigation, useValue: navigation }],
+      providers: [provideSocialAccounts(), { provide: LinkReaderNavigation, useValue: navigation }],
     });
     const entry = anEntry({
       linkCards: [
