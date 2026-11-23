@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\FeedStatus;
+use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
@@ -704,6 +705,74 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->pruned);
         self::assertSame([], $this->fetcher->fetchedUrls());
         $lock->release();
+    }
+
+    public function testAOneFeedRefreshRunsWhileASweepHoldsTheGlobalLock(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
+        );
+        $sweepLock = $this->lockFactory->createLock('feed-refresh');
+        self::assertTrue($sweepLock->acquire());
+
+        $report = $this->runner()->run(RefreshRequestModel::forFeed($feed->requireId(), 25));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame([$feed->getUrl()], $this->fetcher->fetchedUrls());
+        $sweepLock->release();
+    }
+
+    public function testASweepIsStillRefusedWhileTheGlobalLockIsHeld(): void
+    {
+        $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $sweepLock = $this->lockFactory->createLock('feed-refresh');
+        self::assertTrue($sweepLock->acquire());
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(25));
+
+        self::assertSame(RefreshReportModel::STATUS_BUSY, $report->status);
+        $sweepLock->release();
+    }
+
+    public function testAOneFeedRefreshIsBusyWhileAnotherPassHoldsThatFeed(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
+        );
+        $otherPassClaims = new FeedClaims(new LockFactory($this->lockStore));
+        self::assertTrue($otherPassClaims->claim($feed->requireId()));
+
+        $heldReport = $this->runner()->run(RefreshRequestModel::forFeed($feed->requireId(), 25));
+
+        self::assertSame(RefreshReportModel::STATUS_BUSY, $heldReport->status);
+        self::assertSame([], $this->fetcher->fetchedUrls());
+
+        $otherPassClaims->releaseAll();
+        $freedReport = $this->runner()->run(RefreshRequestModel::forFeed($feed->requireId(), 25));
+
+        self::assertSame('completed', $freedReport->status);
+        self::assertSame(1, $freedReport->fetched);
+    }
+
+    public function testASweepWhoseEveryDueFeedIsHeldIsBusy(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->entityManager->flush();
+        $otherPassClaims = new FeedClaims(new LockFactory($this->lockStore));
+        self::assertTrue($otherPassClaims->claim($feed->requireId()));
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(25));
+
+        self::assertSame(RefreshReportModel::STATUS_BUSY, $report->status);
+        self::assertSame([], $this->fetcher->fetchedUrls());
     }
 
     public function testLockIsReleasedAfterRun(): void

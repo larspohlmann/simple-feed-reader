@@ -15,8 +15,6 @@ final readonly class RefreshPass
 
     private BudgetedFeedQueue $queue;
 
-    private FeedClaims $claims;
-
     /** @var array<int, Feed> */
     private array $feedsById;
 
@@ -27,9 +25,8 @@ final readonly class RefreshPass
         public array $feeds,
         ClockInterface $clock,
         int $deadline,
-        FeedClaims $claims,
+        private FeedClaims $claims,
     ) {
-        $this->claims = $claims;
         $this->queue = new BudgetedFeedQueue($feeds, $clock, $deadline, $claims);
         $feedsById = [];
         foreach ($feeds as $feed) {

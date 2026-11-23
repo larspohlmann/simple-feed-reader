@@ -21,7 +21,8 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
 
 /**
- * The one refresh behind the CLI, the maintenance endpoint and the user endpoint: lock-guarded and budget-bound.
+ * The one refresh behind the CLI, the maintenance endpoint and the user endpoint: a sweep takes the run lock, every
+ * pass claims its feeds, and each is budget-bound.
  * Feeds are fetched concurrently, but each outcome is persisted and flushed serially as it lands.
  */
 final readonly class RefreshRunner implements RefreshRunnerInterface
@@ -45,6 +46,10 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     /** @throws \DateMalformedStringException */
     public function run(RefreshRequestModel $request): RefreshReportModel
     {
+        if ($request->isSingleFeed()) {
+            return $this->refresh($request);
+        }
+
         $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
         if (!$lock->acquire()) {
             return RefreshReportModel::busy();
@@ -75,6 +80,9 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 
         try {
             $this->passRecorder->record($pass, $now);
+            if ($this->isHeldElsewhere($pass)) {
+                return RefreshReportModel::busy();
+            }
 
             // Before the abort branch: what an aborted run created before the failure is already committed.
             if ($pass->tally->entriesCreated() > 0) {
@@ -90,6 +98,11 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         } finally {
             $pass->releaseAllFeeds();
         }
+    }
+
+    private function isHeldElsewhere(RefreshPass $pass): bool
+    {
+        return [] === $pass->startedFeedIds() && [] !== $pass->heldFeedIds();
     }
 
     /** @throws \DateMalformedStringException */

@@ -60,6 +60,16 @@ final class RefreshPassTest extends DbTestCase
         self::assertSame([$held->requireId()], $pass->heldFeedIds());
     }
 
+    public function testAHeldFeedDoesNotCountAsStartedAgainstTheBudget(): void
+    {
+        [$held, $free] = $this->feeds(2);
+        $otherPass = $this->otherPassClaims();
+        $otherPass->claim($held->requireId());
+        $pass = $this->pass([$held, $free], self::ONE_FEED_BUDGET);
+
+        self::assertSame([$free->requireId()], array_keys(iterator_to_array($pass->startedFeeds())));
+    }
+
     public function testAFeedTheBudgetNeverStartsIsNeverClaimed(): void
     {
         [$one, $two] = $this->feeds(2);
