@@ -10,9 +10,7 @@ export interface RunHeaderBlock {
 
 /** A followed story's pair of markers: above the rows that joined since the last visit, and where they
  *  end (#2128, #2505). Drawn together or not at all. */
-export interface VisitBlock {
-  kind: 'since-last-visit' | 'before-last-visit';
-}
+export type VisitBlock = { kind: 'since-last-visit' } | { kind: 'before-last-visit' };
 
 export const SINCE_VISIT_BLOCK: VisitBlock = { kind: 'since-last-visit' };
 export const BEFORE_VISIT_BLOCK: VisitBlock = { kind: 'before-last-visit' };
