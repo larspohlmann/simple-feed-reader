@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class LinkTargetQuery
 {
     /** The longest selection the composer starts from; share-content.ts clips to the same `QUOTE_MAX`. */
-    public const int QUOTE_MAX = 1000;
+    public const int QUOTE_MAX = 2500;
 
     public function __construct(
         public SocialNetwork $network,
