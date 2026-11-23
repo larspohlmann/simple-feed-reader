@@ -14,12 +14,12 @@ final class GroupProfiles
      */
     public static function build(TrendingRun $run, array $entryIds): GroupProfileModel
     {
-        $memberCount = count($entryIds);
+        $memberCount = \count($entryIds);
         $membersPerStem = [];
         $times = [];
         foreach ($entryIds as $entryId) {
             $times[] = $run->readEffectiveTime($entryId);
-            foreach (array_unique($run->headlines->collectHeadlineStemIds($entryId)) as $stemId) {
+            foreach ($run->headlines->collectHeadlineStemIds($entryId) as $stemId) {
                 $membersPerStem[$stemId] = ($membersPerStem[$stemId] ?? 0) + 1;
             }
         }

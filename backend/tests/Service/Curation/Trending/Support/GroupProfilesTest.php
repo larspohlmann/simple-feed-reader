@@ -22,9 +22,16 @@ final class GroupProfilesTest extends TestCase
 
         $profile = GroupProfiles::build($run, [1, 2, 3]);
 
-        $stemId = $run->headlines->collectHeadlineStemIds(1)[0];
-        $expectedWeight = 2 / 3 * $run->headlines->computeRarity($stemId);
-        self::assertEqualsWithDelta($expectedWeight, $profile->stemWeights[$stemId], 1e-9);
+        $sharedStemIds = array_values(array_intersect(
+            $run->headlines->collectHeadlineStemIds(1),
+            $run->headlines->collectHeadlineStemIds(2),
+        ));
+        self::assertCount(2, $sharedStemIds);
+        self::assertEqualsCanonicalizing($sharedStemIds, array_keys($profile->stemWeights));
+        foreach ($sharedStemIds as $stemId) {
+            $expectedWeight = 2 / 3 * $run->headlines->computeRarity($stemId);
+            self::assertEqualsWithDelta($expectedWeight, $profile->stemWeights[$stemId], 1e-9);
+        }
     }
 
     public function testAStemOnlyAThirdCarryIsLeftOut(): void
