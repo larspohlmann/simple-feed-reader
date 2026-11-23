@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest\Factory;
 
+use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\EntryChapter;
@@ -286,6 +287,29 @@ final class IngestedEntryFactoryTest extends TestCase
         );
 
         self::assertSame(2, $entry->selectDiscussionCounts()->getCommentCount());
+    }
+
+    public function testNewEntryStoresTheHomeAddress(): void
+    {
+        $parsed = new ParsedEntryModel(
+            guid: 'https://lemmy.world/post/9',
+            url: null,
+            headline: Headline::fromFeed('Post'),
+            author: null,
+            summary: null,
+            contentHtml: null,
+            publishedAt: null,
+        )->asDiscussionThread(
+            Discussion::platformThread('https://lemmy.world/post/9')->withHomeUrl('https://home.example/post/42'),
+        );
+
+        $entry = $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-7'), null),
+            self::context(),
+        );
+
+        self::assertSame('https://home.example/post/42', $entry->getDiscussion()->homeUrl);
     }
 
     public function testASocialTimelineEntryStoresItsGuessedLanguage(): void

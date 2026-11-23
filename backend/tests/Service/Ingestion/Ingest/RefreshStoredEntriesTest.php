@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingestion\Ingest;
 
+use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
 use App\Entity\Feed;
@@ -58,6 +59,7 @@ final class RefreshStoredEntriesTest extends DbTestCase
 
     private const string POST = 'https://lemmy.world/post/1';
     private const string BLUESKY_POST = 'at://did:plc:alice/app.bsky.feed.post/3kq';
+    private const string HOME_POST = 'https://home.example/post/42';
 
     private static function header(string $counts): string
     {
@@ -191,6 +193,49 @@ final class RefreshStoredEntriesTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(3, $entry->getCanonicalItem()?->getScore());
+    }
+
+    public function testRefreshFillsTheHomeAddressOfAStoredEntry(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedAccountPost($feed);
+        self::assertNull($entry->getDiscussion()->homeUrl);
+
+        $this->refresher()->refreshStoredEntries($feed, self::accountPostAt(self::HOME_POST));
+        $this->entityManager->flush();
+
+        self::assertSame(self::HOME_POST, $entry->getDiscussion()->homeUrl);
+        self::assertSame(self::POST, $entry->getDiscussion()->url);
+    }
+
+    public function testRefreshWithoutHomeAddressKeepsTheStoredOne(): void
+    {
+        $feed = $this->feed();
+        $entry = $this->storedAccountPost($feed);
+        $this->refresher()->refreshStoredEntries($feed, self::accountPostAt(self::HOME_POST));
+
+        $this->refresher()->refreshStoredEntries($feed, self::accountPostAt(null));
+        $this->entityManager->flush();
+
+        self::assertSame(self::HOME_POST, $entry->getDiscussion()->homeUrl);
+    }
+
+    private function storedAccountPost(Feed $feed): Entry
+    {
+        $this->ingestor()->ingest($feed, self::accountPostAt(null), self::context());
+        $this->entityManager->flush();
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => self::POST]);
+        self::assertNotNull($entry);
+
+        return $entry;
+    }
+
+    private static function accountPostAt(?string $homeUrl): ParsedFeedModel
+    {
+        $post = new ParsedEntryModel(self::POST, null, Headline::fromFeed('Post'), null, null, null, null)
+            ->asDiscussionThread(Discussion::platformThread(self::POST)->withHomeUrl($homeUrl));
+
+        return new ParsedFeedModel('T', null, null, null, [$post]);
     }
 
     public function testSkipsParsedEntriesThatCarryNoImage(): void

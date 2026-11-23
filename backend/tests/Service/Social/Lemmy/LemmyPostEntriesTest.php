@@ -126,6 +126,14 @@ final class LemmyPostEntriesTest extends TestCase
         self::assertSame(self::MBIN_POST, $mbinPost->guid);
     }
 
+    public function testAccountPostCarriesItsHomeAddress(): void
+    {
+        $linkPost = $this->entries()[self::LINK_POST];
+
+        self::assertSame('https://lemmy.example/post/101', $linkPost->discussion->homeUrl);
+        self::assertSame(self::LINK_POST, $linkPost->discussion->url);
+    }
+
     public function testAPostStatesItsLanguageByTheInstancesLanguageId(): void
     {
         $entries = $this->entriesWithLanguageIds([32, 130, 37, 0, 47]);

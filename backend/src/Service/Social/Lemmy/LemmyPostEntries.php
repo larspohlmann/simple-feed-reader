@@ -119,8 +119,8 @@ final readonly class LemmyPostEntries
         if (null === $address || null === $postId || $post->isTrue('deleted') || $post->isTrue('removed')) {
             return null;
         }
-        $thread = Discussion::platformThread(LemmyPostKey::resolvePostPage($address, $homeInstance, $postId));
-
+        $thread = Discussion::platformThread(LemmyPostKey::resolvePostPage($address, $homeInstance, $postId))
+            ->withHomeUrl($homeInstance . '/post/' . $postId);
 
         return $this->buildPostEntry($postView, $address)
             ->asDiscussionThread($thread)
