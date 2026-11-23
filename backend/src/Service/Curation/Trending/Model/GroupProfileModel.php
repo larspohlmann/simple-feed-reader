@@ -20,7 +20,7 @@ final readonly class GroupProfileModel
     {
         $shared = 0.0;
         $combined = 0.0;
-        foreach ($this->stemWeights + $other->stemWeights as $stemId => $unused) {
+        foreach (array_keys($this->stemWeights + $other->stemWeights) as $stemId) {
             $ours = $this->stemWeights[$stemId] ?? 0.0;
             $theirs = $other->stemWeights[$stemId] ?? 0.0;
             $shared += min($ours, $theirs);
@@ -32,8 +32,6 @@ final readonly class GroupProfileModel
 
     public function isWithinGap(self $other, int $maxGapSeconds): bool
     {
-        $distance = max(0, max($this->firstSeen, $other->firstSeen) - min($this->lastSeen, $other->lastSeen));
-
-        return $distance <= $maxGapSeconds;
+        return max($this->firstSeen, $other->firstSeen) - min($this->lastSeen, $other->lastSeen) <= $maxGapSeconds;
     }
 }

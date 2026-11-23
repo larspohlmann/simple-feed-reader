@@ -7,10 +7,6 @@ namespace App\Service\Curation\Trending\Pass;
 use App\Service\Curation\Trending\Model\GroupProfileModel;
 use App\Service\Curation\Trending\Support\GroupProfiles;
 
-/**
- * Story groups whose headline profiles are alike merge, most alike first, one merge per group a round, until a
- * round merges nothing, so one news event that the links split into several groups becomes one story (#2490).
- */
 final class ProfileMerges
 {
     private const float MERGE_SIMILARITY = 0.30;
@@ -43,7 +39,6 @@ final class ProfileMerges
         do {
             $mergedAny = $this->mergeAlikePairs();
         } while ($mergedAny);
-        ksort($this->groups);
 
         return array_values($this->groups);
     }

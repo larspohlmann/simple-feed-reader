@@ -122,7 +122,7 @@ No `src` change unless the numbers call for it. Every script lives in the sessio
 - [ ] **Step 4: Report to Lars.** Include:
   - the net change in grouped pairs and the false-merge count per window;
   - the week build time delta;
-  - whether 0.25 / 3 / one-third hold.
+  - whether 0.30 / 3 / one-third hold.
 
   A constant changes only on a structural reason, never to fit one story. Write the outcome into issue #2490 as a comment.
 - [ ] **Step 5: Gate before the PR.**

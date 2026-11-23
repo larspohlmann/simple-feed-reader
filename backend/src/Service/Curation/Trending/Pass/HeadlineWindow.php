@@ -121,6 +121,14 @@ final class HeadlineWindow
         ));
     }
 
+    public function computeRarity(int $stemId): float
+    {
+        return $this->rarities[$stemId] ??= $this->filler->rarityWeight(
+            $this->documentFrequencies[$stemId],
+            $this->entryCount(),
+        );
+    }
+
     /** @return array<int, float> earlier entry id => the weight it shares with this one */
     public function sharedWeightsWithEarlier(int $entryId): array
     {
@@ -341,13 +349,5 @@ final class HeadlineWindow
         );
 
         return array_fill_keys(array_keys($filler), true);
-    }
-
-    public function computeRarity(int $stemId): float
-    {
-        return $this->rarities[$stemId] ??= $this->filler->rarityWeight(
-            $this->documentFrequencies[$stemId],
-            $this->entryCount(),
-        );
     }
 }
