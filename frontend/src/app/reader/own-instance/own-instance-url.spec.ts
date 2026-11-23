@@ -43,16 +43,6 @@ const CASES: [string, LinkFacts, string][] = [
   ['https://lemmy.world/u/alice', {}, 'https://l.home/u/alice@lemmy.world'],
   ['https://l.home/post/3', { network: 'lemmy' }, 'https://l.home/post/3'],
   ['https://lemmy.world/some/article', { network: 'lemmy' }, 'https://lemmy.world/some/article'],
-  [
-    'https://expressional.social/users/Peter_Link',
-    { network: 'lemmy' },
-    'https://l.home/u/Peter_Link@expressional.social',
-  ],
-  [
-    'https://host.example/users/name/statuses/1',
-    { network: 'lemmy' },
-    'https://host.example/users/name/statuses/1',
-  ],
   ['https://mastodon.social/@alice/1234', {}, authorize('https://mastodon.social/@alice/1234')],
   [
     'https://pixel.example/users/bob/statuses/77',

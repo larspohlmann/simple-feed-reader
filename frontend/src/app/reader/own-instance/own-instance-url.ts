@@ -18,7 +18,6 @@ const MENTION_PATH = /^\/(?:@[^/]+|users\/[^/]+)$/;
 const HASHTAG_PATH = /^\/tags\/[^/]+$/;
 const LEMMY_THREAD_PATH = /^\/(?:post|comment)\/\d+$/;
 const LEMMY_ACTOR_PATH = /^\/([cu])\/([^/@]+)(?:@([^/]+))?$/;
-const FEDIVERSE_USER_PATH = /^\/users\/([^/@]+)$/;
 
 function parseHttpUrl(value: string): URL | null {
   const parsed = parseUrl(value);
@@ -64,8 +63,6 @@ function lemmyTarget({ address, target }: Link, instance: string): string | null
   if (LEMMY_THREAD_PATH.test(target.pathname)) {
     return `${instance}/search?q=${encodeURIComponent(address)}&type=All`;
   }
-  const user = FEDIVERSE_USER_PATH.exec(target.pathname);
-  if (user !== null) return `${instance}/u/${user[1]}@${target.host}`;
   const actor = LEMMY_ACTOR_PATH.exec(target.pathname);
   if (actor === null) return null;
   const [, kind, name, domain] = actor;
