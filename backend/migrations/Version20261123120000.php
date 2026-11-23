@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace DoctrineMigrations;
 
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** A plain ADD COLUMN, so SQLite keeps the entry table and its entry_search triggers. */
+/**
+ * A text column, as entry's VARCHAR(2048) columns already fill MySQL's 65,535-byte row; a plain ADD COLUMN, so SQLite
+ * keeps the entry table and its entry_search triggers.
+ */
 final class Version20261123120000 extends AbstractMigration
 {
     private const string COLUMN = 'discussion_home_url';
@@ -20,7 +24,8 @@ final class Version20261123120000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->skipIf($schema->getTable('entry')->hasColumn(self::COLUMN), self::COLUMN . ' exists.');
-        $this->addSql('ALTER TABLE entry ADD ' . self::COLUMN . ' VARCHAR(2048) DEFAULT NULL');
+        $text = $this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? 'LONGTEXT' : 'CLOB';
+        $this->addSql('ALTER TABLE entry ADD ' . self::COLUMN . ' ' . $text . ' DEFAULT NULL');
     }
 
     public function down(Schema $schema): void

@@ -14,7 +14,7 @@ final class EntryDiscussion implements DiscussionCountStoreInterface
     #[ORM\Column(name: 'discussion_url', length: 2048, nullable: true)]
     private ?string $url = null;
 
-    #[ORM\Column(name: 'discussion_home_url', length: 2048, nullable: true)]
+    #[ORM\Column(name: 'discussion_home_url', type: Types::TEXT, nullable: true)]
     private ?string $homeUrl = null;
 
     #[ORM\Column(name: 'comments_feed_url', length: 2048, nullable: true)]
