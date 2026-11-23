@@ -42,4 +42,12 @@ describe('NotificationsApi (#2240)', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ network: 'mastodon', upTo: 77 });
   });
+
+  it('posts a refresh for a network (#2502)', () => {
+    api.refresh('lemmy').subscribe();
+
+    const request = http.expectOne('https://api.test/api/me/notifications/refresh');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ network: 'lemmy' });
+  });
 });

@@ -58,6 +58,21 @@ export class NotificationsStore {
     if (network !== null) this.loadFirstPage(network);
   }
 
+  refresh(): void {
+    const network = this.openNetwork();
+    if (network === null) return;
+    this.isLoading.set(true);
+    this.failure.set(null);
+    this.listRequest?.unsubscribe();
+    this.listRequest = this.api.refresh(network).subscribe({
+      complete: () => this.reloadAfterPoll(network),
+      error: (error: HttpErrorResponse) => {
+        this.toast.showProblem(parseProblem(error));
+        this.reloadAfterPoll(network);
+      },
+    });
+  }
+
   loadMore(): void {
     const network = this.openNetwork();
     const cursor = this.cursor();
@@ -115,6 +130,12 @@ export class NotificationsStore {
     this.shownGroups.set([]);
     this.missingScope.set([]);
     this.reconnectNeeded.set([]);
+  }
+
+  private reloadAfterPoll(network: SocialNetworkName): void {
+    if (this.openNetwork() !== network) return;
+    this.subscriptions.reloadCountsQuietly();
+    this.loadFirstPage(network);
   }
 
   private loadFirstPage(network: SocialNetworkName): void {
