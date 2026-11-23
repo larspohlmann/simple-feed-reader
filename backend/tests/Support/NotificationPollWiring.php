@@ -43,39 +43,46 @@ final class NotificationPollWiring
         NotificationContextSourceInterface $contextSource = new RecordingContextSource(),
     ): NotificationPollSweep {
         $naiveClock = new NaiveUtcClock($clock);
-        $polls = $entityManager->getRepository(SocialNotificationPoll::class);
-        Assert::assertInstanceOf(SocialNotificationPollRepository::class, $polls);
         $socialAccounts = $container->get(SocialAccountSyncRepository::class);
         Assert::assertInstanceOf(SocialAccountSyncRepository::class, $socialAccounts);
-        $store = new NotificationStore(
-            $entityManager->getRepository(SocialNotification::class),
-            $entityManager,
-            $naiveClock,
-        );
         $doctrine = $registry ?? $container->get('doctrine');
         Assert::assertInstanceOf(ManagerRegistry::class, $doctrine);
 
         return new NotificationPollSweep(
-            $polls,
+            self::polls($entityManager),
             $socialAccounts,
-            new NotificationPoll(
-                new ServiceLocator(array_map(
-                    static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
-                    $sources,
-                )),
-                new ActingAccountGuard($entityManager),
-                $store,
-                new NotificationContextLookup(self::contextSourcesOf($contextSource), $store),
-                $hostThrottle,
-                $polls,
-                $entityManager,
-                $naiveClock,
-            ),
-            $store,
+            self::poll($entityManager, $clock, $hostThrottle, $sources, $contextSource),
+            self::store($entityManager, $naiveClock),
             $entityManager,
             $doctrine,
             $naiveClock,
             $logger,
+        );
+    }
+
+    /** @param array<string, NotificationSourceInterface> $sources keyed by SocialNetwork value */
+    public static function poll(
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+        HostThrottle $hostThrottle,
+        array $sources,
+        NotificationContextSourceInterface $contextSource = new RecordingContextSource(),
+    ): NotificationPoll {
+        $naiveClock = new NaiveUtcClock($clock);
+        $store = self::store($entityManager, $naiveClock);
+
+        return new NotificationPoll(
+            new ServiceLocator(array_map(
+                static fn (NotificationSourceInterface $source): \Closure => static fn () => $source,
+                $sources,
+            )),
+            new ActingAccountGuard($entityManager),
+            $store,
+            new NotificationContextLookup(self::contextSourcesOf($contextSource), $store),
+            $hostThrottle,
+            self::polls($entityManager),
+            $entityManager,
+            $naiveClock,
         );
     }
 
@@ -97,6 +104,23 @@ final class NotificationPollWiring
         }
 
         return $sources;
+    }
+
+    private static function polls(EntityManagerInterface $entityManager): SocialNotificationPollRepository
+    {
+        $polls = $entityManager->getRepository(SocialNotificationPoll::class);
+        Assert::assertInstanceOf(SocialNotificationPollRepository::class, $polls);
+
+        return $polls;
+    }
+
+    private static function store(EntityManagerInterface $entityManager, NaiveUtcClock $naiveClock): NotificationStore
+    {
+        return new NotificationStore(
+            $entityManager->getRepository(SocialNotification::class),
+            $entityManager,
+            $naiveClock,
+        );
     }
 
     private static function contextSourcesOf(NotificationContextSourceInterface $contextSource): ContainerInterface

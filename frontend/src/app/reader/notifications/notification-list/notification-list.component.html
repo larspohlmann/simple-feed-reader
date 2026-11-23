@@ -6,7 +6,7 @@
     [headerLeading]="headerLeading()"
     [headerActions]="markSeen"
     [refreshing]="store.loading()"
-    (refresh)="refresh()"
+    (refresh)="store.refresh()"
   />
 
   @let networkName = 'settings.social.' + network() | transloco;
