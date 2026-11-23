@@ -1,4 +1,10 @@
-import { blocksWithout, groupMembersWithout, ListBlock, SINCE_VISIT_BLOCK } from './hidden-overlay';
+import {
+  BEFORE_VISIT_BLOCK,
+  blocksWithout,
+  groupMembersWithout,
+  ListBlock,
+  SINCE_VISIT_BLOCK,
+} from './hidden-overlay';
 import { EntryDto } from '../../models';
 
 const entry = (id: number): EntryDto => ({ id }) as EntryDto;
@@ -35,22 +41,23 @@ describe('blocksWithout', () => {
   });
 });
 
-describe('blocksWithout and the "Since your last visit" divider (#2128)', () => {
-  const blocks = [compact(1), compact(2), SINCE_VISIT_BLOCK, compact(3)];
+describe('blocksWithout and the last-visit dividers (#2128, #2505)', () => {
+  const blocks = [SINCE_VISIT_BLOCK, compact(1), compact(2), BEFORE_VISIT_BLOCK, compact(3)];
 
-  it('keeps the divider while new and earlier blocks remain on both sides', () => {
+  it('keeps both dividers while new and earlier blocks remain', () => {
     expect(blocksWithout(blocks, new Set([1]))).toEqual([
-      compact(2),
       SINCE_VISIT_BLOCK,
+      compact(2),
+      BEFORE_VISIT_BLOCK,
       compact(3),
     ]);
   });
 
-  it('drops the divider once nothing new is left above it', () => {
+  it('drops both dividers once nothing new is left', () => {
     expect(blocksWithout(blocks, new Set([1, 2]))).toEqual([compact(3)]);
   });
 
-  it('drops the divider once nothing is left below it', () => {
+  it('drops both dividers once nothing from before the visit is left', () => {
     expect(blocksWithout(blocks, new Set([3]))).toEqual([compact(1), compact(2)]);
   });
 });

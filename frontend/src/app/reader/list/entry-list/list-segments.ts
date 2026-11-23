@@ -1,12 +1,20 @@
 import { groupByRun, RunGroup } from '../for-you-runs';
 import { ListItem, leadOf } from '../../state/list-item';
-import { listBlockKey, RunHeaderBlock, SINCE_VISIT_BLOCK, SinceVisitBlock } from './hidden-overlay';
+import {
+  BEFORE_VISIT_BLOCK,
+  isVisitBlock,
+  listBlockKey,
+  marksVisit,
+  RunHeaderBlock,
+  SINCE_VISIT_BLOCK,
+  VisitBlock,
+} from './hidden-overlay';
 
-/** A stretch of the list both layouts render under one divider: a run header, the visit's, or none. */
+/** A stretch of the list both layouts render under one divider: a run header, a visit marker, or none. */
 export interface ListSegment {
   /** Fixed when segmented, so a segment whose divider hiding takes keeps its rows mounted. */
   readonly key: string;
-  readonly divider: RunHeaderBlock | SinceVisitBlock | null;
+  readonly divider: RunHeaderBlock | VisitBlock | null;
   readonly items: ListItem[];
 }
 
@@ -27,21 +35,20 @@ export function segmentList(items: ListItem[], marks: SegmentMarks): ListSegment
   }));
 }
 
-/** `segments` minus the hidden ids: an emptied segment goes, and the visit's divider once nothing
- *  new is left above it. The input itself comes back when nothing is hidden. */
+/** `segments` minus the hidden ids: an emptied segment goes, and the visit's markers once either side
+ *  of them is empty. The input itself comes back when nothing is hidden. */
 export function segmentsWithout(
   segments: ListSegment[],
   hidden: ReadonlySet<number>,
 ): ListSegment[] {
   if (hidden.size === 0) return segments;
-  return segments
+  const kept = segments
     .map((segment) => segmentWithout(segment, hidden))
-    .filter((segment) => segment.items.length > 0)
-    .map((segment, index) =>
-      index === 0 && segment.divider?.kind === 'since-last-visit'
-        ? { ...segment, divider: null }
-        : segment,
-    );
+    .filter((segment) => segment.items.length > 0);
+  if (marksVisit(kept.map((segment) => segment.divider))) return kept;
+  return kept.map((segment) =>
+    isVisitBlock(segment.divider) ? { ...segment, divider: null } : segment,
+  );
 }
 
 type UnkeyedSegment = Omit<ListSegment, 'key'>;
@@ -61,8 +68,8 @@ function splitAtVisitEnd(segment: UnkeyedSegment, marks: SegmentMarks): UnkeyedS
   const end = items.findIndex((item) => !newIds.has(leadOf(item).id));
   if (end === -1) return [segment];
   return [
-    { ...segment, items: items.slice(0, end) },
-    { divider: SINCE_VISIT_BLOCK, items: items.slice(end) },
+    { divider: segment.divider ?? SINCE_VISIT_BLOCK, items: items.slice(0, end) },
+    { divider: BEFORE_VISIT_BLOCK, items: items.slice(end) },
   ];
 }
 

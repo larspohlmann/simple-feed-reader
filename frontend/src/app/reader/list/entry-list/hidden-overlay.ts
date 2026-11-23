@@ -8,27 +8,37 @@ export interface RunHeaderBlock {
   generatedAt: string;
 }
 
-/** Where a followed story's rows that joined since the last visit end (#2128). */
-export interface SinceVisitBlock {
-  kind: 'since-last-visit';
-}
+/** A followed story's pair of markers: above the rows that joined since the last visit, and where they
+ *  end (#2128, #2505). Drawn together or not at all. */
+export type VisitBlock = { kind: 'since-last-visit' } | { kind: 'before-last-visit' };
 
-export const SINCE_VISIT_BLOCK: SinceVisitBlock = { kind: 'since-last-visit' };
+export const SINCE_VISIT_BLOCK: VisitBlock = { kind: 'since-last-visit' };
+export const BEFORE_VISIT_BLOCK: VisitBlock = { kind: 'before-last-visit' };
 
 /** What the magazine branch actually renders: planner blocks plus dividers. */
-export type ListBlock = MagazineBlock | RunHeaderBlock | SinceVisitBlock;
+export type ListBlock = MagazineBlock | RunHeaderBlock | VisitBlock;
 
 /** A block's identity across re-plans: a divider by what it marks, a block by its first entry. */
 export function listBlockKey(block: ListBlock): string {
   if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
-  if (block.kind === 'since-last-visit') return block.kind;
+  if (isVisitBlock(block)) return block.kind;
   return block.kind === 'group'
     ? `g${block.subscriptionId}:${block.entries[0].id}`
     : `${block.kind}:${block.entry.id}`;
 }
 
-function isDivider(block: ListBlock): block is RunHeaderBlock | SinceVisitBlock {
-  return block.kind === 'run-header' || block.kind === 'since-last-visit';
+export function isVisitBlock(block: { kind: string } | null): block is VisitBlock {
+  return block?.kind === 'since-last-visit' || block?.kind === 'before-last-visit';
+}
+
+/** Both visit markers are still there, so each has rows below it. */
+export function marksVisit(markers: ({ kind: string } | null)[]): boolean {
+  const kinds = markers.filter(isVisitBlock).map((marker) => marker.kind);
+  return kinds.includes('since-last-visit') && kinds.includes('before-last-visit');
+}
+
+function isDivider(block: ListBlock): block is RunHeaderBlock | VisitBlock {
+  return block.kind === 'run-header' || isVisitBlock(block);
 }
 
 /** `blocks` minus the hidden ids, applied to the planner's OUTPUT so nothing
@@ -59,12 +69,12 @@ function blockWithout(block: ListBlock, hidden: ReadonlySet<number>): ListBlock[
   return entries.length === block.entries.length ? [block] : [{ ...block, entries }];
 }
 
-/** A divider goes once nothing is left below it, and the visit's once nothing new is left above it. */
+/** A divider goes once nothing is left below it, and the visit's pair once either one goes. */
 function withoutEmptyRuns(blocks: ListBlock[]): ListBlock[] {
-  return blocks.filter((block, index) => {
+  const kept = blocks.filter((block, index) => {
     if (!isDivider(block)) return true;
     const next = blocks[index + 1];
-    if (next === undefined || isDivider(next)) return false;
-    return block.kind === 'run-header' || index > 0;
+    return next !== undefined && !isDivider(next);
   });
+  return marksVisit(kept) ? kept : kept.filter((block) => !isVisitBlock(block));
 }

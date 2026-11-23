@@ -1471,6 +1471,7 @@
         }
       }
     },
+    "beforeLastVisit": "Avant votre dernière visite",
     "sinceLastVisit": "Depuis votre dernière visite",
     "followedStoryQuiet": "calme",
     "followedStoryQuietHint": "Rien de nouveau depuis deux jours",

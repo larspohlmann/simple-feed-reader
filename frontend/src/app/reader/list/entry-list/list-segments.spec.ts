@@ -1,4 +1,4 @@
-import { SINCE_VISIT_BLOCK } from './hidden-overlay';
+import { BEFORE_VISIT_BLOCK, SINCE_VISIT_BLOCK } from './hidden-overlay';
 import { ListSegment, SegmentMarks, segmentList, segmentsWithout } from './list-segments';
 import { EntryDto } from '../../models';
 import { leadOf } from '../../state/list-item';
@@ -40,7 +40,7 @@ describe('segmentList', () => {
     );
 
     expect(ids(segments)).toEqual([[1, 2], [3]]);
-    expect(dividers(segments)).toEqual([null, SINCE_VISIT_BLOCK]);
+    expect(dividers(segments)).toEqual([SINCE_VISIT_BLOCK, BEFORE_VISIT_BLOCK]);
   });
 
   it('draws no visit divider oldest first or when the list does not open with a new row', () => {
@@ -96,43 +96,51 @@ describe('segmentsWithout', () => {
     expect(segmentsWithout(split, new Set())).toBe(split);
   });
 
-  it('keeps an untouched segment by identity and drops an emptied one', () => {
-    const out = segmentsWithout(split, new Set([3, 4]));
+  it('keeps an untouched segment by identity', () => {
+    const out = segmentsWithout(split, new Set([3]));
 
-    expect(out).toHaveLength(1);
     expect(out[0]).toBe(split[0]);
   });
 
-  it('keeps the visit divider while some new rows are still shown', () => {
-    const out = segmentsWithout(split, new Set([1]));
+  it('keeps both visit dividers while new and earlier rows are still shown', () => {
+    const out = segmentsWithout(split, new Set([1, 3]));
 
-    expect(ids(out)).toEqual([[2], [3, 4]]);
-    expect(dividers(out)).toEqual([null, SINCE_VISIT_BLOCK]);
+    expect(ids(out)).toEqual([[2], [4]]);
+    expect(dividers(out)).toEqual([SINCE_VISIT_BLOCK, BEFORE_VISIT_BLOCK]);
   });
 
-  it('drops the visit divider once hiding leaves nothing new above it', () => {
+  it('drops both visit dividers once hiding leaves nothing new', () => {
     const out = segmentsWithout(split, new Set([1, 2, 3]));
 
     expect(ids(out)).toEqual([[4]]);
+    expect(dividers(out)).toEqual([null]);
+  });
+
+  it('drops both visit dividers once hiding leaves nothing from before the visit', () => {
+    const out = segmentsWithout(split, new Set([3, 4]));
+
+    expect(ids(out)).toEqual([[1, 2]]);
     expect(dividers(out)).toEqual([null]);
   });
 });
 
 describe('segment keys', () => {
   it('keys a segment by its divider, else by its place', () => {
-    const [head, sinceVisit] = segmentList(
+    const [sinceVisit, beforeVisit] = segmentList(
       [entry(1), entry(2)],
       marks({ newSinceVisitIds: new Set([1]) }),
     );
+    const [plain] = segmentList([entry(1)], marks());
 
-    expect(head.key).toBe('head:0');
     expect(sinceVisit.key).toBe('since-last-visit');
+    expect(beforeVisit.key).toBe('before-last-visit');
+    expect(plain.key).toBe('head:0');
   });
 
   it('keeps the key of a segment whose divider hiding takes', () => {
-    const [sinceVisit] = segmentsWithout(split, new Set([1, 2]));
+    const [beforeVisit] = segmentsWithout(split, new Set([1, 2]));
 
-    expect(sinceVisit.divider).toBeNull();
-    expect(sinceVisit.key).toBe('since-last-visit');
+    expect(beforeVisit.divider).toBeNull();
+    expect(beforeVisit.key).toBe('before-last-visit');
   });
 });
