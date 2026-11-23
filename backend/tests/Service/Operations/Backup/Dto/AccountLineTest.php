@@ -7,6 +7,7 @@ namespace App\Tests\Service\Operations\Backup\Dto;
 use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
+use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
 use App\Service\Operations\Backup\Dto\AccountLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -30,14 +31,14 @@ final class AccountLineTest extends TestCase
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
 
-        self::assertTrue($line->trendingEnabled);
+        self::assertTrue($line->reading->trendingEnabled);
     }
 
     public function testItReadsTrending(): void
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'trendingEnabled' => false]);
 
-        self::assertFalse($line->trendingEnabled);
+        self::assertFalse($line->reading->trendingEnabled);
     }
 
     public function testAnOlderBackupHasNoFeedDirectoryScope(): void
@@ -109,14 +110,14 @@ final class AccountLineTest extends TestCase
             'magazineStyle' => 'airy',
         ]);
 
-        self::assertSame(MagazineStyle::Airy, $line->magazineStyle);
+        self::assertSame(MagazineStyle::Airy, $line->reading->magazineStyle);
     }
 
     public function testAMissingMagazineStyleFallsBackToBoxed(): void
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
 
-        self::assertSame(MagazineStyle::Boxed, $line->magazineStyle);
+        self::assertSame(MagazineStyle::Boxed, $line->reading->magazineStyle);
     }
 
     public function testAnInvalidMagazineStyleFallsBackToBoxed(): void
@@ -127,7 +128,44 @@ final class AccountLineTest extends TestCase
             'magazineStyle' => 'sideways',
         ]);
 
-        self::assertSame(MagazineStyle::Boxed, $line->magazineStyle);
+        self::assertSame(MagazineStyle::Boxed, $line->reading->magazineStyle);
+    }
+
+    public function testItReadsTheSidebarStyle(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'sidebarStyle' => 'airy',
+        ]);
+
+        self::assertSame(SidebarStyle::Airy, $line->reading->sidebarStyle);
+    }
+
+    public function testAMissingSidebarStyleFallsBackToBoxed(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame(SidebarStyle::Boxed, $line->reading->sidebarStyle);
+    }
+
+    public function testAnInvalidSidebarStyleFallsBackToBoxed(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'sidebarStyle' => 'sideways',
+        ]);
+
+        self::assertSame(SidebarStyle::Boxed, $line->reading->sidebarStyle);
+    }
+
+    public function testANonStringSidebarStyleIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Field "sidebarStyle" is missing or not a string.');
+
+        AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'sidebarStyle' => 5]);
     }
 
     public function testItReadsTheHandedness(): void
@@ -138,14 +176,14 @@ final class AccountLineTest extends TestCase
             'handedness' => 'left',
         ]);
 
-        self::assertSame(Handedness::Left, $line->handedness);
+        self::assertSame(Handedness::Left, $line->reading->handedness);
     }
 
     public function testAMissingHandednessFallsBackToRight(): void
     {
         $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
 
-        self::assertSame(Handedness::Right, $line->handedness);
+        self::assertSame(Handedness::Right, $line->reading->handedness);
     }
 
     public function testAnInvalidHandednessFallsBackToRight(): void
@@ -156,7 +194,7 @@ final class AccountLineTest extends TestCase
             'handedness' => 'both',
         ]);
 
-        self::assertSame(Handedness::Right, $line->handedness);
+        self::assertSame(Handedness::Right, $line->reading->handedness);
     }
 
     /** An older backup's `recommendationSettings` object is ignored, not rejected: the format does not carry it. */
@@ -170,8 +208,8 @@ final class AccountLineTest extends TestCase
         ]);
 
         self::assertSame('de', $line->locale);
-        self::assertFalse($line->scrapeFallbackEnabled);
-        self::assertSame(MagazineStyle::Airy, $line->magazineStyle);
+        self::assertFalse($line->reading->scrapeFallbackEnabled);
+        self::assertSame(MagazineStyle::Airy, $line->reading->magazineStyle);
     }
 
     public function testANetworkListedTwiceIsIncludedOnce(): void
@@ -267,6 +305,7 @@ final class AccountLineTest extends TestCase
         $settings = UnsavedUserSettings::of($user);
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
+        $settings->reading->setSidebarStyle(SidebarStyle::Airy);
         $settings->reading->setHandedness(Handedness::Left);
         $settings->reading->setTrendingEnabled(false);
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
@@ -280,7 +319,8 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
-            . '"handedness":"left","sharingEnabled":true,"hiddenShareTargets":["mastodon","email"],'
+            . '"sidebarStyle":"airy","handedness":"left","sharingEnabled":true,'
+            . '"hiddenShareTargets":["mastodon","email"],'
             . '"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"savedSearchIncludedNetworks":["bluesky"],'
