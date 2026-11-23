@@ -55,12 +55,22 @@ describe('share content', () => {
   });
 
   it('clips a quote past the most the server takes at a word', () => {
-    const long: SelectedQuote = { text: 'word '.repeat(300).trim(), words: 300, anchorable: false };
+    const long: SelectedQuote = { text: 'word '.repeat(600).trim(), words: 600, anchorable: false };
 
     const sent = sharedLink(PAGE, long).quote!;
 
     expect(sent.length).toBeLessThanOrEqual(QUOTE_MAX);
     expect(sent.endsWith('word…')).toBe(true);
+  });
+
+  it('sends a quote of exactly the most the server takes whole', () => {
+    const text = 'a'.repeat(QUOTE_MAX);
+    expect(sharedLink(PAGE, { text, words: 1, anchorable: false }).quote).toBe(text);
+  });
+
+  it('sends a quote past the old 1000-character cap whole', () => {
+    const text = 'word '.repeat(400).trim();
+    expect(sharedLink(PAGE, { text, words: 400, anchorable: false }).quote).toBe(text);
   });
 
   it('clips at the last space before the limit', () => {
