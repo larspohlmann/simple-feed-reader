@@ -53,7 +53,9 @@ describe('ListFrameComponent', () => {
   it('projects the header into the floating header', () => {
     const { element } = mount();
 
-    expect(element.querySelector('.list-frame.lead > header.list-header > h2')).not.toBeNull();
+    expect(
+      element.querySelector('.list-frame.lead > app-pane-bar.list-header > h2'),
+    ).not.toBeNull();
   });
 
   it('projects rows between the frames and the tail into the tail frame', () => {
