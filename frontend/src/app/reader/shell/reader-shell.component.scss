@@ -74,6 +74,28 @@ app-reader-header.hidden {
   display: none;
 }
 
+/* The airy sidebar (#2493) is one sheet with hairline rules; its rows draw the rest under `:host-context(.airy)`. */
+.sidebar.airy {
+  --airy-sheet: var(--surface-2);
+  --airy-rule: var(--border);
+  --airy-hrule: color-mix(in srgb, var(--border) 35%, var(--airy-sheet));
+
+  background: var(--airy-sheet);
+}
+
+:host-context([data-theme='dark']) .sidebar.airy {
+  --airy-sheet: var(--surface-read);
+  --airy-rule: color-mix(in srgb, var(--border-strong), var(--text-muted));
+  --airy-hrule: var(--border);
+}
+
+/* The sheet's gutter widens the column, so the content keeps its 316px; the search band starts at the bar. */
+.body:not(.is-narrow) .sidebar.airy {
+  width: calc(var(--sidebar-nav-w) + 2 * var(--space-3));
+  padding-top: var(--app-bar-h, var(--bar-h));
+  padding-inline: var(--space-3);
+}
+
 .main {
   flex: 1;
   min-width: 0;

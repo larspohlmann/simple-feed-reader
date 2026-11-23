@@ -31,6 +31,14 @@
   .card.organising {
     padding: var(--space-1) 0;
   }
+
+  // The airy sidebar (#2493) draws no box: a faint rule above each section.
+  :host-context(.airy) .card {
+    padding-block: var(--space-3);
+    border-color: var(--airy-hrule) transparent transparent;
+    border-radius: 0;
+    background: none;
+  }
 }
 
 @mixin row-geometry($color: var(--text-primary)) {
@@ -50,7 +58,8 @@
   }
 }
 
-@mixin row-states($row, $current) {
+// A host row passes `:host-context(.airy).current`: Angular compiles `:host-context(.airy):host(.current)` to `.airy.current`.
+@mixin row-states($row, $current, $airy-current: ':host-context(.airy) #{$current}') {
   @media (hover: hover) {
     #{$row}:hover {
       --dots-color: var(--text-primary);
@@ -62,6 +71,12 @@
   #{$current} {
     background: var(--accent-soft);
     color: var(--accent);
+  }
+
+  #{$airy-current} {
+    border-radius: 0;
+    background: none;
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 }
 
@@ -385,6 +400,34 @@
     position: relative;
     top: 0.15em;
   }
+
+  // The airy sidebar: a head is a heading at the row size, an open one draws no band.
+  :host-context(.airy) .section-head:has(> [aria-expanded='true']) {
+    margin-top: 0;
+    padding-block: 0;
+    border-bottom-color: transparent;
+    background: none;
+
+    &.current::before {
+      background: none;
+    }
+  }
+
+  @media (pointer: fine) {
+    :host-context(.airy) .section-head {
+      height: var(--sidebar-row-h);
+    }
+  }
+
+  :host-context(.airy) .section-head .label {
+    top: 0;
+    color: var(--text-primary);
+    font-size: var(--fs-base);
+  }
+
+  :host-context(.airy) .section-head.current .label {
+    color: var(--accent);
+  }
 }
 
 /* Organise-mode drag handle: the ONLY drag origin there (cdkDragHandle), so a
@@ -418,6 +461,10 @@
     padding-bottom: var(--sidebar-card-pad);
     border-radius: var(--radius);
     background: var(--surface-sunken);
+  }
+
+  :host-context(.airy) .group.open {
+    background: none;
   }
 }
 
