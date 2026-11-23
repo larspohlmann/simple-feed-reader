@@ -5,6 +5,7 @@ import { SignedUrl } from '../../query/link-param';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { ReaderLoad } from '../content/reader-load';
+import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { linkPageKey } from '../reading/article-page-key';
 import {
   ArticlePageBody,
@@ -20,6 +21,7 @@ import {
 export class LinkArticleSource implements ArticlePageSource {
   private readonly reader = inject(ReaderContentService);
   private readonly routeState = inject(ReaderRouteState);
+  private readonly links = inject(OwnInstanceLinks);
   private readonly load = new ReaderLoad();
   private readonly leadFailed = signal(false);
 
@@ -36,7 +38,10 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly url = computed(
     () => this.card()?.url ?? this.article()?.url ?? this.load.failure()?.url ?? null,
   );
-  readonly openUrl = this.url;
+  readonly openUrl = computed(() => {
+    const url = this.url();
+    return url === null ? null : this.links.open(url);
+  });
   readonly body = computed<ArticlePageBody | null>(() => {
     const article = this.article();
     return article === null

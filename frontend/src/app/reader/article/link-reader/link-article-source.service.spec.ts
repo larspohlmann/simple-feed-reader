@@ -8,6 +8,10 @@ import { ReaderContent } from '../../models';
 import { SignedUrl } from '../../query/link-param';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
+import {
+  aMastodonAccount,
+  provideSocialAccounts,
+} from '../../../../testing/social-accounts-testing';
 import { LinkArticleSource } from './link-article-source.service';
 
 const LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
@@ -28,6 +32,7 @@ describe('LinkArticleSource', () => {
         LinkArticleSource,
         { provide: ReaderRouteState, useValue: { linkTarget, openLinkCard } },
         { provide: ReaderContentService, useValue: { load: () => replies } },
+        provideSocialAccounts([aMastodonAccount('https://home.example')]),
       ],
     });
     source = TestBed.inject(LinkArticleSource);
@@ -44,6 +49,22 @@ describe('LinkArticleSource', () => {
     openTheLink();
 
     expect(source.title()).toBe('A shared story');
+  });
+
+  it("opens a Mastodon post's original on the reader's instance", () => {
+    openLinkCard.set(aLinkCard({ url: 'https://mastodon.social/@alice/1234' }));
+    openTheLink();
+
+    expect(source.openUrl()).toBe(
+      `https://home.example/authorize_interaction?uri=${encodeURIComponent('https://mastodon.social/@alice/1234')}`,
+    );
+  });
+
+  it('opens an article original as it is', () => {
+    openLinkCard.set(aLinkCard({ url: 'https://news.test/story' }));
+    openTheLink();
+
+    expect(source.openUrl()).toBe('https://news.test/story');
   });
 
   it('is named after the extracted page when the card is not in view', () => {
