@@ -127,7 +127,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         DueFeedCriteria $criteria,
         SweepLockKeepalive $keepalive,
     ): RefreshReportModel {
-        $keepalive->beat();
         try {
             $this->missingFavicons->resolveFor($pass->tally->faviconEligibleFeeds());
         } catch (UniqueConstraintViolationException | ORMException $exception) {
@@ -142,7 +141,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         return $pass->finished($this->countRemaining($criteria, $pass), $this->keepHouse($request, $keepalive));
     }
 
-    /** A pass that lost the sweep lock leaves the housekeeping to the sweep that took it. */
     private function keepHouse(RefreshRequestModel $request, SweepLockKeepalive $keepalive): int
     {
         $keepalive->beat();

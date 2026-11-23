@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchOutcomeModel;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Outbound\Fetch\Model\FetchTicketModel;
+use Symfony\Component\Clock\MockClock;
 
 final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInterface
 {
@@ -20,6 +21,13 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
 
     /** @var list<string> */
     public array $fetchedUrls = [];
+
+    /** Wall-clock cost of one batch, not of one fetch. */
+    public int $secondsPerBatch = 0;
+
+    public function __construct(private readonly ?MockClock $clock = null)
+    {
+    }
 
     public function willReturn(string $url, FetchResponseModel $response): void
     {
@@ -60,6 +68,10 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     /** @return \Generator<int|string, FetchOutcomeModel> */
     public function fetchAll(iterable $tickets): \Generator
     {
+        if ($this->secondsPerBatch > 0) {
+            $this->clock?->sleep($this->secondsPerBatch);
+        }
+
         foreach ($tickets as $key => $ticket) {
             $this->fetchedUrls[] = $ticket->url;
 

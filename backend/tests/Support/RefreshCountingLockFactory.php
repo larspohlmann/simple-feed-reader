@@ -12,14 +12,12 @@ final class RefreshCountingLockFactory extends RecordingLockFactory
 {
     private const string SWEEP_LOCK = 'feed-refresh';
 
-    /** @var \Closure(RefreshCountingLock): void */
-    private \Closure $armSweepLock;
+    /** @var (\Closure(RefreshCountingLock): void)|null */
+    private ?\Closure $armSweepLock = null;
 
     public function __construct(PersistingStoreInterface $store)
     {
         parent::__construct($store);
-        $this->armSweepLock = static function (RefreshCountingLock $lock): void {
-        };
     }
 
     public function createLock(string $resource, ?float $ttl = 300.0, bool $autoRelease = true): SharedLockInterface
@@ -30,7 +28,9 @@ final class RefreshCountingLockFactory extends RecordingLockFactory
         }
 
         $sweepLock = new RefreshCountingLock($lock);
-        ($this->armSweepLock)($sweepLock);
+        if (null !== $this->armSweepLock) {
+            ($this->armSweepLock)($sweepLock);
+        }
 
         return $this->record($resource, $ttl, $sweepLock);
     }
