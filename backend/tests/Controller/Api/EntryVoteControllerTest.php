@@ -262,7 +262,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         self::assertSame([], $this->storedScores());
     }
 
-    public function testReadingAFederatedPostStoresItsHomeAddress(): void
+    public function testReadingAFederatedPostAnswersItsHomeAddressWithoutStoringIt(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::FEDERATED_POST => self::fixture('post-anonymous.json'),
@@ -276,7 +276,7 @@ final class EntryVoteControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame('https://lemmy.example/post/990', $this->payload($client)['discussionHomeUrl']);
-        self::assertSame('https://lemmy.example/post/990', $this->homeUrlOf($entryId));
+        self::assertNull($this->homeUrlOf($entryId));
     }
 
     public function testAVoteRecastsTheStoredRowToTheNetworksAnswer(): void

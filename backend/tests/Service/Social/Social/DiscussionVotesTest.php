@@ -199,10 +199,10 @@ final class DiscussionVotesTest extends DbTestCase
         self::assertSame([self::HOME_POST], $this->http->requestLines());
         self::assertSame([[VoteScore::Down, $account->requireId()]], $this->storedVotes());
         self::assertSame(43, $entry->getCanonicalItem()?->getScore());
-        self::assertSame(self::HOME_PAGE, $entry->getDiscussion()->homeUrl);
+        self::assertNull($entry->getDiscussion()->homeUrl);
     }
 
-    public function testAVoteStoresThePostsHomeAddressOnTheEntry(): void
+    public function testAVoteLeavesTheSharedEntrysHomeAddressAlone(): void
     {
         $votes = $this->votes([self::LIKE => $this->buildResponse('post-like.json')]);
         $this->lemmyAccount();
@@ -212,21 +212,7 @@ final class DiscussionVotesTest extends DbTestCase
 
         $this->entityManager->clear();
         $stored = $this->entityManager->find(Entry::class, $entry->requireId());
-        self::assertSame(self::HOME_PAGE, $stored?->getDiscussion()->homeUrl);
-    }
-
-    public function testACommentVoteLeavesTheHomeAddressAlone(): void
-    {
-        $votes = $this->votes([
-            self::RESOLVE_COMMENT => $this->buildResponse('resolve-comment.json'),
-            self::COMMENT_LIKE => $this->buildResponse('comment-like.json'),
-        ]);
-        $this->lemmyAccount();
-        $entry = $this->lemmyPost();
-
-        $votes->voteOnComment($this->owner, $entry, self::COMMENT_ADDRESS, VoteScore::Up);
-
-        self::assertNull($entry->getDiscussion()->homeUrl);
+        self::assertNull($stored?->getDiscussion()->homeUrl);
     }
 
     public function testAnEntryNoVoterTakesIsRefusedWithTheLemmyText(): void
