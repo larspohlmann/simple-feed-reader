@@ -71,7 +71,7 @@ export class RefreshService {
   /** Repeats the last run exactly -- same scope, same completion callback -- so a
    *  failed list refresh is not answered with a sweep of every feed. */
   retry(): void {
-    if (this.running() || !this.lastRun) return;
+    if (!this.lastRun) return;
     this.run(this.lastRun.onDone, this.lastRun.scope);
   }
 

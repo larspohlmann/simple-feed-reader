@@ -46,7 +46,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     /** @throws \DateMalformedStringException */
     public function run(RefreshRequestModel $request): RefreshReportModel
     {
-        if ($request->isSingleFeed()) {
+        if (!$request->needsSweepLock()) {
             return $this->refresh($request);
         }
 
