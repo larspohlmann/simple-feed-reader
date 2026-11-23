@@ -13,7 +13,7 @@ use App\Service\Curation\Trending\Support\GroupProfiles;
  */
 final class ProfileMerges
 {
-    private const float MERGE_SIMILARITY = 0.25;
+    private const float MERGE_SIMILARITY = 0.30;
     private const int MIN_MEMBERS = 3;
 
     /** @var array<int, non-empty-list<int>> lowest member => members ascending */

@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Constants, measured on Strato's day window 2026-11-23: `MERGE_SIMILARITY = 0.25`, `MIN_MEMBERS = 3`. A profile keeps a stem whose member share is **strictly more than 1/3**.
+- Constants: `MERGE_SIMILARITY = 0.30` (measured on Strato user 4, 2026-11-23), `MIN_MEMBERS = 3` (measured on Strato's day window 2026-11-23). A profile keeps a stem whose member share is **strictly more than 1/3**.
 - Similarity is weighted Jaccard: Σ min(wₐ, w_b) / Σ max(wₐ, w_b) over the union of both profiles' stems; two empty profiles give 0.0.
 - Gap: two groups may merge only when the distance between their time spans (0 when they overlap) is ≤ `TrendingWindow::maxLinkGapSeconds()` (day 36 h, week 48 h). The spans use `TrendingRun::readEffectiveTime()`.
 - Only headline stems count (the entry's own headline plus its card's headline, as `HeadlineWindow` already files them). Body stems don't count, and neither does any stem `HeadlineWindow` treats as filler for that entry (window filler or feed filler).
@@ -22,7 +22,7 @@
 
 ## Review Focus
 
-- **Chaining:** a grown group must not absorb an unrelated story through one shared generic stem ("trump", "house"). One shared stem among many distinct ones stays below 0.25. Pinned in Task 3 (`testGroupsSharingOneStemAmongManyStayApart`).
+- **Chaining:** a grown group must not absorb an unrelated story through one shared generic stem ("trump", "house"). One shared stem among many distinct ones stays below 0.30. Pinned in Task 3 (`testGroupsSharingOneStemAmongManyStayApart`).
 - **Gap on the week window:** two alike groups 3 days apart stay two stories. Pinned in Task 3 (`testAlikeGroupsBeyondTheLinkGapStayApart`).
 - **Order independence:** the same groups in a different input order give the same result. Pinned in Task 3 (`testTheOrderGroupsArriveInDoesNotChangeTheMerges`).
 - **Pairs untouched:** a 2-member group is never merged by the pass, because its profile is just two headlines, which the 40 % link rule already judged. Pinned in Task 3 (`testATwoMemberGroupIsNeverMerged`).
@@ -87,7 +87,7 @@
 
 **Interfaces:**
 - Consumes: `GroupProfiles::build()`, `GroupProfileModel::computeSimilarity()`, `isWithinGap()`, `$run->window->maxLinkGapSeconds()`.
-- Produces: `final class ProfileMerges`, with `__construct(TrendingRun $run, list<non-empty-list<int>> $groups)` and `groups(): list<non-empty-list<int>>`. The constants `MERGE_SIMILARITY = 0.25` and `MIN_MEMBERS = 3` are private on it.
+- Produces: `final class ProfileMerges`, with `__construct(TrendingRun $run, list<non-empty-list<int>> $groups)` and `groups(): list<non-empty-list<int>>`. The constants `MERGE_SIMILARITY = 0.30` and `MIN_MEMBERS = 3` are private on it.
 
 The algorithm is not fixed by the signature. It runs in rounds:
 
@@ -100,7 +100,7 @@ The algorithm is not fixed by the signature. It runs in rounds:
 - [ ] **Step 1: Keep the existing `StoryGroupingTest` honest.** Its `runPublishedAt()` gives every entry the headline `'Entry'`, so the new pass would merge its separate groups. Give each entry a headline no other entry shares, e.g. `sprintf('Zeile%03d', $entryId)`, and confirm the stemmer keeps it as one unique stem. Run `php bin/phpunit tests/Service/Curation/Trending/StoryGroupingTest.php`. Expected: green before any `src` change.
 - [ ] **Step 2: Write the failing `ProfileMergesTest`.** Build runs as in Task 2, and pass the groups in directly as entry id lists.
   - `testAlikeGroupsMerge`: groups [1,2,3] and [4,5,6]. All six headlines carry `Zorbel Quintar`, and each has one unique word. Result: `[[1,2,3,4,5,6]]`.
-  - `testMergesChainAcrossRounds`: three alike groups. A and C score below 0.25 against each other, but each scores ≥ 0.25 against B, and A∪B still scores ≥ 0.25 against C. Result: one group.
+  - `testMergesChainAcrossRounds`: three alike groups. A and C score below 0.30 against each other, but each scores ≥ 0.30 against B, and A∪B still scores ≥ 0.30 against C. Result: one group.
   - `testGroupsSharingOneStemAmongManyStayApart`: two 3-member groups share only `Trumbel`. Each group's members also share three more stems of their own. Result: unchanged.
   - `testAlikeGroupsBeyondTheLinkGapStayApart`: a week run, the same headlines as `testAlikeGroupsMerge`, the second group published 3 days after the first. Result: unchanged.
   - `testATwoMemberGroupIsNeverMerged`: a group [1,2] whose headlines match a 3-member group exactly. Result: unchanged.

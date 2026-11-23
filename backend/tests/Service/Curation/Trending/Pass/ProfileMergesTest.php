@@ -32,7 +32,7 @@ final class ProfileMergesTest extends TestCase
 
     public function testMergesChainAcrossRounds(): void
     {
-        self::assertSame([range(1, 14)], $this->merged($this->chainRun(), self::chainGroups()));
+        self::assertSame([range(1, 12)], $this->merged($this->chainRun(), self::chainGroups()));
     }
 
     public function testTheMostAlikePairMergesFirst(): void
@@ -47,6 +47,20 @@ final class ProfileMergesTest extends TestCase
             [[1, 2, 3, 4, 5, 6], [7, 8, 9]],
             $this->merged($run, [[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
         );
+    }
+
+    public function testGroupsJustBelowTheMergeSimilarityStayApart(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
+
+        self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
+    }
+
+    public function testGroupsExactlyAtTheMergeSimilarityMerge(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin');
+
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
     }
 
     public function testGroupsSharingOneStemAmongManyStayApart(): void
@@ -81,7 +95,7 @@ final class ProfileMergesTest extends TestCase
     {
         $groups = array_reverse(self::chainGroups());
 
-        self::assertSame([range(1, 14)], $this->merged($this->chainRun(), $groups));
+        self::assertSame([range(1, 12)], $this->merged($this->chainRun(), $groups));
     }
 
     public function testOutputKeepsMembersAscendingAndGroupsByLowestMember(): void
@@ -94,20 +108,20 @@ final class ProfileMergesTest extends TestCase
         );
     }
 
-    /** The middle group outnumbers the others, so its union with the first drops `Kalbo` and still matches the last. */
+    /** The middle group outnumbers the others, so its union with the first drops the first's own stems. */
     private function chainRun(): TrendingRun
     {
         return $this->runOf([
-            ...array_fill(0, 3, 'Kalbo Murnel Teskar'),
-            ...array_fill(0, 8, 'Murnel Teskar Vorlip Paskel'),
-            ...array_fill(0, 3, 'Vorlip Paskel Gimbor'),
+            ...array_fill(0, 3, 'Kalbo Murnel Teskar Vorlip Paskel Gimbor'),
+            ...array_fill(0, 6, 'Teskar Vorlip Paskel Gimbor Hodrin Lumpo'),
+            ...array_fill(0, 3, 'Paskel Gimbor Hodrin Lumpo Fradel Quobin'),
         ]);
     }
 
     /** @return list<non-empty-list<int>> */
     private static function chainGroups(): array
     {
-        return [[1, 2, 3], range(4, 11), [12, 13, 14]];
+        return [[1, 2, 3], range(4, 9), [10, 11, 12]];
     }
 
     /**
@@ -118,6 +132,16 @@ final class ProfileMergesTest extends TestCase
     private function merged(TrendingRun $run, array $groups): array
     {
         return new ProfileMerges($run, $groups)->groups();
+    }
+
+    /** Three ungrouped entries carry both groups' own words, so every stem weighs the same and only counts matter. */
+    private function runWithEvenRarity(string $oneGroupWords, string $otherGroupWords): TrendingRun
+    {
+        return $this->runOf([
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $oneGroupWords),
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $otherGroupWords),
+            ...array_fill(0, 3, $oneGroupWords . ' ' . $otherGroupWords),
+        ]);
     }
 
     /** @param list<string> $headlines */
