@@ -22,7 +22,7 @@
   @if (refresh.failureKey(); as failureKey) {
     <p class="fetch-banner" role="alert">
       {{ failureKey | transloco }}
-      <button type="button" (click)="refresh.refreshAll()">
+      <button type="button" class="fetch-banner-retry" (click)="refreshSvc.retry()">
         {{ 'reader.retryFetch' | transloco }}
       </button>
     </p>

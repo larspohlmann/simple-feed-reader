@@ -53,16 +53,30 @@ export class RefreshService {
     return Math.min(1, Math.max(0, done / total));
   });
 
+  private lastRun: { onDone?: () => void; scope?: RefreshScope } | null = null;
+
   /** Pass a scope to narrow the sweep; omit it to sweep all the caller's due
    *  feeds. The scope holds across the whole poll loop. */
   run(onDone?: () => void, scope?: RefreshScope): void {
     if (this.running()) return;
+    this.lastRun = { onDone, scope };
     this.running.set(true);
     this.report.set(null);
     this.failure.set(null);
     this.slice.set(0);
     this.previousRemaining = Number.POSITIVE_INFINITY;
     this.step(0, onDone, scope);
+  }
+
+  /** Repeats the last run exactly -- same scope, same completion callback -- so a
+   *  failed list refresh is not answered with a sweep of every feed. */
+  retry(): void {
+    if (this.running() || !this.lastRun) return;
+    this.run(this.lastRun.onDone, this.lastRun.scope);
+  }
+
+  dismissFailure(): void {
+    this.failure.set(null);
   }
 
   private step(busyRetries: number, onDone?: () => void, scope?: RefreshScope): void {

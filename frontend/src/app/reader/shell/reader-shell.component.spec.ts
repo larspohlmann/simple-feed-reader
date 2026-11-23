@@ -3205,6 +3205,29 @@ describe('ReaderShellComponent', () => {
       expect(banner()).toBeNull(); // a clean retry clears it
     });
 
+    it('retries a failed list refresh with the list scope, not a full sweep', () => {
+      const fixture = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      qp.next(convertToParamMap({ subscription: '1' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      fixture.componentInstance.refresh.refreshScoped();
+      serverError(ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh'));
+      fixture.detectChanges();
+
+      (
+        (fixture.nativeElement as HTMLElement).querySelector('.fetch-banner-retry') as HTMLElement
+      ).click();
+      fixture.detectChanges();
+
+      const retried = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+      expect(retried.request.params.get('feedId')).toBe('11');
+      retried.flush(refreshDone);
+    });
+
     // An aborted sweep left feeds unfetched and still due. It shared the
     // `completed` branch, so it presented exactly like a clean run.
     it('says a sweep stopped early rather than showing it as finished', () => {
