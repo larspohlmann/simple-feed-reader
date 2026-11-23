@@ -1155,6 +1155,7 @@ describe('ReaderViewComponent', () => {
       const content = host.querySelector('.content') as HTMLElement;
       content.getBoundingClientRect = () => ({ top: 0, bottom: 2400 }) as DOMRect;
       const bar = host.querySelector('.bar') as HTMLElement;
+      Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 56 });
       MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
       fixture.detectChanges();
 

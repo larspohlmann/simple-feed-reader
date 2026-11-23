@@ -13,12 +13,16 @@
         <ng-content select="[articleMini]" />
       </div>
     }
-    <div #bar class="bar" [class.hidden]="toolbarHidden()">
+    <app-pane-bar
+      class="bar"
+      [class.hidden]="toolbarHidden()"
+      (resized)="reserveToolbarHeight($event)"
+    >
       <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="onBackButton()">
         <app-icon name="arrow_back" size="md" />
       </button>
       <ng-content select="[articleBar]" />
-    </div>
+    </app-pane-bar>
     <!-- No progressbar role: announcing every scroll frame would only be noise. -->
     <app-progress-rail [progress]="progressRail()" />
   </div>
