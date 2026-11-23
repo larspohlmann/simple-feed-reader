@@ -60,7 +60,7 @@ final readonly class ComposerContexts
             self::startPublication()->withEmbed(new QuotedPostEmbedModel($post)),
             self::noThreadStarter(),
         );
-        $text = ComposerStartingText::quoting($quote, $defaults->maxCharacters);
+        $text = ComposerStartingText::quoting($quote);
 
         return $this->buildResponseContext($post, ComposerKind::Quote, $defaults, $text);
     }
@@ -106,10 +106,10 @@ final readonly class ComposerContexts
     private static function buildLinkText(SharedLinkModel $link, ComposerDefaultsModel $defaults): string
     {
         if (null !== $defaults->lemmyPost) {
-            return ComposerStartingText::quoting($link->quote, $defaults->maxCharacters);
+            return ComposerStartingText::quoting($link->quote);
         }
 
-        return ComposerStartingText::sharing($link, $defaults->maxCharacters);
+        return ComposerStartingText::sharing($link);
     }
 
     private function buildResponseContext(
