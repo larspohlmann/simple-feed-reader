@@ -41,6 +41,9 @@ final class EntryJsonTest extends TestCase
 {
     use AssignsEntityIds;
 
+    private const string LEMMY_POST = 'https://lemmy.world/post/9';
+    private const string HOME_POST = 'https://home.example/post/42';
+
     public function testEmitsMediaAndAttachmentsAsStructuredArrays(): void
     {
         $entry = new Entry(
@@ -518,6 +521,37 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://example.com/a#comments', $json['discussionUrl']);
     }
 
+    public function testDiscussionHomeUrlComesFromTheEntry(): void
+    {
+        $entry = $this->entryTitled('Post');
+        $entry->setDiscussion(Discussion::platformThread(self::LEMMY_POST)->withHomeUrl(self::HOME_POST));
+
+        $json = JsonMappers::entryJson()->listRow($this->row($entry));
+
+        self::assertSame(self::HOME_POST, $json['discussionHomeUrl']);
+        self::assertSame(self::LEMMY_POST, $json['discussionUrl']);
+    }
+
+    public function testDiscussionHomeUrlComesFromADuplicateWhenTheShownCopyHasNone(): void
+    {
+        $shown = $this->entryTitled('Community copy');
+        $shown->setDiscussion(Discussion::platformThread(self::LEMMY_POST));
+        $accountCopy = $this->entryTitled('Account copy');
+        $accountCopy->setDiscussion(Discussion::platformThread(self::LEMMY_POST)->withHomeUrl(self::HOME_POST));
+        $row = $this->row($shown)->withDuplicates([$this->row($accountCopy)]);
+
+        $json = JsonMappers::entryJson()->listRow($row);
+
+        self::assertSame(self::HOME_POST, $json['discussionHomeUrl']);
+    }
+
+    public function testDiscussionHomeUrlIsNullWithoutOne(): void
+    {
+        $json = JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Article')));
+
+        self::assertNull($json['discussionHomeUrl']);
+    }
+
     public function testTheStoredCommentCountIsEmitted(): void
     {
         $entry = $this->entryTitled('Post');
@@ -569,7 +603,7 @@ final class EntryJsonTest extends TestCase
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'thread', 'threadLength', 'share', 'quote',
-                'canonicalItemId', 'title', 'url', 'discussionUrl',
+                'canonicalItemId', 'title', 'url', 'discussionUrl', 'discussionHomeUrl',
                 'comments', 'score', 'commentCount', 'likeCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
