@@ -77,3 +77,26 @@ export async function signInWithLayout(page: Page, layout: ReadingLayout): Promi
   await presetLocalStorage(page, { 'sfr.layout': layout });
   return signInAsAdmin(page);
 }
+
+/**
+ * `/api/me` is rewritten, not replaced: the profile carries roles, mail state and
+ * AI readiness the shell reads on boot, and a malformed one 401s into a login
+ * redirect. `preferences` is read per request, so a spec can change it mid-test.
+ */
+export async function stubMePreferences(
+  page: Page,
+  preferences: () => Record<string, unknown>,
+): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/me',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const response = await route.fetch();
+      const profile = await response.json();
+      await route.fulfill({
+        response,
+        json: { ...profile, preferences: { ...profile.preferences, ...preferences() } },
+      });
+    },
+  );
+}

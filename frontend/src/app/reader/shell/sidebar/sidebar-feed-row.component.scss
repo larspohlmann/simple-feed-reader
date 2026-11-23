@@ -1,7 +1,7 @@
 @use 'sidebar-row' as row;
 @include row.row-parts;
 @include row.row-link('.nav');
-@include row.row-states(':host', ':host(.current)', ':host-context(.sidebar-airy).current');
+@include row.row-states(':host', ':host(.current)');
 @include row.drag-handle;
 @include row.dots;
 @include row.hidden-feed-mark('app-favicon');

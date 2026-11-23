@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { presetLocalStorage, signInAsAdmin, stubMePreferences } from './support/auth';
 import { entryWire } from './support/reader';
 
 /** The sticky list header is frosted glass: the page surface (--surface-0) at
@@ -51,28 +51,12 @@ const IMAGE_ENTRIES = [
   imageEntry(7, 'Heise'),
 ];
 
-/**
- * `/api/me` is rewritten, not replaced: the profile carries roles, mail state and
- * AI readiness the shell reads on boot, and a malformed one 401s into a login
- * redirect.
- */
 async function stubAccount(
   page: Page,
   magazineStyle: 'boxed' | 'airy',
   entries: unknown[],
 ): Promise<void> {
-  await page.route(
-    (url) => url.pathname === '/api/me',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      const response = await route.fetch();
-      const profile = await response.json();
-      await route.fulfill({
-        response,
-        json: { ...profile, preferences: { ...profile.preferences, magazineStyle } },
-      });
-    },
-  );
+  await stubMePreferences(page, () => ({ magazineStyle }));
 
   await page.route(
     (url) => url.pathname === '/api/entries',

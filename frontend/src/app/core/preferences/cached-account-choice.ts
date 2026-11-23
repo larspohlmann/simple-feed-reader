@@ -11,34 +11,24 @@ interface CachedAccountChoiceOptions<Field extends ChoiceField> {
   field: Field;
 }
 
-/**
- * The account is the record; `localStorage` is a paint cache. It answers the
- * warning in `PreferencesService`: once a choice has been cached, no later
- * window shows or writes a wrong one, so the first frame is never drawn with
- * the fallback while `loadMe()` is pending.
- */
+/** The account is the record; `localStorage` is a paint cache, so the first frame is not drawn with the fallback while `loadMe()` is pending. */
 export abstract class CachedAccountChoice<Field extends ChoiceField> {
   private readonly writer = inject(PREFERENCES_WRITER);
 
   readonly value: WritableSignal<ReadingPreferences[Field]>;
 
-  /** True when the choice applied locally but the account write failed. */
   readonly saveFailed = signal(false);
 
   protected constructor(private readonly options: CachedAccountChoiceOptions<Field>) {
     this.value = signal(this.parse(localStorage.getItem(options.key)) ?? options.fallback);
   }
 
-  /** Applies locally first, then writes through; a failed write is surfaced. */
   set(choice: ReadingPreferences[Field]): void {
     this.cache(choice);
     writeTracked(this.writer, { [this.options.field]: choice }, this.saveFailed);
   }
 
-  /**
-   * Caches only: a value just read from the account is never written straight
-   * back, and `adopt` runs on every `loadMe()`.
-   */
+  /** Caches only: a value just read from the account is never written straight back. */
   adopt(user: CurrentUser): void {
     const choice = this.parse(user.preferences[this.options.field]);
     if (choice === null) return;

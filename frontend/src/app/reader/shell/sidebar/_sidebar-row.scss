@@ -32,13 +32,27 @@
     padding: var(--space-1) 0;
   }
 
-  // The airy sidebar (#2493) draws no box: a faint rule above each section.
   :host-context(.sidebar-airy) .card {
-    padding-block: var(--space-3);
-    border-color: var(--airy-hrule) transparent transparent;
-    border-radius: 0;
-    background: none;
+    @include airy-section-rule;
   }
+}
+
+// The airy sidebar (#2493) draws no box: a faint rule above each section.
+@mixin airy-section-rule {
+  padding-block: var(--space-3);
+  border-color: var(--airy-hrule) transparent transparent;
+  border-radius: 0;
+  background: none;
+}
+
+// The hairline an indented run of rows hangs on, under the parent row's icon.
+@mixin airy-rail($top) {
+  content: '';
+  position: absolute;
+  top: $top;
+  bottom: var(--space-1);
+  left: calc(var(--sidebar-row-inset) + var(--icon-md) / 2);
+  border-left: 1px solid var(--airy-rule);
 }
 
 @mixin row-geometry($color: var(--text-primary)) {
@@ -58,8 +72,7 @@
   }
 }
 
-// A host row passes `:host-context(.sidebar-airy).current`: Angular compiles `:host-context(.sidebar-airy):host(.current)` to `.sidebar-airy.current`.
-@mixin row-states($row, $current, $airy-current: ':host-context(.sidebar-airy) #{$current}') {
+@mixin row-states($row, $current) {
   @media (hover: hover) {
     #{$row}:hover {
       --dots-color: var(--text-primary);
@@ -71,6 +84,13 @@
   #{$current} {
     background: var(--accent-soft);
     color: var(--accent);
+  }
+
+  // Angular compiles `:host-context(.sidebar-airy):host(.current)` to a selector that never matches.
+  $airy-current: ':host-context(.sidebar-airy) #{$current}';
+
+  @if $row == ':host' {
+    $airy-current: ':host-context(.sidebar-airy).current';
   }
 
   #{$airy-current} {
@@ -402,31 +422,31 @@
   }
 
   // The airy sidebar: a head is a heading at the row size, an open one draws no band.
-  :host-context(.sidebar-airy) .section-head:has(> [aria-expanded='true']) {
-    margin-top: 0;
-    padding-block: 0;
-    border-bottom-color: transparent;
-    background: none;
-
-    &.current::before {
-      background: none;
-    }
-  }
-
-  @media (pointer: fine) {
-    :host-context(.sidebar-airy) .section-head {
+  :host-context(.sidebar-airy) .section-head {
+    @media (pointer: fine) {
       height: var(--sidebar-row-h);
     }
-  }
 
-  :host-context(.sidebar-airy) .section-head .label {
-    top: 0;
-    color: var(--text-primary);
-    font-size: var(--fs-base);
-  }
+    &:has(> [aria-expanded='true']) {
+      margin-top: 0;
+      padding-block: 0;
+      border-bottom-color: transparent;
+      background: none;
+    }
 
-  :host-context(.sidebar-airy) .section-head.current .label {
-    color: var(--accent);
+    &:has(> [aria-expanded='true']).current::before {
+      background: none;
+    }
+
+    .label {
+      top: 0;
+      color: var(--text-primary);
+      font-size: var(--fs-base);
+    }
+
+    &.current .label {
+      color: var(--accent);
+    }
   }
 }
 

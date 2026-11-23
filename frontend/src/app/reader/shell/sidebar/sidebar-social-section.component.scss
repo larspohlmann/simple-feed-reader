@@ -108,12 +108,7 @@
 }
 
 :host-context(.sidebar-airy) .rows::before {
-  content: '';
-  position: absolute;
-  top: var(--space-0);
-  bottom: var(--space-1);
-  left: calc(var(--sidebar-row-inset) + var(--icon-md) / 2);
-  border-left: 1px solid var(--airy-rule);
+  @include row.airy-rail(var(--space-0));
 }
 
 :host-context(.sidebar-airy) .divider {

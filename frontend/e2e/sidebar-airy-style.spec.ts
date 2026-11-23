@@ -2,7 +2,7 @@ import { test, expect, Page, Route } from '@playwright/test';
 import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { presetLocalStorage, signInAsAdmin, stubMePreferences } from './support/auth';
 import { entryWire, savedSearchesJson, savedSearchWire, subscriptionsJson } from './support/reader';
 
 type SidebarStyle = 'boxed' | 'airy';
@@ -42,27 +42,15 @@ const TOTALS = {
 };
 
 /**
- * Everything the sidebar draws is stubbed, so the spec owns the rows it measures. `/api/me` is
- * rewritten, not replaced (the shell reads roles and mail state from it), and follows a stubbed
- * preferences `PATCH`, so a later `loadMe()` does not hand the old style back.
+ * Everything the sidebar draws is stubbed, so the spec owns the rows it measures. `/api/me`
+ * follows a stubbed preferences `PATCH`, so a later `loadMe()` does not hand the old style back.
  */
 async function stubSidebar(page: Page, initialStyle: SidebarStyle): Promise<void> {
   let sidebarStyle = initialStyle;
   const getOnly = (body: () => unknown) => (route: Route) =>
     route.request().method() === 'GET' ? route.fulfill({ json: body() }) : route.fallback();
 
-  await page.route(
-    (url) => url.pathname === '/api/me',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      const response = await route.fetch();
-      const profile = await response.json();
-      await route.fulfill({
-        response,
-        json: { ...profile, preferences: { ...profile.preferences, sidebarStyle } },
-      });
-    },
-  );
+  await stubMePreferences(page, () => ({ sidebarStyle }));
   await page.route(
     (url) => url.pathname === '/api/me/preferences',
     async (route) => {
