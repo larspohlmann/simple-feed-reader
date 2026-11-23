@@ -22,6 +22,7 @@ import { EmbedTrackOrigin } from '../../audio/embed-track';
 import { openLinksOnOwnInstance } from '../decorators/own-instance-body-links';
 import { ownInstanceUrl } from '../../own-instance/own-instance-url';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
@@ -44,6 +45,7 @@ export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
   readonly html: Signal<string>;
   readonly pageUrl: () => string | null;
+  readonly network: () => SocialNetworkName | null;
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
   readonly audioTrack: () => AudioTrack | null;
@@ -139,13 +141,16 @@ export class ArticleBody {
       (onCleanup) => {
         parts.html();
         const instances = this.links.instances();
+        const mentionsAreMastodon = parts.network() === 'mastodon';
         if (!parts.content()?.nativeElement) return;
         let cancelled = false;
         onCleanup(() => (cancelled = true));
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || cancelled) return;
-          openLinksOnOwnInstance(host, (href, text) => ownInstanceUrl(href, { text }, instances));
+          openLinksOnOwnInstance(host, (href, text) =>
+            ownInstanceUrl(href, mentionsAreMastodon ? { text } : {}, instances),
+          );
         });
       },
       { injector: this.injector },

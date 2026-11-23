@@ -17,6 +17,7 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
+import { SocialNetworkName } from '../../../core/social-network';
 import { ChapterDto } from '../../models';
 import { embedTrackOrigin, EmbedTrackOrigin } from '../../audio/embed-track';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
@@ -86,7 +87,7 @@ describe('ArticleBody', () => {
   const accounts = signal<SocialAccountRefDto[]>([]);
   const lemmyHosts = signal<readonly string[]>([]);
 
-  function connectBody(body: string): void {
+  function connectBody(body: string, network: SocialNetworkName | null = null): void {
     content = articleHost(body);
     html.set(body);
     decorated = jest.fn();
@@ -94,6 +95,7 @@ describe('ArticleBody', () => {
       content: signal(new ElementRef(content)),
       html,
       pageUrl: () => 'https://news.test/story',
+      network: () => network,
       enclosureUrl: () => null,
       chapters,
       audioTrack,
@@ -195,7 +197,7 @@ describe('ArticleBody', () => {
   });
 
   it("opens a mention on the reader's instance once the account arrives after the body rendered", async () => {
-    connectBody('<a href="https://mastodon.social/@bob">@bob</a>');
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
     await Promise.resolve();
     expect(content.querySelector('a')!.getAttribute('href')).toBe('https://mastodon.social/@bob');
 
@@ -225,7 +227,7 @@ describe('ArticleBody', () => {
   });
 
   it('does not decorate the body again when the account arrives', async () => {
-    connectBody('<a href="https://mastodon.social/@bob">@bob</a>');
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
     await Promise.resolve();
 
     accounts.set([aMastodonAccount('https://home.example')]);

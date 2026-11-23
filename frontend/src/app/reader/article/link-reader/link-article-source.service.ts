@@ -39,7 +39,9 @@ export class LinkArticleSource implements ArticlePageSource {
   readonly openUrl = this.url;
   readonly body = computed<ArticlePageBody | null>(() => {
     const article = this.article();
-    return article === null ? null : { html: article.contentHtml, pageUrl: article.url };
+    return article === null
+      ? null
+      : { html: article.contentHtml, pageUrl: article.url, network: null };
   });
   readonly bodyAudio = signal<ArticlePageBodyAudio | null>(null).asReadonly();
   readonly lead = computed<HeroImageDto | null>(() => {
