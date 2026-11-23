@@ -8,7 +8,7 @@ final readonly class RefreshReportModel
 {
     public const string STATUS_ABORTED = 'aborted';
 
-    /** The global refresh lock was held: NO slice ran, and every counter is zero. */
+    /** The global refresh lock was held, or another pass held every due feed: NO slice ran, every counter is zero. */
     public const string STATUS_BUSY = 'busy';
 
     private function __construct(

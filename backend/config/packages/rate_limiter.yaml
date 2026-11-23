@@ -26,8 +26,8 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per user: one progress loop makes many POSTs. The refresh lock and the per-feed cooldown are the real
-        # throttles; this only stops a script hammering the endpoint.
+        # Per user: one progress loop makes many POSTs. The per-feed claim, the refresh lock for sweeps and the
+        # per-feed cooldown are the real throttles; this only stops a script hammering the endpoint.
         refresh:
             policy: 'sliding_window'
             limit: 90
