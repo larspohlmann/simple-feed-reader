@@ -112,6 +112,15 @@ final class HeadlineWindow
         return $this->totalWeights[$entryId] ??= $this->weighTotal($entryId);
     }
 
+    /** @return list<int> */
+    public function collectHeadlineStemIds(int $entryId): array
+    {
+        return array_values(array_filter(
+            $this->headlineStems[$entryId],
+            fn (int $stemId): bool => !$this->isFillerFor($entryId, $stemId),
+        ));
+    }
+
     /** @return array<int, float> earlier entry id => the weight it shares with this one */
     public function sharedWeightsWithEarlier(int $entryId): array
     {
@@ -121,7 +130,7 @@ final class HeadlineWindow
         foreach ($this->collectPlacedStems($entryId) as $stemId => $placeWeight) {
             $holders = $this->collectEarlierHolders($stemId, $entryId);
             $partLinks = $this->compoundParts->buildPartLinks($stemId, $entryId, $holders);
-            $rarity = $this->rarity($stemId);
+            $rarity = $this->computeRarity($stemId);
             $wordHolders = $partLinks === [] ? $holders : array_diff_key($holders, $partLinks);
             foreach ($wordHolders as $earlierEntryId => $earlierPlaceWeight) {
                 $commonPlaceWeight = min($placeWeight, $earlierPlaceWeight);
@@ -143,7 +152,9 @@ final class HeadlineWindow
             }
         }
 
-        return array_intersect_key(PartWeightCaps::addedTo($shared, $parts, $this->rarity(...)), $sharingAHeadline);
+        $weights = PartWeightCaps::addedTo($shared, $parts, $this->computeRarity(...));
+
+        return array_intersect_key($weights, $sharingAHeadline);
     }
 
     /**
@@ -249,7 +260,7 @@ final class HeadlineWindow
         $total = 0.0;
         foreach ($this->collectPlacedStems($entryId) as $stemId => $placeWeight) {
             if (!$this->compoundParts->isOnlyAPartIn($entryId, $stemId)) {
-                $total += $placeWeight * $this->rarity($stemId);
+                $total += $placeWeight * $this->computeRarity($stemId);
             }
         }
 
@@ -332,7 +343,7 @@ final class HeadlineWindow
         return array_fill_keys(array_keys($filler), true);
     }
 
-    private function rarity(int $stemId): float
+    public function computeRarity(int $stemId): float
     {
         return $this->rarities[$stemId] ??= $this->filler->rarityWeight(
             $this->documentFrequencies[$stemId],
