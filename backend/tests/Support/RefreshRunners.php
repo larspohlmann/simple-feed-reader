@@ -195,7 +195,7 @@ final readonly class RefreshRunners
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
                 $this->pruner($retentionSettings, $indexer),
                 new SubscriptionHistoryWiring($this->entityManager, $retentionSettings, $this->clock)->recorder(),
-                new NullLogger(),
+                $this->logger,
             ),
             $this->lockFactory,
             $this->clock,
