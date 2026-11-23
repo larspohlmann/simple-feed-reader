@@ -12,6 +12,7 @@ use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Service\Ingestion\Refresh\RefreshHousekeeping;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -46,8 +47,9 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     /** @throws \DateMalformedStringException */
     public function run(RefreshRequestModel $request): RefreshReportModel
     {
+        $now = $this->clock->now();
         if (!$request->needsSweepLock()) {
-            return $this->refresh($request);
+            return $this->refresh($request, $now, SweepLockKeepalive::withoutLock());
         }
 
         $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
@@ -56,30 +58,34 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         }
 
         try {
-            return $this->refresh($request);
+            $keepalive = SweepLockKeepalive::holding($lock, $this->clock, $request->deadlineFrom($now), $this->logger);
+
+            return $this->refresh($request, $now, $keepalive);
         } finally {
             $lock->release();
         }
     }
 
     /** @throws \DateMalformedStringException */
-    private function refresh(RefreshRequestModel $request): RefreshReportModel
-    {
+    private function refresh(
+        RefreshRequestModel $request,
+        \DateTimeImmutable $now,
+        SweepLockKeepalive $keepalive,
+    ): RefreshReportModel {
         $this->housekeeping->reclaimOrphanedFeeds($request);
 
-        $now = $this->clock->now();
         $criteria = $this->dueCriteria($request, $now);
         $feeds = $this->feeds->findDue($criteria, $request->batchLimit);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
         $pass = new RefreshPass(
             $feeds,
             $this->clock,
-            $now->getTimestamp() + $request->budgetSeconds,
+            $request->deadlineFrom($now),
             new FeedClaims($this->lockFactory),
         );
 
         try {
-            $this->passRecorder->record($pass, $now);
+            $this->passRecorder->record($pass, $now, $keepalive);
             if ($this->isHeldElsewhere($pass)) {
                 return RefreshReportModel::busy();
             }
@@ -94,7 +100,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
                 return $pass->abortedDuringOutcomes();
             }
 
-            return $this->resolveFaviconsAndReport($request, $pass, $criteria);
+            return $this->resolveFaviconsAndReport($request, $pass, $criteria, $keepalive);
         } finally {
             $pass->releaseAllFeeds();
         }
@@ -119,7 +125,9 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         RefreshRequestModel $request,
         RefreshPass $pass,
         DueFeedCriteria $criteria,
+        SweepLockKeepalive $keepalive,
     ): RefreshReportModel {
+        $keepalive->beat();
         try {
             $this->missingFavicons->resolveFor($pass->tally->faviconEligibleFeeds());
         } catch (UniqueConstraintViolationException | ORMException $exception) {
@@ -131,13 +139,22 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             return $pass->abortedAfterOutcomes();
         }
 
+        return $pass->finished($this->countRemaining($criteria, $pass), $this->keepHouse($request, $keepalive));
+    }
+
+    /** A pass that lost the sweep lock leaves the housekeeping to the sweep that took it. */
+    private function keepHouse(RefreshRequestModel $request, SweepLockKeepalive $keepalive): int
+    {
+        $keepalive->beat();
+        if ($keepalive->hasLostTheLock()) {
+            return 0;
+        }
+
         // Before the prune: a day is recorded while every entry it counts still exists.
         $this->housekeeping->recordSubscriptionHistory($request);
+        $keepalive->beat();
 
-        return $pass->finished(
-            $this->countRemaining($criteria, $pass),
-            $this->housekeeping->pruneEntries($request),
-        );
+        return $keepalive->hasLostTheLock() ? 0 : $this->housekeeping->pruneEntries($request);
     }
 
     // Started feeds are excluded by id: a 429 writes no fetch time, so the due query alone would count a rationed

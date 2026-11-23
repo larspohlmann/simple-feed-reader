@@ -14,6 +14,7 @@ use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
+use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Outbound\Fetch\Exception\FeedGoneException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -26,6 +27,7 @@ use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\RefreshCountingLockFactory;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubPassFetcher;
@@ -789,6 +791,118 @@ final class RefreshRunnerTest extends DbTestCase
         $lock = $this->lockFactory->createLock('feed-refresh');
         self::assertTrue($lock->acquire(), 'lock should be free after a completed run');
         $lock->release();
+    }
+
+    public function testALongSweepRenewsItsLock(): void
+    {
+        $this->notModifiedDueFeeds(['one', 'two', 'three', 'four']);
+        $this->entityManager->flush();
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertGreaterThanOrEqual(4, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+    }
+
+    public function testASweepThatLostItsLockSkipsHousekeeping(): void
+    {
+        $ancient = $this->prunableEntry();
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->conflictOnTheFirstRenewal();
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(0, $report->pruned);
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->find(Entry::class, $ancient->getId()));
+        self::assertContains(SweepLockKeepalive::LOCK_TAKEN_MESSAGE, array_column($this->logger->records, 'message'));
+    }
+
+    public function testAStoreHiccupStillPrunes(): void
+    {
+        $this->prunableEntry();
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->throwOnTheFirstRenewal();
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->pruned);
+        self::assertContains(
+            SweepLockKeepalive::RENEWAL_FAILED_MESSAGE,
+            array_column($this->logger->records, 'message'),
+        );
+    }
+
+    public function testAOneFeedRunTakesNoSweepLock(): void
+    {
+        [$feed] = $this->notModifiedDueFeeds(['one']);
+        $this->entityManager->flush();
+        $this->fetcher->secondsPerFetch = 200;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::forFeed($feed->requireId(), 25));
+
+        self::assertSame('completed', $report->status);
+        self::assertNull($lockFactory->lastLockFor('feed-refresh'));
+        $keepaliveMessages = [
+            SweepLockKeepalive::LOCK_TAKEN_MESSAGE,
+            SweepLockKeepalive::RENEWAL_FAILED_MESSAGE,
+            SweepLockKeepalive::CEILING_REACHED_MESSAGE,
+        ];
+        self::assertSame([], array_intersect($keepaliveMessages, array_column($this->logger->records, 'message')));
+    }
+
+    /**
+     * One wave per feed, 25 s each, so every stored outcome lands a renewal interval after the last.
+     *
+     * @param list<string> $names
+     *
+     * @return list<Feed>
+     */
+    private function notModifiedDueFeeds(array $names): array
+    {
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        $this->fetcher->secondsPerFetch = 25;
+        $feeds = [];
+        foreach ($names as $name) {
+            $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+            $feeds[] = $feed;
+        }
+
+        return $feeds;
+    }
+
+    /** One due feed whose twenty recent fillers hold it above EntryPruner's floor, so its ancient entry is prunable. */
+    private function prunableEntry(): Entry
+    {
+        [$feed] = $this->notModifiedDueFeeds(['prune']);
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->entityManager->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
+        $this->entityManager->persist($ancient);
+        $this->entityManager->flush();
+
+        return $ancient;
+    }
+
+    private function runnerLockingWith(RefreshCountingLockFactory $lockFactory): RefreshRunner
+    {
+        return $this->runners()
+            ->lockingWith($lockFactory)
+            ->flushingThrough($this->entityManager)
+            ->build($this->fetcher, $this->faviconFetcher);
     }
 
     public function testPermanentRedirectUpdatesFeedUrl(): void
