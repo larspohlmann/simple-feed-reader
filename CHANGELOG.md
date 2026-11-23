@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.3] - 2026-11-23
+
 ### Highlights
 
 This release adds an airy sidebar design and better-grouped Trending stories.
@@ -20,6 +22,22 @@ the magazine style.
 
 **Trending stories.** Different angles on one event, such as a live blog,
 reactions and an explainer, now join into one story instead of several.
+
+## What's Changed
+* List refresh: retry keeps its scope, one-feed refresh skips the sweep lock, failure banner can be closed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2488
+* Refresh: a sweep renews its lock while it runs, never past a ceiling by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2491
+* Trending: merge story groups whose headline profiles are alike (#2490) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2492
+* fix(#2494): a shared quote starts the composer whole, not cut to the network's limit by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2495
+* Sidebar: an airy design, picked in Settings next to the magazine style (#2493) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2497
+* Links to Lemmy and Mastodon open on the reader's own instance by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2498
+* fix(#2499): opening a Lemmy post adopts its live score by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2500
+* Notifications: Refresh polls the network for new notifications by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2503
+* fix(#2501): an opened Lemmy post links to its home address by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2504
+* fix(#2505): mark a followed story's new entries above and below by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2506
+* docs(#2507): v1.10.3 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2508
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.2...v1.10.3
 
 ## [v1.10.2] - 2026-11-22
 
