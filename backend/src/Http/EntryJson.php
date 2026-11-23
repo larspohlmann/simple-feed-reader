@@ -177,9 +177,15 @@ final readonly class EntryJson
         ];
     }
 
+    /** Cross-post pills ride in the duplicates too; only a copy of the row's own item may lend its address. */
     private static function findHomeUrl(EntryListRow $row): ?string
     {
-        foreach ([$row, ...$row->duplicates] as $copy) {
+        $itemId = $row->entry->getCanonicalItemId();
+        $sameItemCopies = array_filter(
+            $row->duplicates,
+            static fn (EntryListRow $copy): bool => null !== $itemId && $copy->entry->getCanonicalItemId() === $itemId,
+        );
+        foreach ([$row, ...$sameItemCopies] as $copy) {
             $homeUrl = $copy->entry->getDiscussion()->homeUrl;
             if (null !== $homeUrl) {
                 return $homeUrl;

@@ -534,15 +534,37 @@ final class EntryJsonTest extends TestCase
 
     public function testDiscussionHomeUrlComesFromADuplicateWhenTheShownCopyHasNone(): void
     {
+        $item = self::withId(CanonicalItems::buildItem(CanonicalItemKind::Lemmy, self::LEMMY_POST), 51);
         $shown = $this->entryTitled('Community copy');
         $shown->setDiscussion(Discussion::platformThread(self::LEMMY_POST));
+        $shown->linkTo($item);
         $accountCopy = $this->entryTitled('Account copy');
         $accountCopy->setDiscussion(Discussion::platformThread(self::LEMMY_POST)->withHomeUrl(self::HOME_POST));
+        $accountCopy->linkTo($item);
         $row = $this->row($shown)->withDuplicates([$this->row($accountCopy)]);
 
         $json = JsonMappers::entryJson()->listRow($row);
 
         self::assertSame(self::HOME_POST, $json['discussionHomeUrl']);
+    }
+
+    public function testDiscussionHomeUrlNeverComesFromACrossPostOfAnotherItem(): void
+    {
+        $shown = $this->entryTitled('Post A');
+        $shown->setDiscussion(Discussion::platformThread(self::LEMMY_POST));
+        $shown->linkTo(self::withId(CanonicalItems::buildItem(CanonicalItemKind::Lemmy, self::LEMMY_POST), 52));
+        $crossPost = $this->entryTitled('Post B');
+        $crossPost->setDiscussion(
+            Discussion::platformThread('https://feddit.org/post/3')->withHomeUrl('https://home.example/post/77'),
+        );
+        $crossPost->linkTo(
+            self::withId(CanonicalItems::buildItem(CanonicalItemKind::Lemmy, 'https://feddit.org/post/3'), 53),
+        );
+        $row = $this->row($shown)->withDuplicates([$this->row($crossPost)]);
+
+        $json = JsonMappers::entryJson()->listRow($row);
+
+        self::assertNull($json['discussionHomeUrl']);
     }
 
     public function testDiscussionHomeUrlIsNullWithoutOne(): void
