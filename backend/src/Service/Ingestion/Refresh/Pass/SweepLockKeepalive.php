@@ -29,14 +29,13 @@ final class SweepLockKeepalive
 
     public const string CEILING_REACHED_MESSAGE = 'The feed refresh lock stopped renewing at its ceiling';
 
-    private bool $holdingTheLock = true;
-
     private function __construct(
         private readonly LockInterface $lock,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
         private readonly int $ceiling,
         private int $lastRenewalAttemptAt,
+        private bool $holdingTheLock,
     ) {
     }
 
@@ -46,15 +45,19 @@ final class SweepLockKeepalive
         int $deadline,
         LoggerInterface $logger,
     ): self {
-        return new self($lock, $clock, $logger, $deadline + self::MAX_OVERRUN_SECONDS, $clock->now()->getTimestamp());
+        return new self(
+            $lock,
+            $clock,
+            $logger,
+            $deadline + self::MAX_OVERRUN_SECONDS,
+            $clock->now()->getTimestamp(),
+            true,
+        );
     }
 
     public static function withoutLock(): self
     {
-        $keepalive = self::holding(new NoLock(), new NativeClock(), \PHP_INT_MIN, new NullLogger());
-        $keepalive->holdingTheLock = false;
-
-        return $keepalive;
+        return new self(new NoLock(), new NativeClock(), new NullLogger(), 0, 0, false);
     }
 
     public function isHoldingTheLock(): bool

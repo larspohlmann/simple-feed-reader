@@ -138,10 +138,13 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             return $pass->abortedAfterOutcomes();
         }
 
-        return $pass->finished($this->countRemaining($criteria, $pass), $this->keepHouse($request, $keepalive));
+        return $pass->finished(
+            $this->countRemaining($criteria, $pass),
+            $this->recordHistoryAndPrune($request, $keepalive),
+        );
     }
 
-    private function keepHouse(RefreshRequestModel $request, SweepLockKeepalive $keepalive): int
+    private function recordHistoryAndPrune(RefreshRequestModel $request, SweepLockKeepalive $keepalive): int
     {
         $keepalive->beat();
         if (!$keepalive->isHoldingTheLock()) {
