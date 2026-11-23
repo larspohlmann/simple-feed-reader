@@ -103,7 +103,7 @@ final class DiscussionVotesTest extends DbTestCase
         $voter->expects($this->once())->method('castVoteOnPost')
             ->with(self::identicalTo($caster), self::identicalTo($copy), VoteScore::Down)
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Down, 3));
-        $voter->expects($this->once())->method('fetchPostVote')
+        $voter->expects($this->once())->method('fetchPostVoteResult')
             ->with(self::identicalTo($caster), self::identicalTo($copy))
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Down, 3));
         $votes = $this->buildVotes([SocialNetwork::Lemmy->value => $voter]);
@@ -137,7 +137,7 @@ final class DiscussionVotesTest extends DbTestCase
         $copy = $this->persistCopy($this->persistHomeFeed($homeOwner));
         $voter = $this->createMock(PostVoterInterface::class);
         $voter->method('isVotablePost')->willReturn(true);
-        $voter->expects($this->once())->method('fetchPostVote')
+        $voter->expects($this->once())->method('fetchPostVoteResult')
             ->with(self::identicalTo($homeOwner), self::identicalTo($copy))
             ->willReturnCallback(function () use ($caster): DiscussionVoteResultModel {
                 $this->storeVote($caster, VoteScore::Up);

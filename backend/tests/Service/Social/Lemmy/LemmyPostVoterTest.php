@@ -74,7 +74,7 @@ final class LemmyPostVoterTest extends TestCase
 
         self::assertEquals(
             new DiscussionVoteResultModel(VoteScore::Down, 43),
-            $this->voter($http)->fetchPostVote($this->account(), $this->lemmyPost()),
+            $this->voter($http)->fetchPostVoteResult($this->account(), $this->lemmyPost()),
         );
         self::assertSame([self::HOME_POST], $http->requestLines());
     }
