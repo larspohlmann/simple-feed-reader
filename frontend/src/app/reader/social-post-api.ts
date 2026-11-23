@@ -16,6 +16,7 @@ import { VoteValue } from './vote-pill/vote';
 export interface VoteAnswer {
   myVote: VoteValue;
   score: number;
+  discussionHomeUrl?: string | null;
 }
 
 /** What the reader sees of and does to an entry's network post, and to the replies in its thread. */
