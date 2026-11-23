@@ -296,15 +296,16 @@ describe('EntryListComponent', () => {
     });
   });
 
-  describe('the "Since your last visit" divider (#2128)', () => {
+  describe('the last-visit dividers (#2128, #2505)', () => {
     const story: Selection = { kind: 'trending-story', id: 42, unread: false };
-    const divider = (element: HTMLElement) => element.querySelectorAll('.since-last-visit');
+    const divider = (element: HTMLElement) => element.querySelectorAll('.before-last-visit');
+    const heading = (element: HTMLElement) => element.querySelectorAll('.since-last-visit');
 
-    /** How many rows the divider follows, or null when there is none. */
-    function rowsAboveDivider(element: HTMLElement): number | null {
+    /** How many rows precede the marker with `className`, or null when there is none. */
+    function rowsAbove(element: HTMLElement, className: string): number | null {
       let rows = 0;
       for (const child of Array.from(element.querySelector('.rows')!.children)) {
-        if (child.classList.contains('since-last-visit')) return rows;
+        if (child.classList.contains(className)) return rows;
         if (child.classList.contains('row-slot')) rows++;
       }
       return null;
@@ -319,24 +320,45 @@ describe('EntryListComponent', () => {
         ...over,
       }).nativeElement as HTMLElement;
 
-    it('sits above the first row that is not new', () => {
+    it('heads the new rows with "Since your last visit"', () => {
+      const element = mountStory([1, 2, 3], [1, 2]);
+
+      expect(heading(element).length).toBe(1);
+      expect(rowsAbove(element, 'since-last-visit')).toBe(0);
+      expect(heading(element)[0].textContent).toContain('Since your last visit');
+    });
+
+    it('marks the first row that is not new with "Before your last visit"', () => {
       const element = mountStory([1, 2, 3], [1, 2]);
 
       expect(divider(element).length).toBe(1);
-      expect(rowsAboveDivider(element)).toBe(2);
-      expect(divider(element)[0].textContent).toContain('Since your last visit');
+      expect(rowsAbove(element, 'before-last-visit')).toBe(2);
+      expect(divider(element)[0].textContent).toContain('Before your last visit');
+    });
+
+    it('heads the new magazine blocks and marks the first earlier one', () => {
+      const element = mountStory([1, 2, 3], [1, 2], { layout: 'magazine' });
+      const markers = Array.from(element.querySelectorAll('app-list-divider'));
+
+      expect(markers.map((marker) => marker.textContent?.trim())).toEqual([
+        'Since your last visit',
+        'Before your last visit',
+      ]);
     });
 
     it('is not drawn when the first row is not new', () => {
-      expect(divider(mountStory([1, 2, 3], [2, 3])).length).toBe(0);
+      const element = mountStory([1, 2, 3], [2, 3]);
+      expect(divider(element).length + heading(element).length).toBe(0);
     });
 
     it('is not drawn when every row is new', () => {
-      expect(divider(mountStory([1, 2], [1, 2])).length).toBe(0);
+      const element = mountStory([1, 2], [1, 2]);
+      expect(divider(element).length + heading(element).length).toBe(0);
     });
 
     it('is not drawn when nothing is new', () => {
-      expect(divider(mountStory([1, 2], [])).length).toBe(0);
+      const element = mountStory([1, 2], []);
+      expect(divider(element).length + heading(element).length).toBe(0);
     });
 
     it('is not drawn oldest first, where the new rows sit at the end', () => {
@@ -364,7 +386,7 @@ describe('EntryListComponent', () => {
       fixture.componentInstance.content.hiddenAboveIds.set(new Set([1, 2]));
       fixture.detectChanges();
 
-      expect(divider(element).length).toBe(0);
+      expect(divider(element).length + heading(element).length).toBe(0);
       expect(element.querySelector('.row-slot')).toBe(earlierRow);
     });
 
@@ -428,13 +450,13 @@ describe('EntryListComponent', () => {
         store.load({ view: 'all', storyId: 42 });
         await render();
         expect([...visit.newSinceVisitIds()]).toEqual([1, 2]);
-        expect(rowsAboveDivider(element)).toBe(2);
+        expect(rowsAbove(element, 'before-last-visit')).toBe(2);
 
         store.loadMore();
         await render();
         expect([...visit.newSinceVisitIds()]).toEqual([1, 2, 4]);
         expect(divider(element).length).toBe(1);
-        expect(rowsAboveDivider(element)).toBe(2);
+        expect(rowsAbove(element, 'before-last-visit')).toBe(2);
         expect(rows()).toHaveLength(5);
         const earlierRows = rows().slice(2);
 
@@ -451,7 +473,7 @@ describe('EntryListComponent', () => {
       const element = mountStory([1, 2, 3], [1, 2], { layout: 'magazine' });
 
       expect(divider(element).length).toBe(1);
-      expect(rowsAboveDivider(element)).toBe(2);
+      expect(rowsAbove(element, 'before-last-visit')).toBe(2);
     });
   });
 

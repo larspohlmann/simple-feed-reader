@@ -121,7 +121,7 @@ export class EntryListComponent {
    *  in their saved view). A leaving row fades then collapses in place, staying
    *  in `items` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
-  /** On a followed story, the rows that joined since the last visit; the "Since your last visit" divider follows them. */
+  /** On a followed story, the rows that joined since the last visit, drawn between "Since your last visit" and "Before your last visit". */
   readonly newSinceVisitIds = input<ReadonlySet<number>>(new Set());
 
   readonly loading = input.required<boolean>();

@@ -105,6 +105,11 @@
             class="since-last-visit"
             [label]="'reader.sinceLastVisit' | transloco"
           />
+        } @else if (b.kind === 'before-last-visit') {
+          <app-list-divider
+            class="before-last-visit"
+            [label]="'reader.beforeLastVisit' | transloco"
+          />
         } @else {
           <!-- Same leave animation as the list layout: the slot collapses the
                block's height once its content has faded, closing the gap (#478). -->
@@ -152,10 +157,15 @@
         @if (segment.divider; as divider) {
           @if (divider.kind === 'run-header') {
             <app-run-header [generatedAt]="divider.generatedAt" />
-          } @else {
+          } @else if (divider.kind === 'since-last-visit') {
             <app-list-divider
               class="since-last-visit"
               [label]="'reader.sinceLastVisit' | transloco"
+            />
+          } @else {
+            <app-list-divider
+              class="before-last-visit"
+              [label]="'reader.beforeLastVisit' | transloco"
             />
           }
         }
