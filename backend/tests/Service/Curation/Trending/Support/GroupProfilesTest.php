@@ -34,6 +34,26 @@ final class GroupProfilesTest extends TestCase
         }
     }
 
+    public function testAStemTwoOfFiveCarryIsKept(): void
+    {
+        $run = $this->runOf([
+            'Zorbel ankert',
+            'Zorbel ruft',
+            'Frindle wartet',
+            'Quaffle landet',
+            'Tosmar geht',
+        ]);
+
+        $profile = GroupProfiles::build($run, [1, 2, 3, 4, 5]);
+
+        $sharedStemIds = array_values(array_intersect(
+            $run->headlines->collectHeadlineStemIds(1),
+            $run->headlines->collectHeadlineStemIds(2),
+        ));
+        self::assertCount(1, $sharedStemIds);
+        self::assertSame($sharedStemIds, array_keys($profile->stemWeights));
+    }
+
     public function testAStemOnlyAThirdCarryIsLeftOut(): void
     {
         $run = $this->runOf([

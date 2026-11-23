@@ -567,7 +567,7 @@ final class HeadlineWindowTest extends TestCase
             $this->add($index, 10, 'Briefing ' . self::uniqueWord($index), '');
         }
 
-        self::assertCount(1, $this->window->collectHeadlineStemIds(1));
+        self::assertSame([0], array_keys($this->window->collectHeadlineStemIds(1)));
     }
 
     public function testRarityFollowsDocumentFrequency(): void

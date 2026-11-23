@@ -27,7 +27,7 @@ final class ProfileMergesTest extends TestCase
     {
         $run = $this->runOf(self::ALIKE_HEADLINES);
 
-        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 3, 5], [2, 4, 6]]));
     }
 
     public function testMergesChainAcrossRounds(): void
@@ -105,6 +105,20 @@ final class ProfileMergesTest extends TestCase
         self::assertSame(
             [[1, 2, 3, 4, 5, 6], [7, 8, 9]],
             $this->merged($run, [[4, 5, 6], [1, 2, 3], [7, 8, 9]]),
+        );
+    }
+
+    public function testUnorderedGroupsAndMembersComeOutSorted(): void
+    {
+        $run = $this->runOf([
+            ...array_fill(0, 3, 'Zorbel Quintar'),
+            ...array_fill(0, 3, 'Ulmira Sevpot Kandor'),
+            ...array_fill(0, 3, 'Zorbel Quintar'),
+        ]);
+
+        self::assertSame(
+            [[1, 2, 3, 7, 8, 9], [4, 5, 6]],
+            $this->merged($run, [[6, 4, 5], [7, 8, 9], [3, 1, 2]]),
         );
     }
 
