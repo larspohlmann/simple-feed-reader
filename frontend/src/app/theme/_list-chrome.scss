@@ -22,8 +22,6 @@ $corner-clear: calc(
      bar moves — the rows below are untouched. */
   transform: translateY(var(--app-bar-shift, 0));
   transition: transform 0.4s ease;
-  flex-wrap: wrap;
-  container: list-header / inline-size;
 }
 
 // An error banner overlaying the top of the rows, just below the floating header.

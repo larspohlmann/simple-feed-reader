@@ -912,8 +912,9 @@ The bar heading a pane: the list header (`list-frame`) and the article toolbar
 `--space-3`/`--space-4` padding, the bottom rule, `--surface-0` at 80% over a
 blur (`theme/_frost.scss`), and from `bp-lg` up a `--bar-h` minimum with no
 block padding, which lines it up with the sidebar's search row. Content is
-projected. Its `resized` output reports the bar's height for the pane to
-reserve beneath it.
+projected. Its `resized` output reports the bar's height, whenever it changes,
+for the pane to reserve beneath it. A `collapsed` class slims it below `bp-lg`
+(the list header scrolled down).
 
 It sets no position, transform or z-index: each pane places and moves its own
 instance (the list's rides `--app-bar-shift`, the full-screen article's retracts

@@ -167,12 +167,12 @@
      this one value tunes the gap everywhere (#87). */
   --bar-gap: var(--space-4);
 
-  /* EntryListComponent overwrites this once it measures its own bar; the
+  /* The list frame overwrites this once it measures its pane bar; the
      default is what the `calc()`s add before that. Declared here rather than
      a var() fallback at each site so the arithmetic reads as arithmetic. */
   --list-bar-h: 0px;
 
-  /* The reader view overwrites this on its host once it measures its toolbar. */
+  /* The article layer overwrites this on its host once it measures its pane bar. */
   --reader-bar-h: 0px;
 
   /* Type scale. --fs-read is a step above --fs-base: long-form reading wants

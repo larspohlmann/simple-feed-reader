@@ -35,6 +35,7 @@ import { aLinkCard, aQuotedPost, anEntry, anEntryComment } from '../../../../tes
 import {
   MockResizeObserver,
   installMockResizeObserver,
+  resizeTo,
 } from '../../../../testing/resize-observer-testing';
 import { scrollerOf, stubCssEscape, trackScrollTop } from '../../../../testing/scroll-testing';
 import { longArticleHtml, settleContent } from '../../../../testing/article-page-testing';
@@ -1154,9 +1155,7 @@ describe('ReaderViewComponent', () => {
 
       const content = host.querySelector('.content') as HTMLElement;
       content.getBoundingClientRect = () => ({ top: 0, bottom: 2400 }) as DOMRect;
-      const bar = host.querySelector('.bar') as HTMLElement;
-      Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 56 });
-      MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+      resizeTo(host.querySelector<HTMLElement>('.bar')!, 56);
       fixture.detectChanges();
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
@@ -1390,10 +1389,7 @@ describe('ReaderViewComponent', () => {
     const element = (fixture.nativeElement as HTMLElement).querySelector(
       'app-article-layer',
     ) as HTMLElement;
-    const bar = element.querySelector('.bar') as HTMLElement;
-    Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 44 });
-
-    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+    resizeTo(element.querySelector<HTMLElement>('.bar')!, 44);
 
     expect(element.style.getPropertyValue('--reader-bar-h')).toBe('44px');
   });

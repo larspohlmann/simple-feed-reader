@@ -17,3 +17,10 @@
     padding-block: 0;
   }
 }
+
+/* Not animated: the pane reserves the measured height, and an animating box reports every step (#87). */
+@media (width < bp.$bp-lg) {
+  :host(.collapsed) {
+    padding-block: var(--space-1);
+  }
+}

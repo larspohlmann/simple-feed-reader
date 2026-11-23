@@ -8,11 +8,7 @@ import {
   scrollerOf,
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
-import {
-  MockResizeObserver,
-  fireResizeOf,
-  installMockResizeObserver,
-} from '../../../../testing/resize-observer-testing';
+import { installMockResizeObserver, resizeTo } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
 import { PAGE_MOVING_CLASS, PageLayer } from '../../../shared/scroll-host/page-layer';
@@ -114,9 +110,7 @@ describe('ArticleLayerComponent', () => {
   });
 
   it('reserves the toolbar height', () => {
-    const bar = element.querySelector<HTMLElement>('app-pane-bar.bar')!;
-    Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 56 });
-    fireResizeOf(bar);
+    resizeTo(element.querySelector<HTMLElement>('app-pane-bar.bar')!, 56);
 
     const layer = element.querySelector<HTMLElement>('app-article-layer')!;
     expect(layer.style.getPropertyValue('--reader-bar-h')).toBe('56px');
@@ -344,9 +338,7 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
 
   it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {
     scrollerOf(fixture).style.setProperty('scroll-padding-top', '44px');
-    const bar = layerElement().querySelector('.bar')!;
-    Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 56 });
-    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+    resizeTo(layerElement().querySelector<HTMLElement>('.bar')!, 56);
 
     expect(document.documentElement.style.getPropertyValue('scroll-padding-top')).toBe('');
   });
