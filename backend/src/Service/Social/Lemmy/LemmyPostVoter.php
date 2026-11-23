@@ -14,6 +14,7 @@ use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyPosts;
 use App\Service\Social\Lemmy\Model\LemmyTargetModel;
+use App\Service\Social\Lemmy\Support\LemmyPostKey;
 use App\Service\Social\Lemmy\Support\LemmyView;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\Exception\NotASocialPostException;
@@ -47,7 +48,8 @@ final readonly class LemmyPostVoter implements PostVoterInterface
                 ['post_id' => $this->posts->resolveHomePostId($account, $post), 'score' => $score->value],
             );
 
-            return self::buildResult(
+            return self::buildPostResult(
+                $account,
                 LemmyView::fromPostView(JsonNodeModel::fromValue($answer->json())->node('post_view')),
             );
         });
@@ -68,7 +70,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
 
             $comment = JsonNodeModel::fromValue($answer->json())->node('comment_view');
 
-            return self::buildResult(LemmyView::fromCommentView($comment));
+            return self::buildCommentResult(LemmyView::fromCommentView($comment));
         });
     }
 
@@ -78,7 +80,7 @@ final readonly class LemmyPostVoter implements PostVoterInterface
 
         return $this->guard->actAs(
             $account,
-            fn (): DiscussionVoteResultModel => self::buildResult($this->posts->postOn($account, $post)),
+            fn (): DiscussionVoteResultModel => self::buildPostResult($account, $this->posts->postOn($account, $post)),
         );
     }
 
@@ -89,8 +91,15 @@ final readonly class LemmyPostVoter implements PostVoterInterface
             ?? throw new NotASocialPostException('This entry is not a Lemmy post.');
     }
 
-    private static function buildResult(LemmyTargetModel $target): DiscussionVoteResultModel
+    private static function buildPostResult(SocialAccount $account, LemmyTargetModel $post): DiscussionVoteResultModel
     {
-        return new DiscussionVoteResultModel($target->myVote, $target->score);
+        $homeUrl = LemmyPostKey::buildPostPage($account->getServiceUrl(), $post->postId);
+
+        return new DiscussionVoteResultModel($post->myVote, $post->score, $homeUrl);
+    }
+
+    private static function buildCommentResult(LemmyTargetModel $comment): DiscussionVoteResultModel
+    {
+        return new DiscussionVoteResultModel($comment->myVote, $comment->score);
     }
 }

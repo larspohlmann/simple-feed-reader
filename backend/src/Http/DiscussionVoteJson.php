@@ -8,10 +8,10 @@ use App\Service\Social\Social\Model\DiscussionVoteResultModel;
 
 final class DiscussionVoteJson
 {
-    /** @return array{myVote: int, score: int} */
+    /** @return array{myVote: int, score: int, discussionHomeUrl: string|null} */
     public static function result(DiscussionVoteResultModel $result): array
     {
-        return ['myVote' => $result->myVote->value, 'score' => $result->score];
+        return ['myVote' => $result->myVote->value, 'score' => $result->score, 'discussionHomeUrl' => $result->homeUrl];
     }
 
     private function __construct()

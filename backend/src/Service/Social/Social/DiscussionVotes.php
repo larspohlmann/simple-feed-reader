@@ -60,6 +60,7 @@ final readonly class DiscussionVotes
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
+        self::recordHomeUrl($entry, $result);
 
         return $this->adopt($user, $item, $account, $result);
     }
@@ -109,6 +110,7 @@ final readonly class DiscussionVotes
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->fetchPostVoteResult($account, $entry);
+        self::recordHomeUrl($entry, $result);
 
         return $this->adopt($user, $item, $account, $result);
     }
@@ -177,6 +179,11 @@ final readonly class DiscussionVotes
         $last = (string) array_pop($names);
 
         return [] === $names ? $last : implode(', ', $names) . ' or ' . $last;
+    }
+
+    private static function recordHomeUrl(Entry $entry, DiscussionVoteResultModel $result): void
+    {
+        $entry->setDiscussion($entry->getDiscussion()->withHomeUrl($result->homeUrl));
     }
 
     private function adopt(
