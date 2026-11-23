@@ -30,7 +30,7 @@ The sidebar's grouped cards (#1749) match the boxed magazine style. Readers who 
 - Network heads: name as heading (primary text, semibold, `--fs-base`, logo `--icon-md`), rows indented `--space-5` on a hairline. "+" sits 6px closer to the name so "Mastodon" does not truncate.
 - Followed stories, Saved searches, Tags, Feeds heads: heading only, rows flush. An open tag's children hang on a hairline; a nested open tag has none of its own.
 - Current row: accent text plus a 3px inset accent bar, no fill. Hover keeps today's rounded fill.
-- Phone drawer is the sheet, no rule under its title. Touch discs and footer controls keep fills and rims. Organise mode unchanged apart from the sheet.
+- Phone drawer is the sheet, no rule under its title. Touch discs and footer controls keep fills and rims. Organise mode takes the same sheet look, as shown on the canvas board "A · Sheet · Organise".
 
 ## Constraints
 
