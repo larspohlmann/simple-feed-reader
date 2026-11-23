@@ -24,6 +24,7 @@ use App\Service\Library\Subscription\BulkSubscriptionUpdater;
 use App\Service\Library\Subscription\OwnedSubscriptions;
 use App\Service\Library\Subscription\SubscriptionEditor;
 use App\Service\Library\Subscription\SubscriptionService;
+use App\Service\Social\Lemmy\LemmyHosts;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -43,6 +44,7 @@ final readonly class SubscriptionController
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
         private SubscriptionEditor $editor,
+        private LemmyHosts $lemmyHosts,
     ) {
     }
 
@@ -57,6 +59,7 @@ final readonly class SubscriptionController
             $this->subscriptions->findForUserWithTags($user->requireId(), SubscriptionSet::All),
             $this->tallies->buildTallies($user, $window),
             $this->socialAccounts->findAllForUserIdInActingOrder($user->requireId()),
+            $this->lemmyHosts->collectForUser($user),
         ));
     }
 

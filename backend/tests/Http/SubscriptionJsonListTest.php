@@ -36,12 +36,12 @@ final class SubscriptionJsonListTest extends DbTestCase
             new TrendingUnopenedModel(TrendingWindow::Day, 0),
         );
 
-        $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
+        $payload = SubscriptionJson::list([$counted, $silent], $tallies, [], ['lemmy.world']);
 
         self::assertSame(
             [
                 'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'viewedCount', 'trending',
-                'unreadTotals', 'notifications', 'socialAccounts',
+                'unreadTotals', 'notifications', 'socialAccounts', 'lemmyHosts',
             ],
             array_keys($payload),
         );
@@ -53,6 +53,7 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(2, $payload['keptCount']);
         self::assertSame(41, $payload['viewedCount']);
         self::assertSame(UnreadTotalsJson::from($tallies->subscriptions->unreadTotals), $payload['unreadTotals']);
+        self::assertSame(['lemmy.world'], $payload['lemmyHosts']);
     }
 
     public function testTheListNamesEachConnectedAccountInOrder(): void
@@ -79,6 +80,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
             [$bluesky, $mastodon],
+            [],
         );
 
         self::assertSame(
@@ -125,6 +127,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
             [$bluesky],
+            [],
         );
 
         self::assertSame(

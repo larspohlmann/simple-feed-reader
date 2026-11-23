@@ -68,4 +68,31 @@ final class SubscriptionSocialListTest extends ApiTestCase
         self::assertIsArray($accounts);
         self::assertSame([$later->requireId(), $earlier->requireId()], array_column($accounts, 'id'));
     }
+
+    public function testTheListNamesTheReadersLemmyHosts(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('social-list-lemmy@example.test');
+        $this->entityManager()->persist(SocialAccounts::lemmyOf($user, 'lemmy.example'));
+        $this->entityManager()->flush();
+        $stranger = $this->factory()->create('social-list-lemmy-stranger@example.test');
+        $this->entityManager()->persist(SocialAccounts::lemmyOf($stranger, 'feddit.example'));
+        $this->entityManager()->flush();
+
+        $client->request('GET', '/api/subscriptions', server: $this->bearerFor($user));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['lemmy.example'], $this->payload($client)['lemmyHosts']);
+    }
+
+    public function testAReaderWithoutLemmyDataNamesNoLemmyHosts(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('social-list-no-lemmy@example.test');
+
+        $client->request('GET', '/api/subscriptions', server: $this->bearerFor($user));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([], $this->payload($client)['lemmyHosts']);
+    }
 }

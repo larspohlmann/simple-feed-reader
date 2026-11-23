@@ -97,6 +97,22 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         return $set;
     }
 
+    /** @return list<string> */
+    public function findUrlsOnNetworkForUser(int $userId, SocialNetwork $network): array
+    {
+        /** @var list<array{url: string}> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->select('f.url AS url')
+            ->join(Subscription::class, 's', 'ON', 's.feed = f AND s.user = :userId')
+            ->andWhere('f.network = :network')
+            ->setParameter('userId', $userId)
+            ->setParameter('network', $network)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_column($rows, 'url');
+    }
+
     /**
      * The feed rows behind a set of urls, indexed by url: one query for the whole set a restore file declares. A url
      * with no row is absent.
