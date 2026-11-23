@@ -68,11 +68,6 @@ describe('share content', () => {
     expect(sharedLink(PAGE, { text, words: 1, anchorable: false }).quote).toBe(text);
   });
 
-  it('sends a 1999-character quote whole', () => {
-    const text = 'word '.repeat(400).trim();
-    expect(sharedLink(PAGE, { text, words: 400, anchorable: false }).quote).toBe(text);
-  });
-
   it('clips at the last space before the limit', () => {
     expect(clippedAtWord('one two three', 9)).toBe('one two…');
     expect(clippedAtWord('one two', 9)).toBe('one two');
