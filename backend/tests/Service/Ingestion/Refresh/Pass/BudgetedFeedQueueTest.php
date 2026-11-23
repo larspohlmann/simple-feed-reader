@@ -7,9 +7,12 @@ namespace App\Tests\Service\Ingestion\Refresh\Pass;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Ingestion\Refresh\Pass\BudgetedFeedQueue;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class BudgetedFeedQueueTest extends TestCase
 {
@@ -30,7 +33,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testYieldsEveryFeedWhenTheBudgetIsAmple(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300);
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300, self::claims());
 
         $started = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
@@ -42,7 +45,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testStopsYieldingOnceTheDeadlineIsWithinTheSafetyMargin(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100);
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100, self::claims());
 
         $started = [];
         foreach ($queue->startedFeeds() as $feed) {
@@ -62,7 +65,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testAlwaysYieldsTheFirstFeedEvenWithNoBudgetLeft(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() - 60);
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() - 60, self::claims());
 
         $started = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
@@ -74,7 +77,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testAnEmptyFeedListStartsAndSkipsNothing(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue([], $clock, $clock->now()->getTimestamp() + 300);
+        $queue = new BudgetedFeedQueue([], $clock, $clock->now()->getTimestamp() + 300, self::claims());
 
         self::assertSame([], iterator_to_array($queue->startedFeeds(), preserve_keys: false));
         self::assertCount(0, $queue->startedFeedIds());
@@ -86,7 +89,7 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
         $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
-        $queue = new BudgetedFeedQueue([$rss, $timeline], $clock, $clock->now()->getTimestamp() + 5);
+        $queue = new BudgetedFeedQueue([$rss, $timeline], $clock, $clock->now()->getTimestamp() + 5, self::claims());
 
         self::assertSame([1 => $rss], iterator_to_array($queue->startedFeeds()));
         self::assertSame(1, $queue->skippedCount());
@@ -97,7 +100,7 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
         $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
-        $queue = new BudgetedFeedQueue([$timeline, $rss], $clock, $clock->now()->getTimestamp() + 300);
+        $queue = new BudgetedFeedQueue([$timeline, $rss], $clock, $clock->now()->getTimestamp() + 300, self::claims());
 
         self::assertSame([2 => $timeline, 1 => $rss], iterator_to_array($queue->startedFeeds()));
         self::assertSame([2, 1], $queue->startedFeedIds());
@@ -106,7 +109,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testAFeedCountsAsStartedOnlyOnceItIsPulled(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300);
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300, self::claims());
 
         $queue->startedFeeds()->current();
 
@@ -119,5 +122,10 @@ final class BudgetedFeedQueueTest extends TestCase
         $feed->setSourceFormat(SourceFormat::BLUESKY_API);
 
         return $feed;
+    }
+
+    private static function claims(): FeedClaims
+    {
+        return new FeedClaims(new LockFactory(new InMemoryStore()));
     }
 }

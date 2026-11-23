@@ -276,4 +276,63 @@ describe('RefreshService', () => {
     expect(service.failure()).toBeNull();
     ctrl.expectOne('https://api.test/api/refresh').flush(report({ status: 'completed' }));
   });
+  describe('retrying a failed run', () => {
+    const failWithServerError = () =>
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    it('retries the failed run with its scope', () => {
+      service.run(undefined, { kind: 'feed', feedId: 7 });
+      failWithServerError();
+      expect(service.failure()).not.toBeNull();
+
+      service.retry();
+
+      const retried = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+      expect(retried.request.params.get('feedId')).toBe('7');
+      retried.flush(report({ status: 'completed', remaining: 0 }));
+      expect(service.failure()).toBeNull();
+    });
+
+    it("retries with the failed run's onDone", () => {
+      const done = jest.fn();
+      service.run(done, { kind: 'neverFetched' });
+      failWithServerError();
+      expect(done).toHaveBeenCalledTimes(1);
+
+      service.retry();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(report({ status: 'completed', remaining: 0 }));
+
+      expect(done).toHaveBeenCalledTimes(2);
+    });
+
+    it('does nothing before any run', () => {
+      service.retry();
+
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/refresh');
+    });
+
+    it('does nothing while a run is in flight', () => {
+      service.run();
+
+      service.retry();
+
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(report({ status: 'completed', remaining: 0 }));
+    });
+
+    it('dismisses a failure without a request', () => {
+      service.run();
+      failWithServerError();
+
+      service.dismissFailure();
+
+      expect(service.failure()).toBeNull();
+      ctrl.verify();
+    });
+  });
 });

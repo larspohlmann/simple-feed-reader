@@ -37,6 +37,11 @@ final readonly class RefreshRequestModel
         return new self(null, new FeedTargetModel($feedId), true, $budgetSeconds, false);
     }
 
+    public function needsSweepLock(): bool
+    {
+        return $this->prune || !$this->target instanceof FeedTargetModel;
+    }
+
     #[\NoDiscard]
     public function withoutPruning(): self
     {

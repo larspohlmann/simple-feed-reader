@@ -138,4 +138,13 @@ final class RefreshRequestModelTest extends TestCase
         self::assertEquals(new NetworkTargetModel($network), $request->ignoringSchedule()->target);
         self::assertEquals(new NetworkTargetModel($network), $request->limitedTo(5)->target);
     }
+
+    public function testOnlyARefreshOfOneFeedThatPrunesNothingSkipsTheSweepLock(): void
+    {
+        self::assertFalse(RefreshRequestModel::forFeed(5, 25)->needsSweepLock());
+        self::assertFalse(RefreshRequestModel::forUser(1, new FeedTargetModel(5), 25)->needsSweepLock());
+        self::assertTrue(RefreshRequestModel::allDue(25)->needsSweepLock());
+        self::assertTrue(RefreshRequestModel::allDue(25)->withoutPruning()->needsSweepLock());
+        self::assertTrue(RefreshRequestModel::forUser(1, new TagTargetModel(3), 25)->needsSweepLock());
+    }
 }

@@ -13,6 +13,7 @@ use App\Enum\ShareKind;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
@@ -29,6 +30,8 @@ use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** The container's own reader, mapper and store, platform rules included, from a getTimeline answer to the rows. */
@@ -136,7 +139,12 @@ final class RefreshPassRecorderBlueskyTest extends DbTestCase
     private function refreshed(SocialFeed $socialFeed): RefreshPass
     {
         $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
-        $pass = new RefreshPass([$socialFeed->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
+        $pass = new RefreshPass(
+            [$socialFeed->getFeed()],
+            $clock,
+            $clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
+        );
         $this->recorder()->record($pass, $clock->now());
 
         return $pass;

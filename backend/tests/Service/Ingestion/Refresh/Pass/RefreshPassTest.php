@@ -7,9 +7,12 @@ namespace App\Tests\Service\Ingestion\Refresh\Pass;
 use App\Entity\Feed;
 use App\Service\Ingestion\Refresh\Model\FeedOutcome;
 use App\Service\Ingestion\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class RefreshPassTest extends DbTestCase
 {
@@ -19,11 +22,13 @@ final class RefreshPassTest extends DbTestCase
     private const int WHOLE_BATCH_BUDGET = 300;
 
     private MockClock $clock;
+    private InMemoryStore $lockStore;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
+        $this->lockStore = new InMemoryStore();
     }
 
     public function testFindsEachFeedByItsId(): void
@@ -42,6 +47,36 @@ final class RefreshPassTest extends DbTestCase
 
         self::assertCount(1, iterator_to_array($pass->startedFeeds()));
         self::assertSame([$one->requireId()], $pass->startedFeedIds());
+    }
+
+    public function testAFeedAnotherPassHoldsIsNotStarted(): void
+    {
+        [$free, $held] = $this->feeds(2);
+        $otherPass = $this->otherPassClaims();
+        $otherPass->claim($held->requireId());
+        $pass = $this->pass([$free, $held], self::WHOLE_BATCH_BUDGET);
+
+        self::assertSame([$free->requireId()], array_keys(iterator_to_array($pass->startedFeeds())));
+        self::assertSame([$held->requireId()], $pass->heldFeedIds());
+    }
+
+    public function testAHeldFeedDoesNotCountAsStartedAgainstTheBudget(): void
+    {
+        [$held, $free] = $this->feeds(2);
+        $otherPass = $this->otherPassClaims();
+        $otherPass->claim($held->requireId());
+        $pass = $this->pass([$held, $free], self::ONE_FEED_BUDGET);
+
+        self::assertSame([$free->requireId()], array_keys(iterator_to_array($pass->startedFeeds())));
+    }
+
+    public function testAFeedTheBudgetNeverStartsIsNeverClaimed(): void
+    {
+        [$one, $two] = $this->feeds(2);
+        $pass = $this->pass([$one, $two], self::ONE_FEED_BUDGET);
+
+        self::assertSame([$one->requireId()], array_keys(iterator_to_array($pass->startedFeeds())));
+        self::assertTrue($this->otherPassClaims()->claim($two->requireId()));
     }
 
     public function testAnAbortDuringOutcomesLeavesEveryUnprocessedFeedRemaining(): void
@@ -155,6 +190,16 @@ final class RefreshPassTest extends DbTestCase
      */
     private function pass(array $feeds, int $budgetSeconds): RefreshPass
     {
-        return new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + $budgetSeconds);
+        return new RefreshPass(
+            $feeds,
+            $this->clock,
+            $this->clock->now()->getTimestamp() + $budgetSeconds,
+            new FeedClaims(new LockFactory($this->lockStore)),
+        );
+    }
+
+    private function otherPassClaims(): FeedClaims
+    {
+        return new FeedClaims(new LockFactory($this->lockStore));
     }
 }

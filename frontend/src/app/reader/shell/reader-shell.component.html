@@ -22,8 +22,16 @@
   @if (refresh.failureKey(); as failureKey) {
     <p class="fetch-banner" role="alert">
       {{ failureKey | transloco }}
-      <button type="button" (click)="refresh.refreshAll()">
+      <button type="button" class="fetch-banner-retry" (click)="refreshSvc.retry()">
         {{ 'reader.retryFetch' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="fetch-banner-close"
+        [attr.aria-label]="'reader.dismiss' | transloco"
+        (click)="refreshSvc.dismissFailure()"
+      >
+        &times;
       </button>
     </p>
   } @else if (onboarding.showFetchProgress()) {

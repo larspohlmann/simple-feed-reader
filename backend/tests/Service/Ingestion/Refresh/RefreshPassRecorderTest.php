@@ -11,6 +11,7 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
@@ -32,6 +33,8 @@ use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubPassFetcher;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RefreshPassRecorderTest extends DbTestCase
@@ -40,11 +43,13 @@ final class RefreshPassRecorderTest extends DbTestCase
     private SocialAccount $account;
     private SocialFeed $home;
     private StubPassFetcher $passes;
+    private InMemoryStore $lockStore;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        $this->lockStore = new InMemoryStore();
         $this->passes = new StubPassFetcher();
 
         /** @var UserPasswordHasherInterface $hasher */
@@ -70,6 +75,15 @@ final class RefreshPassRecorderTest extends DbTestCase
             1,
             $this->entityManager->getRepository(Entry::class)->count(['feed' => $this->home->getFeed()->requireId()]),
         );
+    }
+
+    public function testARecordedFeedIsReleasedWhileThePassGoesOn(): void
+    {
+        $pass = $this->refreshed(new FetchedTimelineModel(self::page()));
+        $feedId = $this->home->getFeed()->requireId();
+
+        self::assertSame([$feedId], $pass->startedFeedIds());
+        self::assertTrue((new FeedClaims(new LockFactory($this->lockStore)))->claim($feedId));
     }
 
     public function testAThrottledTimelineWaitsOutItsRetryAfter(): void
@@ -232,7 +246,12 @@ final class RefreshPassRecorderTest extends DbTestCase
     /** @param list<Feed> $feeds */
     private function pass(array $feeds): RefreshPass
     {
-        return new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + 300);
+        return new RefreshPass(
+            $feeds,
+            $this->clock,
+            $this->clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory($this->lockStore)),
+        );
     }
 
     private function recorder(): RefreshPassRecorder

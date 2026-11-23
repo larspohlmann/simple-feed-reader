@@ -347,6 +347,20 @@ app-audio-player-bar {
     font-weight: 600;
     cursor: pointer;
   }
+
+  .fetch-banner-close {
+    margin-inline-start: auto;
+    color: var(--text-secondary);
+    font-size: var(--fs-lg);
+    line-height: 1;
+
+    @media (pointer: coarse) {
+      padding-block: calc((var(--tap-target) - 1em) / 2);
+      margin-block: calc((var(--tap-target) - 1em) / -2);
+      padding-inline: var(--space-3);
+      margin-inline-end: calc(var(--space-3) * -1);
+    }
+  }
 }
 
 /* The admin-only warning that no catalog is imported: an in-flow strip inside
