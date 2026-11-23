@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -51,7 +52,7 @@ describe('NotificationRowComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [NotificationRowComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [provideSocialAccounts(), provideRouter([])],
     });
   });
 

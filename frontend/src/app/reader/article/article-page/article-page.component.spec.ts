@@ -23,7 +23,6 @@ class StubPageSource extends StubArticlePageSource {
       body: {
         html: '<h2 id="one">One</h2><p>Body words</p>',
         pageUrl: 'https://news.test/a',
-        network: null,
       },
       canRefresh: true,
     });
@@ -253,7 +252,6 @@ describe('ArticlePageComponent', () => {
       stub.body.set({
         html: '<h2 id="one">One</h2><p>a</p><h2 id="two">Two</h2><p>b</p><h2 id="three">Three</h2>',
         pageUrl: 'https://news.test/a',
-        network: null,
       }),
     );
     await Promise.resolve();

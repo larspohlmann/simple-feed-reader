@@ -3,9 +3,14 @@
   <span class="warning-text">
     {{ 'reader.paywalled' | transloco }}
     @if (url(); as href) {
-      <a class="note-link" [href]="href" target="_blank" rel="noopener noreferrer">{{
-        'reader.paywalledLink' | transloco
-      }}</a>
+      <a
+        class="note-link"
+        appOwnInstanceHref
+        [href]="href"
+        target="_blank"
+        rel="noopener noreferrer"
+        >{{ 'reader.paywalledLink' | transloco }}</a
+      >
     }
   </span>
 </app-warning-box>

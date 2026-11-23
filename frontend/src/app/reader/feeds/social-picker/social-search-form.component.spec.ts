@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -38,6 +39,7 @@ describe('SocialSearchFormComponent', () => {
     TestBed.configureTestingModule({
       imports: [SocialSearchFormComponent, provideTranslocoTesting()],
       providers: [
+        provideSocialAccounts(),
         { provide: SocialSearchService, useValue: socialSearch },
         { provide: ImageProxyService, useValue: failingProxy },
       ],

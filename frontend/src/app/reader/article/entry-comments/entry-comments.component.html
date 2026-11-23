@@ -56,7 +56,9 @@
                 @if (c.authorUrl) {
                   <a
                     class="author"
-                    [href]="links.open(c.authorUrl, { network: socialNetwork() })"
+                    appOwnInstanceHref
+                    [href]="c.authorUrl"
+                    [linkNetwork]="linkNetwork()"
                     target="_blank"
                     rel="noopener noreferrer"
                     >{{ c.author }}</a
@@ -75,7 +77,9 @@
                   @if (c.url) {
                     <a
                       class="when"
-                      [href]="links.open(c.url, { network: socialNetwork() })"
+                      appOwnInstanceHref
+                      [href]="c.url"
+                      [linkNetwork]="linkNetwork()"
                       target="_blank"
                       rel="noopener noreferrer"
                       >{{ when(publishedAt) }}</a
@@ -99,7 +103,7 @@
                 />
               }
               @if (c.quote) {
-                <app-quoted-post [quote]="c.quote" layout="article" [network]="socialNetwork()" />
+                <app-quoted-post [quote]="c.quote" layout="article" [network]="linkNetwork()" />
               }
               @if (c.linkCard; as card) {
                 <app-link-card [card]="card" layout="article" opensInReader="layer" />
@@ -134,7 +138,15 @@
         </ol>
       }
       @if (entry().discussionUrl; as url) {
-        <a class="all" [href]="url" target="_blank" rel="noopener noreferrer">
+        <a
+          class="all"
+          appOwnInstanceHref
+          [href]="url"
+          [linkNetwork]="linkNetwork()"
+          [linkHomeUrl]="entry().discussionHomeUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           @if (s.omitted > 0 && network()) {
             {{ 'reader.comments.more' | transloco: { count: s.omitted, network: network() } }}
           } @else {
@@ -172,8 +184,15 @@
   </button>
   @if (entry().discussionUrl; as url) {
     ·
-    <a class="discussion note-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
-      'reader.comments.openDiscussion' | transloco
-    }}</a>
+    <a
+      class="discussion note-link"
+      appOwnInstanceHref
+      [href]="url"
+      [linkNetwork]="linkNetwork()"
+      [linkHomeUrl]="entry().discussionHomeUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      >{{ 'reader.comments.openDiscussion' | transloco }}</a
+    >
   }
 </ng-template>

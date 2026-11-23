@@ -29,7 +29,6 @@ import { provideAccountIdentity } from '../../../../testing/account-identity-tes
 import { aMastodonAccount } from '../../../../testing/social-accounts-testing';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SocialAccountRefDto } from '../../social-feed';
-import { SocialNetworkName } from '../../../core/social-network';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -85,8 +84,9 @@ describe('ArticleBody', () => {
   const audioTrack = signal<AudioTrack | null>(null);
   const origin = signal<EmbedTrackOrigin | null>(null);
   const accounts = signal<SocialAccountRefDto[]>([]);
+  const lemmyHosts = signal<readonly string[]>([]);
 
-  function connectBody(body: string, network: SocialNetworkName | null = null): void {
+  function connectBody(body: string): void {
     content = articleHost(body);
     html.set(body);
     decorated = jest.fn();
@@ -94,7 +94,6 @@ describe('ArticleBody', () => {
       content: signal(new ElementRef(content)),
       html,
       pageUrl: () => 'https://news.test/story',
-      network: () => network,
       enclosureUrl: () => null,
       chapters,
       audioTrack,
@@ -130,6 +129,7 @@ describe('ArticleBody', () => {
     audioTrack.set(null);
     origin.set(null);
     accounts.set([]);
+    lemmyHosts.set([]);
     imageProxy = neverRecoveringImageProxy();
     embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
@@ -138,7 +138,7 @@ describe('ArticleBody', () => {
         provideAccountIdentity(),
         {
           provide: SubscriptionsStore,
-          useValue: { lemmyHosts: signal([]), socialAccounts: accounts },
+          useValue: { lemmyHosts, socialAccounts: accounts },
         },
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
@@ -195,7 +195,7 @@ describe('ArticleBody', () => {
   });
 
   it("opens a mention on the reader's instance once the account arrives after the body rendered", async () => {
-    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>');
     await Promise.resolve();
     expect(content.querySelector('a')!.getAttribute('href')).toBe('https://mastodon.social/@bob');
 
@@ -208,8 +208,24 @@ describe('ArticleBody', () => {
     );
   });
 
+  it('moves a Lemmy link in an article once the Lemmy account and hosts arrive', async () => {
+    connectBody('<p><a href="https://lemmy.world/c/rust">a community</a></p>');
+    await Promise.resolve();
+
+    accounts.set([
+      { id: 9, network: 'lemmy', handle: 'me', status: 'connected', serviceUrl: 'https://l.home' },
+    ]);
+    lemmyHosts.set(['lemmy.world']);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(content.querySelector('a')!.getAttribute('href')).toBe(
+      'https://l.home/c/rust@lemmy.world',
+    );
+  });
+
   it('does not decorate the body again when the account arrives', async () => {
-    connectBody('<a href="https://mastodon.social/@bob">@bob</a>', 'mastodon');
+    connectBody('<a href="https://mastodon.social/@bob">@bob</a>');
     await Promise.resolve();
 
     accounts.set([aMastodonAccount('https://home.example')]);

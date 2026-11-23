@@ -7,7 +7,9 @@
 @if (current.poster?.url; as profileUrl) {
   <a
     class="source"
-    [href]="links.open(profileUrl, { network: current.social?.network ?? null })"
+    appOwnInstanceHref
+    [href]="profileUrl"
+    [linkNetwork]="current.social?.network ?? null"
     target="_blank"
     rel="noopener noreferrer"
     (click)="keepFromCard($event)"
@@ -30,7 +32,9 @@
     <span class="community-text"> · </span>
     <a
       class="community"
-      [href]="links.open(community.url, { network: 'lemmy' })"
+      appOwnInstanceHref
+      [href]="community.url"
+      linkNetwork="lemmy"
       target="_blank"
       rel="noopener noreferrer"
       >{{ formatCommunityLabel(community) }}</a

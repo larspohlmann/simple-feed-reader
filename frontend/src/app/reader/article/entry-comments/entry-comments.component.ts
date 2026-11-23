@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { Observable } from 'rxjs';
 import {
   ChangeDetectionStrategy,
@@ -22,7 +23,7 @@ import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES, SocialNetworkName } from '../../../core/social-network';
 import { ArticlePostActions } from '../post-actions/article-post-actions.service';
-import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
+import { entryLinkNetwork } from '../../own-instance/entry-link-facts';
 import { buildItemKey } from '../../state/item-key';
 import { CommentsService, commentTotal } from './comments.service';
 import { relativeTime } from '../../format';
@@ -39,7 +40,14 @@ import { SocialCountsRowComponent } from '../social-counts/social-counts-row.com
 
 type CommentsEntry = Pick<
   EntryDto,
-  'id' | 'canonicalItemId' | 'comments' | 'commentCount' | 'discussionUrl' | 'social'
+  | 'id'
+  | 'canonicalItemId'
+  | 'comments'
+  | 'commentCount'
+  | 'discussionUrl'
+  | 'discussionHomeUrl'
+  | 'social'
+  | 'community'
 >;
 
 const DEEPEST_INDENT = 5;
@@ -47,6 +55,7 @@ const DEEPEST_INDENT = 5;
 @Component({
   selector: 'app-entry-comments',
   imports: [
+    OwnInstanceHrefDirective,
     NgTemplateOutlet,
     TranslocoPipe,
     IconComponent,
@@ -69,7 +78,6 @@ export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
   readonly refreshed = output<void>();
 
-  protected readonly links = inject(OwnInstanceLinks);
   private readonly service = inject(CommentsService);
   private readonly likeActions = new WeakMap<EntryCommentPostDto, () => Observable<void>>();
   private readonly voteActions = new WeakMap<
@@ -86,7 +94,7 @@ export class EntryCommentsComponent {
   readonly state = computed(() => this.service.state(this.entry())());
   protected readonly total = computed(() => commentTotal(this.entry(), this.state()));
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
-  protected readonly socialNetwork = computed(() => this.entry().social?.network ?? null);
+  protected readonly linkNetwork = computed(() => entryLinkNetwork(this.entry()));
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;

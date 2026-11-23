@@ -86,15 +86,3 @@ function mastodonTarget({ address, target, facts }: Link, instance: string | nul
 function authorizeInteraction(instance: string, address: string): string {
   return `${instance}/authorize_interaction?uri=${encodeURIComponent(address)}`;
 }
-
-export function ownInstancePostUrl(address: string, instance: string | null): string {
-  return ownInstanceUrl(
-    address,
-    { network: 'mastodon' },
-    { mastodon: instance, lemmy: null, lemmyHosts: new Set() },
-  );
-}
-
-export function ownInstanceBodyUrl(href: string, text: string, instance: string | null): string {
-  return ownInstanceUrl(href, { text }, { mastodon: instance, lemmy: null, lemmyHosts: new Set() });
-}

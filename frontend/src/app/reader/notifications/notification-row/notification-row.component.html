@@ -3,7 +3,13 @@
     <ng-container *ngTemplateOutlet="rowBody" />
   </a>
 } @else {
-  <a class="row" [href]="group().linkUrl" target="_blank" rel="noopener noreferrer">
+  <a
+    class="row"
+    appOwnInstanceHref
+    [href]="group().linkUrl"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
     <ng-container *ngTemplateOutlet="rowBody" />
   </a>
 }

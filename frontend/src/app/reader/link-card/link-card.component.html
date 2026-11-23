@@ -1,4 +1,4 @@
-<a [href]="card().url" target="_blank" rel="noopener noreferrer">
+<a appOwnInstanceHref [href]="card().url" target="_blank" rel="noopener noreferrer">
   @if (card().imageUrl && !imageFailed()) {
     <img
       appProxiedImage

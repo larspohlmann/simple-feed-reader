@@ -19,8 +19,8 @@ import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
-import { SocialNetworkName } from '../../../core/social-network';
-import { openMastodonLinksOnOwnInstance } from '../decorators/own-instance-body-links';
+import { openLinksOnOwnInstance } from '../decorators/own-instance-body-links';
+import { ownInstanceUrl } from '../../own-instance/own-instance-url';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { ChapterDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
@@ -44,7 +44,6 @@ export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
   readonly html: Signal<string>;
   readonly pageUrl: () => string | null;
-  readonly network: () => SocialNetworkName | null;
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
   readonly audioTrack: () => AudioTrack | null;
@@ -139,13 +138,14 @@ export class ArticleBody {
     effect(
       (onCleanup) => {
         parts.html();
-        const instance = parts.network() === 'mastodon' ? this.links.instances().mastodon : null;
+        const instances = this.links.instances();
         if (!parts.content()?.nativeElement) return;
         let cancelled = false;
         onCleanup(() => (cancelled = true));
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (host && !cancelled) openMastodonLinksOnOwnInstance(host, instance);
+          if (!host || cancelled) return;
+          openLinksOnOwnInstance(host, (href, text) => ownInstanceUrl(href, { text }, instances));
         });
       },
       { injector: this.injector },

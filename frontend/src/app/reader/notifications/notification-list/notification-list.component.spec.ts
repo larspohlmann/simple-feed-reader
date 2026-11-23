@@ -70,7 +70,15 @@ describe('NotificationListComponent (#2240)', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: ToastService, useValue: { showProblem: jest.fn() } },
-        { provide: SubscriptionsStore, useValue: { socialSections, reloadCountsQuietly } },
+        {
+          provide: SubscriptionsStore,
+          useValue: {
+            socialSections,
+            reloadCountsQuietly,
+            socialAccounts: signal([]),
+            lemmyHosts: signal([]),
+          },
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);

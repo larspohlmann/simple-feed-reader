@@ -1,3 +1,4 @@
+import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
@@ -16,7 +17,7 @@ describe('FeedIntroComponent', () => {
     imageProxy = neverRecoveringImageProxy();
     await TestBed.configureTestingModule({
       imports: [FeedIntroComponent, provideTranslocoTesting()],
-      providers: [{ provide: ImageProxyService, useValue: imageProxy }],
+      providers: [provideSocialAccounts(), { provide: ImageProxyService, useValue: imageProxy }],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedIntroComponent);
   });

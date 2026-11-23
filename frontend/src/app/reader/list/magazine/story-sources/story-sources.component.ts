@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../../own-instance/own-instance-href.directive';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -39,6 +40,7 @@ const sameArticles = (
   selector: 'app-story-sources',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OwnInstanceHrefDirective,
     NgTemplateOutlet,
     TranslocoPipe,
     FaviconComponent,

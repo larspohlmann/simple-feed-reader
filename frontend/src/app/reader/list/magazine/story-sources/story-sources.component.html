@@ -25,7 +25,13 @@
             (keydown.space)="$event.stopPropagation()"
           >
             @if (source.card; as card) {
-              <a class="face" [href]="card.url" target="_blank" rel="noopener noreferrer">
+              <a
+                class="face"
+                appOwnInstanceHref
+                [href]="card.url"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
               </a>
               <app-open-in-reader [card]="card" opening="alone" />

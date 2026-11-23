@@ -1,9 +1,9 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntryDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
-import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { formatCommunityLabel, sourceNameOf } from './source-name';
@@ -17,7 +17,7 @@ export type EntrySourceLayout = 'row' | 'kicker' | 'article';
  */
 @Component({
   selector: 'app-entry-source',
-  imports: [FaviconComponent, RouterLink],
+  imports: [OwnInstanceHrefDirective, FaviconComponent, RouterLink],
   templateUrl: './entry-source.component.html',
   styleUrl: './entry-source.component.scss',
   host: { '[class]': '"source-" + layout()' },
@@ -30,7 +30,6 @@ export class EntrySourceComponent {
   readonly layout = input.required<EntrySourceLayout>();
   readonly size = input(16);
 
-  protected readonly links = inject(OwnInstanceLinks);
   private readonly rows = inject(SubscriptionRows);
   protected readonly name = computed(() => sourceNameOf(this.entry(), this.rows));
 

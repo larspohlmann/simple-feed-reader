@@ -57,7 +57,6 @@ export class EntryArticlePage implements ArticlePageSource {
   readonly body = computed<ArticlePageBody>(() => ({
     html: this.article.displayHtml(),
     pageUrl: this.entry().url,
-    network: this.entry().social?.network ?? null,
   }));
   readonly bodyAudio = computed<ArticlePageBodyAudio>(() => ({
     enclosureUrl: this.audio.attachment()?.url ?? null,

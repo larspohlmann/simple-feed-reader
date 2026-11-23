@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
@@ -12,7 +13,7 @@ import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.com
   selector: 'app-paywall-notice',
   templateUrl: './paywall-notice.component.html',
   styleUrl: './paywall-notice.component.scss',
-  imports: [TranslocoPipe, WarningBoxComponent],
+  imports: [OwnInstanceHrefDirective, TranslocoPipe, WarningBoxComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaywallNoticeComponent {

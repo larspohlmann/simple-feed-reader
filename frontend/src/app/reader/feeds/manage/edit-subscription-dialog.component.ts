@@ -1,3 +1,4 @@
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -33,6 +34,7 @@ export type EditSubscriptionResult = SubscriptionDto | typeof UNSUBSCRIBE_REQUES
 @Component({
   selector: 'app-edit-subscription-dialog',
   imports: [
+    OwnInstanceHrefDirective,
     ReactiveFormsModule,
     A11yModule,
     IconComponent,
