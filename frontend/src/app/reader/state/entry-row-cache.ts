@@ -130,12 +130,15 @@ export class EntryRowCache {
     );
   }
 
-  /** Asks the network which vote the account holds on a Lemmy post and adopts it; a failure is silent. */
+  /** Asks the network for a Lemmy post's score and the account's vote on it, and adopts both; a failure is silent. */
   refreshVote(entry: EntryDto): void {
     const from = entry.myVote;
     if (from === null) return;
     this.socialPosts.myVote(entry.id).subscribe({
-      next: (answer) => this.adoptVote(entry.id, { from, to: answer.myVote }),
+      next: (answer) => {
+        this.adoptScore(entry.id, answer.score);
+        this.adoptVote(entry.id, { from, to: answer.myVote });
+      },
       error: () => undefined,
     });
   }
@@ -179,6 +182,13 @@ export class EntryRowCache {
   private dropUnlessHeld(id: number): void {
     for (const ids of this.holds.values()) if (ids.has(id)) return;
     this.records.delete(id);
+  }
+
+  /** The score the network reports, on every copy; a vote on the wire brings its own. */
+  private adoptScore(entryId: number, score: number): void {
+    this.adoptReported(entryId, 'myVote', (entry) =>
+      entry.score === null ? entry : { ...entry, score },
+    );
   }
 
   private adoptReported(

@@ -105,16 +105,18 @@ final readonly class DiscussionVotes
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function syncFromNetwork(User $user, Entry $entry): VoteScore
+    public function syncFromNetwork(User $user, Entry $entry): DiscussionVoteResultModel
     {
         $network = $this->requireVotingNetwork($entry);
         $item = $this->requireItem($entry);
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
-        $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
-        $this->mirror($user, $item, $account, $myVote);
+        $result = $this->selectVoter($network)->fetchPostVote($account, $entry);
+        $item->recordScore($result->score);
+        $this->mirror($user, $item, $account, $result->myVote);
+        $this->entityManager->flush();
 
-        return $myVote;
+        return $result;
     }
 
     /** @throws NoSocialAccountForNetworkException */

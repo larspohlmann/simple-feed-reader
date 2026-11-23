@@ -72,11 +72,14 @@ final readonly class LemmyPostVoter implements PostVoterInterface
         });
     }
 
-    public function fetchPostVote(SocialAccount $account, Entry $entry): VoteScore
+    public function fetchPostVote(SocialAccount $account, Entry $entry): DiscussionVoteResultModel
     {
         $post = self::requirePost($entry);
 
-        return $this->guard->actAs($account, fn (): VoteScore => $this->posts->postOn($account, $post)->myVote);
+        return $this->guard->actAs(
+            $account,
+            fn (): DiscussionVoteResultModel => self::buildResult($this->posts->postOn($account, $post)),
+        );
     }
 
     /** @throws NotASocialPostException */

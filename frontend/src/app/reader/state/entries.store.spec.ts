@@ -1220,9 +1220,18 @@ describe('EntriesStore', () => {
       rows.refreshVote(store.entries()[0]);
       const request = ctrl.expectOne(votePath);
       expect(request.request.method).toBe('GET');
-      request.flush({ myVote: -1 });
+      request.flush({ myVote: -1, score: 42 });
 
-      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
+      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 42 });
+    });
+
+    it('adoptsTheNetworksScoreWhenTheVoteIsUnchanged', () => {
+      loadVotable(0);
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 42 });
+
+      expect(store.entries()[0]).toMatchObject({ myVote: 0, score: 42 });
     });
 
     it('staysSilentWhenTheRefreshFails', () => {

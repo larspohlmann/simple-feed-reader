@@ -239,12 +239,13 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => -1], $this->payload($client));
+        self::assertSame(['myVote' => -1, 'score' => 43], $this->payload($client));
         self::assertSame([VoteScore::Down], $this->storedScores());
+        self::assertSame(43, $this->itemScoreOf($entryId));
 
         $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
 
-        self::assertSame(['myVote' => 0], $this->payload($client));
+        self::assertSame(['myVote' => 0, 'score' => 43], $this->payload($client));
         self::assertSame([], $this->storedScores());
     }
 
