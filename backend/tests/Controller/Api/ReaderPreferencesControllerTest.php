@@ -16,6 +16,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     private const array READING_DEFAULTS = [
         'scrapeFallbackEnabled' => false,
         'magazineStyle' => 'boxed',
+        'sidebarStyle' => 'boxed',
         'handedness' => 'right',
         'trendingEnabled' => true,
     ];
@@ -60,6 +61,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         return [
             'scrapeFallbackEnabled' => $preferences['scrapeFallbackEnabled'],
             'magazineStyle' => $preferences['magazineStyle'],
+            'sidebarStyle' => $preferences['sidebarStyle'],
             'handedness' => $preferences['handedness'],
             'trendingEnabled' => $preferences['trendingEnabled'],
         ];
@@ -78,6 +80,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
             [
                 'scrapeFallbackEnabled' => true,
                 'magazineStyle' => 'boxed',
+                'sidebarStyle' => 'boxed',
                 'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
@@ -106,6 +109,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     {
         yield 'scrape fallback' => ['scrapeFallbackEnabled', true];
         yield 'magazine style' => ['magazineStyle', 'airy'];
+        yield 'sidebar style' => ['sidebarStyle', 'airy'];
         yield 'handedness' => ['handedness', 'left'];
         yield 'trending' => ['trendingEnabled', false];
     }
@@ -172,6 +176,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         yield 'a string for scrape fallback' => ['{"scrapeFallbackEnabled":"yes"}'];
         yield 'a string for trending' => ['{"trendingEnabled":"false"}'];
         yield 'an unknown magazine style' => ['{"magazineStyle":"cards"}'];
+        yield 'an unknown sidebar style' => ['{"sidebarStyle":"cards"}'];
         yield 'an unknown handedness' => ['{"handedness":"both"}'];
     }
 

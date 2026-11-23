@@ -7,7 +7,3 @@ export const MAGAZINE_STYLES: readonly MagazineStyle[] = ['boxed', 'airy'];
  * frame after a cold start is not drawn boxed until `loadMe()` resolves.
  */
 export const MAGAZINE_STYLE_KEY = 'sfr.magazineStyle';
-
-export function asMagazineStyle(value: string | null): MagazineStyle | null {
-  return MAGAZINE_STYLES.includes(value as MagazineStyle) ? (value as MagazineStyle) : null;
-}

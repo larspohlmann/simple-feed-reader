@@ -43,6 +43,7 @@ final class MeJson
         return [
             'scrapeFallbackEnabled' => $settings->reading->isScrapeFallbackEnabled(),
             'magazineStyle' => $settings->reading->getMagazineStyle()->value,
+            'sidebarStyle' => $settings->reading->getSidebarStyle()->value,
             'handedness' => $settings->reading->getHandedness()->value,
             'passkeyOfferAnswered' => $passkeyOfferAnswered,
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),

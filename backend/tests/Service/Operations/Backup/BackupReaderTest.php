@@ -133,8 +133,8 @@ final class BackupReaderTest extends TestCase
         self::assertSame('source@example.com', $objects[0]->sourceEmail);
         self::assertInstanceOf(AccountLine::class, $objects[1]);
         self::assertSame('de', $objects[1]->locale);
-        self::assertTrue($objects[1]->scrapeFallbackEnabled);
-        self::assertSame(MagazineStyle::Boxed, $objects[1]->magazineStyle);
+        self::assertTrue($objects[1]->reading->scrapeFallbackEnabled);
+        self::assertSame(MagazineStyle::Boxed, $objects[1]->reading->magazineStyle);
     }
 
     public function testReadsEveryFoundationKindInOrderAndNormalisesDatesToUtc(): void

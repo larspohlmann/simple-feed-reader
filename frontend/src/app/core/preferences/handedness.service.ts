@@ -1,44 +1,20 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { CurrentUser } from '../auth/auth.service';
-import { DEFAULT_HANDEDNESS, HANDEDNESS_KEY, Handedness, asHandedness } from './handedness';
-import { PREFERENCES_WRITER, writeTracked } from './preferences-writer';
+import { Injectable, computed } from '@angular/core';
+import { CachedAccountChoice } from './cached-account-choice';
+import { DEFAULT_HANDEDNESS, HANDEDNESS, HANDEDNESS_KEY } from './handedness';
 
-/** Which corner the floating corner buttons stack in on a touch screen; the account is the record. */
+/** Which corner the floating corner buttons stack in on a touch screen. */
 @Injectable({ providedIn: 'root' })
-export class HandednessService {
-  private readonly writer = inject(PREFERENCES_WRITER);
-
-  readonly hand = signal<Handedness>(this.cached());
+export class HandednessService extends CachedAccountChoice<'handedness'> {
+  readonly hand = this.value;
 
   readonly leftHanded = computed(() => this.hand() === 'left');
 
-  readonly saveFailed = signal(false);
-
-  set(hand: Handedness): void {
-    this.cache(hand);
-    writeTracked(this.writer, { handedness: hand }, this.saveFailed);
-  }
-
-  /** Caches only: a value just read from the account is never written straight back. */
-  adopt(user: CurrentUser): void {
-    const hand = asHandedness(user.preferences.handedness);
-    if (hand === null) return;
-    this.cache(hand);
-  }
-
-  /** Cache included: the next account must not inherit this one's corner. */
-  reset(): void {
-    localStorage.removeItem(HANDEDNESS_KEY);
-    this.hand.set(DEFAULT_HANDEDNESS);
-    this.saveFailed.set(false);
-  }
-
-  private cache(hand: Handedness): void {
-    localStorage.setItem(HANDEDNESS_KEY, hand);
-    this.hand.set(hand);
-  }
-
-  private cached(): Handedness {
-    return asHandedness(localStorage.getItem(HANDEDNESS_KEY)) ?? DEFAULT_HANDEDNESS;
+  constructor() {
+    super({
+      key: HANDEDNESS_KEY,
+      choices: HANDEDNESS,
+      fallback: DEFAULT_HANDEDNESS,
+      field: 'handedness',
+    });
   }
 }

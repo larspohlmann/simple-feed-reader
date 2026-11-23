@@ -32,6 +32,7 @@ use App\Enum\FeedLanguage;
 use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
+use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Foundation\Url\UrlNormalizer;
@@ -56,6 +57,7 @@ final readonly class FullyPopulatedAccount
         $reading = StoredUserSettings::reading($this->entityManager, $user);
         $reading->setScrapeFallbackEnabled(true);
         $reading->setMagazineStyle(MagazineStyle::Airy);
+        $reading->setSidebarStyle(SidebarStyle::Airy);
         $reading->setHandedness(Handedness::Left);
         $reading->setTrendingEnabled(false);
         $sharing = StoredUserSettings::sharing($this->entityManager, $user);

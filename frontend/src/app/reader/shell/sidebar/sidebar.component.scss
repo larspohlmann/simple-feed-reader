@@ -50,6 +50,19 @@
   min-width: 0;
 }
 
+/* The airy search row is the list header's band: its height, and one rule running into the header's own. */
+:host-context(.sidebar-airy) .search-card {
+  align-items: center;
+  height: var(--bar-h);
+  border-color: transparent transparent var(--border);
+  border-radius: 0;
+  background: none;
+}
+
+:host-context(.sidebar-airy) .sidebar-body {
+  gap: 0;
+}
+
 .drawer-head {
   display: flex;
   flex: none;
@@ -151,6 +164,19 @@
 .tag-child .tagfeeds {
   --row-h: var(--sidebar-leaf-row-h);
   --row-inset: var(--sidebar-row-deep-inset);
+}
+
+:host-context(.sidebar-airy) .tag-child {
+  margin-block: 0;
+  margin-right: 0;
+  padding-block: 0;
+  padding-right: 0;
+  background: none;
+}
+
+/* An open tag hangs its children on a hairline instead of a recessed box; a drop cue keeps the pseudo-element. */
+:host-context(.sidebar-airy) .tag-group.open:not(.drop-after)::after {
+  @include row.airy-rail(calc(var(--sidebar-row-h) + var(--space-0)));
 }
 
 .feedrow.cdk-drag,

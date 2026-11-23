@@ -10,6 +10,7 @@ import { FeedDirectoryScope } from '../preferences/feed-directory-scope';
 import { LanguageService } from '../i18n/language.service';
 import { HandednessService } from '../preferences/handedness.service';
 import { MagazineStyleService } from '../preferences/magazine-style.service';
+import { SidebarStyleService } from '../preferences/sidebar-style.service';
 import { PreferencesService } from '../preferences/preferences.service';
 import { SharingSettings } from '../preferences/sharing';
 import { SharingService } from '../preferences/sharing.service';
@@ -29,6 +30,7 @@ export interface UserPreferences {
    *  Never reset once true: the offer must never ask twice. */
   passkeyOfferAnswered: boolean;
   magazineStyle: string;
+  sidebarStyle: string;
   handedness: string;
   sharing: SharingSettings;
   trendingEnabled: boolean;
@@ -59,6 +61,7 @@ export class AuthService {
   private readonly language = inject(LanguageService);
   private readonly preferences = inject(PreferencesService);
   private readonly magazineStyle = inject(MagazineStyleService);
+  private readonly sidebarStyle = inject(SidebarStyleService);
   private readonly handedness = inject(HandednessService);
   private readonly sharing = inject(SharingService);
   private readonly digest = inject(DigestService);
@@ -95,6 +98,7 @@ export class AuthService {
     this.language.adopt(user.locale);
     this.preferences.adopt(user);
     this.magazineStyle.adopt(user);
+    this.sidebarStyle.adopt(user);
     this.handedness.adopt(user);
     this.sharing.adopt(user);
     this.digest.adopt(user);
@@ -130,6 +134,7 @@ export class AuthService {
     // loadMe() resolves.
     this.preferences.reset();
     this.magazineStyle.reset();
+    this.sidebarStyle.reset();
     this.handedness.reset();
     this.sharing.reset();
     this.digest.reset();

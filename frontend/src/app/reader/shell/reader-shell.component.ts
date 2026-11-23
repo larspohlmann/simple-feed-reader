@@ -42,6 +42,7 @@ import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
+import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
 import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
@@ -157,6 +158,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   readonly sidebarVisibility = inject(SidebarVisibilityService);
+  protected readonly sidebarStyle = inject(SidebarStyleService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of

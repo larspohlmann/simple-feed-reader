@@ -6,6 +6,8 @@ import { HandednessService } from '../../core/preferences/handedness.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { MAGAZINE_STYLES } from '../../core/preferences/magazine-style';
 import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
+import { SIDEBAR_STYLES } from '../../core/preferences/sidebar-style';
+import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
@@ -36,11 +38,13 @@ import { SharingSettingsComponent } from './sharing-settings/sharing-settings.co
 export class PreferencesSectionComponent {
   readonly language = inject(LanguageService);
   readonly magazineStyle = inject(MagazineStyleService);
+  readonly sidebarStyle = inject(SidebarStyleService);
   readonly preferences = inject(PreferencesService);
   readonly readingFocus = inject(ReadingFocusService);
   readonly listAutoplay = inject(ListAutoplayService);
   readonly handedness = inject(HandednessService);
   readonly languages = LANGS;
   readonly magazineStyles = MAGAZINE_STYLES;
+  readonly sidebarStyles = SIDEBAR_STYLES;
   readonly handednessOptions = HANDEDNESS;
 }

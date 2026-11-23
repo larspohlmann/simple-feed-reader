@@ -2,10 +2,12 @@ import { InjectionToken, WritableSignal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
 import { MagazineStyle } from './magazine-style';
+import { SidebarStyle } from './sidebar-style';
 
 export interface ReadingPreferences {
   scrapeFallbackEnabled: boolean;
   magazineStyle: MagazineStyle;
+  sidebarStyle: SidebarStyle;
   handedness: Handedness;
   trendingEnabled: boolean;
 }

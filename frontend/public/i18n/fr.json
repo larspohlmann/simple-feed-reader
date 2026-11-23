@@ -28,6 +28,9 @@
     "magazineStyle": "Style magazine",
     "magazineStyleHint": "Comment la vue magazine affiche un article.",
     "magazineStyleSaveFailed": "Le style magazine n'a pas pu être enregistré dans votre compte.",
+    "sidebarStyle": "Style de la barre latérale",
+    "sidebarStyleHint": "Comment la barre latérale est affichée.",
+    "sidebarStyleSaveFailed": "Le style de la barre latérale n'a pas pu être enregistré dans votre compte.",
     "sharing": "Partage",
     "sharingEnabled": "Partager des articles",
     "sharingEnabledHint": "Le bouton de partage et le partage d'une sélection de texte. Désactivé, ou avec toutes les cibles ci-dessous désactivées, les deux disparaissent.",
@@ -35,6 +38,10 @@
     "sharingRememberHint": "Liste ce que vous partagez sur un réseau social sous Partagés et en tient compte dans Pour vous.",
     "sharingSaveFailed": "Vos paramètres de partage n'ont pas pu être enregistrés dans votre compte.",
     "magazineStyleOption": {
+      "boxed": "Encadré",
+      "airy": "Aéré"
+    },
+    "sidebarStyleOption": {
       "boxed": "Encadré",
       "airy": "Aéré"
     },
