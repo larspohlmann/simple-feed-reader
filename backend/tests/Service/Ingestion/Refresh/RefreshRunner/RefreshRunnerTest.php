@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Outbound\Fetch\Exception\FeedGoneException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -34,6 +35,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class RefreshRunnerTest extends DbTestCase
@@ -43,6 +45,7 @@ final class RefreshRunnerTest extends DbTestCase
     private MockClock $clock;
     private StubPassFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
+    private InMemoryStore $lockStore;
     private TtlRecordingLockFactory $lockFactory;
     private User $subscriber;
     private RecordingSearchIndexWriter $indexWriter;
@@ -59,7 +62,8 @@ final class RefreshRunnerTest extends DbTestCase
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
-        $this->lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
+        $this->lockStore = new InMemoryStore();
+        $this->lockFactory = new TtlRecordingLockFactory($this->lockStore);
         $this->indexWriter = new RecordingSearchIndexWriter();
         // dueFeed() subscribes every fixture feed to this user so the orphan sweep never deletes it;
         // RefreshRunnerOrphanSweepTest covers orphans.
@@ -1070,6 +1074,58 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->failed);
         self::assertSame(FeedStatus::Erroring, $feed->getStatus());
         self::assertStringContainsString('article list', (string) $feed->getLastErrorMessage());
+    }
+
+    public function testEveryClaimIsReleasedAfterThePass(): void
+    {
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->entityManager->flush();
+        foreach ([$feedA, $feedB] as $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+        }
+
+        $this->runner()->run(RefreshRequestModel::allDue(25));
+
+        $claims = new FeedClaims(new LockFactory($this->lockStore));
+        self::assertTrue($claims->claim($feedA->requireId()));
+        self::assertTrue($claims->claim($feedB->requireId()));
+    }
+
+    public function testEveryClaimIsReleasedWhenThePassAborts(): void
+    {
+        $first = $this->dueFeed('https://one.example.com/feed');
+        $second = $this->dueFeed('https://two.example.com/feed');
+        $third = $this->dueFeed('https://three.example.com/feed');
+        $this->entityManager->flush();
+        foreach ([$first, $second, $third] as $index => $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
+            );
+        }
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            failingFlush: 2,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        $claims = new FeedClaims(new LockFactory($this->lockStore));
+        self::assertTrue($claims->claim($first->requireId()));
+        self::assertTrue($claims->claim($second->requireId()));
+        self::assertTrue($claims->claim($third->requireId()));
     }
 
     /**

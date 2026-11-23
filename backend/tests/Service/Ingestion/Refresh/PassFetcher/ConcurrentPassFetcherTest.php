@@ -12,6 +12,7 @@ use App\Enum\SocialFeedKind;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Outbound\Fetch\IpValidator;
@@ -43,6 +44,8 @@ use Symfony\Component\HttpClient\DecoratorTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -697,7 +700,12 @@ final class ConcurrentPassFetcherTest extends TestCase
         $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
-        $pass = new RefreshPass([$home->getFeed(), $rss], $clock, $clock->now()->getTimestamp() + 5);
+        $pass = new RefreshPass(
+            [$home->getFeed(), $rss],
+            $clock,
+            $clock->now()->getTimestamp() + 5,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
+        );
 
         $outcomes = [];
         $fetcher = $this->fetcher(self::renewingStaleSessions());
@@ -804,7 +812,12 @@ final class ConcurrentPassFetcherTest extends TestCase
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
         $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
-        $pass = new RefreshPass([$rss, $home->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
+        $pass = new RefreshPass(
+            [$rss, $home->getFeed()],
+            $clock,
+            $clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
+        );
 
         $outcomes = iterator_to_array($this->fetcher($respond)->fetchAll($pass, [self::idOf($home) => $home]));
 
@@ -1001,7 +1014,12 @@ final class ConcurrentPassFetcherTest extends TestCase
                 $socialFeedsByFeedId[$feed->requireId()] = $entry;
             }
         }
-        $pass = new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300);
+        $pass = new RefreshPass(
+            $feeds,
+            $clock,
+            $clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
+        );
 
         foreach ($fetcher->fetchAll($pass, $socialFeedsByFeedId) as $feedId => $outcome) {
             yield $feedId => self::unwrapped($outcome);

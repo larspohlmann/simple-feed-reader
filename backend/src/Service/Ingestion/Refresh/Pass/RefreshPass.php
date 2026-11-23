@@ -15,6 +15,8 @@ final readonly class RefreshPass
 
     private BudgetedFeedQueue $queue;
 
+    private FeedClaims $claims;
+
     /** @var array<int, Feed> */
     private array $feedsById;
 
@@ -25,8 +27,10 @@ final readonly class RefreshPass
         public array $feeds,
         ClockInterface $clock,
         int $deadline,
+        FeedClaims $claims,
     ) {
-        $this->queue = new BudgetedFeedQueue($feeds, $clock, $deadline);
+        $this->claims = $claims;
+        $this->queue = new BudgetedFeedQueue($feeds, $clock, $deadline, $claims);
         $feedsById = [];
         foreach ($feeds as $feed) {
             $feedsById[$feed->requireId()] = $feed;
@@ -50,6 +54,22 @@ final readonly class RefreshPass
     public function startedFeedIds(): array
     {
         return $this->queue->startedFeedIds();
+    }
+
+    /** @return list<int> */
+    public function heldFeedIds(): array
+    {
+        return $this->queue->heldFeedIds();
+    }
+
+    public function releaseFeed(int $feedId): void
+    {
+        $this->claims->release($feedId);
+    }
+
+    public function releaseAllFeeds(): void
+    {
+        $this->claims->releaseAll();
     }
 
     /** Persistence failed while outcomes were stored: every feed not yet processed, the failing one too, is due. */

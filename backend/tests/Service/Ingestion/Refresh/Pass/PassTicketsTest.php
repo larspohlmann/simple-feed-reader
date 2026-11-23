@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\PassLane\FeedLane;
 use App\Service\Ingestion\Refresh\Pass\PassLane\TimelineLane;
 use App\Service\Ingestion\Refresh\Pass\PassTickets;
@@ -24,6 +25,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class PassTicketsTest extends TestCase
 {
@@ -135,6 +138,7 @@ final class PassTicketsTest extends TestCase
             [$rss, PrivateFeeds::mastodonFeed(7), PrivateFeeds::mastodonFeed(4)],
             $clock,
             $clock->now()->getTimestamp() + 5,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
         );
 
         self::assertSame([7, 4], PassTickets::collectPrivateFeedIds($pass));
@@ -147,7 +151,12 @@ final class PassTicketsTest extends TestCase
     private function passTickets(array $feeds, array $socialFeeds): PassTickets
     {
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
-        $this->pass = new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300);
+        $this->pass = new RefreshPass(
+            $feeds,
+            $clock,
+            $clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
+        );
         $socialFeedsByFeedId = [];
         foreach ($socialFeeds as $socialFeed) {
             $socialFeedsByFeedId[$socialFeed->getFeed()->requireId()] = $socialFeed;

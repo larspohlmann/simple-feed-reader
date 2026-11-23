@@ -19,11 +19,15 @@ final class BudgetedFeedQueue
     /** @var list<int> */
     private array $startedFeedIds = [];
 
+    /** @var list<int> */
+    private array $heldFeedIds = [];
+
     /** @param list<Feed> $feeds */
     public function __construct(
         private readonly array $feeds,
         private readonly ClockInterface $clock,
         private readonly int $deadline,
+        private readonly FeedClaims $claims,
     ) {
     }
 
@@ -35,10 +39,22 @@ final class BudgetedFeedQueue
                 return;
             }
 
-            $this->startedFeedIds[] = $feed->requireId();
+            $feedId = $feed->requireId();
+            if (!$this->claims->claim($feedId)) {
+                $this->heldFeedIds[] = $feedId;
+                continue;
+            }
 
-            yield $feed->requireId() => $feed;
+            $this->startedFeedIds[] = $feedId;
+
+            yield $feedId => $feed;
         }
+    }
+
+    /** @return list<int> due feeds another pass held, so this one left them alone */
+    public function heldFeedIds(): array
+    {
+        return $this->heldFeedIds;
     }
 
     /** @return list<int> */

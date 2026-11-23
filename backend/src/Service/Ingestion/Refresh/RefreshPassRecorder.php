@@ -28,6 +28,7 @@ final readonly class RefreshPassRecorder
         foreach ($this->fetcher->fetchAll($pass, $socialFeedsByFeedId) as $feedId => $outcome) {
             $feed = $pass->feed($feedId);
             $pass->tally->record($outcome->storeIn($outcomes, $feed), $feed);
+            $pass->releaseFeed($feed->requireId());
             if ($pass->tally->isAborted()) {
                 return;
             }

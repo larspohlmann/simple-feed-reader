@@ -10,6 +10,7 @@ use App\Service\Ingestion\Refresh\ContentChangeMarker\ContentChangeMarkerInterfa
 use App\Service\Ingestion\Refresh\MissingFaviconResolver;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\RefreshHousekeeping;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
@@ -65,20 +66,30 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $criteria = $this->dueCriteria($request, $now);
         $feeds = $this->feeds->findDue($criteria, $request->batchLimit);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
-        $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
-        $this->passRecorder->record($pass, $now);
+        $pass = new RefreshPass(
+            $feeds,
+            $this->clock,
+            $now->getTimestamp() + $request->budgetSeconds,
+            new FeedClaims($this->lockFactory),
+        );
 
-        // Before the abort branch: what an aborted run created before the failure is already committed.
-        if ($pass->tally->entriesCreated() > 0) {
-            $this->changeMarker->markChanged();
+        try {
+            $this->passRecorder->record($pass, $now);
+
+            // Before the abort branch: what an aborted run created before the failure is already committed.
+            if ($pass->tally->entriesCreated() > 0) {
+                $this->changeMarker->markChanged();
+            }
+
+            if ($pass->tally->isAborted()) {
+                // The EntityManager is likely closed: no favicons, no countDue, no prune.
+                return $pass->abortedDuringOutcomes();
+            }
+
+            return $this->resolveFaviconsAndReport($request, $pass, $criteria);
+        } finally {
+            $pass->releaseAllFeeds();
         }
-
-        if ($pass->tally->isAborted()) {
-            // The EntityManager is likely closed: no favicons, no countDue, no prune.
-            return $pass->abortedDuringOutcomes();
-        }
-
-        return $this->resolveFaviconsAndReport($request, $pass, $criteria);
     }
 
     /** @throws \DateMalformedStringException */

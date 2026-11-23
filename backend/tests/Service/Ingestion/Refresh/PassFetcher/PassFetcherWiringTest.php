@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialNetwork;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
 use App\Service\Ingestion\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
 use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Ingestion\Refresh\PassFetcher\PassFetcherInterface;
@@ -26,6 +27,8 @@ use App\Tests\Support\StaticDnsResolver;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class PassFetcherWiringTest extends KernelTestCase
 {
@@ -56,6 +59,7 @@ final class PassFetcherWiringTest extends KernelTestCase
             [$mastodon->getFeed(), $bluesky->getFeed()],
             $clock,
             $clock->now()->getTimestamp() + 300,
+            new FeedClaims(new LockFactory(new InMemoryStore())),
         );
 
         $outcomes = [];
