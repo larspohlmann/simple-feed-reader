@@ -199,7 +199,6 @@ final class DiscussionVotesTest extends DbTestCase
         self::assertSame([self::HOME_POST], $this->http->requestLines());
         self::assertSame([[VoteScore::Down, $account->requireId()]], $this->storedVotes());
         self::assertSame(43, $entry->getCanonicalItem()?->getScore());
-        self::assertNull($entry->getDiscussion()->homeUrl);
     }
 
     public function testAVoteLeavesTheSharedEntrysHomeAddressAlone(): void

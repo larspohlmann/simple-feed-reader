@@ -114,8 +114,8 @@ export class EntryRowCache {
             ...row,
             myVote: answer.myVote,
             score: answer.score,
+            discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
           }));
-          this.adoptHomeUrl(entry.id, answer.discussionHomeUrl);
         },
         error: (error: HttpErrorResponse) => onError(parseProblem(error)),
       },
@@ -139,7 +139,7 @@ export class EntryRowCache {
     this.socialPosts.fetchVote(entry.id).subscribe({
       next: (answer) => {
         this.adoptVote(entry.id, from, answer);
-        this.adoptHomeUrl(entry.id, answer.discussionHomeUrl);
+        this.adoptHomeUrl(entry, answer.discussionHomeUrl);
       },
       error: () => undefined,
     });
@@ -188,10 +188,10 @@ export class EntryRowCache {
     });
   }
 
-  private adoptHomeUrl(entryId: number, homeUrl: string | null | undefined): void {
+  private adoptHomeUrl(entry: EntryDto, homeUrl: string | null | undefined): void {
     if (homeUrl == null) return;
-    this.patch(this.collectIdsWithCopies([entryId]), (entry) =>
-      entry.discussionHomeUrl === null ? { ...entry, discussionHomeUrl: homeUrl } : entry,
+    this.patch(this.collectCopyIds(entry), (row) =>
+      row.discussionHomeUrl === null ? { ...row, discussionHomeUrl: homeUrl } : row,
     );
   }
 

@@ -11,7 +11,11 @@ final class DiscussionVoteJson
     /** @return array{myVote: int, score: int, discussionHomeUrl: string|null} */
     public static function result(DiscussionVoteResultModel $result): array
     {
-        return ['myVote' => $result->myVote->value, 'score' => $result->score, 'discussionHomeUrl' => $result->homeUrl];
+        return [
+            'myVote' => $result->myVote->value,
+            'score' => $result->score,
+            'discussionHomeUrl' => $result->homeUrl,
+        ];
     }
 
     private function __construct()
