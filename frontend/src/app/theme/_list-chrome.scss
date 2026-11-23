@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'corner-circle-button' as circle;
+@use 'frost';
 
 // What a list's rows reserve above them: the app bar, the floating list header, and the gap.
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
@@ -23,10 +24,8 @@ $corner-clear: calc(
   transform: translateY(var(--app-bar-shift, 0));
   transition: transform 0.4s ease;
 
-  /* The solid colour is the fallback where backdrop-filter is unsupported. */
-  background: var(--surface-0);
-  background: color-mix(in srgb, var(--surface-0) 80%, transparent);
-  backdrop-filter: blur(12px) saturate(1.4);
+  @include frost.frosted(var(--surface-0), 80%);
+
   display: flex;
   align-items: center;
   justify-content: space-between;

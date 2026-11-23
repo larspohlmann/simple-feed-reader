@@ -1,3 +1,5 @@
+@use 'frost';
+
 @mixin corner-circle-button {
   position: relative;
   display: inline-flex;
@@ -10,9 +12,8 @@
 
   /* A mild frost, not a full-glass panel: the button keeps its tone
      (--corner-button-tone, grey by default; an active toggle takes the accent). */
-  background: var(--corner-button-tone, var(--text-muted));
-  background: color-mix(in srgb, var(--corner-button-tone, var(--text-muted)) 35%, transparent);
-  backdrop-filter: blur(12px) saturate(1.4);
+  @include frost.frosted(var(--corner-button-tone, var(--text-muted)), 35%);
+
   color: var(--on-accent);
   cursor: pointer;
   box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
