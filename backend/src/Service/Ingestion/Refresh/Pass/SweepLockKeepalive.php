@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace App\Service\Ingestion\Refresh\Pass;
 
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\Clock\NativeClock;
 use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
 use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockInterface;
+use Symfony\Component\Lock\NoLock;
 
-/** Renews one sweep's lock on beat(), at most every RENEWAL_INTERVAL_SECONDS and never past the pass's ceiling. */
+/**
+ * Renews one sweep's lock on beat(), at most every RENEWAL_INTERVAL_SECONDS and never past the pass's ceiling.
+ * Past the ceiling the lock may have expired and passed to the next sweep, so it no longer counts as held.
+ */
 final class SweepLockKeepalive
 {
     public const int RENEWAL_INTERVAL_SECONDS = 20;
@@ -23,14 +29,12 @@ final class SweepLockKeepalive
 
     public const string CEILING_REACHED_MESSAGE = 'The feed refresh lock stopped renewing at its ceiling';
 
-    private bool $lockLost = false;
-
-    private bool $renewalStopped = false;
+    private bool $holdingTheLock = true;
 
     private function __construct(
-        private readonly ?LockInterface $lock,
-        private readonly ?ClockInterface $clock,
-        private readonly ?LoggerInterface $logger,
+        private readonly LockInterface $lock,
+        private readonly ClockInterface $clock,
+        private readonly LoggerInterface $logger,
         private readonly int $ceiling,
         private int $lastRenewalAttemptAt,
     ) {
@@ -47,24 +51,27 @@ final class SweepLockKeepalive
 
     public static function withoutLock(): self
     {
-        return new self(null, null, null, 0, 0);
+        $keepalive = self::holding(new NoLock(), new NativeClock(), \PHP_INT_MIN, new NullLogger());
+        $keepalive->holdingTheLock = false;
+
+        return $keepalive;
     }
 
-    public function hasLostTheLock(): bool
+    public function isHoldingTheLock(): bool
     {
-        return $this->lockLost;
+        return $this->holdingTheLock;
     }
 
     public function beat(): void
     {
-        if (null === $this->lock || null === $this->clock || $this->renewalStopped) {
+        if (!$this->holdingTheLock) {
             return;
         }
 
         $now = $this->clock->now()->getTimestamp();
         if ($now > $this->ceiling) {
-            $this->renewalStopped = true;
-            $this->logger?->warning(self::CEILING_REACHED_MESSAGE);
+            $this->holdingTheLock = false;
+            $this->logger->warning(self::CEILING_REACHED_MESSAGE);
 
             return;
         }
@@ -74,19 +81,18 @@ final class SweepLockKeepalive
         }
 
         $this->lastRenewalAttemptAt = $now;
-        $this->renew($this->lock);
+        $this->renew();
     }
 
-    private function renew(LockInterface $lock): void
+    private function renew(): void
     {
         try {
-            $lock->refresh();
+            $this->lock->refresh();
         } catch (LockConflictedException $conflict) {
-            $this->lockLost = true;
-            $this->renewalStopped = true;
-            $this->logger?->warning(self::LOCK_TAKEN_MESSAGE, ['exception' => $conflict]);
+            $this->holdingTheLock = false;
+            $this->logger->warning(self::LOCK_TAKEN_MESSAGE, ['exception' => $conflict]);
         } catch (LockExceptionInterface $failure) {
-            $this->logger?->warning(self::RENEWAL_FAILED_MESSAGE, ['exception' => $failure]);
+            $this->logger->warning(self::RENEWAL_FAILED_MESSAGE, ['exception' => $failure]);
         }
     }
 }

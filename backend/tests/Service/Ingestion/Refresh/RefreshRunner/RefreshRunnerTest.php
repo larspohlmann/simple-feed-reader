@@ -804,7 +804,7 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('completed', $report->status);
-        self::assertGreaterThanOrEqual(4, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+        self::assertSame(4, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
     }
 
     public function testASweepThatLostItsLockSkipsHousekeeping(): void
@@ -894,6 +894,24 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame(2, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
         self::assertSame(1, $report->pruned);
+    }
+
+    public function testASweepPastItsCeilingSkipsHistoryAndPrune(): void
+    {
+        $subscription = $this->historyReader($this->prunableEntry()->getFeed());
+        $budgetSeconds = 300;
+        $this->faviconFetcher->secondsPerBatch = $budgetSeconds + SweepLockKeepalive::MAX_OVERRUN_SECONDS + 1;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue($budgetSeconds));
+
+        self::assertSame(0, $report->pruned);
+        self::assertSame(0, $this->recordedDays($subscription));
+        $ceilingMessages = array_filter(
+            array_column($this->logger->records, 'message'),
+            static fn (string $message): bool => SweepLockKeepalive::CEILING_REACHED_MESSAGE === $message,
+        );
+        self::assertCount(1, $ceilingMessages);
     }
 
     /** A reader subscribed for a week, so the history step has completed days to record. */

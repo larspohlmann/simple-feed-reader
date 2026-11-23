@@ -144,7 +144,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     private function keepHouse(RefreshRequestModel $request, SweepLockKeepalive $keepalive): int
     {
         $keepalive->beat();
-        if ($keepalive->hasLostTheLock()) {
+        if (!$keepalive->isHoldingTheLock()) {
             return 0;
         }
 
@@ -152,7 +152,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $this->housekeeping->recordSubscriptionHistory($request);
         $keepalive->beat();
 
-        return $keepalive->hasLostTheLock() ? 0 : $this->housekeeping->pruneEntries($request);
+        return $keepalive->isHoldingTheLock() ? $this->housekeeping->pruneEntries($request) : 0;
     }
 
     // Started feeds are excluded by id: a 429 writes no fetch time, so the due query alone would count a rationed
