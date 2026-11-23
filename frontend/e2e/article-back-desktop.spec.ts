@@ -67,14 +67,6 @@ async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
-/**
- * What the user's cursor would actually hit at the centre of `selector`.
- * `toBeVisible()` is not enough here: the app bar floats over the panes
- * (position: absolute, z-index 10), so a control can be laid out, painted and
- * "visible" to Playwright while the bar sits on top of it and swallows every
- * click. Returns whether the topmost element at that point is the control
- * itself or something inside it.
- */
 /** The fill a bar paints over what scrolls beneath it. */
 async function fillOf(locator: Locator): Promise<{ background: string; backdrop: string }> {
   return locator.evaluate((element) => {
@@ -83,6 +75,14 @@ async function fillOf(locator: Locator): Promise<{ background: string; backdrop:
   });
 }
 
+/**
+ * What the user's cursor would actually hit at the centre of `selector`.
+ * `toBeVisible()` is not enough here: the app bar floats over the panes
+ * (position: absolute, z-index 10), so a control can be laid out, painted and
+ * "visible" to Playwright while the bar sits on top of it and swallows every
+ * click. Returns whether the topmost element at that point is the control
+ * itself or something inside it.
+ */
 async function hitAtCentre(page: Page, selector: string): Promise<string> {
   return page.evaluate((target) => {
     const element = document.querySelector(target);

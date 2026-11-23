@@ -33,7 +33,9 @@
   @include list-chrome.floating-header;
 }
 
-/* Narrow layout: scrolled down, the header collapses to a slim bar. */
+/* Narrow layout: scrolled down, the header collapses to a slim bar. Deliberately NOT animated:
+   the rows' reservation follows this bar's measured height, and an animating box reports every
+   intermediate value (#87). */
 @media (width < bp.$bp-lg) {
   .list-header.collapsed {
     padding-top: var(--space-1);

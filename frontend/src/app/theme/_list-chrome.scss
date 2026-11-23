@@ -24,9 +24,6 @@ $corner-clear: calc(
   transition: transform 0.4s ease;
   flex-wrap: wrap;
   container: list-header / inline-size;
-
-  /* Deliberately NOT animated: the rows' reservation follows this bar's measured
-     height, and an animating box reports every intermediate value (#87). */
 }
 
 // An error banner overlaying the top of the rows, just below the floating header.
