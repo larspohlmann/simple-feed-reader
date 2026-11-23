@@ -8,7 +8,7 @@ use App\Enum\VoteScore;
 
 final readonly class DiscussionVoteResultModel
 {
-    public function __construct(public VoteScore $myVote, public int $score)
+    public function __construct(public VoteScore $myVote, public int $score, public ?string $homeUrl = null)
     {
     }
 }

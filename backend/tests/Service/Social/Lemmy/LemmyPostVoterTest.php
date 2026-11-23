@@ -38,6 +38,7 @@ final class LemmyPostVoterTest extends TestCase
     private const string RESOLVE_COMMENT = 'GET https://lemmy.example/api/v3/resolve_object?q='
         . 'https%3A%2F%2Forigin.example%2Fcomment%2F5';
     private const string COMMENT_LIKE = 'POST https://lemmy.example/api/v3/comment/like';
+    private const string HOME_PAGE = 'https://lemmy.example/post/42';
 
     public function testAVoteOnAPostReachesTheHomeInstance(): void
     {
@@ -45,7 +46,7 @@ final class LemmyPostVoterTest extends TestCase
 
         $result = $this->voter($http)->castVoteOnPost($this->account(), $this->lemmyPost(), VoteScore::Up);
 
-        self::assertEquals(new DiscussionVoteResultModel(VoteScore::Up, 43), $result);
+        self::assertEquals(new DiscussionVoteResultModel(VoteScore::Up, 43, self::HOME_PAGE), $result);
         self::assertSame([self::LIKE], $http->requestLines());
         self::assertSame('{"post_id":42,"score":1}', $http->requests[0]['body']);
     }
@@ -73,7 +74,7 @@ final class LemmyPostVoterTest extends TestCase
         $http = new RoutedHttpClient([self::HOME_POST => $this->buildResponse('post-like-downvoted.json')]);
 
         self::assertEquals(
-            new DiscussionVoteResultModel(VoteScore::Down, 43),
+            new DiscussionVoteResultModel(VoteScore::Down, 43, self::HOME_PAGE),
             $this->voter($http)->fetchPostVoteResult($this->account(), $this->lemmyPost()),
         );
         self::assertSame([self::HOME_POST], $http->requestLines());

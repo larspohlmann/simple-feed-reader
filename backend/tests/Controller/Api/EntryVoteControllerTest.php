@@ -39,6 +39,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         . 'https%3A%2F%2Forigin.example%2Fcomment%2F5';
     private const string COMMENT_LIKE = 'POST https://lemmy.example/api/v3/comment/like';
     private const string LIKE = 'POST https://lemmy.example/api/v3/post/like';
+    private const string HOME_PAGE = 'https://lemmy.example/post/42';
 
     /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
     private const int LIKE_BUDGET = 60;
@@ -76,7 +77,10 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->vote($client, $entryId, 1);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => 1, 'score' => 43], $this->payload($client));
+        self::assertSame(
+            ['myVote' => 1, 'score' => 43, 'discussionHomeUrl' => self::HOME_PAGE],
+            $this->payload($client),
+        );
         self::assertSame([self::LIKE], $this->routesAsked());
         self::assertSame('{"post_id":42,"score":1}', $this->http->requests[0]['body']);
         self::assertSame([VoteScore::Up], $this->storedScores());
@@ -113,7 +117,10 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->vote($client, $entryId, 0);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => 0, 'score' => 43], $this->payload($client));
+        self::assertSame(
+            ['myVote' => 0, 'score' => 43, 'discussionHomeUrl' => self::HOME_PAGE],
+            $this->payload($client),
+        );
         self::assertSame([], $this->storedScores());
     }
 
@@ -239,14 +246,37 @@ final class EntryVoteControllerTest extends ApiTestCase
         $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => -1, 'score' => 43], $this->payload($client));
+        self::assertSame(
+            ['myVote' => -1, 'score' => 43, 'discussionHomeUrl' => self::HOME_PAGE],
+            $this->payload($client),
+        );
         self::assertSame([VoteScore::Down], $this->storedScores());
         self::assertSame(43, $this->itemScoreOf($entryId));
 
         $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
 
-        self::assertSame(['myVote' => 0, 'score' => 43], $this->payload($client));
+        self::assertSame(
+            ['myVote' => 0, 'score' => 43, 'discussionHomeUrl' => self::HOME_PAGE],
+            $this->payload($client),
+        );
         self::assertSame([], $this->storedScores());
+    }
+
+    public function testReadingAFederatedPostAnswersItsHomeAddressWithoutStoringIt(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::FEDERATED_POST => self::fixture('post-anonymous.json'),
+            self::RESOLVE => self::fixture('resolve-post.json'),
+        ]);
+        $user = $this->signIn($client, 'vote-read-federated@example.test');
+        $this->lemmyAccountOf($user);
+        $entryId = $this->persistLemmyPost($user, 'https://feddit.example/post/7');
+
+        $client->request('GET', sprintf('/api/entries/%d/vote', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://lemmy.example/post/990', $this->payload($client)['discussionHomeUrl']);
+        self::assertNull($this->homeUrlOf($entryId));
     }
 
     public function testAVoteRecastsTheStoredRowToTheNetworksAnswer(): void
@@ -262,7 +292,10 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->vote($client, $entryId, -1);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => -1, 'score' => 43], $this->payload($client));
+        self::assertSame(
+            ['myVote' => -1, 'score' => 43, 'discussionHomeUrl' => self::HOME_PAGE],
+            $this->payload($client),
+        );
         self::assertSame([VoteScore::Down], $this->storedScores());
     }
 
@@ -309,7 +342,7 @@ final class EntryVoteControllerTest extends ApiTestCase
         $this->voteOnComment($client, $entryId, self::COMMENT_ADDRESS, 1);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['myVote' => 1, 'score' => 5], $this->payload($client));
+        self::assertSame(['myVote' => 1, 'score' => 5, 'discussionHomeUrl' => null], $this->payload($client));
         self::assertSame([self::RESOLVE_COMMENT, self::COMMENT_LIKE], $this->routesAsked());
         self::assertSame('{"comment_id":77,"score":1}', $this->http->requests[1]['body']);
         self::assertSame([], $this->storedScores());
@@ -456,6 +489,13 @@ final class EntryVoteControllerTest extends ApiTestCase
             static fn (DiscussionVote $vote): VoteScore => $vote->getScore(),
             $this->entityManager()->getRepository(DiscussionVote::class)->findAll(),
         );
+    }
+
+    private function homeUrlOf(int $entryId): ?string
+    {
+        $this->entityManager()->clear();
+
+        return $this->entityManager()->find(Entry::class, $entryId)?->getDiscussion()->homeUrl;
     }
 
     private function itemScoreOf(int $entryId): ?int

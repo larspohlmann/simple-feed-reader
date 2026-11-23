@@ -52,6 +52,7 @@ final class DiscussionVotesTest extends DbTestCase
     private const string RESOLVE_COMMENT = 'GET https://lemmy.example/api/v3/resolve_object?q='
         . 'https%3A%2F%2Forigin.example%2Fcomment%2F5';
     private const string COMMENT_LIKE = 'POST https://lemmy.example/api/v3/comment/like';
+    private const string HOME_PAGE = 'https://lemmy.example/post/42';
 
     private RoutedHttpClient $http;
     private User $owner;
@@ -71,7 +72,7 @@ final class DiscussionVotesTest extends DbTestCase
 
         $result = $votes->vote($this->owner, $entry, VoteScore::Up);
 
-        self::assertEquals(new DiscussionVoteResultModel(VoteScore::Up, 43), $result);
+        self::assertEquals(new DiscussionVoteResultModel(VoteScore::Up, 43, self::HOME_PAGE), $result);
         self::assertSame([self::LIKE], $this->http->requestLines());
         self::assertSame('{"post_id":42,"score":1}', $this->http->requests[0]['body']);
         self::assertSame([[VoteScore::Up, $account->requireId()]], $this->storedVotes());
@@ -86,7 +87,7 @@ final class DiscussionVotesTest extends DbTestCase
 
         $result = $votes->vote($this->owner, $entry, VoteScore::None);
 
-        self::assertEquals(new DiscussionVoteResultModel(VoteScore::None, 43), $result);
+        self::assertEquals(new DiscussionVoteResultModel(VoteScore::None, 43, self::HOME_PAGE), $result);
         self::assertSame('{"post_id":42,"score":0}', $this->http->requests[0]['body']);
         self::assertSame([], $this->storedVotes());
     }
@@ -191,13 +192,26 @@ final class DiscussionVotesTest extends DbTestCase
         $entry = $this->lemmyPost();
 
         self::assertEquals(
-            new DiscussionVoteResultModel(VoteScore::Down, 43),
+            new DiscussionVoteResultModel(VoteScore::Down, 43, self::HOME_PAGE),
             $votes->syncFromNetwork($this->owner, $entry),
         );
 
         self::assertSame([self::HOME_POST], $this->http->requestLines());
         self::assertSame([[VoteScore::Down, $account->requireId()]], $this->storedVotes());
         self::assertSame(43, $entry->getCanonicalItem()?->getScore());
+    }
+
+    public function testAVoteLeavesTheSharedEntrysHomeAddressAlone(): void
+    {
+        $votes = $this->votes([self::LIKE => $this->buildResponse('post-like.json')]);
+        $this->lemmyAccount();
+        $entry = $this->lemmyPost();
+
+        $votes->vote($this->owner, $entry, VoteScore::Up);
+
+        $this->entityManager->clear();
+        $stored = $this->entityManager->find(Entry::class, $entry->requireId());
+        self::assertNull($stored?->getDiscussion()->homeUrl);
     }
 
     public function testAnEntryNoVoterTakesIsRefusedWithTheLemmyText(): void

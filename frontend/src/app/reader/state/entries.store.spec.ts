@@ -1263,6 +1263,97 @@ describe('EntriesStore', () => {
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
       cast.flush({ myVote: 1, score: 11 });
     });
+
+    const homeUrl = 'https://home.test/post/9';
+
+    it('adoptsTheHomeAddressTheReadReports', () => {
+      loadVotable(0);
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 42, discussionHomeUrl: homeUrl });
+
+      expect(store.entries()[0].discussionHomeUrl).toBe(homeUrl);
+    });
+
+    it('adoptsTheHomeAddressEvenWhenAVoteIsOnTheWire', () => {
+      loadVotable(0);
+      rows.refreshVote(store.entries()[0]);
+      rows.setVote(store.entries()[0], 1, () => undefined);
+      const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
+
+      ctrl
+        .expectOne({ method: 'GET', url: votePath })
+        .flush({ myVote: -1, score: 9, discussionHomeUrl: homeUrl });
+
+      expect(store.entries()[0]).toMatchObject({
+        myVote: 1,
+        score: 10,
+        discussionHomeUrl: homeUrl,
+      });
+      cast.flush({ myVote: 1, score: 11, discussionHomeUrl: homeUrl });
+    });
+
+    it('laysTheHomeAddressOnEveryCopyOfTheItem', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            entry(1, { score: 10, myVote: 0, canonicalItemId: 7 }),
+            entry(2, { score: 10, myVote: 0, canonicalItemId: 7 }),
+          ],
+          nextCursor: null,
+        });
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 10, discussionHomeUrl: homeUrl });
+
+      expect(store.entries().map((row) => row.discussionHomeUrl)).toEqual([homeUrl, homeUrl]);
+    });
+
+    it('keepsTheHomeAddressACopyAlreadyHas', () => {
+      const ownHome = 'https://own.test/post/3';
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            entry(1, { score: 10, myVote: 0, canonicalItemId: 7 }),
+            entry(2, { score: 10, myVote: 0, canonicalItemId: 7, discussionHomeUrl: ownHome }),
+          ],
+          nextCursor: null,
+        });
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 10, discussionHomeUrl: homeUrl });
+
+      expect(store.entries().map((row) => row.discussionHomeUrl)).toEqual([homeUrl, ownHome]);
+    });
+
+    it('adoptsTheHomeAddressACastVoteReports', () => {
+      loadVotable(0);
+
+      rows.setVote(store.entries()[0], 1, () => undefined);
+      ctrl.expectOne(votePath).flush({ myVote: 1, score: 11, discussionHomeUrl: homeUrl });
+
+      expect(store.entries()[0].discussionHomeUrl).toBe(homeUrl);
+    });
+
+    it('keepsTheHomeAddressWhenTheAnswerHasNone', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [entry(1, { score: 42, myVote: 0, discussionHomeUrl: homeUrl })],
+          nextCursor: null,
+        });
+      const before = store.entries()[0];
+
+      rows.refreshVote(before);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 42 });
+
+      expect(store.entries()[0]).toBe(before);
+    });
   });
 
   describe('liking a post (#1600)', () => {
