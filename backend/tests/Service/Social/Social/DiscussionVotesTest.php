@@ -103,9 +103,9 @@ final class DiscussionVotesTest extends DbTestCase
         $voter->expects($this->once())->method('castVoteOnPost')
             ->with(self::identicalTo($caster), self::identicalTo($copy), VoteScore::Down)
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Down, 3));
-        $voter->expects($this->once())->method('fetchPostVote')
+        $voter->expects($this->once())->method('fetchPostVoteResult')
             ->with(self::identicalTo($caster), self::identicalTo($copy))
-            ->willReturn(VoteScore::Down);
+            ->willReturn(new DiscussionVoteResultModel(VoteScore::Down, 3));
         $votes = $this->buildVotes([SocialNetwork::Lemmy->value => $voter]);
 
         $votes->vote($this->owner, $copy, VoteScore::Down);
@@ -137,12 +137,12 @@ final class DiscussionVotesTest extends DbTestCase
         $copy = $this->persistCopy($this->persistHomeFeed($homeOwner));
         $voter = $this->createMock(PostVoterInterface::class);
         $voter->method('isVotablePost')->willReturn(true);
-        $voter->expects($this->once())->method('fetchPostVote')
+        $voter->expects($this->once())->method('fetchPostVoteResult')
             ->with(self::identicalTo($homeOwner), self::identicalTo($copy))
-            ->willReturnCallback(function () use ($caster): VoteScore {
+            ->willReturnCallback(function () use ($caster): DiscussionVoteResultModel {
                 $this->storeVote($caster, VoteScore::Up);
 
-                return VoteScore::None;
+                return new DiscussionVoteResultModel(VoteScore::None, 3);
             });
 
         $this->buildVotes([SocialNetwork::Lemmy->value => $voter])->syncFromNetwork($this->owner, $copy);
@@ -190,10 +190,14 @@ final class DiscussionVotesTest extends DbTestCase
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
 
-        self::assertSame(VoteScore::Down, $votes->syncFromNetwork($this->owner, $entry));
+        self::assertEquals(
+            new DiscussionVoteResultModel(VoteScore::Down, 43),
+            $votes->syncFromNetwork($this->owner, $entry),
+        );
 
         self::assertSame([self::HOME_POST], $this->http->requestLines());
         self::assertSame([[VoteScore::Down, $account->requireId()]], $this->storedVotes());
+        self::assertSame(43, $entry->getCanonicalItem()?->getScore());
     }
 
     public function testAnEntryNoVoterTakesIsRefusedWithTheLemmyText(): void

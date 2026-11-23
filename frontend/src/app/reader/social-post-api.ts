@@ -78,8 +78,8 @@ export class SocialPostApi {
     return this.http.put<VoteAnswer>(this.entryPath(entryId, 'vote'), { score });
   }
 
-  myVote(entryId: number): Observable<{ myVote: VoteValue }> {
-    return this.http.get<{ myVote: VoteValue }>(this.entryPath(entryId, 'vote'));
+  fetchVote(entryId: number): Observable<VoteAnswer> {
+    return this.http.get<VoteAnswer>(this.entryPath(entryId, 'vote'));
   }
 
   voteComment(entryId: number, address: string, score: VoteValue): Observable<VoteAnswer> {

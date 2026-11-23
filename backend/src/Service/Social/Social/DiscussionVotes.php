@@ -60,11 +60,8 @@ final readonly class DiscussionVotes
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
-        $item->recordScore($result->score);
-        $this->mirror($user, $item, $account, $result->myVote);
-        $this->entityManager->flush();
 
-        return $result;
+        return $this->adopt($user, $item, $account, $result);
     }
 
     /**
@@ -105,16 +102,15 @@ final readonly class DiscussionVotes
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function syncFromNetwork(User $user, Entry $entry): VoteScore
+    public function syncFromNetwork(User $user, Entry $entry): DiscussionVoteResultModel
     {
         $network = $this->requireVotingNetwork($entry);
         $item = $this->requireItem($entry);
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
-        $myVote = $this->selectVoter($network)->fetchPostVote($account, $entry);
-        $this->mirror($user, $item, $account, $myVote);
+        $result = $this->selectVoter($network)->fetchPostVoteResult($account, $entry);
 
-        return $myVote;
+        return $this->adopt($user, $item, $account, $result);
     }
 
     /** @throws NoSocialAccountForNetworkException */
@@ -183,6 +179,19 @@ final readonly class DiscussionVotes
         return [] === $names ? $last : implode(', ', $names) . ' or ' . $last;
     }
 
+    private function adopt(
+        User $user,
+        CanonicalItem $item,
+        SocialAccount $account,
+        DiscussionVoteResultModel $result,
+    ): DiscussionVoteResultModel {
+        $item->recordScore($result->score);
+        $this->mirror($user, $item, $account, $result->myVote);
+        $this->entityManager->flush();
+
+        return $result;
+    }
+
     private function mirror(User $user, CanonicalItem $item, SocialAccount $account, VoteScore $myVote): void
     {
         $stored = $this->votes->findOneFor($user, $item);
@@ -203,7 +212,6 @@ final readonly class DiscussionVotes
             return;
         }
         $stored->recast($myVote, $this->clock->now());
-        $this->entityManager->flush();
     }
 
     private function drop(?DiscussionVote $stored): void
@@ -212,6 +220,5 @@ final readonly class DiscussionVotes
             return;
         }
         $this->entityManager->remove($stored);
-        $this->entityManager->flush();
     }
 }

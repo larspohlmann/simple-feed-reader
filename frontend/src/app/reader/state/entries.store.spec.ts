@@ -1220,9 +1220,18 @@ describe('EntriesStore', () => {
       rows.refreshVote(store.entries()[0]);
       const request = ctrl.expectOne(votePath);
       expect(request.request.method).toBe('GET');
-      request.flush({ myVote: -1 });
+      request.flush({ myVote: -1, score: 42 });
 
-      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
+      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 42 });
+    });
+
+    it('adoptsTheNetworksScoreWhenTheVoteIsUnchanged', () => {
+      loadVotable(0);
+
+      rows.refreshVote(store.entries()[0]);
+      ctrl.expectOne(votePath).flush({ myVote: 0, score: 42 });
+
+      expect(store.entries()[0]).toMatchObject({ myVote: 0, score: 42 });
     });
 
     it('staysSilentWhenTheRefreshFails', () => {
@@ -1243,23 +1252,16 @@ describe('EntriesStore', () => {
       ctrl.expectNone(votePath);
     });
 
-    it('adoptsTheNetworksVoteWithoutTouchingTheScore', () => {
-      loadVotable(0);
-
-      rows.adoptVote(1, { from: 0, to: -1 });
-
-      expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 10 });
-    });
-
     it('lets a vote on the wire win over the network report', () => {
       loadVotable(0);
+      rows.refreshVote(store.entries()[0]);
       rows.setVote(store.entries()[0], 1, () => undefined);
-      const request = ctrl.expectOne(votePath);
+      const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
 
-      rows.adoptVote(1, { from: 1, to: -1 });
+      ctrl.expectOne({ method: 'GET', url: votePath }).flush({ myVote: -1, score: 9 });
 
-      expect(store.entries()[0].myVote).toBe(1);
-      request.flush({ myVote: 1, score: 11 });
+      expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
+      cast.flush({ myVote: 1, score: 11 });
     });
   });
 

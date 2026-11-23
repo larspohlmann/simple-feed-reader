@@ -5,7 +5,7 @@ import { subscribeUntilSettled } from '../../core/rx/settled';
 import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
-import { SocialPostApi } from '../social-post-api';
+import { SocialPostApi, VoteAnswer } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
@@ -130,22 +130,14 @@ export class EntryRowCache {
     );
   }
 
-  /** Asks the network which vote the account holds on a Lemmy post and adopts it; a failure is silent. */
+  /** Asks the network for a Lemmy post's score and the account's vote on it, and adopts both; a failure is silent. */
   refreshVote(entry: EntryDto): void {
     const from = entry.myVote;
     if (from === null) return;
-    this.socialPosts.myVote(entry.id).subscribe({
-      next: (answer) => this.adoptVote(entry.id, { from, to: answer.myVote }),
+    this.socialPosts.fetchVote(entry.id).subscribe({
+      next: (answer) => this.adoptVote(entry.id, from, answer),
       error: () => undefined,
     });
-  }
-
-  /** The vote the network reports, laid over entries still showing `from`; a click made since wins. */
-  adoptVote(entryId: number, change: { from: VoteValue; to: VoteValue }): void {
-    if (change.from === change.to) return;
-    this.adoptReported(entryId, 'myVote', (entry) =>
-      entry.myVote === change.from ? { ...entry, myVote: change.to } : entry,
-    );
   }
 
   mergeCompleted(rows: CompletedEntryDto[]): void {
@@ -179,6 +171,16 @@ export class EntryRowCache {
   private dropUnlessHeld(id: number): void {
     for (const ids of this.holds.values()) if (ids.has(id)) return;
     this.records.delete(id);
+  }
+
+  /** The vote and score the network reports, laid over entries still showing `from`; a click made since wins. */
+  private adoptVote(entryId: number, from: VoteValue, reported: VoteAnswer): void {
+    this.adoptReported(entryId, 'myVote', (entry) => {
+      const shown = entry.myVote === reported.myVote && entry.score === reported.score;
+      return entry.myVote !== from || shown
+        ? entry
+        : { ...entry, myVote: reported.myVote, score: reported.score };
+    });
   }
 
   private adoptReported(

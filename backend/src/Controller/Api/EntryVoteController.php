@@ -69,6 +69,6 @@ final readonly class EntryVoteController
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialViewerLimiter, $user);
 
-        return new JsonResponse(DiscussionVoteJson::myVote($this->discussionVotes->syncFromNetwork($user, $entry)));
+        return new JsonResponse(DiscussionVoteJson::result($this->discussionVotes->syncFromNetwork($user, $entry)));
     }
 }

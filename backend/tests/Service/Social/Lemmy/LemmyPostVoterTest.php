@@ -68,13 +68,13 @@ final class LemmyPostVoterTest extends TestCase
         self::assertSame('{"comment_id":77,"score":1}', $http->requests[1]['body']);
     }
 
-    public function testThePostVoteIsWhatTheHomeInstanceReports(): void
+    public function testThePostVoteAndScoreAreWhatTheHomeInstanceReports(): void
     {
         $http = new RoutedHttpClient([self::HOME_POST => $this->buildResponse('post-like-downvoted.json')]);
 
-        self::assertSame(
-            VoteScore::Down,
-            $this->voter($http)->fetchPostVote($this->account(), $this->lemmyPost()),
+        self::assertEquals(
+            new DiscussionVoteResultModel(VoteScore::Down, 43),
+            $this->voter($http)->fetchPostVoteResult($this->account(), $this->lemmyPost()),
         );
         self::assertSame([self::HOME_POST], $http->requestLines());
     }

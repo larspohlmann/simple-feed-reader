@@ -57,5 +57,5 @@ interface PostVoterInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function fetchPostVote(SocialAccount $account, Entry $entry): VoteScore;
+    public function fetchPostVoteResult(SocialAccount $account, Entry $entry): DiscussionVoteResultModel;
 }

@@ -18,10 +18,4 @@ final class DiscussionVoteJsonTest extends TestCase
             DiscussionVoteJson::result(new DiscussionVoteResultModel(VoteScore::Down, -3)),
         );
     }
-
-    public function testAReadCarriesTheVoteOnly(): void
-    {
-        self::assertSame(['myVote' => 1], DiscussionVoteJson::myVote(VoteScore::Up));
-        self::assertSame(['myVote' => 0], DiscussionVoteJson::myVote(VoteScore::None));
-    }
 }
