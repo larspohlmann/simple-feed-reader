@@ -2,11 +2,13 @@ import { WritableSignal, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
 import { PREFERENCES_WRITER, ReadingPreferences, writeTracked } from './preferences-writer';
 
-interface CachedAccountChoiceOptions<T extends string> {
+type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle';
+
+interface CachedAccountChoiceOptions<Field extends ChoiceField> {
   key: string;
-  choices: readonly T[];
-  fallback: T;
-  field: 'magazineStyle' | 'handedness' | 'sidebarStyle';
+  choices: readonly ReadingPreferences[Field][];
+  fallback: ReadingPreferences[Field];
+  field: Field;
 }
 
 /**
@@ -15,23 +17,22 @@ interface CachedAccountChoiceOptions<T extends string> {
  * window shows or writes a wrong one, so the first frame is never drawn with
  * the fallback while `loadMe()` is pending.
  */
-export abstract class CachedAccountChoice<T extends string> {
+export abstract class CachedAccountChoice<Field extends ChoiceField> {
   private readonly writer = inject(PREFERENCES_WRITER);
 
-  readonly value: WritableSignal<T>;
+  readonly value: WritableSignal<ReadingPreferences[Field]>;
 
   /** True when the choice applied locally but the account write failed. */
   readonly saveFailed = signal(false);
 
-  protected constructor(private readonly options: CachedAccountChoiceOptions<T>) {
+  protected constructor(private readonly options: CachedAccountChoiceOptions<Field>) {
     this.value = signal(this.parse(localStorage.getItem(options.key)) ?? options.fallback);
   }
 
   /** Applies locally first, then writes through; a failed write is surfaced. */
-  set(choice: T): void {
+  set(choice: ReadingPreferences[Field]): void {
     this.cache(choice);
-    const change = { [this.options.field]: choice } as Partial<ReadingPreferences>;
-    writeTracked(this.writer, change, this.saveFailed);
+    writeTracked(this.writer, { [this.options.field]: choice }, this.saveFailed);
   }
 
   /**
@@ -51,12 +52,12 @@ export abstract class CachedAccountChoice<T extends string> {
     this.saveFailed.set(false);
   }
 
-  private cache(choice: T): void {
+  private cache(choice: ReadingPreferences[Field]): void {
     localStorage.setItem(this.options.key, choice);
     this.value.set(choice);
   }
 
-  private parse(raw: string | null): T | null {
+  private parse(raw: string | null): ReadingPreferences[Field] | null {
     return this.options.choices.find((choice) => choice === raw) ?? null;
   }
 }

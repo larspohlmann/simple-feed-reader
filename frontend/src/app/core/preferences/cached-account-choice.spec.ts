@@ -5,14 +5,17 @@ import { CurrentUser } from '../auth/auth.service';
 import { CachedAccountChoice } from './cached-account-choice';
 import { PREFERENCES_WRITER, ReadingPreferences } from './preferences-writer';
 
-type Letter = 'a' | 'b';
-
 const LETTER_KEY = 'sfr.testLetter';
 
 @Injectable({ providedIn: 'root' })
-class LetterChoice extends CachedAccountChoice<Letter> {
+class LetterChoice extends CachedAccountChoice<'magazineStyle'> {
   constructor() {
-    super({ key: LETTER_KEY, choices: ['a', 'b'], fallback: 'a', field: 'magazineStyle' });
+    super({
+      key: LETTER_KEY,
+      choices: ['boxed', 'airy'],
+      fallback: 'boxed',
+      field: 'magazineStyle',
+    });
   }
 }
 
@@ -49,53 +52,53 @@ describe('CachedAccountChoice', () => {
   });
 
   it('starts from a cached valid value', () => {
-    localStorage.setItem(LETTER_KEY, 'b');
+    localStorage.setItem(LETTER_KEY, 'airy');
 
-    expect(make().value()).toBe('b');
+    expect(make().value()).toBe('airy');
   });
 
   it('starts from the fallback when nothing valid is cached', () => {
-    localStorage.setItem(LETTER_KEY, 'z');
+    localStorage.setItem(LETTER_KEY, 'zzz');
 
-    expect(make().value()).toBe('a');
+    expect(make().value()).toBe('boxed');
   });
 
   it('caches a set value and writes it under its field', () => {
     const choice = make();
 
-    choice.set('b');
+    choice.set('airy');
 
-    expect(choice.value()).toBe('b');
-    expect(localStorage.getItem(LETTER_KEY)).toBe('b');
-    expect(written).toEqual([{ magazineStyle: 'b' }]);
+    expect(choice.value()).toBe('airy');
+    expect(localStorage.getItem(LETTER_KEY)).toBe('airy');
+    expect(written).toEqual([{ magazineStyle: 'airy' }]);
   });
 
   it('flags a failed account write and keeps the local value', () => {
     result = of(false);
     const choice = make();
 
-    choice.set('b');
+    choice.set('airy');
 
-    expect(choice.value()).toBe('b');
+    expect(choice.value()).toBe('airy');
     expect(choice.saveFailed()).toBe(true);
   });
 
   it('adopts a known account value without writing it back', () => {
     const choice = make();
 
-    choice.adopt(userWith('b'));
+    choice.adopt(userWith('airy'));
 
-    expect(choice.value()).toBe('b');
-    expect(localStorage.getItem(LETTER_KEY)).toBe('b');
+    expect(choice.value()).toBe('airy');
+    expect(localStorage.getItem(LETTER_KEY)).toBe('airy');
     expect(written).toEqual([]);
   });
 
   it('ignores an account value it does not know', () => {
     const choice = make();
 
-    choice.adopt(userWith('z'));
+    choice.adopt(userWith('zzz'));
 
-    expect(choice.value()).toBe('a');
+    expect(choice.value()).toBe('boxed');
     expect(localStorage.getItem(LETTER_KEY)).toBeNull();
     expect(written).toEqual([]);
   });
@@ -103,11 +106,11 @@ describe('CachedAccountChoice', () => {
   it('resets to the fallback, cache and failure flag included', () => {
     result = of(false);
     const choice = make();
-    choice.set('b');
+    choice.set('airy');
 
     choice.reset();
 
-    expect(choice.value()).toBe('a');
+    expect(choice.value()).toBe('boxed');
     expect(localStorage.getItem(LETTER_KEY)).toBeNull();
     expect(choice.saveFailed()).toBe(false);
   });

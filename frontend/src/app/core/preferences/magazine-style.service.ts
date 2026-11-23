@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { MAGAZINE_STYLES, MAGAZINE_STYLE_KEY, MagazineStyle } from './magazine-style';
+import { MAGAZINE_STYLES, MAGAZINE_STYLE_KEY } from './magazine-style';
 import { CachedAccountChoice } from './cached-account-choice';
 
 @Injectable({ providedIn: 'root' })
-export class MagazineStyleService extends CachedAccountChoice<MagazineStyle> {
+export class MagazineStyleService extends CachedAccountChoice<'magazineStyle'> {
   readonly style = this.value;
 
   constructor() {

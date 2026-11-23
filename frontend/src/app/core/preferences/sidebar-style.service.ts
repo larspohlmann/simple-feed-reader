@@ -1,9 +1,9 @@
 import { Injectable, computed } from '@angular/core';
 import { CachedAccountChoice } from './cached-account-choice';
-import { SIDEBAR_STYLES, SIDEBAR_STYLE_KEY, SidebarStyle } from './sidebar-style';
+import { SIDEBAR_STYLES, SIDEBAR_STYLE_KEY } from './sidebar-style';
 
 @Injectable({ providedIn: 'root' })
-export class SidebarStyleService extends CachedAccountChoice<SidebarStyle> {
+export class SidebarStyleService extends CachedAccountChoice<'sidebarStyle'> {
   readonly style = this.value;
 
   readonly airy = computed(() => this.style() === 'airy');
