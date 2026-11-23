@@ -10,6 +10,17 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release adds an airy sidebar design and better-grouped Trending stories.
+
+**Airy sidebar (beta).** A second sidebar design: one sheet with headings and
+faint rules instead of boxed cards. Pick it in Settings → Preferences, under
+the magazine style.
+
+**Trending stories.** Different angles on one event, such as a live blog,
+reactions and an explainer, now join into one story instead of several.
+
 ## [v1.10.2] - 2026-11-22
 
 ## What's Changed
