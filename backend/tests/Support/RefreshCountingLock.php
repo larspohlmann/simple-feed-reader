@@ -6,13 +6,13 @@ namespace App\Tests\Support;
 
 use Symfony\Component\Lock\Exception\LockAcquiringException;
 use Symfony\Component\Lock\Exception\LockConflictedException;
-use Symfony\Component\Lock\LockInterface;
+use Symfony\Component\Lock\SharedLockInterface;
 
 /**
- * Counts refresh() calls without a store, so TickLockKeepaliveTest can pin when a beat refreshed. The keepalive calls
- * only refresh(), so every other method is a stub.
+ * Counts refresh() calls, so a keepalive test can pin when a beat refreshed. Without an inner lock every other method
+ * answers as a held lock; with one, they and a refresh that does not fail delegate to it.
  */
-final class RefreshCountingLock implements LockInterface
+final class RefreshCountingLock implements SharedLockInterface
 {
     private int $refreshCount = 0;
 
@@ -20,9 +20,18 @@ final class RefreshCountingLock implements LockInterface
 
     private bool $nextRefreshConflicts = false;
 
+    public function __construct(private readonly ?SharedLockInterface $inner = null)
+    {
+    }
+
     public function acquire(bool $blocking = false): bool
     {
-        return true;
+        return $this->inner?->acquire($blocking) ?? true;
+    }
+
+    public function acquireRead(bool $blocking = false): bool
+    {
+        return $this->inner?->acquireRead($blocking) ?? true;
     }
 
     public function refresh(?float $ttl = null): void
@@ -40,25 +49,28 @@ final class RefreshCountingLock implements LockInterface
 
             throw new LockConflictedException('Simulated: another process holds this lock now.');
         }
+
+        $this->inner?->refresh($ttl);
     }
 
     public function isAcquired(): bool
     {
-        return true;
+        return $this->inner?->isAcquired() ?? true;
     }
 
     public function release(): void
     {
+        $this->inner?->release();
     }
 
     public function isExpired(): bool
     {
-        return false;
+        return $this->inner?->isExpired() ?? false;
     }
 
     public function getRemainingLifetime(): ?float
     {
-        return null;
+        return $this->inner?->getRemainingLifetime();
     }
 
     public function refreshCount(): int

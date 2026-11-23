@@ -14,6 +14,7 @@ use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\Model\RefreshTarget\EveryFeedTargetModel;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
+use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Outbound\Fetch\Exception\FeedGoneException;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -22,10 +23,12 @@ use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Ingestion\Scraper\ScrapedFixtures;
 use App\Tests\Service\Library\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\ClockAdvancingLogger;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\RefreshCountingLockFactory;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubPassFetcher;
@@ -62,7 +65,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher = new StubPassFetcher($this->clock);
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
-        $this->faviconFetcher = new StubFeedFetcher();
+        $this->faviconFetcher = new StubFeedFetcher($this->clock);
         $this->lockStore = new InMemoryStore();
         $this->lockFactory = new TtlRecordingLockFactory($this->lockStore);
         $this->indexWriter = new RecordingSearchIndexWriter();
@@ -789,6 +792,204 @@ final class RefreshRunnerTest extends DbTestCase
         $lock = $this->lockFactory->createLock('feed-refresh');
         self::assertTrue($lock->acquire(), 'lock should be free after a completed run');
         $lock->release();
+    }
+
+    public function testALongSweepRenewsItsLock(): void
+    {
+        $this->notModifiedDueFeeds(['one', 'two', 'three', 'four']);
+        $this->entityManager->flush();
+        $this->fetcher->secondsPerFetch = 25;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(4, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+    }
+
+    public function testASweepThatLostItsLockSkipsHousekeeping(): void
+    {
+        $ancient = $this->prunableEntry();
+        $this->fetcher->secondsPerFetch = 25;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->conflictOnTheFirstRenewal();
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(0, $report->pruned);
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->find(Entry::class, $ancient->getId()));
+        self::assertContains(SweepLockKeepalive::LOCK_TAKEN_MESSAGE, array_column($this->logger->records, 'message'));
+    }
+
+    public function testAStoreHiccupStillPrunes(): void
+    {
+        $this->prunableEntry();
+        $this->fetcher->secondsPerFetch = 25;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->throwOnTheFirstRenewal();
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $report->pruned);
+        self::assertContains(
+            SweepLockKeepalive::RENEWAL_FAILED_MESSAGE,
+            array_column($this->logger->records, 'message'),
+        );
+    }
+
+    public function testAOneFeedRunTakesNoSweepLock(): void
+    {
+        [$feed] = $this->notModifiedDueFeeds(['one']);
+        $this->entityManager->flush();
+        $this->fetcher->secondsPerFetch = 200;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::forFeed($feed->requireId(), 25));
+
+        self::assertSame('completed', $report->status);
+        self::assertNull($lockFactory->lastLockFor('feed-refresh'));
+        $keepaliveMessages = [
+            SweepLockKeepalive::LOCK_TAKEN_MESSAGE,
+            SweepLockKeepalive::RENEWAL_FAILED_MESSAGE,
+            SweepLockKeepalive::CEILING_REACHED_MESSAGE,
+        ];
+        self::assertSame([], array_intersect($keepaliveMessages, array_column($this->logger->records, 'message')));
+    }
+
+    public function testALockLostDuringTheFaviconStepSkipsHistoryAndPrune(): void
+    {
+        $subscription = $this->historyReader($this->prunableEntry()->getFeed());
+        $this->faviconFetcher->secondsPerBatch = 25;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->conflictOnTheFirstRenewal();
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+        self::assertSame(0, $report->pruned);
+        self::assertSame(0, $this->recordedDays($subscription));
+    }
+
+    public function testALockLostDuringTheHistoryStepSkipsThePrune(): void
+    {
+        $subscription = $this->historyReader($this->prunableEntry()->getFeed());
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+        $lockFactory->conflictOnTheFirstRenewal();
+
+        $report = $this->runnerWithSlowHistory($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(1, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+        self::assertSame(0, $report->pruned);
+        self::assertGreaterThan(0, $this->recordedDays($subscription));
+    }
+
+    public function testTheFaviconAndHistoryStepsEachRenewTheLock(): void
+    {
+        $this->historyReader($this->prunableEntry()->getFeed());
+        $this->faviconFetcher->secondsPerBatch = 25;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerWithSlowHistory($lockFactory)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(2, $lockFactory->lastLockFor('feed-refresh')?->refreshCount());
+        self::assertSame(1, $report->pruned);
+    }
+
+    public function testASweepPastItsCeilingSkipsHistoryAndPrune(): void
+    {
+        $subscription = $this->historyReader($this->prunableEntry()->getFeed());
+        $budgetSeconds = 300;
+        $this->faviconFetcher->secondsPerBatch = $budgetSeconds + SweepLockKeepalive::MAX_OVERRUN_SECONDS + 1;
+        $lockFactory = new RefreshCountingLockFactory($this->lockStore);
+
+        $report = $this->runnerLockingWith($lockFactory)->run(RefreshRequestModel::allDue($budgetSeconds));
+
+        self::assertSame(0, $report->pruned);
+        self::assertSame(0, $this->recordedDays($subscription));
+        $ceilingMessages = array_filter(
+            array_column($this->logger->records, 'message'),
+            static fn (string $message): bool => SweepLockKeepalive::CEILING_REACHED_MESSAGE === $message,
+        );
+        self::assertCount(1, $ceilingMessages);
+    }
+
+    /** A reader subscribed for a week, so the history step has completed days to record. */
+    private function historyReader(Feed $feed): Subscription
+    {
+        $reader = new User('history-reader@example.com', $this->clock->now());
+        $subscription = new Subscription($reader, $feed, new \DateTimeImmutable('2026-07-15 00:00:00'));
+        $this->entityManager->persist($reader);
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        return $subscription;
+    }
+
+    private function recordedDays(Subscription $subscription): int
+    {
+        return $this->entityManager->getRepository(SubscriptionDay::class)
+            ->count(['subscription' => $subscription->requireId()]);
+    }
+
+    /**
+     * One wave per feed, so secondsPerFetch is the time between two stored outcomes.
+     *
+     * @param list<string> $names
+     *
+     * @return list<Feed>
+     */
+    private function notModifiedDueFeeds(array $names): array
+    {
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
+        $feeds = [];
+        foreach ($names as $name) {
+            $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+            $feeds[] = $feed;
+        }
+
+        return $feeds;
+    }
+
+    /** One due feed whose twenty recent fillers hold it above EntryPruner's floor, so its ancient entry is prunable. */
+    private function prunableEntry(): Entry
+    {
+        [$feed] = $this->notModifiedDueFeeds(['prune']);
+        $recentDate = $this->clock->now()->modify('-1 day');
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
+            $filler->setPublishedAt($recentDate);
+            $this->entityManager->persist($filler);
+        }
+
+        $ancientDate = $this->clock->now()->modify('-200 days');
+        $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
+        $ancient->setPublishedAt($ancientDate);
+        $this->entityManager->persist($ancient);
+        $this->entityManager->flush();
+
+        return $ancient;
+    }
+
+    /** The history step logs once it recorded days; this logger makes that step take 25 s. */
+    private function runnerWithSlowHistory(RefreshCountingLockFactory $lockFactory): RefreshRunner
+    {
+        return $this->runners()
+            ->lockingWith($lockFactory)
+            ->loggingTo(new ClockAdvancingLogger($this->clock, 'Recorded subscription history days', 25))
+            ->build($this->fetcher, $this->faviconFetcher);
+    }
+
+    private function runnerLockingWith(RefreshCountingLockFactory $lockFactory): RefreshRunner
+    {
+        return $this->runners()
+            ->lockingWith($lockFactory)
+            ->flushingThrough($this->entityManager)
+            ->build($this->fetcher, $this->faviconFetcher);
     }
 
     public function testPermanentRedirectUpdatesFeedUrl(): void

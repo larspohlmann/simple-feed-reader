@@ -13,6 +13,7 @@ use App\Enum\SourceFormat;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Service\Social\Mastodon\Support\MastodonTimelinePage;
@@ -28,6 +29,8 @@ use App\Service\Social\Social\Model\TimelinePageModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PrivateFeedsWiring;
+use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\RefreshCountingLock;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubPassFetcher;
@@ -136,7 +139,7 @@ final class RefreshPassRecorderTest extends DbTestCase
         $feedId = $feed->requireId();
         $this->passes->willReadTimeline($feed->getUrl(), new ThrottledTimelineModel(null));
 
-        $this->recorder()->record($this->pass([$feed]), $this->clock->now());
+        $this->recorder()->record($this->pass([$feed]), $this->clock->now(), SweepLockKeepalive::withoutLock());
 
         self::assertSame([$feedId], array_keys($this->passes->socialFeedsByFeedId));
         self::assertSame(
@@ -152,7 +155,7 @@ final class RefreshPassRecorderTest extends DbTestCase
         $this->passes->willReturn($rss->getUrl(), FetchResponseModel::notModified($rss->getUrl(), false, null, null));
         $pass = $this->pass([$rss]);
 
-        $this->recorder()->record($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now(), SweepLockKeepalive::withoutLock());
 
         self::assertSame(1, $pass->tally->notModified());
         self::assertSame([$rss->getUrl()], $this->passes->fetchedUrls());
@@ -165,11 +168,33 @@ final class RefreshPassRecorderTest extends DbTestCase
         $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), new FetchedTimelineModel(self::page()));
         $pass = $this->pass([$this->home->getFeed(), $rss]);
 
-        $this->recorder()->record($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now(), SweepLockKeepalive::withoutLock());
 
         self::assertSame(1, $pass->tally->fetched());
         self::assertSame(1, $pass->tally->notModified());
         self::assertSame(2, $pass->tally->processed());
+    }
+
+    public function testEachStoredOutcomeBeatsTheKeepalive(): void
+    {
+        $this->passes = new StubPassFetcher($this->clock, concurrency: 1);
+        $this->passes->secondsPerFetch = 25;
+        $feeds = [];
+        foreach (['one', 'two', 'three'] as $name) {
+            $feed = $this->rssFeed(sprintf('https://%s.example.com/feed.xml', $name));
+            $this->passes->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+            $feeds[] = $feed;
+        }
+        $lock = new RefreshCountingLock();
+        $deadline = $this->clock->now()->getTimestamp() + 300;
+        $keepalive = SweepLockKeepalive::holding($lock, $this->clock, $deadline, new RecordingLogger());
+
+        $this->recorder()->record($this->pass($feeds), $this->clock->now(), $keepalive);
+
+        self::assertSame(3, $lock->refreshCount());
     }
 
     public function testAPrivateFeedThatLostItsSocialFeedFailsWithoutAsking(): void
@@ -193,7 +218,7 @@ final class RefreshPassRecorderTest extends DbTestCase
         $this->passes->willReadTimeline($home->getUrl(), new FetchedTimelineModel(self::page()));
         $pass = $this->pass($feeds);
 
-        $this->recorder()->record($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now(), SweepLockKeepalive::withoutLock());
 
         self::assertSame([$home->requireId()], $this->passes->asked);
         self::assertSame(1, $pass->tally->failed());
@@ -215,9 +240,9 @@ final class RefreshPassRecorderTest extends DbTestCase
         return $orphan;
     }
 
-    private function rssFeed(): Feed
+    private function rssFeed(string $url = 'https://example.com/feed.xml'): Feed
     {
-        $rss = new Feed('https://example.com/feed.xml');
+        $rss = new Feed($url);
         $this->entityManager->persist($rss);
         $this->entityManager->flush();
 
@@ -238,7 +263,7 @@ final class RefreshPassRecorderTest extends DbTestCase
     {
         $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), $outcome);
         $pass = $this->pass([$this->home->getFeed()]);
-        $this->recorder()->record($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now(), SweepLockKeepalive::withoutLock());
 
         return $pass;
     }

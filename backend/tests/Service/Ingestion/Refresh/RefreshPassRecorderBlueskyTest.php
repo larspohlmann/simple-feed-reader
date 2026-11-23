@@ -15,6 +15,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
 use App\Service\Ingestion\Refresh\Pass\FeedClaims;
 use App\Service\Ingestion\Refresh\Pass\RefreshPass;
+use App\Service\Ingestion\Refresh\Pass\SweepLockKeepalive;
 use App\Service\Ingestion\Refresh\RefreshPassRecorder;
 use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
@@ -145,7 +146,7 @@ final class RefreshPassRecorderBlueskyTest extends DbTestCase
             $clock->now()->getTimestamp() + 300,
             new FeedClaims(new LockFactory(new InMemoryStore())),
         );
-        $this->recorder()->record($pass, $clock->now());
+        $this->recorder()->record($pass, $clock->now(), SweepLockKeepalive::withoutLock());
 
         return $pass;
     }
