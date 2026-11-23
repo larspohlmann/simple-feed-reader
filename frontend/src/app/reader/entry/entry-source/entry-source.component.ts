@@ -1,8 +1,9 @@
-import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntryDto } from '../../models';
+import { entryLinkNetwork } from '../../own-instance/entry-link-facts';
+import { OwnInstanceHrefDirective } from '../../own-instance/own-instance-href.directive';
 import { selectionQueryParams } from '../../query/query';
 import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
@@ -32,6 +33,7 @@ export class EntrySourceComponent {
 
   private readonly rows = inject(SubscriptionRows);
   protected readonly name = computed(() => sourceNameOf(this.entry(), this.rows));
+  protected readonly linkNetwork = computed(() => entryLinkNetwork(this.entry()));
 
   /** A saved post names the feed it now lives in after its poster or origin. */
   protected readonly savedIn = computed(() => {

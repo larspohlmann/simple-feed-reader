@@ -1,6 +1,6 @@
 import { articleHost } from '../../../../testing/article-host-testing';
 import { OwnInstances, ownInstanceUrl } from '../../own-instance/own-instance-url';
-import { openLinksOnOwnInstance } from './own-instance-body-links';
+import { rewriteLinks } from './own-instance-body-links';
 
 const INSTANCE = 'https://home.example';
 
@@ -15,7 +15,9 @@ const BODY = `
 function hrefsAfter(mastodon: string | null): Record<string, string | null> {
   const instances: OwnInstances = { mastodon, lemmy: null, lemmyHosts: new Set() };
   const host = articleHost(BODY, (element) =>
-    openLinksOnOwnInstance(element, (href, text) => ownInstanceUrl(href, { text }, instances)),
+    rewriteLinks(element, (href, text) =>
+      ownInstanceUrl(href, { mastodonLinkText: text }, instances),
+    ),
   );
   return Object.fromEntries(
     Array.from(host.querySelectorAll('a'), (link) => [link.id, link.getAttribute('href')]),
@@ -25,7 +27,7 @@ function hrefsAfter(mastodon: string | null): Record<string, string | null> {
 const authorize = (address: string) =>
   `${INSTANCE}/authorize_interaction?uri=${encodeURIComponent(address)}`;
 
-describe('openLinksOnOwnInstance', () => {
+describe('rewriteLinks', () => {
   it('moves mentions, hashtags and status links and leaves other links alone', () => {
     expect(hrefsAfter(INSTANCE)).toEqual({
       mention: authorize('https://mastodon.social/@alice'),

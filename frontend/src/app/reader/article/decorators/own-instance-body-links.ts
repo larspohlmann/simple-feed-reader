@@ -1,4 +1,4 @@
-export function openLinksOnOwnInstance(
+export function rewriteLinks(
   host: HTMLElement,
   rewrite: (href: string, text: string) => string,
 ): void {

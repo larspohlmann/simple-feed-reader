@@ -9,7 +9,7 @@ export interface OwnInstances {
 
 export interface LinkFacts {
   network?: SocialNetworkName | null;
-  text?: string;
+  mastodonLinkText?: string;
   homeUrl?: string | null;
 }
 
@@ -35,15 +35,16 @@ interface Link {
 }
 
 export function ownInstanceUrl(address: string, facts: LinkFacts, instances: OwnInstances): string {
+  if (instances.mastodon === null && instances.lemmy === null) return address;
   const target = parseHttpUrl(address);
-  if (target === null || facts.network === 'bluesky') return address;
+  if (target === null) return address;
   const homeUrl = pickHomeUrl(facts.homeUrl, instances.lemmy);
   if (homeUrl !== null) return homeUrl;
   const link: Link = { address, target, facts };
-  const moved = isLemmyLink(link, instances)
-    ? lemmyTarget(link, instances.lemmy)
-    : mastodonTarget(link, instances.mastodon);
-  return moved ?? address;
+  const isLemmy = isLemmyLink(link, instances);
+  const instance = isLemmy ? instances.lemmy : instances.mastodon;
+  if (instance === null || target.origin === instance) return address;
+  return (isLemmy ? lemmyTarget(link, instance) : mastodonTarget(link, instance)) ?? address;
 }
 
 function pickHomeUrl(homeUrl: string | null | undefined, instance: string | null): string | null {
@@ -58,8 +59,7 @@ function isLemmyLink({ target, facts }: Link, instances: OwnInstances): boolean 
   );
 }
 
-function lemmyTarget({ address, target }: Link, instance: string | null): string | null {
-  if (instance === null || target.origin === instance) return null;
+function lemmyTarget({ address, target }: Link, instance: string): string | null {
   if (LEMMY_THREAD_PATH.test(target.pathname)) {
     return `${instance}/search?q=${encodeURIComponent(address)}&type=All`;
   }
@@ -69,10 +69,9 @@ function lemmyTarget({ address, target }: Link, instance: string | null): string
   return `${instance}/${kind}/${name}@${domain ?? target.host}`;
 }
 
-function mastodonTarget({ address, target, facts }: Link, instance: string | null): string | null {
-  if (instance === null || target.origin === instance) return null;
+function mastodonTarget({ address, target, facts }: Link, instance: string): string | null {
   const path = target.pathname;
-  const text = facts.text ?? '';
+  const text = facts.mastodonLinkText ?? '';
   if (facts.network === 'mastodon' || MASTODON_STATUS_PATHS.some((shape) => shape.test(path))) {
     return authorizeInteraction(instance, address);
   }

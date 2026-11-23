@@ -1,7 +1,7 @@
+import { provideSocialAccounts } from './social-accounts-testing';
 import { Provider, signal } from '@angular/core';
 import { ListAutoplayService } from '../app/core/preferences/list-autoplay.service';
 import { ArticlePostActions } from '../app/reader/article/post-actions/article-post-actions.service';
-import { SubscriptionsStore } from '../app/reader/state/subscriptions.store';
 import { ImageProxyService } from '../app/shared/proxied-image/image-proxy.service';
 import { failingImageProxy } from './image-proxy-testing';
 
@@ -9,10 +9,7 @@ import { failingImageProxy } from './image-proxy-testing';
 export function provideArticlePageStubs(): Provider[] {
   return [
     { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-    {
-      provide: SubscriptionsStore,
-      useValue: { lemmyHosts: signal([]), socialAccounts: signal([]) },
-    },
+    provideSocialAccounts(),
     { provide: ArticlePostActions, useValue: {} },
     { provide: ImageProxyService, useValue: failingImageProxy() },
   ];

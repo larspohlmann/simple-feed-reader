@@ -19,7 +19,7 @@ import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedTrackOrigin } from '../../audio/embed-track';
-import { openLinksOnOwnInstance } from '../decorators/own-instance-body-links';
+import { rewriteLinks } from '../decorators/own-instance-body-links';
 import { ownInstanceUrl } from '../../own-instance/own-instance-url';
 import { OwnInstanceLinks } from '../../own-instance/own-instance-links.service';
 import { SocialNetworkName } from '../../../core/social-network';
@@ -148,8 +148,8 @@ export class ArticleBody {
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || cancelled) return;
-          openLinksOnOwnInstance(host, (href, text) =>
-            ownInstanceUrl(href, mentionsAreMastodon ? { text } : {}, instances),
+          rewriteLinks(host, (href, text) =>
+            ownInstanceUrl(href, mentionsAreMastodon ? { mastodonLinkText: text } : {}, instances),
           );
         });
       },

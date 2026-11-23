@@ -6,8 +6,6 @@ const READER = join(__dirname, '..');
 const ALLOWED: Record<string, string> = {
   'shell/sidebar/sidebar-foot.component.html':
     'release notes and GitHub links, never a social post',
-  'article/article-page/article-page.component.html':
-    "binds the page source's openUrl, which each source resolves through OwnInstanceLinks",
 };
 
 function templatesUnder(directory: string): string[] {

@@ -53,10 +53,10 @@ const CASES: [string, LinkFacts, string][] = [
   ['https://medium.com/@author', {}, 'https://medium.com/@author'],
   [
     'https://mastodon.social/@alice',
-    { text: '@alice' },
+    { mastodonLinkText: '@alice' },
     authorize('https://mastodon.social/@alice'),
   ],
-  ['https://mastodon.social/tags/rust', { text: '#rust' }, 'https://m.home/tags/rust'],
+  ['https://mastodon.social/tags/rust', { mastodonLinkText: '#rust' }, 'https://m.home/tags/rust'],
   [
     'https://mastodon.social/@Gargron',
     { network: 'mastodon' },
@@ -90,12 +90,16 @@ describe('ownInstanceUrl', () => {
   it('encodes the whole mention href', () => {
     const href = 'https://mastodon.social/@alice?x=1#y';
 
-    expect(ownInstanceUrl(href, { text: '@alice' }, BOTH)).toBe(authorize(href));
+    expect(ownInstanceUrl(href, { mastodonLinkText: '@alice' }, BOTH)).toBe(authorize(href));
   });
 
   it('routes a users-path mention through authorize_interaction', () => {
     expect(
-      ownInstanceUrl('https://pixel.example/users/bob', { text: '@bob@pixel.example' }, BOTH),
+      ownInstanceUrl(
+        'https://pixel.example/users/bob',
+        { mastodonLinkText: '@bob@pixel.example' },
+        BOTH,
+      ),
     ).toBe(authorize('https://pixel.example/users/bob'));
   });
 
@@ -109,10 +113,12 @@ describe('ownInstanceUrl', () => {
   ])('keeps the body rule for %p with text %p', (href, text) => {
     const expected = href === 'https://mastodon.social/@alice/123' ? authorize(href) : href;
 
-    expect(ownInstanceUrl(href, { text }, BOTH)).toBe(expected);
+    expect(ownInstanceUrl(href, { mastodonLinkText: text }, BOTH)).toBe(expected);
   });
 
   it.each(['nonsense', 'mailto:someone@example.com', '#comments'])('leaves %p alone', (address) => {
-    expect(ownInstanceUrl(address, { network: 'mastodon', text: '@alice' }, BOTH)).toBe(address);
+    expect(ownInstanceUrl(address, { network: 'mastodon', mastodonLinkText: '@alice' }, BOTH)).toBe(
+      address,
+    );
   });
 });

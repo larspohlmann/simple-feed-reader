@@ -9,7 +9,7 @@
     class="source"
     appOwnInstanceHref
     [href]="profileUrl"
-    [linkNetwork]="current.social?.network ?? null"
+    [linkNetwork]="linkNetwork()"
     target="_blank"
     rel="noopener noreferrer"
     (click)="keepFromCard($event)"

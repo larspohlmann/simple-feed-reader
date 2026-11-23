@@ -59,6 +59,17 @@ describe('OwnInstanceLinks', () => {
     expect(links.open('https://lemmy.world/c/rust')).toBe('https://l.home/c/rust@lemmy.world');
   });
 
+  it('keeps the same instances when a reload brings the same values', () => {
+    store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
+    store.lemmyHosts.set(['lemmy.world']);
+    const before = links.instances();
+
+    store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
+    store.lemmyHosts.set(['lemmy.world']);
+
+    expect(links.instances()).toBe(before);
+  });
+
   it('forwards the stored home address', () => {
     store.socialAccounts.set([account(4, 'lemmy', 'https://l.home/')]);
 

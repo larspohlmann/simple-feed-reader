@@ -146,6 +146,7 @@ export function subscriptionsJson(
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
     socialAccounts: [],
+    lemmyHosts: [],
     unreadTotals: unreadTotalsOf(subscriptions),
     notifications: [],
     ...totals,

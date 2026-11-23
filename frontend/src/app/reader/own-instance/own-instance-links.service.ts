@@ -7,11 +7,14 @@ import { instanceOrigin, LinkFacts, OwnInstances, ownInstanceUrl } from './own-i
 export class OwnInstanceLinks {
   private readonly subscriptions = inject(SubscriptionsStore);
 
-  readonly instances: Signal<OwnInstances> = computed(() => ({
-    mastodon: this.findInstance('mastodon'),
-    lemmy: this.findInstance('lemmy'),
-    lemmyHosts: new Set(this.subscriptions.lemmyHosts()),
-  }));
+  readonly instances: Signal<OwnInstances> = computed(
+    () => ({
+      mastodon: this.findInstance('mastodon'),
+      lemmy: this.findInstance('lemmy'),
+      lemmyHosts: new Set(this.subscriptions.lemmyHosts()),
+    }),
+    { equal: sameInstances },
+  );
 
   open(address: string, facts: LinkFacts = {}): string {
     return ownInstanceUrl(address, facts, this.instances());
@@ -21,4 +24,13 @@ export class OwnInstanceLinks {
     const account = this.subscriptions.socialAccounts().find((ref) => ref.network === network);
     return account === undefined ? null : instanceOrigin(account.serviceUrl);
   }
+}
+
+function sameInstances(left: OwnInstances, right: OwnInstances): boolean {
+  return (
+    left.mastodon === right.mastodon &&
+    left.lemmy === right.lemmy &&
+    left.lemmyHosts.size === right.lemmyHosts.size &&
+    [...left.lemmyHosts].every((host) => right.lemmyHosts.has(host))
+  );
 }

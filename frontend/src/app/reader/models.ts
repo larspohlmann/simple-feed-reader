@@ -8,8 +8,9 @@ import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 import { ChapterDto, TranscriptDto } from './episode-detail';
-import { TrendingUnopened, TrendingWindow } from './trending/trending.models';
+import { TrendingWindow } from './trending/trending.models';
 import { FeedLanguage, FeedLanguageChoice } from './feed-language';
+import { SidebarTotalsDto } from './sidebar-totals';
 
 export type {
   DiscoverResult,
@@ -21,6 +22,12 @@ export type {
 } from './feed-discovery';
 export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
 export type { HeroImageDto, ReaderArticle, ReaderContent, ReaderFailure } from './reader-content';
+export type {
+  NotificationCountDto,
+  SidebarTotalsDto,
+  SubscriptionCountsResponse,
+  UnreadTotalsDto,
+} from './sidebar-totals';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -156,44 +163,12 @@ export interface SubscriptionDto {
   social: SocialFeedRefDto | null;
 }
 
-export interface SidebarTotalsDto {
-  favoritesCount: number;
-  keptCount: number;
-  sharedCount: number;
-  viewedCount: number;
-  unreadTotals: UnreadTotalsDto;
-  /** Unopened Trending stories in the window the request asked for (#2017). */
-  trending: TrendingUnopened;
-  notifications: NotificationCountDto[];
-}
-
 /** The sidebar bootstrap payload: the feed list plus the totals shown as badges on the
  *  Favorites/Kept/Shared/Recently-read nav items. */
 export interface SubscriptionsResponse extends SidebarTotalsDto {
   subscriptions: SubscriptionDto[];
   socialAccounts: SocialAccountRefDto[];
   lemmyHosts: string[];
-}
-
-/** The sidebar poll's cheap payload (#720): unread and entry counts per feed
- *  plus the totals, without the feeds, tags or descriptions the
- *  full list carries. A feed absent from `subscriptions` has no entries. */
-export interface SubscriptionCountsResponse extends SidebarTotalsDto {
-  subscriptions: { id: number; unreadCount: number; entryCount: number }[];
-}
-
-export interface NotificationCountDto {
-  network: SocialNetworkName;
-  unseenCount: number;
-}
-
-/** Unread per scope, each article counted once within its scope (#1679). */
-export interface UnreadTotalsDto {
-  allItems: number;
-  forYou: number;
-  tags: { id: number; unreadCount: number }[];
-  networks: { network: SocialNetworkName; unreadCount: number; profilesUnreadCount: number }[];
-  groups: Record<FeedGroupName, number>;
 }
 
 /** One playable or downloadable enclosure the feed declared (#906). */

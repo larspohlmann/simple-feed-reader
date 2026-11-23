@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -60,12 +59,10 @@ describe('EntryQuotingComponent', () => {
   });
 
   it("opens a Mastodon entry's quoted post on the reader's instance", () => {
-    TestBed.overrideProvider(SubscriptionsStore, {
-      useValue: {
-        lemmyHosts: signal([]),
-        socialAccounts: signal([aMastodonAccount('https://home.test')]),
-      },
-    });
+    TestBed.overrideProvider(
+      SubscriptionsStore,
+      provideSocialAccounts([aMastodonAccount('https://home.test')]),
+    );
     const element = mount(
       quoting({
         social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
