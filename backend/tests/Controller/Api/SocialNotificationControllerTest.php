@@ -17,19 +17,36 @@ use App\Entity\SocialNotificationPoll;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CanonicalItemKind;
+use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNotificationKind;
 use App\Service\Social\Lemmy\LemmyNotificationSource;
+use App\Service\Social\Notification\Model\NotificationPageModel;
 use App\Service\Social\Notification\NotificationSource\NotificationSourceInterface;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\MarkingNotificationSource;
+use App\Tests\Support\NotificationRows;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialNotificationRows;
+use App\Tests\Support\StubNotificationSource;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SocialNotificationControllerTest extends ApiTestCase
 {
+    private const int REFRESH_BUDGET = 30;
+
+    protected function setUp(): void
+    {
+        self::bootKernel();
+        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
+        $rateLimiterCache->clear();
+        self::ensureKernelShutdown();
+    }
+
     public function testListReturnsGroupsWithActorsCappedAtThree(): void
     {
         $client = self::createClient();
@@ -354,6 +371,90 @@ final class SocialNotificationControllerTest extends ApiTestCase
         $this->postSeen($client, ['network' => 'bluesky']);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testRefreshReturns204AndStoresTheFetchedNotifications(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-refresh@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $this->useSource(new StubNotificationSource([
+            $account->getIdentity() => new NotificationPageModel(
+                [NotificationRows::fetched('c-refresh', SocialNotificationKind::Reply)],
+                null,
+            ),
+        ]));
+
+        $this->postRefresh($client, ['network' => 'lemmy']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        $client->request('GET', '/api/me/notifications?network=lemmy');
+        $groups = $this->listPayload($client)['groups'];
+        self::assertCount(1, $groups);
+        self::assertSame('reply', $groups[0]['kind']);
+    }
+
+    public function testRefreshMapsRejectedCredentialsToItsProblemAndMarksTheAccount(): void
+    {
+        $client = self::createClient();
+        $user = $this->signIn($client, 'notification-refresh-rejected@example.test');
+        $account = $this->persisted(SocialAccounts::lemmyOf($user));
+        $accountId = $account->requireId();
+        $this->useSource(new StubNotificationSource([
+            $account->getIdentity() => new SocialCredentialsRejectedException('Lemmy refused the token.'),
+        ]));
+
+        $this->postRefresh($client, ['network' => 'lemmy']);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->entityManager()->clear();
+        $stored = $this->entityManager()->find(SocialAccount::class, $accountId);
+        self::assertNotNull($stored);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $stored->getStatus());
+    }
+
+    public function testRefreshIsRateLimitedPerUser(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'notification-refresh-limited@example.test');
+        for ($attempt = 0; $attempt < self::REFRESH_BUDGET; ++$attempt) {
+            $this->postRefresh($client, ['network' => 'bluesky']);
+            self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+        }
+
+        $this->postRefresh($client, ['network' => 'bluesky']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testRefreshWithoutANetworkIs422(): void
+    {
+        $client = self::createClient();
+        $this->signIn($client, 'notification-refresh-missing@example.test');
+
+        $this->postRefresh($client, []);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testRefreshNeedsAToken(): void
+    {
+        $client = self::createClient();
+
+        $this->postRefresh($client, ['network' => 'bluesky']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function postRefresh(KernelBrowser $client, array $body): void
+    {
+        $client->request(
+            'POST',
+            '/api/me/notifications/refresh',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, JSON_THROW_ON_ERROR),
+        );
     }
 
     private function useSource(NotificationSourceInterface $source): void
