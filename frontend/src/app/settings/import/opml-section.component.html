@@ -11,6 +11,16 @@
 
   <div class="group">
     <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
+    <input
+      type="file"
+      accept=".opml,.xml,text/xml,application/xml,text/x-opml"
+      [attr.aria-label]="'settings.opml.importLead' | transloco"
+      [disabled]="previewing()"
+      (change)="onFile($event)"
+    />
+    @if (previewing()) {
+      <p class="result">{{ 'settings.opml.previewing' | transloco }}</p>
+    }
     @if (importError(); as problem) {
       <app-error-banner [message]="problem.detail || problem.title" />
     }
@@ -23,7 +33,6 @@
                   imported: r.imported,
                   already: r.alreadySubscribed,
                   invalid: r.invalid,
-                  skipped: r.skippedOverLimit,
                 }
         }}
       </p>
