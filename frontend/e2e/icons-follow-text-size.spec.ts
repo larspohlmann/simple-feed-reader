@@ -165,10 +165,16 @@ async function stubArticle(page: Page): Promise<void> {
   );
 }
 
-async function open(browser: Browser, surface: Surface, step: Step): Promise<Page> {
+interface View {
+  surface: Surface;
+  step: Step;
+  viewport?: { width: number; height: number };
+}
+
+async function open(browser: Browser, { surface, step, viewport = DESKTOP }: View): Promise<Page> {
   const context = await browser.newContext({
     baseURL: test.info().project.use.baseURL,
-    viewport: DESKTOP,
+    viewport,
   });
   const page = await context.newPage();
   await presetLocalStorage(page, {
@@ -256,7 +262,7 @@ const ROWS_ON: Record<Surface, (keyof typeof ROWS)[]> = {
 };
 
 async function measure(browser: Browser, surface: Surface, step: Step): Promise<Measurement> {
-  const page = await open(browser, surface, step);
+  const page = await open(browser, { surface, step });
   const icons: Record<string, number[]> = {};
   for (const row of ROWS_ON[surface]) icons[row] = await iconHeights(page, ROWS[row]);
   const texts: Record<string, number> = {};
@@ -357,4 +363,53 @@ test.describe('icons follow the text size of their row', () => {
       }
     });
   }
+});
+
+const PHONE = { width: 375, height: 812 };
+const GROUPED_KICKER_HEIGHT = 23.5;
+
+/** Each grouped action button's box, the card's, and whether an ancestor that clips overflow cuts it. */
+async function actionBoxes(page: Page) {
+  return page.locator(`${ROWS.groupedKicker} app-entry-actions button`).evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      const card = button.closest('article')!.getBoundingClientRect();
+      const inside = (outer: DOMRect) =>
+        box.left >= outer.left - 0.5 &&
+        box.right <= outer.right + 0.5 &&
+        box.bottom <= outer.bottom + 0.5;
+      const clippers: Element[] = [];
+      for (let node = button.parentElement; node; node = node.parentElement) {
+        if (getComputedStyle(node).overflowX !== 'visible') clippers.push(node);
+      }
+      return {
+        insideCard: inside(card),
+        clipped: clippers.some((clipper) => !inside(clipper.getBoundingClientRect())),
+      };
+    }),
+  );
+}
+
+test.describe("a grouped card's kicker on a phone", () => {
+  test('wraps its actions at 150% rather than letting the card clip them', async ({ browser }) => {
+    const page = await open(browser, { surface: 'grouped', step: 150, viewport: PHONE });
+    const boxes = await actionBoxes(page);
+    expect(boxes.length, 'no grouped action button to measure').toBeGreaterThan(0);
+    expect(boxes.filter((box) => !box.insideCard).length, 'buttons outside the card').toBe(0);
+    expect(boxes.filter((box) => box.clipped).length, 'buttons clipped by an ancestor').toBe(0);
+    await page.context().close();
+  });
+
+  test('stays one line at 100%', async ({ browser }) => {
+    const page = await open(browser, { surface: 'grouped', step: 100, viewport: PHONE });
+    const heights = await page
+      .locator(`${ROWS.groupedKicker} .kicker`)
+      .evaluateAll((lines) => lines.map((line) => line.getBoundingClientRect().height));
+    expect(heights.length).toBeGreaterThan(0);
+    expect(
+      heights.every((height) => height === GROUPED_KICKER_HEIGHT),
+      `${heights}`,
+    ).toBe(true);
+    await page.context().close();
+  });
 });
