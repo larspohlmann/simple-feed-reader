@@ -41,6 +41,46 @@ final readonly class BulkTagger
         $this->nestUnder($batch, $tag, $names);
     }
 
+    /** Joins the chosen tags, then the path's innermost tag, creating what is missing and moving nothing that exists. */
+    public function tagInPlace(
+        BulkSubscribeBatch $batch,
+        Subscription $subscription,
+        BulkSubscribeItemModel $item,
+    ): void {
+        foreach ($item->chosenTags as $chosenTag) {
+            $this->joinOnce($batch->positions, $subscription, $chosenTag);
+        }
+        $innermost = $this->walkPath($batch, $item);
+        if ($innermost !== null) {
+            $this->joinOnce($batch->positions, $subscription, $innermost);
+        }
+    }
+
+    private function joinOnce(BulkSubscribePositions $positions, Subscription $subscription, Tag $tag): void
+    {
+        if (!$subscription->getTags()->contains($tag)) {
+            $this->joinTag($positions, $subscription, $tag);
+        }
+    }
+
+    private function walkPath(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item): ?Tag
+    {
+        $parent = null;
+        foreach ($item->tagPath as $name) {
+            $parent = $this->existingTag($batch, $name) ?? $this->newTagUnder($batch, $name, $item->tagStyle, $parent);
+        }
+
+        return $parent;
+    }
+
+    private function newTagUnder(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style, ?Tag $parent): Tag
+    {
+        $tag = $this->newTag($batch, $name, $style);
+        $tag->setParent($parent);
+
+        return $tag;
+    }
+
     /**
      * @param list<string> $path
      *

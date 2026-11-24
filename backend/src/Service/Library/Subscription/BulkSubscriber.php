@@ -47,18 +47,41 @@ final readonly class BulkSubscriber
      */
     public function subscribeAll(User $user, iterable $items): BulkSubscribeResultModel
     {
+        return $this->subscribeUnderLock($user, $items, $this->bulkTagger->tag(...));
+    }
+
+    /**
+     * Tags each feed with the tags its item names where they already stand: a missing tag is created, a stored one
+     * is never moved.
+     *
+     * @param iterable<BulkSubscribeItemModel> $items
+     */
+    public function subscribeAllInPlace(User $user, iterable $items): BulkSubscribeResultModel
+    {
+        return $this->subscribeUnderLock($user, $items, $this->bulkTagger->tagInPlace(...));
+    }
+
+    /**
+     * @param iterable<BulkSubscribeItemModel> $items
+     * @param \Closure(BulkSubscribeBatch, Subscription, BulkSubscribeItemModel): void $tagger
+     */
+    private function subscribeUnderLock(User $user, iterable $items, \Closure $tagger): BulkSubscribeResultModel
+    {
         return $this->tagStructureLock->hold(
             $user,
-            fn (): BulkSubscribeResultModel => $this->subscribeAllHeld($user, $items),
+            fn (): BulkSubscribeResultModel => $this->subscribeAllHeld($user, $items, $tagger),
         );
     }
 
-    /** @param iterable<BulkSubscribeItemModel> $items */
-    private function subscribeAllHeld(User $user, iterable $items): BulkSubscribeResultModel
+    /**
+     * @param iterable<BulkSubscribeItemModel> $items
+     * @param \Closure(BulkSubscribeBatch, Subscription, BulkSubscribeItemModel): void $tagger
+     */
+    private function subscribeAllHeld(User $user, iterable $items, \Closure $tagger): BulkSubscribeResultModel
     {
         $batch = $this->open($user);
         foreach ($items as $item) {
-            $this->subscribeOne($batch, $item);
+            $this->subscribeOne($batch, $item, $tagger);
         }
 
         $this->entityManager->flush();
@@ -81,7 +104,8 @@ final readonly class BulkSubscriber
         );
     }
 
-    private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item): void
+    /** @param \Closure(BulkSubscribeBatch, Subscription, BulkSubscribeItemModel): void $tagger */
+    private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item, \Closure $tagger): void
     {
         $url = $item->feedUrl;
         if (!$this->isSubscribableUrl($url)) {
@@ -109,7 +133,7 @@ final readonly class BulkSubscriber
         }
 
         $subscription = $this->persistSubscription($batch, $feed ?? $this->persistNewFeed($item));
-        $this->bulkTagger->tag($batch, $subscription, $item);
+        $tagger($batch, $subscription, $item);
         $batch->recordSubscribed($url, $subscription);
     }
 
