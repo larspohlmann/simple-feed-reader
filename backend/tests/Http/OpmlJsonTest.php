@@ -7,12 +7,38 @@ namespace App\Tests\Http;
 use App\Http\OpmlJson;
 use App\Service\Library\Opml\Model\OpmlFeedModel;
 use App\Service\Library\Opml\Model\OpmlFeedState;
+use App\Service\Library\Opml\Model\OpmlImportResultModel;
 use App\Service\Library\Opml\Model\OpmlPlacedFolderModel;
 use App\Service\Library\Opml\Model\OpmlPreviewModel;
 use PHPUnit\Framework\TestCase;
 
 final class OpmlJsonTest extends TestCase
 {
+    public function testMapsEveryCount(): void
+    {
+        self::assertSame(
+            ['imported' => 5, 'alreadySubscribed' => 2, 'invalid' => 1, 'skippedOverLimit' => 3],
+            OpmlJson::imported(new OpmlImportResultModel(5, 2, 1, 3)),
+        );
+    }
+
+    public function testADroppedFolderCarriesTheDestinationOfTheFolderAboveIt(): void
+    {
+        $dropped = new OpmlPlacedFolderModel('Misc', true, ['P', 'Tech'], [], []);
+        $tech = new OpmlPlacedFolderModel('Tech', false, ['P', 'Tech'], [], [$dropped]);
+        $root = new OpmlPlacedFolderModel(null, false, ['P'], [], [$tech]);
+
+        $json = OpmlJson::preview(new OpmlPreviewModel(1, $root, []));
+
+        self::assertSame([[
+            'name' => 'Misc',
+            'dropped' => true,
+            'destination' => ['P', 'Tech'],
+            'feeds' => [],
+            'folders' => [],
+        ]], $json['root']['folders'][0]['folders']);
+    }
+
     public function testAPreviewNestsFoldersAndCarriesEachFeedsState(): void
     {
         $feed = new OpmlFeedModel('https://a.example/feed.xml', 'A', 'rss');
