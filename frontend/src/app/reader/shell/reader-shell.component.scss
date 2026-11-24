@@ -215,19 +215,16 @@ app-reader-header.hidden {
 }
 
 /* A covered layer is not painted once the one above has slid over it: a scroll that outruns the
-   paint above showed it through (#2459). Painted while the layer above slides or a gesture moves it. */
+   paint above showed it through (#2459). Painted while the layer above slides or a gesture moves it.
+   A transition, not an animation: replacing a layer's own `article-enter` replays it on unpinning (#2527). */
 .main > .page-pinned:not(.article-leave) {
-  animation: page-covered 0s $layer-slide forwards;
+  visibility: hidden;
+  transition: visibility 0s $layer-slide;
 }
 
 .main:has(> .page-moving) > .page-pinned {
-  animation: none;
-}
-
-@keyframes page-covered {
-  to {
-    visibility: hidden;
-  }
+  visibility: visible;
+  transition: none;
 }
 
 /* The list pane's width is user-owned: dragged on the divider below, persisted
