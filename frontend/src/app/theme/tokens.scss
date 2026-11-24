@@ -192,7 +192,7 @@
   /* Type scale. --fs-read is a step above --fs-base: long-form reading wants
      more than UI chrome. Article headings size in `em` against it, so this
      one value rescales the whole article. */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+  --font-text: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
 
   @include type-scale.fixed;
 
