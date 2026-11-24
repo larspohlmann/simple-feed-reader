@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Foundation\Sanitize\EntrySanitizer;
+use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Ingestion\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Outbound\Fetch\AnswerSettler\PassThroughSettler;
@@ -160,6 +163,11 @@ final class SocialApiWiring
             'max_nesting_level' => 20,
             'max_delimiters_per_line' => 1000,
         ]));
+    }
+
+    public static function commentBodyRenderer(): CommentBodyRenderer
+    {
+        return new CommentBodyRenderer(self::markdownHtml(), new EntrySanitizer(new TrailingBlankRemover()));
     }
 
     public static function blueskyAccount(): SocialAccount
