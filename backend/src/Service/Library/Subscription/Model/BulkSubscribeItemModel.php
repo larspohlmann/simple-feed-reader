@@ -16,7 +16,7 @@ final readonly class BulkSubscribeItemModel
 {
     /**
      * @param list<string> $tagPath group names, outermost first; the feed is tagged with the innermost
-     * @param list<Tag> $chosenTags the account's own tags the feed joins as they are; read by the in-place path only
+     * @param list<Tag> $chosenTags
      */
     public function __construct(
         public string $feedUrl,

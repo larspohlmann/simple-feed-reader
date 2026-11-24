@@ -8,7 +8,7 @@ final readonly class OpmlImportSelectionModel
 {
     /**
      * @param list<string>              $feedUrls
-     * @param array<string, list<int>> $tagIdsByFeedUrl tags that replace a feed's folder; [] leaves it untagged
+     * @param array<string, list<int>> $tagIdsByFeedUrl
      */
     public function __construct(
         public string $opml,

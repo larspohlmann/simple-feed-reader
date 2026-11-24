@@ -7,6 +7,7 @@ namespace App\Service\Library\Subscription\Pass;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 
 final class BulkSubscribeBatch
@@ -25,6 +26,8 @@ final class BulkSubscribeBatch
         private int $room,
         public readonly BulkSubscribePositions $positions,
         public readonly BulkSubscribeTagTree $tagTree,
+        /** @var \Closure(self, Subscription, BulkSubscribeItemModel): void */
+        private readonly \Closure $tagger,
     ) {
         $this->result = new BulkSubscribeResultModel();
     }
@@ -32,6 +35,11 @@ final class BulkSubscribeBatch
     public function result(): BulkSubscribeResultModel
     {
         return $this->result;
+    }
+
+    public function tag(Subscription $subscription, BulkSubscribeItemModel $item): void
+    {
+        ($this->tagger)($this, $subscription, $item);
     }
 
     public function hasSubscribed(string $url): bool

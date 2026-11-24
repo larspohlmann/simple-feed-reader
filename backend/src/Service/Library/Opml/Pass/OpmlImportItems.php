@@ -42,14 +42,14 @@ final readonly class OpmlImportItems
     /** @param list<string> $destination */
     private function buildItem(OpmlFeedModel $feed, array $destination): BulkSubscribeItemModel
     {
-        $isChosen = array_key_exists($feed->url, $this->chosenTagsByFeedUrl);
+        $chosen = $this->chosenTagsByFeedUrl[$feed->url] ?? null;
 
         return new BulkSubscribeItemModel(
             feedUrl: $feed->url,
             feedTitle: $feed->title,
-            tagPath: $isChosen ? [] : $destination,
+            tagPath: null === $chosen ? $destination : [],
             sourceFormat: $feed->sourceFormat,
-            chosenTags: $this->chosenTagsByFeedUrl[$feed->url] ?? [],
+            chosenTags: $chosen ?? [],
         );
     }
 }
