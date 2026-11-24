@@ -6,6 +6,7 @@ namespace App\Service\Content\Comments;
 
 use App\Service\Content\Comments\Model\CommentBodyFormat;
 use App\Service\Content\Comments\Model\CommentBodyModel;
+use App\Service\Foundation\Html\Support\BareUrlLinks;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Foundation\Text\Support\LinkedPlainText;
@@ -18,7 +19,9 @@ final readonly class CommentBodyRenderer
 
     public function buildHtml(CommentBodyModel $body): ?string
     {
-        return $this->sanitizer->sanitize($this->convertToHtml($body));
+        $html = $this->convertToHtml($body);
+
+        return $this->sanitizer->sanitize($html === null ? null : BareUrlLinks::linkHtml($html));
     }
 
     private function convertToHtml(CommentBodyModel $body): ?string

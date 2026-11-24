@@ -45,6 +45,30 @@ final class CommentBodyRendererTest extends TestCase
         );
     }
 
+    public function testABareUrlInHtmlBecomesALinkThatOpensInANewTab(): void
+    {
+        self::assertSame(
+            '<p>see <a href="https://example.org/a" rel="noopener noreferrer" target="_blank">'
+                . 'https://example.org/a</a>.</p>',
+            $this->renderer->buildHtml(CommentBodyModel::fromHtml('<p>see https://example.org/a.</p>')),
+        );
+    }
+
+    public function testABareUrlInMarkdownBecomesALink(): void
+    {
+        self::assertStringContainsString(
+            '<a href="https://example.org/a"',
+            (string) $this->renderer->buildHtml(CommentBodyModel::fromMarkdown('see https://example.org/a')),
+        );
+    }
+
+    public function testAMarkdownAutolinkIsLinkedOnce(): void
+    {
+        $html = (string) $this->renderer->buildHtml(CommentBodyModel::fromMarkdown('<https://example.org/a>'));
+
+        self::assertSame(1, substr_count($html, '<a '));
+    }
+
     #[DataProvider('emptyBodies')]
     public function testAnEmptyBodyRendersAsNothing(CommentBodyModel $body): void
     {
