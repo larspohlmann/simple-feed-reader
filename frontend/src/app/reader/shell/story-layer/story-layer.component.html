@@ -1,14 +1,16 @@
 <ng-template #leading>
-  <button
-    appIconButton
-    class="story-back"
-    type="button"
-    [attr.aria-label]="'reader.backToList' | transloco"
-    [attr.title]="'reader.backToList' | transloco"
-    (click)="overlay.close()"
-  >
-    <app-icon name="arrow_back" size="md" />
-  </button>
+  @if (overlay.returnsToList()) {
+    <button
+      appIconButton
+      class="story-back"
+      type="button"
+      [attr.aria-label]="'reader.backToList' | transloco"
+      [attr.title]="'reader.backToList' | transloco"
+      (click)="overlay.close()"
+    >
+      <app-icon name="arrow_back" size="md" />
+    </button>
+  }
   @if (listLeading(); as shared) {
     <ng-container [ngTemplateOutlet]="shared" />
   }

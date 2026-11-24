@@ -61,7 +61,7 @@
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
   [appDrawerSwipeDisabled]="
-    !screen.isNarrow() || articleFullscreen() || storyOverlay.open() || sidebarOrganising()
+    !screen.isNarrow() || articleFullscreen() || storyOverlay.returnsToList() || sidebarOrganising()
   "
   (appDrawerSwipeOpenDrawer)="setSidebarOpen(true)"
   (appDrawerSwipeCloseDrawer)="setSidebarOpen(false)"

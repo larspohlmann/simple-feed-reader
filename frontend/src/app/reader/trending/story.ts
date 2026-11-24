@@ -20,6 +20,15 @@ export function storyListLink(storyId: number): [string, number] {
 /** Merged into the current query, so a story opens over the current list but closes an open article (#2479). */
 export const STORY_LIST_QUERY_PARAMS = { entry: null, link: null } as const;
 
+/** The navigation state of a story the sidebar opens as the root, as a feed is: no way back to the list beneath (#2518). */
+export interface StoryRootState {
+  readonly rootStory: number;
+}
+
+export function storyRootState(storyId: number): StoryRootState {
+  return { rootStory: storyId };
+}
+
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts
  *  entries the card does not show, or because one of its articles was opened here (#2017). */
 export function isStoryViewed(story: TrendingStoryDto): boolean {

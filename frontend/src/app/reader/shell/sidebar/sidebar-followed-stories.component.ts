@@ -4,7 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryDto } from '../../trending/trending.models';
-import { STORY_LIST_QUERY_PARAMS, storyListLink } from '../../trending/story';
+import { STORY_LIST_QUERY_PARAMS, storyListLink, storyRootState } from '../../trending/story';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
@@ -24,6 +24,7 @@ export class SidebarFollowedStoriesComponent {
   protected readonly rows = inject(SidebarRowActions);
   protected readonly storyListLink = storyListLink;
   protected readonly storyListQueryParams = STORY_LIST_QUERY_PARAMS;
+  protected readonly storyRootState = storyRootState;
 
   readonly expanded = signal(false);
   protected readonly newTotal = computed(() =>

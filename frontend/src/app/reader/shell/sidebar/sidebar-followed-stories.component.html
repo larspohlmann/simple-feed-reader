@@ -32,6 +32,7 @@
               [routerLink]="storyListLink(story.id)"
               [queryParams]="storyListQueryParams"
               queryParamsHandling="merge"
+              [state]="storyRootState(story.id)"
             >
               <app-icon name="notifications_active" size="md" />
               <span class="name">{{

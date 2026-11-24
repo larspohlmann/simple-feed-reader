@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PAGE_LEAD_REM } from './page-scroll-owner';
 import { Dialog } from '@angular/cdk/dialog';
@@ -44,6 +45,7 @@ import { EntriesStore } from '../state/entries.store';
 import { EntryRowCache } from '../state/entry-row-cache';
 import { ListContext } from '../state/list-context';
 import { StoryLayerComponent } from './story-layer/story-layer.component';
+import { storyRootState } from '../trending/story';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
@@ -3502,6 +3504,26 @@ describe('ReaderShellComponent', () => {
       fixture.componentInstance.sidebarOrganising.set(true);
       fixture.detectChanges();
       expect(swipe.disabled()).toBe(true);
+    });
+
+    describe('over an open story (#2518)', () => {
+      afterEach(() => pp.next(convertToParamMap({})));
+
+      function drawerSwipeOverStory(state: unknown): DrawerSwipeDirective {
+        TestBed.inject(Location).replaceState('/trending/stories/5', '', state);
+        pp.next(convertToParamMap({ story: '5' }));
+        return bootDrawerShell()
+          .debugElement.query(By.directive(DrawerSwipeDirective))
+          .injector.get(DrawerSwipeDirective);
+      }
+
+      it('leaves the swipe to a story opened over a list, which it takes back to that list', () => {
+        expect(drawerSwipeOverStory(null).disabled()).toBe(true);
+      });
+
+      it('opens the drawer from a story the sidebar opened as the root', () => {
+        expect(drawerSwipeOverStory(storyRootState(5)).disabled()).toBe(false);
+      });
     });
 
     it('resets organising when the drawer closes', () => {

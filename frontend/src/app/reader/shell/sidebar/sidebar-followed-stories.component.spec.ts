@@ -1,10 +1,12 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Location } from '@angular/common';
 import { Router, provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
 import { FollowedStoryDto } from '../../trending/trending.models';
+import { storyRootState } from '../../trending/story';
 import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
@@ -118,6 +120,19 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
 
     const link = root(fixture).querySelector('.followed-row .nav');
     expect(link?.getAttribute('href')).toBe('/trending/stories/7?tag=56');
+  });
+
+  it('opens the story as the root, as a feed is (#2518)', async () => {
+    const fixture = mount([story(7)]);
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/?tag=56');
+    expand(fixture);
+
+    root(fixture).querySelector<HTMLAnchorElement>('.followed-row .nav')!.click();
+    await fixture.whenStable();
+
+    expect(router.url).toBe('/trending/stories/7?tag=56');
+    expect(TestBed.inject(Location).getState()).toEqual(expect.objectContaining(storyRootState(7)));
   });
 
   it('shows the count on a row that has new members, and none on one that has not', () => {

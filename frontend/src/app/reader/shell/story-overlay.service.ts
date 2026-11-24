@@ -1,8 +1,12 @@
-import { Injectable, computed, inject } from '@angular/core';
-import { NavigationExtras, Router } from '@angular/router';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, NavigationExtras, Router } from '@angular/router';
+import { filter } from 'rxjs';
 import { ListPreferences } from '../list/list-preferences.service';
 import { SelectionOf, sameSelection, trendingStorySelection } from '../query/query';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { StoryRootState } from '../trending/story';
 import { ReaderRouteState } from './reader-route-state.service';
 
 const ONTO_THE_LIST: NavigationExtras = { queryParamsHandling: 'preserve' };
@@ -14,9 +18,13 @@ export class StoryOverlay {
   private readonly router = inject(Router);
   private readonly followedStories = inject(FollowedStoriesStore);
   private readonly listPreferences = inject(ListPreferences);
+  private readonly location = inject(Location);
 
   readonly storyId = inject(ReaderRouteState).storyId;
   readonly open = computed(() => this.storyId() !== null);
+  private readonly rootStoryId = signal(rootStoryOf(this.location.getState()));
+  /** A story the sidebar opened is the root (#2518): no back arrow, and the swipe opens the drawer. */
+  readonly returnsToList = computed(() => this.open() && this.storyId() !== this.rootStoryId());
   readonly selection = computed(
     (): SelectionOf<'trending-story'> | null => {
       const id = this.storyId();
@@ -27,6 +35,15 @@ export class StoryOverlay {
     { equal: (left, right) => (left && right ? sameSelection(left, right) : left === right) },
   );
 
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.rootStoryId.set(this.rootStoryAfterNavigation()));
+  }
+
   close(): void {
     void this.router.navigate(['/'], ONTO_THE_LIST);
   }
@@ -36,4 +53,18 @@ export class StoryOverlay {
     this.followedStories.load();
     void this.router.navigate(['/'], { ...ONTO_THE_LIST, replaceUrl: true });
   }
+
+  /** Opening or closing one of the root story's articles navigates without the sidebar's mark. */
+  private rootStoryAfterNavigation(): number | null {
+    const marked = rootStoryOf(this.location.getState());
+    if (marked !== null) return marked;
+    const root = this.rootStoryId();
+    return root === this.storyId() ? root : null;
+  }
+}
+
+function rootStoryOf(state: unknown): number | null {
+  if (typeof state !== 'object' || state === null || !('rootStory' in state)) return null;
+  const { rootStory } = state as StoryRootState;
+  return typeof rootStory === 'number' ? rootStory : null;
 }
