@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.4] - 2026-11-24
+
 ### Highlights
 
 This release adds a classic theme and a notification dot on the browser tab.
@@ -20,6 +22,23 @@ warmer, calmer colours, in light and dark. Choose it in Settings → Preferences
 **Notification dot on the tab.** Leave the reader in a background tab and
 still see when a Bluesky, Mastodon or Lemmy notification arrives: a dot
 appears on its tab icon.
+
+## What's Changed
+* Article view: one pane bar with the list header, aligned and frosted (#2509) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2510
+* Comment bodies: one renderer for every source, bare URLs linked by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2513
+* fix(#2514): no second rule after a list divider in the airy magazine by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2516
+* feat(#2515): a dot on the tab's favicon while a social notification is unseen by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2517
+* fix(#2518): a story opened from the sidebar is the root, so swiping right opens the drawer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2520
+* fix(#2519): a cross-post's "cross-posted from" credit gets no link card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2522
+* fix(#2521): the article sits on the list's sheet over the darker page ground by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2523
+* docs(#2525): run the full gate set once per branch, not per task by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2526
+* fix(#2527): swiping back from a story's article no longer replays the story's slide-in by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2528
+* Settings opens on Preferences; header menu drops Admin by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2530
+* feat(#2524): a classic theme, and a text-size control that moves the whole content area by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2532
+* docs(#2533): v1.10.4 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2534
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.3...v1.10.4
 
 ## [v1.10.3] - 2026-11-23
 
