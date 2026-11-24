@@ -12,8 +12,8 @@ const CLASSIC_TYPE = {
   '--summary-lh': '1.45',
   '--read-lh': '1.62',
   '--read-heading-weight': '650',
-  '--brand-weight': '700',
-  '--brand-size': '1.2em',
+  '--app-name-weight': '700',
+  '--app-name-size': '1.2em',
   '--count-numerals': 'lining-nums tabular-nums',
 };
 
