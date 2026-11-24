@@ -23,6 +23,10 @@ describe('SETTINGS_SECTIONS', () => {
     expect(SETTINGS_SECTIONS.map((section) => section.path)).not.toContain('profile');
   });
 
+  it('lists Preferences first, the section the settings area opens on (#2529)', () => {
+    expect(SETTINGS_SECTIONS[0].path).toBe('preferences');
+  });
+
   it('lists Visibility right after Organise', () => {
     const paths = SETTINGS_SECTIONS.map((section) => section.path);
     expect(paths[paths.indexOf('organise') + 1]).toBe('visibility');

@@ -189,23 +189,15 @@ describe('ReaderHeaderComponent', () => {
       expect(menu.querySelector('.head')).toBeNull();
     });
 
-    it('keeps settings, admin and sign out with their icons', () => {
+    it('keeps settings and sign out, and no admin item even for an admin (#2529)', () => {
       const menu = openMenu(createWith([], true));
       expect(menu.getAttribute('role')).toBe('menu');
       const icons = Array.from(menu.querySelectorAll('[role=menuitem] app-icon')).map((icon) =>
         icon.getAttribute('name'),
       );
-      expect(icons).toEqual(['settings', 'admin_panel_settings', 'logout']);
-      expect(menu.querySelectorAll('[role=menuitem]')).toHaveLength(3);
-      expect(menu.querySelector('button[role=menuitem]')?.classList).toContain('signout');
-    });
-
-    it('leaves the admin item out for a non-admin', () => {
-      const menu = openMenu(createWith([]));
-      const icons = Array.from(menu.querySelectorAll('[role=menuitem] app-icon')).map((icon) =>
-        icon.getAttribute('name'),
-      );
       expect(icons).toEqual(['settings', 'logout']);
+      expect(menu.querySelectorAll('[role=menuitem]')).toHaveLength(2);
+      expect(menu.querySelector('button[role=menuitem]')?.classList).toContain('signout');
     });
   });
 
@@ -244,7 +236,7 @@ describe('ReaderHeaderComponent', () => {
     });
   });
 
-  it('shows a Settings link, and Admin only for admins', () => {
+  it('shows a Settings link and no Admin link', () => {
     const fixture = create();
     const element = fixture.nativeElement as HTMLElement;
     (element.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
@@ -264,17 +256,6 @@ describe('ReaderHeaderComponent', () => {
     fixture.detectChanges();
 
     expect(element.querySelector('.menu')).toBeNull();
-  });
-
-  it('shows Admin when the user is an admin', () => {
-    TestBed.overrideProvider(AuthService, {
-      useValue: { user: signal({ email: 'a@b.c' }), logout: jest.fn(), isAdmin: () => true },
-    });
-    const fixture = create();
-    const element = fixture.nativeElement as HTMLElement;
-    (element.querySelector('[aria-haspopup="menu"]') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(element.querySelector('a[routerLink="/admin/users"]')).not.toBeNull();
   });
 
   describe('tap the empty middle to scroll the list to the top', () => {

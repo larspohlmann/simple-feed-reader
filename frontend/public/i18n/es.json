@@ -1549,7 +1549,6 @@
     "accountWithNotificationsOne": "Cuenta, 1 notificación sin ver",
     "accountWithNotificationsOther": "Cuenta, {{count}} notificaciones sin ver",
     "settings": "Configuración",
-    "admin": "Administración",
     "signOut": "Cerrar sesión",
     "readerView": "Vista de lectura",
     "original": "Vista original",

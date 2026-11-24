@@ -1549,7 +1549,6 @@
     "accountWithNotificationsOne": "Konto, 1 ungesehene Benachrichtigung",
     "accountWithNotificationsOther": "Konto, {{count}} ungesehene Benachrichtigungen",
     "settings": "Einstellungen",
-    "admin": "Admin",
     "signOut": "Abmelden",
     "readerView": "Leseansicht",
     "original": "Originalansicht",
