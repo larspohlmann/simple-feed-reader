@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { ThemeName } from '../../theme/themes/registry';
 import { CurrentUser } from '../auth/auth.service';
 import { CachedAccountChoice } from './cached-account-choice';
 import { THEME_NAMES, THEME_NAME_KEY } from './theme-name';
@@ -12,7 +13,7 @@ export class ThemeNameService extends CachedAccountChoice<'theme'> {
     this.applyAttribute();
   }
 
-  override set(choice: 'graphite' | 'classic'): void {
+  override set(choice: ThemeName): void {
     super.set(choice);
     this.applyAttribute();
   }
