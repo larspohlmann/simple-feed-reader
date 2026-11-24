@@ -4,7 +4,7 @@
 
 **Goal:** While any social network has an unseen notification, the reader's favicon carries a red dot. A background tab keeps that dot current.
 
-**Architecture:** The backend moves the existing global change marker (`public/state/change-marker.json`) whenever the number of unseen notification rows changes: in the poll, the manual refresh, the prune and the seen endpoint. The reader's `SidebarCountsPoll` keeps a slow 5-minute marker tick while the tab is hidden, where it stopped before. A new reader-provided `FaviconUnseenDot` swaps the `<link rel="icon">` hrefs to a static badged icon set while `SubscriptionsStore.unseenNotificationsTotal()` is above zero.
+**Architecture:** The backend moves the existing global change marker (`public/state/change-marker.json`) whenever an account's number of unseen notification rows changes: in the poll, the manual refresh and the seen endpoint. Each count covers the one account being changed. The reader's `SidebarCountsPoll` keeps a slow 5-minute marker tick while the tab is hidden, where it stopped before. A new reader-provided `FaviconUnseenDot` swaps the `<link rel="icon">` hrefs to a static badged icon set while `SubscriptionsStore.unseenNotificationsTotal()` is above zero.
 
 **Tech Stack:** Symfony 8.1 / PHP 8.5 / Doctrine (backend), Angular 20 signals + Jest (frontend), `rsvg-convert` for the PNG.
 
@@ -28,7 +28,7 @@
 4. **A page the idle limit already wrote off, then hidden**: the slow hidden tick must start anyway. Task 2 pins it.
 5. **Notifications seen on another device or in the network's own app** (the poll syncs `seenUntil`) must move the marker so the dot clears. Task 1's `seenUntil` test pins it.
 
-Known and accepted: a sweep in which exactly as many rows turn seen as arrive leaves the unseen count unchanged. The marker doesn't move then, and the poll's existing 5-minute floor tick catches it.
+Known and accepted, both caught by the poll's existing 5-minute floor tick: a single poll of one account in which exactly as many rows turn seen as arrive leaves that account's count unchanged; and a 30-day-old unseen row removed by `prune()` doesn't move the marker. `prune()` deletes across all accounts, and ageing out isn't news.
 
 ---
 
@@ -37,16 +37,16 @@ Known and accepted: a sweep in which exactly as many rows turn seen as arrive le
 **Files:**
 - Create: `backend/src/Service/Social/Notification/UnseenCountWatch.php`
 - Modify: `backend/src/Repository/SocialNotificationRepository.php` (add `countUnseen()`)
-- Modify: `backend/src/Service/Social/Notification/NotificationStore.php` (`record()` and `prune()` run inside the watch)
-- Modify: `backend/src/Service/Social/Notification/NotificationSeenMarker.php` (`markSeen()` runs inside the watch)
+- Modify: `backend/src/Service/Social/Notification/NotificationStore.php` (`record()` runs inside the watch; `prune()` stays as it is)
+- Modify: `backend/src/Service/Social/Notification/NotificationSeenMarker.php` (`markAccountSeen()` runs inside the watch)
 - Modify: `backend/src/Service/Ingestion/Refresh/ContentChangeMarker/ContentChangeMarkerInterface.php`: the docblock says a moved marker means an import stored new content *or* the unseen notification count changed
 - Modify every place that constructs `NotificationStore` or `NotificationSeenMarker` in tests: `backend/tests/Support/NotificationPollWiring.php`, `backend/tests/Service/Social/Notification/NotificationContextLookupTest.php`, `NotificationStoreTest.php`, `NotificationSeenMarkerTest.php`, plus any other hit of `grep -rn "new NotificationStore(\|new NotificationSeenMarker(" backend/tests`
 - Test: `backend/tests/Service/Social/Notification/UnseenCountWatchTest.php` (new), additions to `NotificationStoreTest.php` and `NotificationSeenMarkerTest.php`
 
 **Interfaces:**
-- Produces: `SocialNotificationRepository::countUnseen(): int` counts every row with `seen = false`, across all users (the marker is global). A DQL `COUNT` in the repository.
+- Produces: `SocialNotificationRepository::countUnseen(SocialAccount $account): int` counts the account's rows with `seen = false`. A DQL `COUNT` in the repository.
 - Produces: `final readonly class UnseenCountWatch` with constructor `(SocialNotificationRepository $notifications, ContentChangeMarkerInterface $changeMarker)` and
-  `public function watch(\Closure $change): mixed`, templated `@template T` / `@param \Closure(): T $change` / `@return T`. It counts, runs `$change`, counts again, calls `markChanged()` when the two counts differ, and returns `$change`'s result. If `$change` throws, the exception propagates and nothing is marked.
+  `public function watch(SocialAccount $account, \Closure $change): mixed`, templated `@template T` / `@param \Closure(): T $change` / `@return T`. It counts the account's unseen rows, runs `$change`, counts them again, calls `markChanged()` when the two counts differ, and returns `$change`'s result. If `$change` throws, the exception propagates and nothing is marked.
 - `NotificationStore` gains a 4th constructor parameter `UnseenCountWatch $unseenCountWatch`; `NotificationSeenMarker` gains a 6th. Public signatures stay as they are.
 - Tests use the existing `App\Tests\Support\RecordingContentChangeMarker` (`public int $marks`).
 
@@ -54,7 +54,8 @@ Known and accepted: a sweep in which exactly as many rows turn seen as arrive le
   - `testMarksWhenTheChangeAddsAnUnseenRow`: inside `watch`, add one unseen row → `$marker->marks === 1`.
   - `testMarksWhenTheChangeSeesARow`: seed one unseen row; inside `watch`, `markSeen()` it and flush → `marks === 1`.
   - `testLeavesTheMarkerAloneWhenTheCountHolds`: seed one unseen row; `watch` a closure that touches nothing → `marks === 0`.
-  - `testReturnsWhatTheChangeReturned`: `self::assertSame(7, $watch->watch(static fn (): int => 7))`.
+  - `testCountsOnlyTheWatchedAccount`: seed an unseen row on another user's account; watch the first account while that other row is marked seen and a new unseen row is added to the other account → `marks === 0`.
+  - `testReturnsWhatTheChangeReturned`: `self::assertSame(7, $watch->watch($account, static fn (): int => 7))`.
 - [ ] **Step 2: Run it and watch it fail.** `cd backend && TEST_TOKEN=t1 php bin/phpunit tests/Service/Social/Notification/UnseenCountWatchTest.php` → error: class `UnseenCountWatch` not found.
 - [ ] **Step 3: Implement `countUnseen()` and `UnseenCountWatch`.**
 - [ ] **Step 4: Run it.** Same command → 4 tests pass.
@@ -62,11 +63,10 @@ Known and accepted: a sweep in which exactly as many rows turn seen as arrive le
   - `NotificationStoreTest::testRecordingANewUnseenRowMovesTheMarker` → `marks === 1`.
   - `NotificationStoreTest::testRefetchingUnchangedRowsLeavesTheMarkerAlone`: record the same page twice; after the second → `marks === 1`.
   - `NotificationStoreTest::testSeenUntilMovesTheMarker`: store an unseen row, then record a page whose `seenUntil` covers it → the marker moved on that second record.
-  - `NotificationStoreTest::testPruningAnUnseenRowMovesTheMarker`: an unseen row older than 30 days, then `prune()` → moved.
   - `NotificationSeenMarkerTest::testMarkingSeenMovesTheMarker` → moved once.
   - `NotificationSeenMarkerTest::testNothingUnseenLeavesTheMarkerAlone` → `marks === 0`.
 - [ ] **Step 6: Run them and watch them fail.** `TEST_TOKEN=t1 php bin/phpunit tests/Service/Social/Notification/` → the new tests fail on `marks`.
-- [ ] **Step 7: Wire the watch.** `record()`, `prune()` and `markSeen()` each run their existing body inside `$this->unseenCountWatch->watch(...)`. Update every test construction site. Update the `ContentChangeMarkerInterface` docblock.
+- [ ] **Step 7: Wire the watch.** `record()` and `markAccountSeen()` each run their existing body inside `$this->unseenCountWatch->watch($account, ...)`. Update every test construction site. Update the `ContentChangeMarkerInterface` docblock.
 - [ ] **Step 8: Run the module and the worker tests.** `TEST_TOKEN=t1 php bin/phpunit tests/Service/Social tests/Service/Operations` → all green.
 - [ ] **Step 9: Run the gates on the touched files.** `cd backend && bin/console cache:warmup -q && composer stan && composer cs && composer md && composer tramp` → clean, with no PHPMD finding in a touched file. `ServiceModuleCycleRule` must stay quiet: `Social/Notification → Ingestion/Refresh` was checked and creates no cycle.
 - [ ] **Step 10: Commit.** `feat(#2515): a change in unseen notifications moves the change marker`
