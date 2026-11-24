@@ -80,13 +80,40 @@ const GROUPED_ENTRIES = [
   groupedEntry(11, 'Netzpolitik', 4),
 ];
 
+const PICTURE = { url: INLINE_IMAGE, kind: 'image' as const, width: 1200, height: 800 };
+
+/** A short, a described photo and an animated picture, each shared as media: the play button, the
+ *  ALT badge and the GIF badge sit on their pictures. */
+const MEDIA_ENTRIES = [
+  entryWire({
+    id: 31,
+    share: 'media',
+    titleDerived: true,
+    title: 'A short shared as media',
+    shortPlayerUrl: 'https://www.youtube-nocookie.com/embed/fixture0031',
+    media: [PICTURE],
+  }),
+  entryWire({
+    id: 32,
+    share: 'media',
+    title: 'A photo with a description',
+    media: [{ ...PICTURE, alt: 'A grey rectangle standing in for a photo.' }],
+  }),
+  entryWire({
+    id: 33,
+    share: 'media',
+    title: 'An animated picture',
+    media: [{ ...PICTURE, animated: true }],
+  }),
+];
+
 const EPISODE = {
   ...POST,
   attachments: [{ url: 'https://fixtures.invalid/episode.mp3', mimeType: 'audio/mpeg' }],
 };
 
 type Step = 90 | 100 | 150;
-type Surface = 'magazine' | 'grouped' | 'article' | 'notifications' | 'trending' | 'list';
+type Surface = 'magazine' | 'grouped' | 'article' | 'notifications' | 'trending' | 'list' | 'media';
 
 interface View {
   surface: Surface;
@@ -98,15 +125,21 @@ interface Setup {
   step: Step;
   layout: 'pane' | 'magazine' | 'list';
   viewport: { width: number; height: number };
+  stillMedia?: boolean;
 }
 
 async function openPage(
   browser: Browser,
-  { step, layout, viewport }: Setup,
+  { step, layout, viewport, stillMedia = false }: Setup,
   load: (page: Page) => Promise<void>,
 ): Promise<Page> {
-  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport });
+  const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
+    viewport,
+    reducedMotion: stillMedia ? 'reduce' : 'no-preference',
+  });
   const page = await context.newPage();
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
   await presetLocalStorage(page, { 'sfr.textSize': String(step), 'sfr.layout': layout });
   await load(page);
   await page.evaluate(() => document.fonts.ready);
@@ -121,6 +154,7 @@ const LAYOUTS: Record<Surface, Setup['layout']> = {
   notifications: 'magazine',
   trending: 'magazine',
   list: 'list',
+  media: 'magazine',
 };
 
 const LOADS: Record<Surface, (page: Page) => Promise<void>> = {
@@ -165,54 +199,76 @@ const LOADS: Record<Surface, (page: Page) => Promise<void>> = {
     await page.goto('/');
     await expect(page.locator('app-short-badge')).toBeVisible();
   },
+  media: async (page) => {
+    await stubMagazine(page, MEDIA_ENTRIES);
+    await page.goto('/');
+    await expect(page.locator('app-entry-media button.play')).toBeVisible();
+    await expect(page.locator('app-alt-text button.badge')).toBeVisible();
+    await expect(page.locator('app-gif .badge')).toBeVisible();
+  },
 };
 
 async function open(browser: Browser, { surface, step, viewport = DESKTOP }: View): Promise<Page> {
-  return openPage(browser, { step, layout: LAYOUTS[surface], viewport }, LOADS[surface]);
+  return openPage(
+    browser,
+    { step, layout: LAYOUTS[surface], viewport, stillMedia: surface === 'media' },
+    LOADS[surface],
+  );
 }
 
 /** A part of the page: its font size, or the height of what it draws. `stays` marks a part that
- *  keeps its size at every step. */
+ *  keeps its size at every step; `at100` is `develop`'s font size, which 100% must keep. */
 interface Probe {
   selector: string;
   measure: 'font' | 'height';
   stays?: true;
+  at100?: number;
 }
 
-const font = (selector: string): Probe => ({ selector, measure: 'font' });
+const font = (selector: string, at100?: number): Probe => ({ selector, measure: 'font', at100 });
 const height = (selector: string): Probe => ({ selector, measure: 'height' });
 const glyph = (selector: string): Probe => height(`${selector} app-icon > span`);
 
 const PROBES: Record<Surface, Record<string, Probe>> = {
   magazine: {
-    kickerSource: font('app-entry-kicker-line .source'),
+    kicker: font('app-entry-kicker-line .kicker', 13),
+    kickerSource: font('app-entry-kicker-line .source', 13),
     kickerAvatar: height('app-entry-kicker-line img.avatar'),
     kickerFavicon: height('app-entry-kicker-line img.favicon'),
     pillText: font('app-entry-pills a.pill .name'),
     pillGlyph: height('app-entry-pills a.pill app-tag-glyph'),
     actionButton: glyph('app-entry-actions button'),
-    alsoInLabel: font('.also-foot .lead'),
-    alsoInButton: font('.also-foot .also-entry'),
+    alsoInLabel: font('.also-foot .lead', 11),
+    alsoInButton: font('.also-foot .also-entry', 11),
   },
   grouped: {
-    when: font('app-source-group app-entry-kicker-line .when'),
-    shortPill: font('app-source-group app-entry-kicker-line app-entry-pills .pill'),
-    likeCount: font('app-source-group app-entry-kicker-line app-entry-like .count'),
+    when: font('app-source-group app-entry-kicker-line .when', 13),
+    shortPill: font('app-source-group app-entry-kicker-line app-entry-pills .pill', 11),
+    likeCount: font('app-source-group app-entry-kicker-line app-entry-like .count', 13),
     likeGlyph: glyph('app-source-group app-entry-kicker-line app-entry-like'),
     moreFromLabel: font('app-source-group button.more'),
     moreFromGlyph: glyph('app-source-group button.more'),
   },
   article: {
-    articleSource: font('app-article-page article > p.meta'),
+    rowMeta: font('app-entry-row p.meta', 13),
+    articleSource: font('app-article-page article > p.meta', 13),
     actionRow: glyph('app-reader-view app-entry-actions.actions button'),
     listenLabel: font('app-listen-row .listen-label'),
     listenGlyph: glyph('app-listen-row button.listen'),
-    commentAuthor: font('app-entry-comments p.byline .author'),
+    commentsTitle: font('app-entry-comments header.head .title', 18),
+    commentsAge: font('app-entry-comments header.head .age', 13),
+    commentsRefresh: height('app-entry-comments header.head button.ib'),
+    commentAuthor: font('app-entry-comments p.byline .author', 13),
+    commentScore: font('app-entry-comments p.byline app-vote-pill .number', 13),
     commentAvatar: height('app-entry-comments p.byline app-avatar'),
     deleteGlyph: glyph('app-entry-comments button.delete'),
-    replyLabel: font('app-social-counts-row button.reply .label'),
+    replyLabel: font('app-social-counts-row button.reply .label', 13),
     replyGlyph: glyph('app-social-counts-row button.reply'),
-    openInReaderLabel: font('app-open-in-reader .open-in-reader-label'),
+    likeLabel: font('app-social-counts-row button.like .label', 13),
+    repostLabel: font('app-social-counts-row button.repost .label', 13),
+    voteNumber: font('app-social-counts-row app-vote-pill .number', 13),
+    voteArrow: glyph('app-social-counts-row app-vote-pill .arrow'),
+    openInReaderLabel: font('app-open-in-reader .open-in-reader-label', 11),
     openInReaderGlyph: glyph('app-open-in-reader'),
     barTitle: { ...font('app-reader-view .bar-title'), stays: true },
     barButton: { ...glyph('app-reader-view .bar .nav button'), stays: true },
@@ -230,7 +286,12 @@ const PROBES: Record<Surface, Record<string, Probe>> = {
   },
   list: {
     rowTitle: font('app-entry-row .title'),
-    playBadge: { ...glyph('app-short-badge'), stays: true },
+    shortBadge: glyph('app-short-badge'),
+  },
+  media: {
+    playButton: font('app-entry-media button.play .material-symbols-outlined'),
+    altBadge: font('app-alt-text button.badge'),
+    gifBadge: font('app-gif .badge'),
   },
 };
 
@@ -258,8 +319,33 @@ async function measureProbe(page: Page, { selector, measure }: Probe): Promise<n
     : target.evaluate((element) => element.getBoundingClientRect().height);
 }
 
+/** Rows measured whole: every icon in them scales, and none goes missing at another step. */
+const ROWS: Partial<Record<Surface, Record<string, string>>> = {
+  magazine: { kicker: 'app-entry-kicker-line', alsoFoot: '.also-foot' },
+  grouped: { groupedKicker: 'app-source-group app-entry-kicker-line' },
+  article: {
+    rowMeta: 'app-entry-row p.meta',
+    articleSource: 'app-article-page article > p.meta',
+    commentsHead: 'app-entry-comments header.head',
+    commentActions: 'app-comment-actions',
+    countsRow: 'app-social-counts-row',
+  },
+};
+
+/** Controls that sit on a picture, which scale with the text but stay on their picture. */
+const ON_PICTURES: Partial<Record<Surface, string[]>> = {
+  media: [
+    'app-entry-media button.play .material-symbols-outlined',
+    'app-alt-text button.badge',
+    'app-gif .badge',
+  ],
+  list: ['app-short-badge'],
+  article: ['app-open-in-reader button'],
+};
+
 interface Measurement {
   probes: Record<string, number>;
+  rows: Record<string, number[]>;
   sidebarIcons: number[];
   headerIcons: number[];
 }
@@ -270,8 +356,13 @@ async function measure(browser: Browser, surface: Surface, step: Step): Promise<
   for (const [name, probe] of Object.entries(PROBES[surface])) {
     probes[name] = await measureProbe(page, probe);
   }
+  const rows: Record<string, number[]> = {};
+  for (const [name, selector] of Object.entries(ROWS[surface] ?? {})) {
+    rows[name] = await iconHeights(page, selector);
+  }
   const measurement = {
     probes,
+    rows,
     sidebarIcons: await iconHeights(page, 'aside.sidebar'),
     headerIcons: await iconHeights(page, 'app-reader-header, app-list-header'),
   };
@@ -325,6 +416,34 @@ async function escapes(page: Page): Promise<string[]> {
   });
 }
 
+/** Each control on a picture that leaves its picture's box. */
+async function offPicture(page: Page, selectors: string[]): Promise<string[]> {
+  return page.evaluate((controls) => {
+    const pictureOf = (control: Element) => {
+      for (let node = control.parentElement; node; node = node.parentElement) {
+        const picture = [...node.querySelectorAll('img, video')].find(
+          (media) => !control.contains(media) && media.getBoundingClientRect().width > 0,
+        );
+        if (picture) return picture;
+      }
+      return null;
+    };
+    return controls.flatMap((selector) =>
+      [...document.querySelectorAll(selector)].flatMap((control) => {
+        const box = control.getBoundingClientRect();
+        const frame = pictureOf(control)?.getBoundingClientRect();
+        if (!frame) return [`${selector} has no picture`];
+        const inside =
+          box.left >= frame.left - 0.5 &&
+          box.right <= frame.right + 0.5 &&
+          box.top >= frame.top - 0.5 &&
+          box.bottom <= frame.bottom + 0.5;
+        return inside ? [] : [`${selector} leaves its picture`];
+      }),
+    );
+  }, selectors);
+}
+
 const SURFACES = Object.keys(PROBES) as Surface[];
 
 test.describe('everything in a text-scaled container follows the text size', () => {
@@ -333,6 +452,14 @@ test.describe('everything in a text-scaled container follows the text size', () 
       browser,
     }) => {
       const normal = await measure(browser, surface, 100);
+      for (const [name, probe] of Object.entries(PROBES[surface])) {
+        if (probe.at100 !== undefined) {
+          expect.soft(normal.probes[name], `${name} at 100%`).toBe(probe.at100);
+        }
+      }
+      for (const [row, heights] of Object.entries(normal.rows)) {
+        expect(heights.length, `${row} shows no icon to measure`).toBeGreaterThan(0);
+      }
       for (const step of [90, 150] as const) {
         const scaled = await measure(browser, surface, step);
         for (const [name, probe] of Object.entries(PROBES[surface])) {
@@ -340,6 +467,17 @@ test.describe('everything in a text-scaled container follows the text size', () 
           expect
             .soft(Math.abs(scaled.probes[name] - expected), `${name} at ${step}%`)
             .toBeLessThanOrEqual(0.05);
+        }
+        for (const [row, heights] of Object.entries(normal.rows)) {
+          expect(scaled.rows[row].length, `${row} at ${step}%`).toBe(heights.length);
+          heights.forEach((height, index) => {
+            expect
+              .soft(
+                Math.abs(scaled.rows[row][index] - height * (step / 100)),
+                `${row} icon ${index}`,
+              )
+              .toBeLessThanOrEqual(0.5);
+          });
         }
         expect.soft(scaled.sidebarIcons, `sidebar icons at ${step}%`).toEqual(normal.sidebarIcons);
         expect.soft(scaled.headerIcons, `header icons at ${step}%`).toEqual(normal.headerIcons);
@@ -355,6 +493,7 @@ test.describe('everything in a text-scaled container follows the text size', () 
         viewport: { width: 390, height: 760 },
       });
       expect(await escapes(page)).toEqual([]);
+      expect(await offPicture(page, ON_PICTURES[surface] ?? [])).toEqual([]);
       await page.context().close();
     });
   }

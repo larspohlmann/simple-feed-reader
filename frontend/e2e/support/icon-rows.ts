@@ -60,7 +60,7 @@ export const COMMENTS: CommentsResponse = {
       author: 'Scored Comment',
       html: '<p>A comment with a score.</p>',
       score: 3,
-      linkCard: aLinkCard(),
+      linkCard: aLinkCard({ imageUrl: `https://${ICON_HOST}/card.png` }),
     }),
   ],
 };
