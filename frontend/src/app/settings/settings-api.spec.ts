@@ -130,11 +130,29 @@ describe('SettingsApi', () => {
     testRequest.flush('<opml/>');
   });
 
-  it('POSTs OPML import as a raw body', () => {
-    api.importOpml('<opml/>').subscribe();
+  it('POSTs the OPML preview request as JSON', () => {
+    api.previewOpml('<opml/>', 'P').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/opml/preview');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({ opml: '<opml/>', parentTagName: 'P' });
+    testRequest.flush({
+      freeSlots: 1,
+      root: { name: null, dropped: false, destination: [], feeds: [], folders: [] },
+    });
+  });
+
+  it('POSTs the OPML import request as JSON', () => {
+    const request = {
+      opml: '<opml/>',
+      parentTagName: null,
+      feedUrls: ['https://a.test/feed'],
+      tagIdsByFeedUrl: { 'https://a.test/feed': [3] },
+    };
+    api.importOpml(request).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/opml/import');
     expect(testRequest.request.method).toBe('POST');
-    expect(testRequest.request.body).toBe('<opml/>');
+    expect(testRequest.request.body).toEqual(request);
+    expect(testRequest.request.headers.has('Content-Type')).toBe(false);
     testRequest.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
   });
 

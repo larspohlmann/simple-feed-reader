@@ -11,21 +11,6 @@
 
   <div class="group">
     <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
-    <input type="file" accept=".opml,.xml,text/xml,text/x-opml" (change)="onFile($event)" />
-    <textarea
-      class="area"
-      rows="4"
-      [placeholder]="'settings.opml.pastePlaceholder' | transloco"
-      [value]="text()"
-      (input)="text.set(value($event))"
-    ></textarea>
-    <app-button
-      variant="primary"
-      [disabled]="importing() || reading() || !text().trim()"
-      (click)="importText()"
-    >
-      {{ (importing() ? 'settings.opml.importing' : 'settings.opml.import') | transloco }}
-    </app-button>
     @if (importError(); as problem) {
       <app-error-banner [message]="problem.detail || problem.title" />
     }
