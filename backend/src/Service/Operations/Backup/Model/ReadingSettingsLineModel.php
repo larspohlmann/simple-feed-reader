@@ -29,7 +29,7 @@ final readonly class ReadingSettingsLineModel
      */
     public static function fromLine(array $line): self
     {
-        // An unknown style or handedness restores its default: restore over reject.
+        // An unknown value restores its default.
         return new self(
             scrapeFallbackEnabled: LineField::bool($line, 'scrapeFallbackEnabled'),
             magazineStyle: MagazineStyle::tryFrom(

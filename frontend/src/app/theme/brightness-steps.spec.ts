@@ -277,6 +277,8 @@ const CLASSIC: Record<Theme, Palette> = {
   },
 };
 
+const CLASSIC_ACCENT_SOFT = { light: 'rgb(229, 232, 220)', dark: 'rgb(43, 49, 42)' };
+
 describe.each(['light', 'dark'] as const)('classic %s', (theme) => {
   const base = findBlock(CLASSIC_BLOCKS, theme, 0);
 
@@ -299,8 +301,8 @@ describe.each(['light', 'dark'] as const)('classic %s', (theme) => {
     }
   });
 
-  it('mixes accent-soft into a plain colour value', () => {
-    expect(base?.tokens['accent-soft']).toMatch(/^(#[0-9a-f]{6}|rgb\(\d+, \d+, \d+\))$/);
+  it('mixes accent-soft into its compiled colour', () => {
+    expect(base?.tokens['accent-soft']).toBe(CLASSIC_ACCENT_SOFT[theme]);
   });
 
   it.each(STEPS[theme])('step %i has its own block, dimmer or brighter than graphite’s', (step) => {
