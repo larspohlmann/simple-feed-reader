@@ -8,16 +8,10 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\SubscriptionRepository;
-use App\Repository\TagRepository;
 use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use App\Service\Library\Opml\Model\OpmlFeedState;
 use App\Service\Library\Opml\Model\OpmlPreviewModel;
-use App\Service\Library\Opml\OpmlBodyReader;
-use App\Service\Library\Opml\OpmlDocumentReader;
-use App\Service\Library\Opml\OpmlPlacementPlanner;
 use App\Service\Library\Opml\OpmlPreviewer;
-use App\Service\Library\Subscription\SubscriptionLimitResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
@@ -132,27 +126,10 @@ final class OpmlPreviewerTest extends DbTestCase
 
     private function previewer(): OpmlPreviewer
     {
-        return new OpmlPreviewer(
-            new OpmlDocumentReader(new OpmlBodyReader()),
-            new OpmlPlacementPlanner($this->fromContainer(TagRepository::class)),
-            $this->fromContainer(SubscriptionRepository::class),
-            $this->fromContainer(SubscriptionLimitResolver::class),
-        );
-    }
+        $previewer = self::getContainer()->get(OpmlPreviewer::class);
+        self::assertInstanceOf(OpmlPreviewer::class, $previewer);
 
-    /**
-     * @template T of object
-     *
-     * @param class-string<T> $class
-     *
-     * @return T
-     */
-    private function fromContainer(string $class): object
-    {
-        $service = self::getContainer()->get($class);
-        self::assertInstanceOf($class, $service);
-
-        return $service;
+        return $previewer;
     }
 
     private function subscribe(string $url): void
