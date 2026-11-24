@@ -12,6 +12,9 @@ const BASE_URL = 'http://localhost:4200';
 const VIEWPORT = { width: 1280, height: 900 };
 const OFFSET_TOLERANCE = 0.25;
 const X_HEIGHT_TOLERANCE = 0.2;
+const X_HEIGHT_TARGET = 0.5;
+const JUDGED_LINE = 15;
+const LINE_SIZES = [11, 13, JUDGED_LINE, 24];
 const FONT_TIMEOUT = 10_000;
 const CLASSIC_FACE = "16px 'Newsreader Classic'";
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -282,18 +285,24 @@ async function measureControl(page, control) {
   }, control);
 }
 
-async function lineXHeight(page) {
-  return page.evaluate(() => {
-    const line = document.createElement('p');
-    line.style.fontSize = '15px';
-    line.textContent = 'x';
-    document.body.append(line);
-    const style = getComputedStyle(line);
-    const context = document.createElement('canvas').getContext('2d');
-    context.font = `${style.fontWeight} 15px ${style.fontFamily}`;
-    line.remove();
-    return context.measureText('x').actualBoundingBoxAscent;
-  });
+async function lineXHeights(page) {
+  return page.evaluate(
+    (sizes) =>
+      Object.fromEntries(
+        sizes.map((size) => {
+          const line = document.createElement('p');
+          line.style.fontSize = `${size}px`;
+          line.textContent = 'x';
+          document.body.append(line);
+          const style = getComputedStyle(line);
+          const context = document.createElement('canvas').getContext('2d');
+          context.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+          line.remove();
+          return [size, context.measureText('x').actualBoundingBoxAscent];
+        }),
+      ),
+    LINE_SIZES,
+  );
 }
 
 async function readStyles(page, selectors) {
@@ -363,7 +372,7 @@ async function main() {
       for (const control of CONTROLS.filter((candidate) => candidate.surface === surface)) {
         graphite[control.name] = await measureControl(page, control);
       }
-      lines.graphite ??= await lineXHeight(page);
+      lines.graphite ??= await lineXHeights(page);
       requests[`${surface}, graphite`] = [...fontRequests];
       if (values['graphite-only']) {
         await page.context().close();
@@ -376,7 +385,7 @@ async function main() {
         if (!before || !classic) throw new Error(`${control.name}: no control on the ${surface}`);
         rows.push({ name: control.name, graphite: before, classic });
       }
-      lines.classic ??= await lineXHeight(page);
+      lines.classic ??= await lineXHeights(page);
       requests[`${surface}, classic`] = fontRequests.slice(requests[`${surface}, graphite`].length);
       await setClassic(page, false);
       await page.context().close();
@@ -403,19 +412,24 @@ async function main() {
       `${name.padEnd(12)}  ${format(graphite.offset).padStart(8)}  ${format(classic.offset).padStart(7)}  ${format(difference).padStart(10)}${verdict}`,
     );
   }
-  const xDifference = lines.classic - lines.graphite;
-  const xVerdict = Math.abs(xDifference) > X_HEIGHT_TOLERANCE ? '  FAIL' : '';
-  failed ||= xVerdict !== '';
-  console.log(
-    `x-height of a 15px line: graphite ${lines.graphite.toFixed(2)}, classic ${lines.classic.toFixed(2)}, difference ${format(xDifference)}${xVerdict}`,
-  );
+  console.log(`x-height, px, against ${X_HEIGHT_TARGET}em (graphite for information only)`);
+  for (const size of LINE_SIZES) {
+    const target = X_HEIGHT_TARGET * size;
+    const difference = lines.classic[size] - target;
+    const judged = size === JUDGED_LINE;
+    const verdict = judged && Math.abs(difference) > X_HEIGHT_TOLERANCE ? '  FAIL' : '';
+    failed ||= verdict !== '';
+    console.log(
+      `${String(size).padStart(2)}px line: classic ${lines.classic[size].toFixed(2)}, target ${target.toFixed(2)}, difference ${format(difference)}, graphite ${lines.graphite[size].toFixed(2)}${judged ? ' (judged)' : ''}${verdict}`,
+    );
+  }
   console.log(`classic family: ${rows[0].classic.family}`);
   for (const [phase, urls] of Object.entries(requests)) {
     console.log(`font requests (${phase}): ${urls.length ? urls.join(', ') : 'none'}`);
   }
   if (failed) {
     console.error(
-      `FAIL: a difference exceeds ${OFFSET_TOLERANCE}px or the x-heights ${X_HEIGHT_TOLERANCE}px`,
+      `FAIL: an offset difference exceeds ${OFFSET_TOLERANCE}px, or a ${JUDGED_LINE}px line's x-height is more than ${X_HEIGHT_TOLERANCE}px from ${X_HEIGHT_TARGET}em`,
     );
     process.exitCode = 1;
   }

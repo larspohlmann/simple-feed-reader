@@ -8,9 +8,9 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
-SIZE_MATCH = 1.177
-ASCENT = 0.99
-DESCENT = 0.22
+SIZE_MATCH = 1.117
+ASCENT = 0.97
+DESCENT = 0.23
 
 FRONTEND = Path(__file__).resolve().parents[2]
 PACKAGE = FRONTEND / 'node_modules' / '@fontsource-variable' / 'newsreader'
