@@ -15,12 +15,15 @@ final class BareUrlLinks
 
     public static function linkHtml(string $html): string
     {
-        $document = HtmlDocumentParser::parseFragment($html);
-
-        return self::linkIn($document) === 0 ? $html : ($document->body->innerHTML ?? $html);
+        return self::linkIn(HtmlDocumentParser::parseFragment($html), $html);
     }
 
-    public static function linkIn(HTMLDocument $document): int
+    public static function linkIn(HTMLDocument $document, string $parsedHtml): string
+    {
+        return self::linkTextNodes($document) === 0 ? $parsedHtml : ($document->body->innerHTML ?? $parsedHtml);
+    }
+
+    private static function linkTextNodes(HTMLDocument $document): int
     {
         $linked = 0;
         foreach (TextNodes::in($document->body) as $text) {

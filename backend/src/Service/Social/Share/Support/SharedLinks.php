@@ -24,7 +24,7 @@ final class SharedLinks
     public static function fromBodyHtml(string $bodyHtml): SharedLinksModel
     {
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
-        $linkedHtml = BareUrlLinks::linkIn($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
+        $linkedHtml = BareUrlLinks::linkIn($document, $bodyHtml);
 
         $hrefsToCheck = self::collectSharedUrls($document);
         $urls = \array_slice(array_keys($hrefsToCheck), 0, self::MAX);

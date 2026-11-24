@@ -9,7 +9,8 @@ use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Foundation\Html\Support\BareUrlLinks;
 use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\MarkdownHtml;
-use App\Service\Foundation\Text\Support\LinkedPlainText;
+use App\Service\Foundation\Text\Support\HtmlEscape;
+use App\Service\Foundation\Text\Support\ParagraphedText;
 
 final readonly class CommentBodyRenderer
 {
@@ -29,7 +30,12 @@ final readonly class CommentBodyRenderer
         return match ($body->format) {
             CommentBodyFormat::Html => $body->source,
             CommentBodyFormat::Markdown => $this->markdown->toHtml($body->source),
-            CommentBodyFormat::PlainText => LinkedPlainText::asHtml($body->source),
+            CommentBodyFormat::PlainText => self::paragraphPlainText($body->source),
         };
+    }
+
+    private static function paragraphPlainText(string $text): ?string
+    {
+        return trim($text) === '' ? null : ParagraphedText::asHtml($text, HtmlEscape::text(...));
     }
 }

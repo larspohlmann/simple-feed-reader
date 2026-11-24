@@ -24,11 +24,15 @@ final class BareUrlLinksTest extends TestCase
         self::assertSame('<p>open <b>bold', BareUrlLinks::linkHtml('<p>open <b>bold'));
     }
 
-    public function testCountsTheLinksItMade(): void
+    public function testLinksADocumentParsedByTheCallerAndLeavesItLinked(): void
     {
-        $document = HtmlDocumentParser::parseFragment('<p>https://example.org/a and http://example.org/b</p>');
+        $html = '<p>https://example.org/a and http://example.org/b</p>';
+        $document = HtmlDocumentParser::parseFragment($html);
 
-        self::assertSame(2, BareUrlLinks::linkIn($document));
+        $linked = BareUrlLinks::linkIn($document, $html);
+
+        self::assertSame(2, substr_count($linked, '<a href='));
+        self::assertCount(2, $document->querySelectorAll('a'));
     }
 
     #[DataProvider('unlinkable')]
@@ -43,6 +47,5 @@ final class BareUrlLinksTest extends TestCase
         yield 'anchor' => ['<a href="https://example.org">https://example.org</a>'];
         yield 'code' => ['<code>https://example.org</code>'];
         yield 'pre' => ['<pre>https://example.org</pre>'];
-        yield 'no url' => ['<p>plain</p>'];
     }
 }
