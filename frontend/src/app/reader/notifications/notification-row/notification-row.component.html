@@ -1,10 +1,15 @@
 @if (entryLink(); as queryParams) {
-  <a class="row" [routerLink]="[]" [queryParams]="queryParams" queryParamsHandling="merge">
+  <a
+    class="row scales-with-text"
+    [routerLink]="[]"
+    [queryParams]="queryParams"
+    queryParamsHandling="merge"
+  >
     <ng-container *ngTemplateOutlet="rowBody" />
   </a>
 } @else {
   <a
-    class="row"
+    class="row scales-with-text"
     appOwnInstanceHref
     [href]="group().linkUrl"
     target="_blank"

@@ -49,7 +49,7 @@
         {{ source.title() }}
       </h1>
     </div>
-    <p class="meta">
+    <p class="meta scales-with-text">
       <ng-content select="[pageByline]" />
       @if (readingMinutes(); as minutes) {
         · {{ 'reader.readingTime' | transloco: { minutes } }}
@@ -120,7 +120,7 @@
       }
       @if (source.failure() && !body() && source.openUrl(); as url) {
         <a
-          class="open-original"
+          class="open-original scales-with-text"
           appOwnInstanceHref
           [href]="url"
           target="_blank"

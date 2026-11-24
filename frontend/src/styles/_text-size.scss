@@ -9,9 +9,13 @@
 
 // One element of specificity: beats _reset's `button { font: inherit }` by source order,
 // loses to any class rule. The 1em division undoes one scaling, so it holds only for
-// non-nested controls.
+// non-nested controls. The kicker line scales its icons only: the pills and actions a
+// grouped card projects into it keep their fixed text (#2524).
 :where(.text-scaled)
-  :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *)) {
+  :is(button:where(:not(.reads-as-text)), app-entry-pills):where(
+    :not(.scales-with-text *),
+    app-entry-kicker-line *
+  ) {
   @include type-scale.fixed;
 
   font-size: calc(1em / var(--text-scale, 1));
@@ -19,4 +23,6 @@
 
 :where(.text-scaled) .scales-with-text {
   @include icon-scale.scaled;
+
+  --icon-text-scale: var(--text-scale, 1);
 }

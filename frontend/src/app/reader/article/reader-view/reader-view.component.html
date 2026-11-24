@@ -59,7 +59,7 @@
   <ng-container pageHead>
     <div class="head-line">
       @if (e.score !== null && e.myVote === null) {
-        <app-vote-pill [score]="e.score" [myVote]="null" />
+        <app-vote-pill class="scales-with-text" [score]="e.score" [myVote]="null" />
       }
       <app-entry-pills
         [tags]="tags()"

@@ -1,5 +1,5 @@
 @if (copies().length) {
-  <div class="also-foot">
+  <div class="also-foot scales-with-text">
     <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
     <span class="lead">{{ label() | transloco }}</span>
     @for (item of shown(); track item.copy.id) {

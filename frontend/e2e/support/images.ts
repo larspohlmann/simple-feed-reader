@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 
 /** A single opaque pixel: the smallest image a browser decodes. */
-const ONE_PIXEL_PNG = Buffer.from(
+export const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 );

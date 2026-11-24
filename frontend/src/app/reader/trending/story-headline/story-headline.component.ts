@@ -9,6 +9,7 @@ import { STORY_ICON, storySynopsisId, storyTitleId } from '../story';
   imports: [IconComponent],
   templateUrl: './story-headline.component.html',
   styleUrl: './story-headline.component.scss',
+  host: { class: 'scales-with-text' },
 })
 export class StoryHeadlineComponent {
   readonly storyId = input.required<number>();

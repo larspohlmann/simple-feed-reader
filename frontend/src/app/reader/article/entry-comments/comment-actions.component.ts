@@ -11,6 +11,7 @@ import { VotePillComponent } from '../../vote-pill/vote-pill.component';
   imports: [TranslocoPipe, IconComponent, IconButtonDirective, VotePillComponent],
   templateUrl: './comment-actions.component.html',
   styleUrl: './comment-actions.component.scss',
+  host: { class: 'scales-with-text' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommentActionsComponent {

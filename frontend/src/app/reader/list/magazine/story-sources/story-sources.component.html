@@ -3,7 +3,7 @@
   <div class="more-sources">
     <button
       type="button"
-      class="toggle reads-as-text"
+      class="toggle reads-as-text scales-with-text"
       [attr.aria-expanded]="expanded()"
       [attr.aria-controls]="expanded() ? panelId : null"
       (click)="toggle($event)"
@@ -68,7 +68,7 @@
     </span>
   }
   <span class="text">
-    <span class="byline">
+    <span class="byline scales-with-text">
       @if (!source.site) {
         <app-favicon [url]="source.copy.faviconUrl" [avatarUrl]="source.avatarUrl" [size]="14" />
       }

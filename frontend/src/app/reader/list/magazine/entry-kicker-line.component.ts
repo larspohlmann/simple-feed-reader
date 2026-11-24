@@ -18,6 +18,7 @@ import { injectStory } from '../../trending/story-context';
   imports: [EntrySourceComponent],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
+  host: { class: 'scales-with-text' },
 })
 export class EntryKickerLineComponent {
   readonly entry = input.required<EntryDto>();

@@ -1,6 +1,6 @@
 @let s = state();
 <section class="comments" [attr.aria-busy]="s.status === 'loading' ? 'true' : null">
-  <header class="head">
+  <header class="head scales-with-text">
     <h2 class="title">
       {{ 'reader.comments.heading' | transloco }}
       @if (total(); as total) {

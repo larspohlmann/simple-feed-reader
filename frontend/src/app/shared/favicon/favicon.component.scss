@@ -8,6 +8,14 @@
      it would push the row out of symmetry against the unread dot. */
   margin-inline-end: 0.35em;
   flex: none;
+
+  --favicon-box: calc(var(--favicon-size) * var(--icon-text-scale, 1));
+}
+
+.favicon,
+.avatar {
+  width: var(--favicon-box);
+  height: var(--favicon-box);
 }
 
 .favicon {

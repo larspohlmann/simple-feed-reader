@@ -12,7 +12,7 @@
   @let networkName = 'settings.social.' + network() | transloco;
   <div class="rows text-scaled" #rows>
     @for (key of hintKeys(); track key) {
-      <app-warning-box class="hint">
+      <app-warning-box class="hint scales-with-text">
         <app-icon class="hint-glyph" name="warning" size="md" />
         <span class="hint-text">
           {{ key | transloco: { network: networkName } }}

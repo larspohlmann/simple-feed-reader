@@ -54,6 +54,7 @@ interface ResponsePill {
   ],
   templateUrl: './social-counts-row.component.html',
   styleUrl: './social-counts-row.component.scss',
+  host: { class: 'scales-with-text' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SocialCountsRowComponent {

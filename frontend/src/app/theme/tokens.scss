@@ -145,6 +145,8 @@
 
   @include icon-scale.fixed;
 
+  --icon-text-scale: 1;
+
   /* A label laid over a picture, whose colours are the picture's, not the theme's. */
   --media-scrim: rgb(0 0 0 / 55%);
   --media-scrim-strong: rgb(0 0 0 / 80%);

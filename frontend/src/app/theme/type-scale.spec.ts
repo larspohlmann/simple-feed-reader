@@ -43,6 +43,10 @@ describe('type tokens', () => {
       expect(root[`--icon-${name}`]).toBe(size);
     },
   );
+
+  it('keeps a favicon at its own size on the root', () => {
+    expect(root['--icon-text-scale']).toBe('1');
+  });
 });
 
 describe('text-scaled scope', () => {
@@ -50,7 +54,7 @@ describe('text-scaled scope', () => {
   const scope = ruleOf(file, '.text-scaled');
   const reset = ruleOf(
     file,
-    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *))',
+    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *), app-entry-kicker-line *)',
   );
   const scalesWithText = ruleOf(file, ':where(.text-scaled) .scales-with-text');
 
@@ -76,4 +80,8 @@ describe('text-scaled scope', () => {
       expect(scalesWithText[`--icon-${name}`]).toBe(`calc(${size} * var(--text-scale, 1))`);
     },
   );
+
+  it('scales a favicon with the text in a scales-with-text block', () => {
+    expect(scalesWithText['--icon-text-scale']).toBe('var(--text-scale, 1)');
+  });
 });

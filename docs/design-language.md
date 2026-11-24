@@ -1847,8 +1847,18 @@ outside the page's containers, so it takes the class itself). Inside one, every 
 still overrides them. A block that scales as one takes
 `scales-with-text`: its buttons, pills and `--icon-*` tokens scale too, so a count never
 grows beside a fixed glyph; the entry's meta row (`app-entry-meta`) sets it on its host (#2457). A button typeset as running text (TOC
-entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons (outside a
-`scales-with-text` block), spacing, images and widths are px tokens and never scale. The list header and the
+entries, inline "Retry", "Also in") opts back in with `reads-as-text`.
+
+Icons follow the row they sit in (#2524): when any text in a row scales, every icon in
+it scales, icon-only buttons included (a comment's delete beside Reply), so that row takes
+`scales-with-text`; a row whose text all stays fixed keeps fixed icons. "Icon" is a
+Material icon, a tag glyph, a network logo or a favicon (with the poster avatar that
+`app-favicon` shows in its place). A `scales-with-text` block also sets
+`--icon-text-scale` (1 on `:root`), which `app-favicon` multiplies its px `size` by.
+The kicker line is a row for its icons only: the pills and actions a grouped card projects
+into it keep their fixed text. `icon-scale-coverage.spec.ts` lists every icon inside a
+`text-scaled` container that no scaled row holds; each must be a row or an exemption
+naming why its row's text is fixed. Avatars, pictures, spacing and widths never scale. The list header and the
 reader toolbar sit outside every `text-scaled` container, which is why their texts
 stay fixed. A new reading surface takes `text-scaled`. A control inside one stays fixed
 if it sizes its text with an `--fs-*` token or has no font-size rule of its own; a class
