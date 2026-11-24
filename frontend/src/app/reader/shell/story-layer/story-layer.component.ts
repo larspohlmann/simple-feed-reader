@@ -98,7 +98,7 @@ export class StoryLayerComponent {
       inject(DestroyRef),
     );
     this.gestures.connect({
-      fullscreen: this.fullscreen,
+      fullscreen: computed(() => this.fullscreen() && this.overlay.returnsToList()),
       scroller: NO_PULL_BACK,
       back: () => this.overlay.close(),
     });

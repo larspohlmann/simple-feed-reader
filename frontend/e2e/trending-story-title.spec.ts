@@ -199,7 +199,7 @@ for (const layout of ['magazine', 'list'] as const) {
     });
   }
 
-  test(`a followed story's sidebar row opens its list over the list on screen (${layout})`, async ({
+  test(`a followed story's sidebar row opens its list as the root, with no way back (#2518, ${layout})`, async ({
     page,
   }) => {
     await stubStories(page, true);
@@ -212,8 +212,7 @@ for (const layout of ['magazine', 'list'] as const) {
     await expect(page).toHaveURL(new RegExp(`/trending/stories/${STORY_ID}\\?view=kept$`));
     await expect(layer(page)).toContainText(TITLE);
     await expect(layer(page).getByRole('button', { name: 'Unfollow story' })).toBeVisible();
-    await closeStory(page);
-    await expect(page).toHaveURL(/\/\?view=kept$/);
+    await expect(layer(page).locator('.story-back')).toHaveCount(0);
   });
 
   test(`a deep link opens the story over the start list, with a working back (${layout})`, async ({

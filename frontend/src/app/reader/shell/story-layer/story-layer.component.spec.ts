@@ -92,6 +92,7 @@ describe('StoryLayerComponent (#2329)', () => {
 
   let close: jest.Mock;
   let overlayOpen: ReturnType<typeof signal<boolean>>;
+  let returnsToList: ReturnType<typeof signal<boolean>>;
   let toggleOpen: jest.Mock;
   let hideRun: jest.Mock;
   let setOrder: jest.Mock;
@@ -120,6 +121,7 @@ describe('StoryLayerComponent (#2329)', () => {
   function mountFixture(): ComponentFixture<StoryLayerComponent> {
     close = jest.fn();
     overlayOpen = signal(true);
+    returnsToList = signal(true);
     toggleOpen = jest.fn();
     hideRun = jest.fn();
     setOrder = jest.fn();
@@ -131,7 +133,7 @@ describe('StoryLayerComponent (#2329)', () => {
       imports: [StoryLayerComponent, provideTranslocoTesting()],
       providers: [
         ListCover,
-        { provide: StoryOverlay, useValue: { close, open: overlayOpen } },
+        { provide: StoryOverlay, useValue: { close, open: overlayOpen, returnsToList } },
         { provide: TrendingHideAction, useValue: { run: hideRun } },
         { provide: ListOrderService, useValue: { set: setOrder } },
         { provide: ListPreferences, useValue: { setUnreadOnly } },
@@ -293,6 +295,14 @@ describe('StoryLayerComponent (#2329)', () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it('offers no way back from a story opened as the root (#2518)', () => {
+    const fixture = mountFixture();
+    returnsToList.set(false);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.story-back')).toBeNull();
+  });
+
   describe("the story's title card (#2442)", () => {
     function mountCard(): HTMLElement {
       const fixture = mountFixture();
@@ -394,6 +404,19 @@ describe('StoryLayerComponent (#2329)', () => {
       tick(220);
 
       expect(close).not.toHaveBeenCalled();
+    }));
+
+    it('leaves the swipe on a story opened as the root to the drawer (#2518)', fakeAsync(() => {
+      const fixture = mountFixture();
+      fixture.componentRef.setInput('fullscreen', true);
+      returnsToList.set(false);
+      fixture.detectChanges();
+
+      swipe(fixture, 130);
+      tick(220);
+
+      expect(close).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).style.transform).toBe('none');
     }));
 
     it('leaves a story beside the list in the wide layout alone', fakeAsync(() => {
