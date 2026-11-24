@@ -31,6 +31,9 @@
     "sidebarStyle": "Style de la barre latérale",
     "sidebarStyleHint": "Comment la barre latérale est affichée.",
     "sidebarStyleSaveFailed": "Le style de la barre latérale n'a pas pu être enregistré dans votre compte.",
+    "theme": "Thème",
+    "themeHint": "Couleurs et police de toute l'application.",
+    "themeSaveFailed": "Le thème n'a pas pu être enregistré dans votre compte.",
     "sharing": "Partage",
     "sharingEnabled": "Partager des articles",
     "sharingEnabledHint": "Le bouton de partage et le partage d'une sélection de texte. Désactivé, ou avec toutes les cibles ci-dessous désactivées, les deux disparaissent.",
@@ -44,6 +47,10 @@
     "sidebarStyleOption": {
       "boxed": "Encadré",
       "airy": "Aéré"
+    },
+    "themeOption": {
+      "graphite": "Graphite",
+      "classic": "Classique"
     },
     "handedness": "Main dominante",
     "handednessHint": "Le coin où se placent les boutons flottants sur un écran tactile.",
@@ -1760,7 +1767,7 @@
       "pane": "Disposition en panneaux"
     },
     "theme": {
-      "aria": "Thème",
+      "aria": "Apparence",
       "light": "Clair",
       "dark": "Sombre",
       "system": "Système"

@@ -1,0 +1,61 @@
+@use 'sass:color';
+@use 'sass:map';
+@use '../brightness';
+@use './graphite';
+
+@function accent-soft($accent, $surface, $share) {
+  @return brightness.rounded(color.mix($accent, $surface, $weight: $share, $method: oklab));
+}
+
+$light-accent: #2f6f62;
+$light-surface: #faf6ea;
+$dark-accent: #6aa998;
+$dark-surface: #1d1b16;
+$light: (
+  surface-0: #f2ecdd,
+  surface-1: $light-surface,
+  surface-2: #fefbf2,
+  surface-read: #faf6ea,
+  surface-sunken: #eee7d6,
+  border: #e4dcc9,
+  border-strong: #d0c7b0,
+  text-primary: #26231d,
+  text-secondary: #5c574b,
+  text-muted: #8e8878,
+  accent: $light-accent,
+  accent-soft: accent-soft($light-accent, $light-surface, 10%),
+  on-accent: #fff,
+  danger: map.get(graphite.$light, danger),
+  bg-danger: map.get(graphite.$light, bg-danger),
+  border-danger: map.get(graphite.$light, border-danger),
+  success: map.get(graphite.$light, success),
+  bg-success: map.get(graphite.$light, bg-success),
+  warning: map.get(graphite.$light, warning),
+  bg-warning: map.get(graphite.$light, bg-warning),
+  border-warning: map.get(graphite.$light, border-warning),
+  favicon-backdrop: transparent,
+);
+$dark: (
+  surface-0: #161511,
+  surface-1: $dark-surface,
+  surface-2: #25231d,
+  surface-read: #1f1d18,
+  surface-sunken: #17160f,
+  border: #2c2a22,
+  border-strong: #3b382e,
+  text-primary: #cbc6b6,
+  text-secondary: #9e9988,
+  text-muted: #6d695b,
+  accent: $dark-accent,
+  accent-soft: accent-soft($dark-accent, $dark-surface, 18%),
+  on-accent: #0f1a17,
+  danger: map.get(graphite.$dark, danger),
+  bg-danger: map.get(graphite.$dark, bg-danger),
+  border-danger: map.get(graphite.$dark, border-danger),
+  success: map.get(graphite.$dark, success),
+  bg-success: map.get(graphite.$dark, bg-success),
+  warning: map.get(graphite.$dark, warning),
+  bg-warning: map.get(graphite.$dark, bg-warning),
+  border-warning: map.get(graphite.$dark, border-warning),
+  favicon-backdrop: #e8e4da,
+);

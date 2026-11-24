@@ -35,6 +35,7 @@ use App\Enum\MagazineStyle;
 use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\Theme;
 use App\Service\Foundation\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -58,6 +59,7 @@ final readonly class FullyPopulatedAccount
         $reading->setScrapeFallbackEnabled(true);
         $reading->setMagazineStyle(MagazineStyle::Airy);
         $reading->setSidebarStyle(SidebarStyle::Airy);
+        $reading->setTheme(Theme::Classic);
         $reading->setHandedness(Handedness::Left);
         $reading->setTrendingEnabled(false);
         $sharing = StoredUserSettings::sharing($this->entityManager, $user);

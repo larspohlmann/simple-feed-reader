@@ -1,18 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 import { presetLocalStorage, signInAsAdmin, stubMePreferences } from './support/auth';
+import { imageEntries } from './support/images';
 import { entryWire } from './support/reader';
 
 /** The sticky list header is frosted glass: the page surface (--surface-0) at
  *  80%, over a blur (#758). It must stay the PAGE colour — never take a card
  *  fill — so both magazine styles assert this exact translucent value. */
 const HEADER_GLASS = 'color(srgb 0.960784 0.960784 0.956863 / 0.8)';
-
-/** Inline, so no external host can 404 and cost this file its radius check. */
-const IMG =
-  'data:image/svg+xml;base64,' +
-  Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#8a8a86"/></svg>',
-  ).toString('base64');
 
 function entry(id: number, source: string) {
   return entryWire({
@@ -34,22 +28,7 @@ const ENTRIES = [
   entry(6, 'Der Spiegel'),
 ];
 
-/** A large, non-portrait image on every entry so `hero` (>= 500px) and `wide`
- *  (>= 400px) both fit without demoting; seven entries across three sources
- *  spill a `wide` opener onto a second page whose template opens `hero`. */
-function imageEntry(id: number, source: string) {
-  return { ...entry(id, source), imageUrl: IMG, imageWidth: 1200, imageHeight: 800 };
-}
-
-const IMAGE_ENTRIES = [
-  imageEntry(1, 'Heise'),
-  imageEntry(2, 'Tagesschau'),
-  imageEntry(3, 'Heise'),
-  imageEntry(4, 'Der Spiegel'),
-  imageEntry(5, 'Tagesschau'),
-  imageEntry(6, 'Der Spiegel'),
-  imageEntry(7, 'Heise'),
-];
+const IMAGE_ENTRIES = imageEntries(entry);
 
 async function stubAccount(
   page: Page,

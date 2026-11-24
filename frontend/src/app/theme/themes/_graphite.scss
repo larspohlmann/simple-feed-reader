@@ -59,9 +59,3 @@ $dark: (
   // background (e.g. Die Zeit) stay legible against the dark surface.
   favicon-backdrop: #e8e8e6,
 );
-
-@mixin emit($palette) {
-  @each $name, $value in $palette {
-    --#{$name}: #{$value};
-  }
-}

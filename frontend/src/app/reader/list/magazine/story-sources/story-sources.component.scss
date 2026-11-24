@@ -1,3 +1,4 @@
+@use '../../../../theme/type';
 @use '../magazine-card';
 @use '../../../link-card/open-in-reader';
 
@@ -89,6 +90,8 @@
 }
 
 .thumb.tile {
+  --icon-text-scale: 1;
+
   display: grid;
   place-items: center;
   background: var(--surface-1);
@@ -123,9 +126,10 @@
 }
 
 .title {
+  @include type.headline(400, var(--lh-tight));
+
   color: var(--text-primary);
   font-size: var(--fs-base);
-  line-height: var(--lh-tight);
 }
 
 .dek {

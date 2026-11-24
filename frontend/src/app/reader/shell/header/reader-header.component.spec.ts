@@ -54,7 +54,7 @@ describe('ReaderHeaderComponent', () => {
   it('no longer hosts the layout/theme controls (moved to the sidebar)', () => {
     const element = create().nativeElement as HTMLElement;
     expect(element.querySelector('[aria-label="Reading layout"]')).toBeNull();
-    expect(element.querySelector('[aria-label="Theme"]')).toBeNull();
+    expect(element.querySelector('[aria-label="Appearance"]')).toBeNull();
   });
 
   // No article mode: the full-screen article rides an overlay above this bar

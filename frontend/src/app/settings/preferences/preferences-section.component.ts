@@ -8,6 +8,7 @@ import { MAGAZINE_STYLES } from '../../core/preferences/magazine-style';
 import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
 import { SIDEBAR_STYLES } from '../../core/preferences/sidebar-style';
 import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
+import { ThemeNameService } from '../../core/preferences/theme-name.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
@@ -17,6 +18,7 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
+import { THEMES } from '../../theme/themes/registry';
 import { SharingSettingsComponent } from './sharing-settings/sharing-settings.component';
 
 @Component({
@@ -39,6 +41,7 @@ export class PreferencesSectionComponent {
   readonly language = inject(LanguageService);
   readonly magazineStyle = inject(MagazineStyleService);
   readonly sidebarStyle = inject(SidebarStyleService);
+  readonly themeName = inject(ThemeNameService);
   readonly preferences = inject(PreferencesService);
   readonly readingFocus = inject(ReadingFocusService);
   readonly listAutoplay = inject(ListAutoplayService);
@@ -46,5 +49,6 @@ export class PreferencesSectionComponent {
   readonly languages = LANGS;
   readonly magazineStyles = MAGAZINE_STYLES;
   readonly sidebarStyles = SIDEBAR_STYLES;
+  readonly themeNames = THEMES;
   readonly handednessOptions = HANDEDNESS;
 }

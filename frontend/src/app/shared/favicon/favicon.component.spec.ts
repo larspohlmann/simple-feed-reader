@@ -29,6 +29,11 @@ describe('FaviconComponent', () => {
     expect(fixture.nativeElement.querySelector('app-icon')).toBeNull();
   });
 
+  it('hands its size to the stylesheet, which scales it with a scaled row', () => {
+    const host: HTMLElement = render().nativeElement.querySelector('app-favicon');
+    expect(host.style.getPropertyValue('--favicon-size')).toBe('14px');
+  });
+
   it('falls back to the rss icon when there is no url', () => {
     const fixture = render();
     expect(fixture.nativeElement.querySelector('img')).toBeNull();

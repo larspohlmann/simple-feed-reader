@@ -14,6 +14,7 @@ import { IconComponent } from '../icon/icon.component';
   imports: [IconComponent],
   templateUrl: './favicon.component.html',
   styleUrl: './favicon.component.scss',
+  host: { '[style.--favicon-size.px]': 'size()' },
 })
 export class FaviconComponent {
   readonly url = input<string | null>(null);

@@ -1,4 +1,4 @@
-<p class="kicker">
+<p class="kicker" [class.sourceless]="!showSource()">
   @if (showSource()) {
     <app-entry-source [entry]="entry()" layout="kicker" [size]="faviconSize()" />
     <span class="separator" aria-hidden="true">·</span>

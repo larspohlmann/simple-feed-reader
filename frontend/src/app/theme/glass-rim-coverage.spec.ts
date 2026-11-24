@@ -1,8 +1,8 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { listFiles } from '../../testing/list-files';
 
 const SOURCE_ROOT = join(__dirname, '..', '..');
-const GUARDED = ['.'];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;
 
@@ -42,14 +42,6 @@ const EXEMPT: readonly Exemption[] = [
   },
 ];
 
-function scssFiles(directory: string): string[] {
-  return readdirSync(join(SOURCE_ROOT, directory), { withFileTypes: true }).flatMap((entry) => {
-    const path = directory === '.' ? entry.name : `${directory}/${entry.name}`;
-    if (entry.isDirectory()) return UNGUARDED.includes(path) ? [] : scssFiles(path);
-    return entry.name.endsWith('.scss') ? [path] : [];
-  });
-}
-
 /** Blanks comments and `#{…}` so neither can fake a declaration or unbalance the braces. */
 function withoutComments(source: string): string {
   return source
@@ -87,9 +79,10 @@ function fullBorders(file: string): Site[] {
   return sites;
 }
 
-const SITES = GUARDED.flatMap((directory) => scssFiles(directory)).flatMap((file) =>
-  fullBorders(file),
-);
+const isGuarded = (path: string): boolean =>
+  path.endsWith('.scss') && !UNGUARDED.some((directory) => path.startsWith(`${directory}/`));
+
+const SITES = listFiles(SOURCE_ROOT, isGuarded).flatMap((file) => fullBorders(file));
 
 const covers = (exemption: Exemption, site: Site): boolean =>
   exemption.file === site.file && exemption.selector === site.selector;

@@ -3,7 +3,7 @@
   <div class="more-sources">
     <button
       type="button"
-      class="toggle reads-as-text"
+      class="toggle"
       [attr.aria-expanded]="expanded()"
       [attr.aria-controls]="expanded() ? panelId : null"
       (click)="toggle($event)"
@@ -36,7 +36,7 @@
               </a>
               <app-open-in-reader [card]="card" opening="alone" />
             } @else {
-              <button type="button" class="face reads-as-text" (click)="open(source.copy)">
+              <button type="button" class="face" (click)="open(source.copy)">
                 <ng-container *ngTemplateOutlet="face; context: { $implicit: source }" />
               </button>
             }

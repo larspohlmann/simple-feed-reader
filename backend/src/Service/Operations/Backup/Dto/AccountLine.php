@@ -87,6 +87,7 @@ final readonly class AccountLine
             'scrapeFallbackEnabled' => $this->reading->scrapeFallbackEnabled,
             'magazineStyle' => $this->reading->magazineStyle->value,
             'sidebarStyle' => $this->reading->sidebarStyle->value,
+            'theme' => $this->reading->theme->value,
             'handedness' => $this->reading->handedness->value,
             'sharingEnabled' => $this->sharingEnabled,
             'hiddenShareTargets' => $this->hiddenShareTargets,

@@ -4,6 +4,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { HandednessService } from '../../core/preferences/handedness.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
+import { ThemeNameService } from '../../core/preferences/theme-name.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { PREFERENCES_WRITER } from '../../core/preferences/preferences-writer';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
@@ -45,13 +46,13 @@ describe('PreferencesSectionComponent', () => {
     );
   });
 
-  it('offers a segmented choice for the language, the magazine style, the sidebar style and the handedness', () => {
+  it('offers a segmented choice for the language, the magazine style, the sidebar style, the theme and the handedness', () => {
     const element = mount().nativeElement as HTMLElement;
     const labels = Array.from(element.querySelectorAll('app-segmented-choice [role="group"]')).map(
       (group) => group.getAttribute('aria-label'),
     );
 
-    expect(labels).toEqual(['Language', 'Magazine style', 'Sidebar style', 'Handedness']);
+    expect(labels).toEqual(['Language', 'Magazine style', 'Sidebar style', 'Theme', 'Handedness']);
   });
 
   it('writes the sidebar style picked in its segmented choice', () => {
@@ -76,6 +77,30 @@ describe('PreferencesSectionComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(en.settings.sidebarStyleSaveFailed);
+  });
+
+  it('writes the theme picked in its segmented choice', () => {
+    const fixture = mount();
+    const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
+    const classic = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '[aria-label="Theme"] button',
+      ),
+    ).find((button) => button.textContent?.trim() === en.settings.themeOption.classic)!;
+
+    classic.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(ThemeNameService).name()).toBe('classic');
+    expect(write).toHaveBeenCalledWith({ theme: 'classic' });
+  });
+
+  it('surfaces a banner when the theme write failed', () => {
+    const fixture = mount();
+    TestBed.inject(ThemeNameService).saveFailed.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(en.settings.themeSaveFailed);
   });
 
   it('writes the handedness picked in its segmented choice', () => {

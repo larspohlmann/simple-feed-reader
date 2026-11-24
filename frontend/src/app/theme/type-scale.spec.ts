@@ -43,16 +43,14 @@ describe('type tokens', () => {
       expect(root[`--icon-${name}`]).toBe(size);
     },
   );
+
+  it('keeps a favicon at its own size on the root', () => {
+    expect(root['--icon-text-scale']).toBe('1');
+  });
 });
 
 describe('text-scaled scope', () => {
-  const file = '../../styles/_text-size.scss';
-  const scope = ruleOf(file, '.text-scaled');
-  const reset = ruleOf(
-    file,
-    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *))',
-  );
-  const scalesWithText = ruleOf(file, ':where(.text-scaled) .scales-with-text');
+  const scope = ruleOf('../../styles/_text-size.scss', '.text-scaled');
 
   it.each(Object.entries(SIZES))('multiplies --fs-%s by the text scale', (name, size) => {
     expect(scope[`--fs-${name}`]).toBe(`calc(${size} * var(--text-scale, 1))`);
@@ -62,18 +60,18 @@ describe('text-scaled scope', () => {
     expect(scope['font-size']).toBe('calc(1em * var(--text-scale, 1))');
   });
 
-  it.each(Object.entries(SIZES))('puts --fs-%s back to fixed on controls', (name, size) => {
-    expect(reset[`--fs-${name}`]).toBe(size);
+  it.each(Object.entries(ICON_SIZES))('multiplies --icon-%s by the text scale', (name, size) => {
+    expect(scope[`--icon-${name}`]).toBe(`calc(${size} * var(--text-scale, 1))`);
   });
 
-  it('divides the inherited scale back out on controls', () => {
-    expect(reset['font-size']).toBe('calc(1em / var(--text-scale, 1))');
+  it('scales a favicon and an avatar with the text', () => {
+    expect(scope['--icon-text-scale']).toBe('var(--text-scale, 1)');
   });
 
-  it.each(Object.entries(ICON_SIZES))(
-    'multiplies --icon-%s by the text scale in a scales-with-text block',
-    (name, size) => {
-      expect(scalesWithText[`--icon-${name}`]).toBe(`calc(${size} * var(--text-scale, 1))`);
-    },
-  );
+  it('leaves no rule that puts a control back to fixed type', () => {
+    const selectors = cssRules(
+      compileScssFile(join(__dirname, '../../styles/_text-size.scss')),
+    ).map((rule) => rule.selector);
+    expect(selectors).toEqual(['.text-scaled']);
+  });
 });

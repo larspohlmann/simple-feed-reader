@@ -113,13 +113,15 @@ $text: text-primary, text-secondary, text-muted;
 
 // One block per step of the theme's range, keyed by the data-brightness
 // attribute the no-flash script and BrightnessService write. Step 0 has no
-// block: the base block in tokens.scss is today's palette verbatim.
-@mixin theme-steps($theme, $palette) {
+// block: the base block in tokens.scss is the palette verbatim. A named theme
+// carries one more attribute, so its blocks outrank the unnamed theme's.
+@mixin theme-steps($theme, $palette, $theme-name: null) {
   $range: map.get($ranges, $theme);
+  $name-attribute: if($theme-name, "[data-theme-name='#{$theme-name}']", '');
 
   @for $step from map.get($range, min) through map.get($range, max) {
     @if $step != 0 {
-      :root[data-theme='#{$theme}'][data-brightness='#{$step}'] {
+      :root#{$name-attribute}[data-theme='#{$theme}'][data-brightness='#{$step}'] {
         @include step($palette, $step, $range);
       }
     }

@@ -1,5 +1,6 @@
 @use '../post-text';
 @use '../../../theme/glass-rim';
+@use '../../../theme/type';
 
 .row {
   display: flex;
@@ -47,9 +48,10 @@
 }
 
 .title {
+  @include type.headline(500, 1.25);
+
   margin: 0;
   font-size: var(--fs-base);
-  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -63,6 +65,9 @@
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-secondary);
+
+  @include type.summary(1.5);
+
   display: -webkit-box;
 
   /* Medium tile: show a fuller excerpt than the old two-line teaser. */
