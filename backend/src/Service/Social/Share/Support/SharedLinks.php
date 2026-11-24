@@ -65,7 +65,8 @@ final class SharedLinks
 
         return mb_strlen($href) <= LinkCardContent::URL_MAX
             && AbsoluteHttpUrl::matches($href)
-            && UrlLinkText::readsAsItsUrl($anchor, $href);
+            && UrlLinkText::readsAsItsUrl($anchor, $href)
+            && !CrossPostCredit::isCredit($anchor);
     }
 
     private function __construct()

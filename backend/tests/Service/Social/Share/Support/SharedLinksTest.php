@@ -91,10 +91,64 @@ final class SharedLinksTest extends TestCase
             . ' https://example.com/' . str_repeat('b', 2028) . '</p>',
             ['https://example.com/' . str_repeat('b', 2028)],
         ];
+        yield 'a cross-post shares its article, not its credit' => [
+            '<a href="https://example.com/a">https://example.com/a</a>'
+            . '<p>cross-posted from: <a href="https://lemmy.test/post/1">lemmy.test/post/1</a></p>'
+            . '<blockquote><p><a href="https://example.com/comments">Comments</a></p></blockquote>',
+            ['https://example.com/a'],
+        ];
+        yield 'a credit as a heading' => [
+            '<h2>Crossposted from <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></h2>',
+            [],
+        ];
+        yield 'a credit naming its community' => [
+            "<p>cross-posted from !food&#64;lemmy.test:\n"
+            . '<a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></p>',
+            [],
+        ];
+        yield 'a credit inside the quoted original' => [
+            '<blockquote><p>Cross posted from <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></p>'
+            . '</blockquote>',
+            [],
+        ];
+        yield 'a bare credit url' => ['<p>cross-posted from: https://lemmy.test/post/1</p>', []];
+        yield 'a link after the credit' => [
+            '<p>cross-posted from: <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a>'
+            . ' via <a href="https://example.com/a">https://example.com/a</a></p>',
+            ['https://example.com/a'],
+        ];
+        yield 'a credit in the middle of a sentence' => [
+            '<p>I found this cross-posted from <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></p>',
+            ['https://lemmy.test/post/1'],
+        ];
+        yield 'a word that only starts like a credit' => [
+            '<p>Crosspost your posts here: <a href="https://lemmy.test/c/a">https://lemmy.test/c/a</a></p>',
+            ['https://lemmy.test/c/a'],
+        ];
         yield 'six links give five' => [
             '<p>' . implode(' ', self::urls(6)) . '</p>',
             self::urls(5),
         ];
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function creditLabels(): iterable
+    {
+        yield 'Lemmy' => ['cross-posted from:'];
+        yield 'capitalised' => ['Cross-posted from:'];
+        yield 'one word' => ['Crossposted from'];
+        yield 'two words' => ['Cross posted from'];
+        yield 'a space before the colon' => ['cross-posted from :'];
+        yield 'German' => ['Cross-geposted von:'];
+        yield 'a non-breaking space' => ['cross-posted&nbsp;from:&nbsp;'];
+    }
+
+    #[DataProvider('creditLabels')]
+    public function testACreditLinkIsNoSharedLink(string $label): void
+    {
+        $body = '<p>' . $label . ' <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></p>';
+
+        self::assertSame([], SharedLinks::fromBodyHtml($body)->urls);
     }
 
     /** @return list<string> */
