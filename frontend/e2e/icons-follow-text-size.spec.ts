@@ -1,17 +1,33 @@
 import { Browser, expect, Page, test } from '@playwright/test';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
+import { settleAnimations } from './support/animations';
 import { presetLocalStorage } from './support/auth';
-import { AVATAR, FAVICON, POST, stubArticle, stubMagazine } from './support/icon-rows';
+import { INLINE_IMAGE } from './support/images';
+import {
+  AVATAR,
+  FAVICON,
+  POST,
+  STORY_TITLE,
+  stubArticle,
+  stubMagazine,
+  stubNotifications,
+  stubTrending,
+} from './support/icon-rows';
 import { entryWire } from './support/reader';
 
 /**
- * #2524: inside a text-scaled container a row of controls scales as one. Where a row's text follows
- * the text size, every icon in that row follows it too, and so does the text of its pills and counts.
- * Every API read is stubbed, so the spec owns the rows it measures.
+ * #2524: inside a text-scaled container everything follows the text size, text and icons, in every
+ * control, and an avatar in front of text with them; pictures, the glyphs on them and the chrome
+ * around the content do not. Every API read is stubbed, so the spec owns what it measures.
  */
 const DESKTOP = { width: 1280, height: 900 };
 
 const COPY = entryWire({ id: 20, title: 'The same story elsewhere', source: 'Golem' });
+
+const PILL_TAGS = [
+  makeTag(7, 'Politics', { icon: 'label' }),
+  makeTag(8, 'Science', { icon: 'science' }),
+];
 
 const LIST_ENTRIES = [
   entryWire({
@@ -31,6 +47,16 @@ const LIST_ENTRIES = [
   entryWire({ id: 14, title: 'Another one', source: 'Heise', faviconUrl: FAVICON }),
   entryWire({ id: 15, title: 'And one more', source: 'Golem' }),
 ];
+
+const SHORT_WITH_PICTURE = entryWire({
+  id: 16,
+  title: 'A short with a picture',
+  source: 'Tagesschau',
+  shortPlayerUrl: 'https://www.youtube.com/shorts/fixture16',
+  imageUrl: INLINE_IMAGE,
+  imageWidth: 1200,
+  imageHeight: 800,
+});
 
 /** A run of eight from one feed folds into a source group, whose cards carry their pills and
  *  actions on the kicker line (see `magazine-compact-actions-flush.spec.ts`). */
@@ -54,33 +80,13 @@ const GROUPED_ENTRIES = [
   groupedEntry(11, 'Netzpolitik', 4),
 ];
 
-/** The rows that scale as one; each holds text that follows the text size. */
-const ROWS = {
-  kicker: 'app-entry-kicker-line',
-  alsoFoot: '.also-foot',
-  rowMeta: 'app-entry-row p.meta',
-  articleSource: 'app-article-page article > p.meta',
-  commentsHead: 'app-entry-comments header.head',
-  commentActions: 'app-comment-actions',
-  groupedKicker: 'app-source-group app-entry-kicker-line',
-  countsRow: 'app-social-counts-row',
+const EPISODE = {
+  ...POST,
+  attachments: [{ url: 'https://fixtures.invalid/episode.mp3', mimeType: 'audio/mpeg' }],
 };
 
-/** What each icon draws: an `app-icon`'s glyph span, any other icon itself. */
-const GLYPHS = 'app-icon > span, app-favicon img, app-tag-glyph, app-network-logo';
-
 type Step = 90 | 100 | 150;
-type Surface = 'magazine' | 'grouped' | 'article';
-
-interface Measurement {
-  icons: Record<string, number[]>;
-  texts: Record<string, number>;
-  sidebarIcons: number[];
-  headerIcons: number[];
-  openInReaderIcon: number;
-  deleteGlyph: number;
-  replyGlyph: number;
-}
+type Surface = 'magazine' | 'grouped' | 'article' | 'notifications' | 'trending' | 'list';
 
 interface View {
   surface: Surface;
@@ -90,7 +96,7 @@ interface View {
 
 interface Setup {
   step: Step;
-  layout: 'pane' | 'magazine';
+  layout: 'pane' | 'magazine' | 'list';
   viewport: { width: number; height: number };
 }
 
@@ -104,36 +110,132 @@ async function openPage(
   await presetLocalStorage(page, { 'sfr.textSize': String(step), 'sfr.layout': layout });
   await load(page);
   await page.evaluate(() => document.fonts.ready);
+  await settleAnimations(page.locator('body'));
   return page;
 }
 
+const LAYOUTS: Record<Surface, Setup['layout']> = {
+  magazine: 'magazine',
+  grouped: 'magazine',
+  article: 'pane',
+  notifications: 'magazine',
+  trending: 'magazine',
+  list: 'list',
+};
+
+const LOADS: Record<Surface, (page: Page) => Promise<void>> = {
+  magazine: async (page) => {
+    await stubMagazine(page, LIST_ENTRIES, { tags: PILL_TAGS });
+    await page.goto('/');
+    await expect(page.locator('.also-foot').first()).toBeVisible();
+    await expect(page.locator('app-entry-kicker-line img.avatar').first()).toBeVisible();
+  },
+  grouped: async (page) => {
+    await stubMagazine(page, GROUPED_ENTRIES);
+    await page.goto('/');
+    await expect(page.locator('app-source-group button.more')).toBeVisible();
+    await expect(
+      page.locator('app-source-group app-entry-kicker-line app-entry-like .count').first(),
+    ).toBeVisible();
+  },
+  article: async (page) => {
+    await stubArticle(page, { post: EPISODE });
+    await page.goto('/?subscription=1');
+    await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+    await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
+    await expect(page.locator('app-entry-comments p.byline app-avatar').first()).toBeAttached();
+    await expect(page.locator('app-listen-row')).toBeVisible();
+  },
+  notifications: async (page) => {
+    await stubNotifications(page);
+    await page.goto('/?view=notifications&network=bluesky');
+    await expect(page.locator('app-notification-row app-avatar img')).toBeVisible();
+  },
+  trending: async (page) => {
+    await stubTrending(page);
+    await page.goto('/?view=trending&window=day');
+    await expect(page.getByText(STORY_TITLE).first()).toBeVisible();
+    await page.locator('app-story-sources button.toggle').click();
+    await expect(
+      page.locator('app-story-sources .thumb.tile app-favicon img').first(),
+    ).toBeVisible();
+  },
+  list: async (page) => {
+    await stubMagazine(page, [SHORT_WITH_PICTURE]);
+    await page.goto('/');
+    await expect(page.locator('app-short-badge')).toBeVisible();
+  },
+};
+
 async function open(browser: Browser, { surface, step, viewport = DESKTOP }: View): Promise<Page> {
-  const layout = surface === 'article' ? 'pane' : 'magazine';
-  return openPage(browser, { step, layout, viewport }, async (page) => {
-    if (surface === 'magazine') {
-      await stubMagazine(page, LIST_ENTRIES);
-      await page.goto('/');
-      await expect(page.locator('.also-foot').first()).toBeVisible();
-      await expect(page.locator('app-entry-kicker-line img.avatar').first()).toBeVisible();
-    } else if (surface === 'grouped') {
-      await stubMagazine(page, GROUPED_ENTRIES);
-      await page.goto('/');
-      await expect(
-        page.locator(`${ROWS.groupedKicker} app-entry-pills .pill`).first(),
-      ).toBeVisible();
-      await expect(
-        page.locator(`${ROWS.groupedKicker} app-entry-like .count`).first(),
-      ).toBeVisible();
-    } else {
-      await stubArticle(page);
-      await page.goto('/?subscription=1');
-      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
-      await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
-      await expect(page.locator('app-entry-comments button.delete')).toBeVisible();
-      await expect(page.locator('app-open-in-reader app-icon').first()).toBeAttached();
-    }
-  });
+  return openPage(browser, { step, layout: LAYOUTS[surface], viewport }, LOADS[surface]);
 }
+
+/** A part of the page: its font size, or the height of what it draws. `stays` marks a part that
+ *  keeps its size at every step. */
+interface Probe {
+  selector: string;
+  measure: 'font' | 'height';
+  stays?: true;
+}
+
+const font = (selector: string): Probe => ({ selector, measure: 'font' });
+const height = (selector: string): Probe => ({ selector, measure: 'height' });
+const glyph = (selector: string): Probe => height(`${selector} app-icon > span`);
+
+const PROBES: Record<Surface, Record<string, Probe>> = {
+  magazine: {
+    kickerSource: font('app-entry-kicker-line .source'),
+    kickerAvatar: height('app-entry-kicker-line img.avatar'),
+    kickerFavicon: height('app-entry-kicker-line img.favicon'),
+    pillText: font('app-entry-pills a.pill .name'),
+    pillGlyph: height('app-entry-pills a.pill app-tag-glyph'),
+    actionButton: glyph('app-entry-actions button'),
+    alsoInLabel: font('.also-foot .lead'),
+    alsoInButton: font('.also-foot .also-entry'),
+  },
+  grouped: {
+    when: font('app-source-group app-entry-kicker-line .when'),
+    shortPill: font('app-source-group app-entry-kicker-line app-entry-pills .pill'),
+    likeCount: font('app-source-group app-entry-kicker-line app-entry-like .count'),
+    likeGlyph: glyph('app-source-group app-entry-kicker-line app-entry-like'),
+    moreFromLabel: font('app-source-group button.more'),
+    moreFromGlyph: glyph('app-source-group button.more'),
+  },
+  article: {
+    articleSource: font('app-article-page article > p.meta'),
+    actionRow: glyph('app-reader-view app-entry-actions.actions button'),
+    listenLabel: font('app-listen-row .listen-label'),
+    listenGlyph: glyph('app-listen-row button.listen'),
+    commentAuthor: font('app-entry-comments p.byline .author'),
+    commentAvatar: height('app-entry-comments p.byline app-avatar'),
+    deleteGlyph: glyph('app-entry-comments button.delete'),
+    replyLabel: font('app-social-counts-row button.reply .label'),
+    replyGlyph: glyph('app-social-counts-row button.reply'),
+    openInReaderLabel: font('app-open-in-reader .open-in-reader-label'),
+    openInReaderGlyph: glyph('app-open-in-reader'),
+    barTitle: { ...font('app-reader-view .bar-title'), stays: true },
+    barButton: { ...glyph('app-reader-view .bar .nav button'), stays: true },
+  },
+  notifications: {
+    line: font('app-notification-row p.line'),
+    avatar: height('app-notification-row app-avatar'),
+    kindGlyph: glyph('app-notification-row .kind'),
+  },
+  trending: {
+    sourcesToggle: font('app-story-sources button.toggle'),
+    sourcesGlyph: glyph('app-story-sources button.toggle'),
+    miniTitle: font('app-story-sources .mini .title'),
+    pictureTileFavicon: { ...height('app-story-sources .thumb.tile app-favicon img'), stays: true },
+  },
+  list: {
+    rowTitle: font('app-entry-row .title'),
+    playBadge: { ...glyph('app-short-badge'), stays: true },
+  },
+};
+
+/** What each icon draws: an `app-icon`'s glyph span, any other icon itself. */
+const GLYPHS = 'app-icon > span, app-favicon img, app-tag-glyph, app-network-logo';
 
 async function iconHeights(page: Page, selector: string): Promise<number[]> {
   return page
@@ -149,158 +251,111 @@ async function iconHeights(page: Page, selector: string): Promise<number[]> {
     );
 }
 
-async function fontSize(page: Page, selector: string): Promise<number> {
-  return page
-    .locator(selector)
-    .first()
-    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+async function measureProbe(page: Page, { selector, measure }: Probe): Promise<number> {
+  const target = page.locator(selector).first();
+  return measure === 'font'
+    ? target.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
+    : target.evaluate((element) => element.getBoundingClientRect().height);
 }
 
-const TEXTS: Record<Surface, Record<string, string>> = {
-  magazine: {
-    kicker: 'app-entry-kicker-line .kicker',
-    kickerSource: 'app-entry-kicker-line .source',
-    alsoFootLead: '.also-foot .lead',
-    alsoFootEntry: '.also-foot .also-entry',
-  },
-  grouped: {
-    when: 'app-source-group app-entry-kicker-line .when',
-    shortPill: 'app-source-group app-entry-kicker-line app-entry-pills .pill',
-    likeCount: 'app-source-group app-entry-kicker-line app-entry-like .count',
-  },
-  article: {
-    rowMeta: 'app-entry-row p.meta',
-    articleSource: 'app-article-page article > p.meta',
-    commentsTitle: 'app-entry-comments header.head .title',
-    commentsAge: 'app-entry-comments header.head .age',
-    commentAuthor: 'app-entry-comments p.byline .author',
-    commentScore: 'app-entry-comments p.byline app-vote-pill .number',
-    replyLabel: 'app-social-counts-row button.reply .label',
-    likeLabel: 'app-social-counts-row button.like .label',
-    repostLabel: 'app-social-counts-row button.repost .label',
-    voteNumber: 'app-social-counts-row app-vote-pill .number',
-    openInReaderLabel: 'app-open-in-reader .open-in-reader-label',
-  },
-};
-
-const ROWS_ON: Record<Surface, (keyof typeof ROWS)[]> = {
-  magazine: ['kicker', 'alsoFoot'],
-  grouped: ['groupedKicker'],
-  article: ['rowMeta', 'articleSource', 'commentsHead', 'commentActions', 'countsRow'],
-};
+interface Measurement {
+  probes: Record<string, number>;
+  sidebarIcons: number[];
+  headerIcons: number[];
+}
 
 async function measure(browser: Browser, surface: Surface, step: Step): Promise<Measurement> {
   const page = await open(browser, { surface, step });
-  const icons: Record<string, number[]> = {};
-  for (const row of ROWS_ON[surface]) icons[row] = await iconHeights(page, ROWS[row]);
-  const texts: Record<string, number> = {};
-  for (const [name, selector] of Object.entries(TEXTS[surface])) {
-    texts[name] = await fontSize(page, selector);
+  const probes: Record<string, number> = {};
+  for (const [name, probe] of Object.entries(PROBES[surface])) {
+    probes[name] = await measureProbe(page, probe);
   }
-  const single = (selector: string) =>
-    surface === 'article'
-      ? page
-          .locator(selector)
-          .first()
-          .evaluate(
-            (icon, glyphs) => icon.querySelector(glyphs)!.getBoundingClientRect().height,
-            GLYPHS,
-          )
-      : 0;
   const measurement = {
-    icons,
-    texts,
+    probes,
     sidebarIcons: await iconHeights(page, 'aside.sidebar'),
-    headerIcons: await iconHeights(page, 'app-list-header'),
-    openInReaderIcon: await single('app-open-in-reader app-icon'),
-    deleteGlyph: await single('app-entry-comments button.delete app-icon'),
-    replyGlyph: await single('app-entry-comments button.reply app-icon'),
+    headerIcons: await iconHeights(page, 'app-reader-header, app-list-header'),
   };
   await page.context().close();
   return measurement;
 }
 
-/** The rows' text: `develop`'s sizes, except the grouped card's pill and like count, which now
- *  scale with their kicker line. */
-const TEXT_SIZES: Record<Surface, Partial<Record<Step, Record<string, number>>>> = {
-  magazine: {
-    100: { kicker: 13, kickerSource: 13, alsoFootLead: 11, alsoFootEntry: 11 },
-    150: { kicker: 19.5, kickerSource: 19.5, alsoFootLead: 16.5, alsoFootEntry: 16.5 },
-  },
-  grouped: {
-    90: { when: 11.7, shortPill: 9.9, likeCount: 11.7 },
-    100: { when: 13, shortPill: 11, likeCount: 13 },
-    150: { when: 19.5, shortPill: 16.5, likeCount: 19.5 },
-  },
-  article: {
-    100: {
-      rowMeta: 13,
-      articleSource: 13,
-      commentsTitle: 18,
-      commentsAge: 13,
-      commentAuthor: 13,
-      commentScore: 13,
-      replyLabel: 13,
-      likeLabel: 13,
-      repostLabel: 13,
-      voteNumber: 13,
-      openInReaderLabel: 11,
-    },
-    150: {
-      rowMeta: 19.5,
-      articleSource: 19.5,
-      commentsTitle: 27,
-      commentsAge: 19.5,
-      commentAuthor: 19.5,
-      commentScore: 19.5,
-      replyLabel: 19.5,
-      likeLabel: 19.5,
-      repostLabel: 19.5,
-      voteNumber: 19.5,
-      openInReaderLabel: 11,
-    },
-  },
-};
+/** Every text, control, icon and avatar inside a text-scaled container that is cut by an ancestor
+ *  that clips, or that leaves the viewport; an ellipsis and screen-reader text are cut on purpose. */
+async function escapes(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const parts = [...document.querySelectorAll('.text-scaled *')].filter((part) => {
+      const box = part.getBoundingClientRect();
+      return box.width > 0 && box.height > 0 && !part.closest('.sr-only');
+    });
+    const clipperOf = (part: Element) => {
+      let clipper = part.parentElement;
+      while (clipper && getComputedStyle(clipper).overflowX === 'visible') {
+        clipper = clipper.parentElement;
+      }
+      return clipper;
+    };
+    const isCut = (part: Element) => {
+      const box = part.getBoundingClientRect();
+      const outer = clipperOf(part)?.getBoundingClientRect();
+      return outer !== undefined && (box.right > outer.right + 0.5 || box.left < outer.left - 0.5);
+    };
+    const overflows = (part: Element) => {
+      const style = getComputedStyle(part);
+      return (
+        style.overflowX !== 'visible' &&
+        style.textOverflow !== 'ellipsis' &&
+        part.scrollWidth > part.clientWidth + 1
+      );
+    };
+    const found = parts.flatMap((part) => {
+      const label = `${part.tagName.toLowerCase()}.${[...part.classList].join('.')}`;
+      return [
+        ...(isCut(part) ? [`${label} is cut`] : []),
+        ...(overflows(part) ? [`${label} overflows`] : []),
+        ...(part.getBoundingClientRect().right > window.innerWidth + 0.5
+          ? [`${label} leaves the viewport`]
+          : []),
+      ];
+    });
+    const sideways =
+      document.documentElement.scrollWidth > document.documentElement.clientWidth
+        ? ['the page scrolls sideways']
+        : [];
+    return [...found, ...sideways];
+  });
+}
 
-/** The grouped card's kicker holds pills and actions too, so it is checked below 100% as well. */
-const STEPS: Record<Surface, Exclude<Step, 100>[]> = {
-  magazine: [150],
-  grouped: [90, 150],
-  article: [150],
-};
+const SURFACES = Object.keys(PROBES) as Surface[];
 
-test.describe('icons follow the text size of their row', () => {
-  for (const surface of ['magazine', 'grouped', 'article'] as const) {
-    test(`on the ${surface}, a scaled row's icons grow with its text, and nothing else moves`, async ({
+test.describe('everything in a text-scaled container follows the text size', () => {
+  for (const surface of SURFACES) {
+    test(`on the ${surface}, text, icons and avatars scale by the step; pictures and chrome stay`, async ({
       browser,
     }) => {
       const normal = await measure(browser, surface, 100);
-      expect.soft(normal.texts, 'text at 100%').toEqual(TEXT_SIZES[surface][100]);
-
-      for (const step of STEPS[surface]) {
+      for (const step of [90, 150] as const) {
         const scaled = await measure(browser, surface, step);
-        const factor = step / 100;
-        for (const row of ROWS_ON[surface]) {
-          expect(normal.icons[row].length, `${row} shows no icon to measure`).toBeGreaterThan(0);
-          expect(scaled.icons[row].length, row).toBe(normal.icons[row].length);
-          normal.icons[row].forEach((height, index) => {
-            expect
-              .soft(
-                Math.abs(scaled.icons[row][index] - height * factor),
-                `${row} icon ${index} at ${step}%`,
-              )
-              .toBeLessThanOrEqual(0.5);
-          });
+        for (const [name, probe] of Object.entries(PROBES[surface])) {
+          const expected = probe.stays ? normal.probes[name] : normal.probes[name] * (step / 100);
+          expect
+            .soft(Math.abs(scaled.probes[name] - expected), `${name} at ${step}%`)
+            .toBeLessThanOrEqual(0.05);
         }
-        expect.soft(scaled.texts, `text at ${step}%`).toEqual(TEXT_SIZES[surface][step]);
-        expect.soft(scaled.sidebarIcons, 'sidebar icons').toEqual(normal.sidebarIcons);
-        expect.soft(scaled.headerIcons, 'list header icons').toEqual(normal.headerIcons);
-        if (surface === 'article') {
-          expect.soft(scaled.openInReaderIcon, 'open-in-reader icon').toBe(normal.openInReaderIcon);
-          expect.soft(scaled.deleteGlyph, 'delete glyph').toBeGreaterThan(0);
-          expect.soft(scaled.deleteGlyph, 'delete beside reply').toBe(scaled.replyGlyph);
-        }
+        expect.soft(scaled.sidebarIcons, `sidebar icons at ${step}%`).toEqual(normal.sidebarIcons);
+        expect.soft(scaled.headerIcons, `header icons at ${step}%`).toEqual(normal.headerIcons);
       }
+    });
+
+    test(`on the ${surface}, nothing is cut or leaves the page on a phone at 150%`, async ({
+      browser,
+    }) => {
+      const page = await open(browser, {
+        surface,
+        step: 150,
+        viewport: { width: 390, height: 760 },
+      });
+      expect(await escapes(page)).toEqual([]);
+      await page.context().close();
     });
   }
 });
@@ -310,24 +365,26 @@ const GROUPED_KICKER_HEIGHT = 23.5;
 
 /** Each grouped action button's box, the card's, and whether an ancestor that clips overflow cuts it. */
 async function actionBoxes(page: Page) {
-  return page.locator(`${ROWS.groupedKicker} app-entry-actions button`).evaluateAll((buttons) =>
-    buttons.map((button) => {
-      const box = button.getBoundingClientRect();
-      const card = button.closest('article')!.getBoundingClientRect();
-      const inside = (outer: DOMRect) =>
-        box.left >= outer.left - 0.5 &&
-        box.right <= outer.right + 0.5 &&
-        box.bottom <= outer.bottom + 0.5;
-      const clippers: Element[] = [];
-      for (let node = button.parentElement; node; node = node.parentElement) {
-        if (getComputedStyle(node).overflowX !== 'visible') clippers.push(node);
-      }
-      return {
-        insideCard: inside(card),
-        clipped: clippers.some((clipper) => !inside(clipper.getBoundingClientRect())),
-      };
-    }),
-  );
+  return page
+    .locator(`app-source-group app-entry-kicker-line app-entry-actions button`)
+    .evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        const card = button.closest('article')!.getBoundingClientRect();
+        const inside = (outer: DOMRect) =>
+          box.left >= outer.left - 0.5 &&
+          box.right <= outer.right + 0.5 &&
+          box.bottom <= outer.bottom + 0.5;
+        const clippers: Element[] = [];
+        for (let node = button.parentElement; node; node = node.parentElement) {
+          if (getComputedStyle(node).overflowX !== 'visible') clippers.push(node);
+        }
+        return {
+          insideCard: inside(card),
+          clipped: clippers.some((clipper) => !inside(clipper.getBoundingClientRect())),
+        };
+      }),
+    );
 }
 
 test.describe("a grouped card's kicker on a phone", () => {
@@ -343,7 +400,7 @@ test.describe("a grouped card's kicker on a phone", () => {
   test('stays one line at 100%', async ({ browser }) => {
     const page = await open(browser, { surface: 'grouped', step: 100, viewport: PHONE });
     const heights = await page
-      .locator(`${ROWS.groupedKicker} .kicker`)
+      .locator(`app-source-group app-entry-kicker-line .kicker`)
       .evaluateAll((lines) => lines.map((line) => line.getBoundingClientRect().height));
     expect(heights.length).toBeGreaterThan(0);
     expect(
@@ -353,11 +410,6 @@ test.describe("a grouped card's kicker on a phone", () => {
     await page.context().close();
   });
 });
-
-const PILL_TAGS = [
-  makeTag(7, 'Politics', { icon: 'label' }),
-  makeTag(8, 'Science', { icon: 'science' }),
-];
 
 const PILL_ROWS = {
   articleHead: 'app-reader-view .head-line',

@@ -1,7 +1,18 @@
 import type { Page } from '@playwright/test';
 import { CommentsResponse } from '../../src/app/reader/entry-comment';
 import type { EntryDto, SubscriptionDto } from '../../src/app/reader/models';
-import { aCommentPost, aLinkCard, anEntryComment } from '../../src/testing/entry-testing';
+import type {
+  NotificationActorDto,
+  NotificationGroupDto,
+} from '../../src/app/reader/notifications/notification.models';
+import type { TrendingResponseDto } from '../../src/app/reader/trending/trending-page';
+import {
+  aCommentPost,
+  aLinkCard,
+  anEntryComment,
+  aStory,
+  aStoryArticle,
+} from '../../src/testing/entry-testing';
 import { stubImageHost } from './images';
 import {
   entryDetailJson,
@@ -34,11 +45,13 @@ export const COMMENTS: CommentsResponse = {
   comments: [
     anEntryComment({
       author: 'Own Reply',
+      authorAvatarUrl: AVATAR,
       html: '<p>A reply the reader may delete.</p>',
       post: aCommentPost({ isOwn: true }),
     }),
     anEntryComment({
       author: 'Lemmy Voter',
+      authorAvatarUrl: AVATAR,
       html: '<p>A comment the reader votes on.</p>',
       score: 7,
       vote: { address: 'https://lemmy.invalid/comment/1', myVote: 0, canReply: true },
@@ -114,5 +127,73 @@ export async function stubArticle(
   await page.route(
     (url) => url.pathname === '/api/entries/1/comments',
     (route) => route.fulfill({ json: COMMENTS }),
+  );
+}
+
+function notificationActor(displayName: string, handle: string): NotificationActorDto {
+  return { handle, displayName, avatarUrl: AVATAR, profileUrl: `https://bsky.invalid/${handle}` };
+}
+
+export const NOTIFICATION: NotificationGroupDto = {
+  id: 1,
+  kind: 'reply',
+  account: '@reader.bsky.social',
+  actors: [notificationActor('Chris Weber', 'chris.example')],
+  actorCount: 1,
+  excerpt: 'Does it count a wire story once when five outlets reprint it?',
+  answeredExcerpt: null,
+  threadTitle: null,
+  threadPlace: null,
+  threadBy: null,
+  onComment: false,
+  linkUrl: 'https://bsky.invalid/post/1',
+  entryId: null,
+  latestAt: '2026-11-16T10:00:00+00:00',
+  seen: true,
+};
+
+/** One Bluesky notification whose actor has an avatar; open `/?view=notifications&network=bluesky`. */
+export async function stubNotifications(page: Page): Promise<void> {
+  await stubFeedReader(page, {});
+  await page.route(/\/api\/me\/notifications(?:[?#]|$)/, (route) =>
+    route.fulfill({
+      json: { groups: [NOTIFICATION], nextCursor: null, scopeMissing: [], needsReconnect: [] },
+    }),
+  );
+  await page.route('**/api/me/notifications/seen', (route) => route.fulfill({ status: 204 }));
+}
+
+export const STORY_TITLE = 'A story five outlets ran';
+
+const TRENDING: TrendingResponseDto = {
+  window: 'day',
+  builtAt: '2026-11-18T08:00:00Z',
+  stories: [
+    aStory({
+      id: 601,
+      title: STORY_TITLE,
+      outletCount: 3,
+      articles: [601, 602, 603].map((id) =>
+        aStoryArticle({
+          id,
+          title: `Outlet article ${id}`,
+          source: `Outlet ${id}`,
+          faviconUrl: FAVICON,
+        }),
+      ),
+    }),
+  ],
+};
+
+/** One Trending story with three outlets; open `/?view=trending&window=day` and expand its sources. */
+export async function stubTrending(page: Page): Promise<void> {
+  await stubFeedReader(page, {});
+  await page.route(
+    (url) => url.pathname === '/api/trending',
+    (route) => route.fulfill({ json: TRENDING }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/trending/followed',
+    (route) => route.fulfill({ json: { stories: [], nextBuildDueAt: null } }),
   );
 }

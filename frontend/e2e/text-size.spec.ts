@@ -22,13 +22,14 @@ const SCALED = {
   articleTitle: 'app-reader-view article .title',
   articleBody: 'app-reader-view .content p',
   articleHeading: 'app-reader-view .content h2',
+  articlePill: 'app-reader-view app-entry-pills .pill',
+  articleAction: 'app-reader-view app-entry-actions.actions button',
 };
 const FIXED = {
   listHeaderTitle: 'app-list-header h2',
   listHeaderCount: 'app-list-header .title-count',
   toolbarTitle: 'app-reader-view .bar-title',
   toolbarButton: 'app-reader-view .bar .nav button',
-  articlePill: 'app-reader-view app-entry-pills .pill',
 };
 
 async function stubReader(page: Page): Promise<void> {
@@ -88,7 +89,7 @@ test('a saved text size reaches the root before the app boots', async ({ page })
 test.describe('on a desktop pane layout', () => {
   test.use({ viewport: DESKTOP });
 
-  test('reading text and the entry meta row scale; headers, toolbar, buttons and article pills do not', async ({
+  test('reading text, its pills and its buttons scale; headers and toolbar do not', async ({
     page,
   }) => {
     await presetLocalStorage(page, { 'sfr.layout': 'pane' });
