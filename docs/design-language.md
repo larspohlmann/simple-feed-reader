@@ -957,7 +957,7 @@ and the chapter list under an embed (`app-embed-chapters`, #1886): a
 `label` input and an `open` model. The body is a projected `<ng-template>`, so
 a collapsed panel builds none of it (a transcript runs to hundreds of
 paragraphs). Its toggle is a `<button>`; inside `.text-scaled` it follows the text size like
-every other control (#2524). Article panels use it, not `<app-disclosure>`.
+every other control (#2524).
 
 ---
 
@@ -1910,10 +1910,11 @@ fits at 150 % on a phone wraps its actions to their own line (the kicker line), 
 label with an ellipsis (a quoted post's date), or collapses a bar's labels to their icons where
 the bar already does so at narrow widths.
 
-Pictures and spacing do not scale, and neither does a glyph that stands in for a picture or sits
-on one: the favicon in a story-sources mini card's picture tile (`--icon-text-scale: 1` on the
-tile), and the badges and play button over a thumbnail (`media-badge.media-badge` and the
-magazine's `.play` reset the type and icon tokens with `type-scale.fixed` and `icon-scale.fixed`).
+Controls and labels on a picture scale like any other: the ALT and GIF badges, the Short badge,
+the play button over a thumbnail and "Open in reader" on a link card, text and glyph alike; at 150 %
+each still sits inside its picture. What keeps its size is the picture itself (thumbnails, picture
+tiles) and a glyph that stands in for one: the favicon in a story-sources mini card's tile
+(`--icon-text-scale: 1` on `.thumb.tile`). Spacing does not scale.
 
 The control does not reach outside the content area: the app header, the sidebar and the phone
 drawer, the list header, the article's bar, the floating corner buttons, dialogs, menus and

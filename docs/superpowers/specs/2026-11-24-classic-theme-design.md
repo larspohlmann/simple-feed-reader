@@ -9,7 +9,7 @@ A second theme next to graphite for readers who want the feel of a printed newsp
 - A theme `classic`, in light and dark, next to today's `graphite`.
 - Off by default. Picked in Settings → Preferences, stored with the account, the same on every device.
 - Serif type on everything: headlines, summaries, article body, sidebar, list header, buttons, settings, dialogs.
-- In every theme: an icon that sits with text following the text-size control scales with that text.
+- In every theme: inside the content area, text and icons follow the text-size control in every control, and an avatar that prefixes text scales with it.
 
 ## Non-goals
 
@@ -77,7 +77,7 @@ Type:
 
 ## Icons follow the text size (every theme)
 
-Rule: inside a container that follows the text-size control, text and icons scale in every control: buttons, pills, links and running text alike (#2524). "Icon" covers Material icons, tag glyphs, network logos and favicons set inline with text. Pictures and spacing do not scale; an avatar scales where it prefixes text. A glyph that stands in for a picture or sits on one (a picture tile's favicon, the play badge over a thumbnail) keeps its size, and nothing outside the content area follows the control.
+Rule: inside a container that follows the text-size control, text and icons scale in every control: buttons, pills, links and running text alike (#2524). "Icon" covers Material icons, tag glyphs, network logos and favicons set inline with text. Pictures and spacing do not scale; an avatar scales where it prefixes text. Controls and labels on a picture (the ALT, GIF and Short badges, the play button, Open in reader) scale too; the picture itself, thumbnails, picture tiles and a glyph that stands in for a picture (a picture tile's favicon) keep their size, and nothing outside the content area follows the control.
 
 Measured on the list and an article with comments at 100% against 150%, these have scaling text beside a fixed icon today:
 
