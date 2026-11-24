@@ -6,8 +6,11 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\HttpFoundation\Response;
 
 final class OpmlControllerTest extends ApiTestCase
 {
@@ -15,7 +18,7 @@ final class OpmlControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->request('GET', '/api/opml/export');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testExportReturnsOpmlAttachment(): void
@@ -37,40 +40,167 @@ final class OpmlControllerTest extends ApiTestCase
         self::assertStringContainsString('xmlUrl="https://example.com/feed.xml"', $body);
     }
 
-    public function testImportCreatesSubscriptions(): void
+    public function testImportSubscribesTheListedFeedsUnderTheParent(): void
     {
         $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('opml-import@example.com'));
-        $opml = (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
+        [$headers, $user] = $this->bearerAndUser('opml-import@example.com');
 
-        $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
-        $client->request('POST', '/api/opml/import', server: $server, content: $opml);
-        self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertSame(3, $body['imported']);
+        $this->postImport($client, $headers, [
+            'opml' => $this->fixture(),
+            'parentTagName' => 'From Feedly',
+            'feedUrls' => ['https://www.heise.de/rss/heise.rdf'],
+        ]);
 
-        $client->request('GET', '/api/subscriptions', server: $headers);
-        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($list);
-        self::assertIsArray($list['subscriptions']);
-        self::assertCount(3, $list['subscriptions']);
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertSame(1, $this->payload($client)['imported']);
+        $entityManager = $this->entityManager();
+        self::assertCount(1, $entityManager->getRepository(Subscription::class)->findBy(['user' => $user]));
+        self::assertNotNull(
+            $entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'From Feedly']),
+        );
     }
 
-    public function testImportRejectsEmptyBody(): void
+    public function testImportWithoutFeedsIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('opml-empty@example.com'));
-        $client->request('POST', '/api/opml/import', server: $headers + ['CONTENT_TYPE' => 'text/x-opml'], content: '');
-        self::assertResponseStatusCodeSame(422);
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-no-feeds@example.com')), [
+            'opml' => $this->fixture(),
+            'feedUrls' => [],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('validation_error', $this->payload($client)['type']);
+    }
+
+    public function testImportWithoutAFileIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-no-file@example.com')), [
+            'feedUrls' => ['https://www.heise.de/rss/heise.rdf'],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('invalid_opml', $this->payload($client)['type']);
+    }
+
+    public function testImportRejectsATagIdThatIsNotANumber(): void
+    {
+        $client = self::createClient();
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-bad-tag@example.com')), [
+            'opml' => $this->fixture(),
+            'feedUrls' => ['https://www.heise.de/rss/heise.rdf'],
+            'tagIdsByFeedUrl' => ['u' => ['x']],
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testImportRejectsOversizedBody(): void
     {
         $client = self::createClient();
-        $headers = $this->bearerFor($this->factory()->create('opml-big@example.com'));
-        $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
-        $client->request('POST', '/api/opml/import', server: $server, content: str_repeat('a', 1_048_577));
-        self::assertResponseStatusCodeSame(422);
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-big@example.com')), [
+            'opml' => str_repeat('a', 1_048_577),
+            'feedUrls' => ['https://www.heise.de/rss/heise.rdf'],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('invalid_opml', $this->payload($client)['type']);
+    }
+
+    public function testPreviewRequiresAuth(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/api/opml/preview');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testPreviewListsTheFileWithoutSubscribing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('opml-preview@example.com');
+
+        $this->postPreview($client, $headers, ['opml' => $this->fixture()]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $body = $this->payload($client);
+        self::assertIsInt($body['freeSlots']);
+        self::assertIsArray($body['root']);
+        self::assertCount(0, $this->entityManager()->getRepository(Subscription::class)->findBy(['user' => $user]));
+    }
+
+    public function testPreviewOfAnUnreadableFileIsAProblem(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-bad@example.com')), [
+            'opml' => 'not xml',
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $type = $this->payload($client)['type'];
+        self::assertIsString($type);
+        self::assertStringEndsWith('invalid_opml', $type);
+    }
+
+    public function testPreviewWithoutAFileIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-nofile@example.com')), []);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('invalid_opml', $this->payload($client)['type']);
+    }
+
+    public function testPreviewCarriesTheParentIntoTheDestinations(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-parent@example.com')), [
+            'opml' => $this->fixture(),
+            'parentTagName' => 'From Feedly',
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        self::assertSame(['From Feedly'], $root['destination']);
+    }
+
+    private function fixture(): string
+    {
+        return (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
+    }
+
+    /**
+     * @param array{HTTP_AUTHORIZATION: string} $headers
+     * @param array<string, mixed>               $body
+     */
+    private function postImport(KernelBrowser $client, array $headers, array $body): void
+    {
+        $client->request(
+            'POST',
+            '/api/opml/import',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /**
+     * @param array{HTTP_AUTHORIZATION: string} $headers
+     * @param array<string, mixed>               $body
+     */
+    private function postPreview(KernelBrowser $client, array $headers, array $body): void
+    {
+        $client->request(
+            'POST',
+            '/api/opml/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
     }
 }

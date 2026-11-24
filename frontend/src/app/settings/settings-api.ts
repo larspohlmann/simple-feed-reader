@@ -2,6 +2,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { OpmlImportRequest, OpmlPreview } from './import/opml-import.models';
 import {
   DebugLogDetail,
   DebugLogEntry,
@@ -24,10 +25,12 @@ export class SettingsApi {
     return this.http.get(`${this.base}/api/opml/export`, { responseType: 'text' });
   }
 
-  importOpml(xml: string): Observable<OpmlImportResult> {
-    return this.http.post<OpmlImportResult>(`${this.base}/api/opml/import`, xml, {
-      headers: { 'Content-Type': 'text/xml' },
-    });
+  previewOpml(opml: string, parentTagName: string | null): Observable<OpmlPreview> {
+    return this.http.post<OpmlPreview>(`${this.base}/api/opml/preview`, { opml, parentTagName });
+  }
+
+  importOpml(request: OpmlImportRequest): Observable<OpmlImportResult> {
+    return this.http.post<OpmlImportResult>(`${this.base}/api/opml/import`, request);
   }
 
   downloadAccountBackup(): Observable<HttpResponse<Blob>> {

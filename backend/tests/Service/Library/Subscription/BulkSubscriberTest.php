@@ -469,6 +469,206 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame('A', $this->storedTag($user, 'B')->getParent()?->getName());
     }
 
+    public function testInPlaceCreatesEachMissingTagUnderTheOneBefore(): void
+    {
+        $user = $this->user('in-place-new@example.com');
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://feedly.example.com/rss.xml', 'Feedly', ['From Feedly', 'Tech (1)']),
+        ]);
+
+        self::assertSame('From Feedly', $this->storedTag($user, 'Tech (1)')->getParent()?->getName());
+        self::assertNull($this->storedTag($user, 'From Feedly')->getParent());
+        $subscription = $this->subscriptionTo($user, 'https://feedly.example.com/rss.xml');
+        self::assertSame(['Tech (1)'], $this->namesOf($subscription->getTags()->toArray()));
+        self::assertEqualsCanonicalizing(['From Feedly', 'Tech (1)'], $this->namesOf($result->tagsCreated));
+    }
+
+    public function testInPlaceNeverMovesATagItFindsAndStopsBeforeIt(): void
+    {
+        $user = $this->user('in-place-keep@example.com');
+        $this->entityManager->persist(new Tag($user, 'Tech'));
+        $this->entityManager->flush();
+
+        $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://keep.example.com/rss.xml', 'Keep', ['News', 'Tech']),
+        ]);
+
+        self::assertNull($this->storedTag($user, 'Tech')->getParent());
+        self::assertNull($this->storedTag($user, 'News')->getParent());
+        $subscription = $this->subscriptionTo($user, 'https://keep.example.com/rss.xml');
+        self::assertSame(['News'], $this->namesOf($subscription->getTags()->toArray()));
+    }
+
+    public function testInPlaceStopsAtAFirstTagThatIsNestedAndJoinsNoPathTag(): void
+    {
+        $user = $this->user('in-place-nested@example.com');
+        [$shelf, $reading] = $this->storeShelfWithReading($user);
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://nested.example.com/rss.xml', 'Nested', ['Reading']),
+        ]);
+
+        self::assertSame($shelf, $reading->getParent());
+        self::assertSame([], $result->tagsCreated);
+        self::assertCount(0, $this->subscriptionTo($user, 'https://nested.example.com/rss.xml')->getTags());
+    }
+
+    public function testInPlaceStopsAtATagUnderAnotherParentAndJoinsTheTagBeforeIt(): void
+    {
+        $user = $this->user('in-place-elsewhere@example.com');
+        [$shelf, $reading] = $this->storeShelfWithReading($user);
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://elsewhere.example.com/rss.xml', 'Away', ['News', 'Reading', 'Deep']),
+        ]);
+
+        self::assertSame($shelf, $reading->getParent());
+        $tags = $this->entityManager->getRepository(Tag::class);
+        self::assertNull($tags->findOneBy(['user' => $user, 'name' => 'Deep']));
+        self::assertSame(['News'], $this->namesOf($result->tagsCreated));
+        $subscription = $this->subscriptionTo($user, 'https://elsewhere.example.com/rss.xml');
+        self::assertSame(['News'], $this->namesOf($subscription->getTags()->toArray()));
+    }
+
+    public function testInPlaceCreatesANewPathTagUnderAStoredParent(): void
+    {
+        $user = $this->user('in-place-under-stored@example.com');
+        $news = new Tag($user, 'News');
+        $this->entityManager->persist($news);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://sport.example.com/rss.xml', 'Sport', ['News', 'Sport']),
+        ]);
+
+        self::assertSame($news, $this->storedTag($user, 'Sport')->getParent());
+        self::assertNull($news->getParent());
+        self::assertSame(['Sport'], $this->namesOf($result->tagsCreated));
+        $subscription = $this->subscriptionTo($user, 'https://sport.example.com/rss.xml');
+        self::assertSame(['Sport'], $this->namesOf($subscription->getTags()->toArray()));
+    }
+
+    public function testInPlaceJoinsTheChosenTagsAndNothingElse(): void
+    {
+        $user = $this->user('in-place-chosen@example.com');
+        $one = new Tag($user, 'One');
+        $two = new Tag($user, 'Two');
+        $this->entityManager->persist($one);
+        $this->entityManager->persist($two);
+        $feed = new Feed('https://holder.example.com/rss.xml');
+        $holder = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00'));
+        $holder->addTag($one, 0);
+        $holder->addTag($two, 0);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($holder);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://chosen.example.com/rss.xml', 'Chosen', chosenTags: [$one, $two]),
+        ]);
+
+        $subscription = $this->subscriptionTo($user, 'https://chosen.example.com/rss.xml');
+        self::assertSame(['One', 'Two'], $this->namesOf($subscription->getTags()->toArray()));
+        self::assertSame(1, TagJoins::positionOf($subscription, $one));
+        self::assertSame(1, TagJoins::positionOf($subscription, $two));
+        self::assertSame([], $result->tagsCreated);
+    }
+
+    public function testInPlaceLeavesAFeedWithNeitherUntagged(): void
+    {
+        $user = $this->user('in-place-none@example.com');
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://none.example.com/rss.xml', 'None'),
+        ]);
+
+        self::assertSame(1, $result->imported);
+        $subscription = $this->subscriptionTo($user, 'https://none.example.com/rss.xml');
+        self::assertCount(0, $subscription->getTags());
+    }
+
+    public function testInPlaceJoinsATagOnceWhenChosenAndInnermostAreTheSame(): void
+    {
+        $user = $this->user('in-place-twice@example.com');
+        $tech = new Tag($user, 'Tech');
+        $this->entityManager->persist($tech);
+        $this->entityManager->flush();
+
+        $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://twice.example.com/rss.xml', 'Twice', ['Tech'], chosenTags: [$tech]),
+        ]);
+
+        $subscription = $this->subscriptionTo($user, 'https://twice.example.com/rss.xml');
+        self::assertCount(1, $subscription->getSubscriptionTags());
+        self::assertSame(0, TagJoins::positionOf($subscription, $tech));
+    }
+
+    public function testInPlaceCreatesASharedNewTagOnceAcrossItems(): void
+    {
+        $user = $this->user('in-place-shared@example.com');
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://x.example.com/rss.xml', 'X', ['New', 'X']),
+            new BulkSubscribeItemModel('https://y.example.com/rss.xml', 'Y', ['New', 'Y']),
+        ]);
+
+        self::assertEqualsCanonicalizing(['New', 'X', 'Y'], $this->namesOf($result->tagsCreated));
+        self::assertSame(
+            $this->storedTag($user, 'New'),
+            $this->storedTag($user, 'X')->getParent(),
+        );
+        self::assertSame($this->storedTag($user, 'New'), $this->storedTag($user, 'Y')->getParent());
+    }
+
+    public function testInPlaceUsesAStoredTagOfAnotherCaseWhereItIs(): void
+    {
+        $user = $this->user('in-place-case@example.com');
+        $this->entityManager->persist(new Tag($user, 'news'));
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://case.example.com/rss.xml', 'Case', ['News']),
+        ]);
+
+        self::assertSame([], $result->tagsCreated);
+        $subscription = $this->subscriptionTo($user, 'https://case.example.com/rss.xml');
+        self::assertSame(['news'], $this->namesOf($subscription->getTags()->toArray()));
+        self::assertNull($this->storedTag($user, 'news')->getParent());
+    }
+
+    public function testAnInPlaceBatchHoldsTheTagStructureLock(): void
+    {
+        $this->skipWithoutRowLocks();
+        $user = $this->user('in-place-locks@example.com');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', ['A', 'B']),
+        ]);
+
+        self::assertCount(1, $recorder->queriesMatching('for update'));
+    }
+
+    public function testAnInPlaceBatchKeepsTheCapAndTheCounts(): void
+    {
+        $user = $this->user('in-place-cap@example.com');
+        $user->setMaxSubscriptions(1);
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First'),
+            new BulkSubscribeItemModel('https://second.example.com/rss.xml', 'Second'),
+            new BulkSubscribeItemModel('ftp://x', 'Bad'),
+        ]);
+
+        self::assertSame(1, $result->imported);
+        self::assertSame(1, $result->skippedOverLimit);
+        self::assertSame(1, $result->invalid);
+        self::assertCount(1, $this->entityManager->getRepository(Feed::class)->findAll());
+    }
+
     /**
      * @param array<array-key, Tag> $tags
      *
@@ -477,6 +677,19 @@ final class BulkSubscriberTest extends DbTestCase
     private function namesOf(array $tags): array
     {
         return array_values(array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
+    }
+
+    /** @return array{Tag, Tag} */
+    private function storeShelfWithReading(User $user): array
+    {
+        $shelf = new Tag($user, 'Shelf');
+        $reading = new Tag($user, 'Reading');
+        $reading->setParent($shelf);
+        $this->entityManager->persist($shelf);
+        $this->entityManager->persist($reading);
+        $this->entityManager->flush();
+
+        return [$shelf, $reading];
     }
 
     private function storedTag(User $user, string $name): Tag

@@ -1,0 +1,177 @@
+<app-overlay-panel cdkTrapFocus fillOnMobile [heading]="'settings.opml.dialogTitle' | transloco">
+  <div subheader class="controls">
+    <app-field
+      [label]="'settings.opml.parentTag' | transloco"
+      [hint]="'settings.opml.parentTagHint' | transloco"
+    >
+      <input
+        type="text"
+        list="opml-import-parents"
+        maxlength="100"
+        autocomplete="off"
+        data-testid="opml-import-parent"
+        [value]="parent()"
+        [disabled]="importing()"
+        (input)="typeParent($event)"
+      />
+    </app-field>
+    <datalist id="opml-import-parents">
+      @for (name of topLevelTagNames(); track name) {
+        <option [value]="name"></option>
+      }
+    </datalist>
+    <div class="list-head">
+      <p
+        class="counter"
+        aria-live="polite"
+        data-testid="opml-import-counter"
+        [class.is-over]="selection.overLimit()"
+      >
+        {{
+          counterKey()
+            | transloco: { selected: selection.selectedCount(), free: selection.freeSlots() }
+        }}
+      </p>
+      <app-button
+        variant="ghost"
+        size="sm"
+        data-testid="opml-import-select-all"
+        (click)="selection.selectAll()"
+      >
+        {{ 'settings.opml.selectAll' | transloco }}
+      </app-button>
+      <app-button
+        variant="ghost"
+        size="sm"
+        data-testid="opml-import-select-none"
+        (click)="selection.selectNone()"
+      >
+        {{ 'settings.opml.selectNone' | transloco }}
+      </app-button>
+    </div>
+  </div>
+
+  @let dropped = selection.droppedFolders();
+  @if (dropped.length > 0) {
+    <app-warning-box class="dropped" data-testid="opml-import-dropped">
+      {{ 'settings.opml.dropped' | transloco: { names: dropped.join(', ') } }}
+    </app-warning-box>
+  }
+
+  <ul class="rows">
+    @for (row of selection.rows(); track row.key) {
+      @if (row.kind === 'folder') {
+        @let state = selection.folderStates().get(row.key);
+        <li class="row is-folder" data-testid="opml-import-folder" [style.--depth]="row.depth">
+          <label class="pick">
+            <input
+              type="checkbox"
+              [checked]="state === 'all'"
+              [indeterminate]="state === 'some'"
+              [disabled]="row.importableUrls.length === 0"
+              [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
+              (change)="selection.toggleFolder(row)"
+            />
+            <span class="name">{{ row.name }}</span>
+          </label>
+        </li>
+      } @else {
+        @let url = row.feed.url;
+        @let host = row.host;
+        @let title = row.feed.title ?? host;
+        @let changed = selection.isChanged(url);
+        <li
+          class="row"
+          data-testid="opml-import-feed"
+          [class.is-off]="row.feed.state !== 'new'"
+          [class.is-chosen]="selection.selected().has(url)"
+          [style.--depth]="row.depth"
+        >
+          <div class="line">
+            <label class="pick">
+              <input
+                type="checkbox"
+                [checked]="selection.selected().has(url)"
+                [disabled]="row.feed.state !== 'new'"
+                [attr.aria-label]="'settings.opml.selectFeed' | transloco: { name: title }"
+                (change)="selection.toggleFeed(url)"
+              />
+              <span class="who">
+                <span class="name">{{ title }}</span>
+                <span class="host">{{ host }}</span>
+              </span>
+            </label>
+            @if (row.feed.state === 'new') {
+              @if (changed) {
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="opml-import-use-folder"
+                  (click)="selection.useFolder(url)"
+                >
+                  {{ 'settings.opml.useFolder' | transloco }}
+                </app-button>
+              } @else {
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="opml-import-change-tags"
+                  (click)="selection.changeTags(url)"
+                >
+                  {{ 'settings.opml.changeTags' | transloco }}
+                </app-button>
+              }
+            } @else {
+              <span class="state">{{ stateKeys[row.feed.state] | transloco }}</span>
+            }
+          </div>
+          @if (row.feed.state === 'new') {
+            @if (changed) {
+              <app-tag-picker
+                class="tags"
+                [tags]="tags()"
+                [selected]="selection.chosenTags(url)"
+                (toggled)="selection.toggleTag(url, $event)"
+              />
+            } @else {
+              <p class="destination">
+                {{
+                  'settings.opml.destination'
+                    | transloco
+                      : {
+                          path: row.destination.length
+                            ? row.destination.join(' / ')
+                            : ('settings.opml.untagged' | transloco),
+                        }
+                }}
+              </p>
+            }
+          }
+        </li>
+      }
+    }
+  </ul>
+
+  @if (failure(); as message) {
+    <app-error-banner
+      subheader
+      class="failure"
+      data-testid="opml-import-failure"
+      [message]="message"
+    />
+  }
+
+  <app-button footer data-testid="opml-import-cancel" [disabled]="importing()" (click)="cancel()">
+    {{ 'common.cancel' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    variant="primary"
+    data-testid="opml-import-apply"
+    [disabled]="!canImport()"
+    [loading]="importing()"
+    (click)="apply()"
+  >
+    {{ 'settings.opml.applyCount' | transloco: { count: selection.selectedCount() } }}
+  </app-button>
+</app-overlay-panel>

@@ -16,6 +16,7 @@ use App\Service\Library\Subscription\Model\BulkSubscribeResultModel;
 use App\Service\Library\Subscription\Pass\BulkSubscribeBatch;
 use App\Service\Library\Subscription\Pass\BulkSubscribePositions;
 use App\Service\Library\Subscription\Pass\BulkSubscribeTagTree;
+use App\Service\Library\Subscription\Support\SubscribableUrl;
 use App\Service\Library\Tag\TagStructureLock;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -26,9 +27,6 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class BulkSubscriber
 {
-    /** Feed.url is VARCHAR(750): a longer URL counts as invalid instead of failing the whole batch's flush. */
-    private const int MAX_FEED_URL = 750;
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private FeedRepository $feeds,
@@ -47,16 +45,31 @@ final readonly class BulkSubscriber
      */
     public function subscribeAll(User $user, iterable $items): BulkSubscribeResultModel
     {
+        return $this->subscribeUnderLock($user, $items, $this->bulkTagger->tag(...));
+    }
+
+    /** @param iterable<BulkSubscribeItemModel> $items
+     */
+    public function subscribeAllInPlace(User $user, iterable $items): BulkSubscribeResultModel
+    {
+        return $this->subscribeUnderLock($user, $items, $this->bulkTagger->tagInPlace(...));
+    }
+
+    /**
+     * @param iterable<BulkSubscribeItemModel> $items
+     * @param \Closure(BulkSubscribeBatch, Subscription, BulkSubscribeItemModel): void $tagger
+     */
+    private function subscribeUnderLock(User $user, iterable $items, \Closure $tagger): BulkSubscribeResultModel
+    {
         return $this->tagStructureLock->hold(
             $user,
-            fn (): BulkSubscribeResultModel => $this->subscribeAllHeld($user, $items),
+            fn (): BulkSubscribeResultModel => $this->subscribeAllHeld($this->open($user, $tagger), $items),
         );
     }
 
     /** @param iterable<BulkSubscribeItemModel> $items */
-    private function subscribeAllHeld(User $user, iterable $items): BulkSubscribeResultModel
+    private function subscribeAllHeld(BulkSubscribeBatch $batch, iterable $items): BulkSubscribeResultModel
     {
-        $batch = $this->open($user);
         foreach ($items as $item) {
             $this->subscribeOne($batch, $item);
         }
@@ -66,7 +79,8 @@ final readonly class BulkSubscriber
         return $batch->result();
     }
 
-    private function open(User $user): BulkSubscribeBatch
+    /** @param \Closure(BulkSubscribeBatch, Subscription, BulkSubscribeItemModel): void $tagger */
+    private function open(User $user, \Closure $tagger): BulkSubscribeBatch
     {
         $userId = $user->requireId();
 
@@ -78,13 +92,14 @@ final readonly class BulkSubscriber
                 $this->tags->nextPositionForUser($userId),
             ),
             new BulkSubscribeTagTree($this->tags->findForUser($userId)),
+            $tagger,
         );
     }
 
     private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item): void
     {
         $url = $item->feedUrl;
-        if (!$this->isSubscribableUrl($url)) {
+        if (!SubscribableUrl::isSubscribable($url)) {
             $batch->countInvalid();
 
             return;
@@ -109,7 +124,7 @@ final readonly class BulkSubscriber
         }
 
         $subscription = $this->persistSubscription($batch, $feed ?? $this->persistNewFeed($item));
-        $this->bulkTagger->tag($batch, $subscription, $item);
+        $batch->tag($subscription, $item);
         $batch->recordSubscribed($url, $subscription);
     }
 
@@ -135,16 +150,5 @@ final readonly class BulkSubscriber
         $this->entityManager->persist($subscription);
 
         return $subscription;
-    }
-
-    private function isSubscribableUrl(string $url): bool
-    {
-        if (mb_strlen($url) > self::MAX_FEED_URL) {
-            return false;
-        }
-        $scheme = parse_url($url, \PHP_URL_SCHEME);
-        $host = parse_url($url, \PHP_URL_HOST);
-
-        return \in_array($scheme, ['http', 'https'], true) && \is_string($host) && '' !== $host;
     }
 }

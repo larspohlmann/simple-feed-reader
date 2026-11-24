@@ -118,8 +118,7 @@ final class TagRepository extends ServiceEntityRepository
     }
 
     /**
-     * The user's tag with this name (case-insensitive), or null. Consumed by
-     * OPML import to reuse an existing tag rather than creating a duplicate.
+     * The user's tag with this name (case-insensitive), or null.
      */
     public function findOneByNameForUser(int $userId, string $name): ?Tag
     {

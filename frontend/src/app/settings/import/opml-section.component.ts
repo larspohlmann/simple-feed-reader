@@ -1,15 +1,18 @@
+import { Dialog } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../../core/problem';
 import { downloadOpmlExport } from './opml-export';
 import { SettingsApi } from '../settings-api';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { TagsStore } from '../../reader/state/tags.store';
 import { OpmlImportResult } from '../settings.models';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
+import { OpmlImportDialogComponent, OpmlImportDialogData } from './opml-import-dialog.component';
 
 @Component({
   selector: 'app-opml-section',
@@ -19,56 +22,75 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 })
 export class OpmlSectionComponent {
   private readonly api = inject(SettingsApi);
+  private readonly dialog = inject(Dialog);
   private readonly subs = inject(SubscriptionsStore);
+  private readonly tags = inject(TagsStore);
   private readonly refresh = inject(RefreshService);
+  private readonly i18n = inject(TranslocoService);
 
-  readonly text = signal('');
-  readonly reading = signal(false);
+  readonly previewing = signal(false);
   readonly exporting = signal(false);
-  readonly importing = signal(false);
   readonly result = signal<OpmlImportResult | null>(null);
   readonly exportError = signal<Problem | null>(null);
   readonly importError = signal<Problem | null>(null);
-
-  value(event: Event): string {
-    return (event.target as HTMLTextAreaElement).value;
-  }
 
   exportOpml(): void {
     downloadOpmlExport(this.api, this.exporting, this.exportError);
   }
 
   onFile(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    // Block Import until the async read resolves, so a quick click cannot send
-    // stale pasted text instead of the chosen file.
-    this.reading.set(true);
-    file.text().then((contents) => {
-      this.text.set(contents);
-      this.reading.set(false);
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || this.previewing()) return;
+    this.previewing.set(true);
+    this.importError.set(null);
+    this.result.set(null);
+    file
+      .text()
+      .then((contents) => this.preview(contents))
+      .catch(() => this.failToRead());
+  }
+
+  private failToRead(): void {
+    this.previewing.set(false);
+    this.importError.set({
+      type: 'unreadable_file',
+      title: this.i18n.translate('settings.opml.unreadable'),
+      status: 0,
     });
   }
 
-  importText(): void {
-    const body = this.text().trim();
-    if (!body) return;
-    this.importing.set(true);
-    this.importError.set(null);
-    this.result.set(null);
-    this.api.importOpml(body).subscribe({
-      next: (importResult) => {
-        this.importing.set(false);
-        this.result.set(importResult);
-        this.subs.load();
-        if (importResult.imported > 0) {
-          this.refresh.run(() => this.subs.load(), { kind: 'neverFetched' });
-        }
+  private preview(contents: string): void {
+    this.api.previewOpml(contents, null).subscribe({
+      next: (preview) => {
+        this.previewing.set(false);
+        this.openDialog({ opml: contents, preview });
       },
       error: (error: HttpErrorResponse) => {
-        this.importing.set(false);
+        this.previewing.set(false);
         this.importError.set(parseProblem(error));
       },
     });
+  }
+
+  private openDialog(data: OpmlImportDialogData): void {
+    this.dialog
+      .open<OpmlImportResult | undefined>(OpmlImportDialogComponent, {
+        data,
+        panelClass: 'app-dialog',
+      })
+      .closed.subscribe((importResult) => {
+        if (importResult) this.finishImport(importResult);
+      });
+  }
+
+  private finishImport(importResult: OpmlImportResult): void {
+    this.result.set(importResult);
+    this.subs.load();
+    this.tags.load();
+    if (importResult.imported > 0) {
+      this.refresh.run(() => this.subs.load(), { kind: 'neverFetched' });
+    }
   }
 }

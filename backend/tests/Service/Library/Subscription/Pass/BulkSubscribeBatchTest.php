@@ -97,6 +97,8 @@ final class BulkSubscribeBatchTest extends TestCase
             $room,
             new BulkSubscribePositions(0, 0),
             new BulkSubscribeTagTree([]),
+            static function (): void {
+            },
         );
     }
 
