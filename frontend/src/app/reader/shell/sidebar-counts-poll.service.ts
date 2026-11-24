@@ -7,9 +7,9 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 
-/** How long a page may sit untouched before the poll gives up on it. The tab
- *  visibility rule already covers a backgrounded tab; this covers a reader left
- *  open and visible with nobody at the screen. Two hours outlasts a lunch break. */
+/** How long a visible page may sit untouched before the poll gives up on it: a
+ *  reader left open with nobody at the screen. A hidden tab is never given up on.
+ *  Two hours outlasts a lunch break. */
 export const SIDEBAR_POLL_IDLE_LIMIT_MS = 2 * 60 * 60 * 1000;
 
 /** How often a hidden tab fetches counts. The favicon dot (#2515) has to stay
@@ -130,8 +130,8 @@ export class SidebarCountsPoll {
     // Both conditions are read here rather than trusted to the handlers that
     // set them: `visibilitychange` does not fire in every teardown path,
     // and nothing at all fires when a page simply goes quiet.
+    this.startTicking();
     if (isTabHidden()) {
-      this.startTicking();
       this.refreshCounts();
       return;
     }
@@ -142,10 +142,7 @@ export class SidebarCountsPoll {
     const token = await this.readMarker();
     // The marker read is a round trip; the tab may have been hidden or gone
     // idle while it was out.
-    if (isTabHidden()) {
-      this.startTicking();
-      return;
-    }
+    if (isTabHidden()) return;
     if (this.givenUp()) {
       this.stopTicking();
       return;

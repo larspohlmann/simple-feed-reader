@@ -240,6 +240,37 @@ describe('SidebarCountsPoll', () => {
     expect(refreshes()).toBe(beforeHiding + 1);
   });
 
+  it('hide, show, hide leaves exactly one interval, at the hidden cadence', async () => {
+    await start('a');
+    setVisibility('hidden');
+    const timersWhenHidden = jest.getTimerCount();
+    setVisibility('visible');
+    setVisibility('hidden');
+    await elapse(0);
+
+    expect(jest.getTimerCount()).toBe(timersWhenHidden);
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 9);
+    const beforeHiddenTick = refreshes();
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS - SIDEBAR_RELOAD_INTERVAL_MS * 9);
+    expect(refreshes()).toBe(beforeHiddenTick + 1);
+  });
+
+  it('a visible tick on the hidden timer goes back to the steady cadence', async () => {
+    await start('a');
+    setVisibility('hidden');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS);
+    expect(refreshes()).toBe(0);
+
+    markerToken = 'b';
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS);
+    expect(reloadCounts).toHaveBeenCalledTimes(1);
+  });
+
   it('does a full reload the moment a hidden tab is shown again', async () => {
     await start(null);
     setVisibility('hidden');
