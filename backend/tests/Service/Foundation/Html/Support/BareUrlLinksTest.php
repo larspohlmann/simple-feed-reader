@@ -19,6 +19,11 @@ final class BareUrlLinksTest extends TestCase
         );
     }
 
+    public function testHtmlWithoutABareUrlComesBackExactlyAsGiven(): void
+    {
+        self::assertSame('<p>open <b>bold', BareUrlLinks::linkHtml('<p>open <b>bold'));
+    }
+
     public function testCountsTheLinksItMade(): void
     {
         $document = HtmlDocumentParser::parseFragment('<p>https://example.org/a and http://example.org/b</p>');
