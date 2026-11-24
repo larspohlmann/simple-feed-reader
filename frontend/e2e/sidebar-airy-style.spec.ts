@@ -4,6 +4,7 @@ import { aSubscription } from '../src/testing/subscription-testing';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { presetLocalStorage, signInAsAdmin, stubMePreferences } from './support/auth';
 import { entryWire, savedSearchesJson, savedSearchWire, subscriptionsJson } from './support/reader';
+import { bottomBorderEdge } from './support/geometry';
 
 type SidebarStyle = 'boxed' | 'airy';
 
@@ -117,16 +118,6 @@ async function tokenColor(page: Page, token: string): Promise<string> {
     probe.remove();
     return color;
   }, token);
-}
-
-async function bottomBorderEdge(page: Page, selector: string): Promise<number> {
-  return page
-    .locator(selector)
-    .first()
-    .evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      return rect.bottom - Number.parseFloat(getComputedStyle(element).borderBottomWidth);
-    });
 }
 
 const SKIP = 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)';

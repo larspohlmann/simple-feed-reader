@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  NgZone,
   computed,
   effect,
   inject,
@@ -11,13 +10,13 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { observeResize } from '../../../shared/observe-resize';
 import { ScrollHosts } from '../../../shared/scroll-host/scroll-hosts.service';
 import { PageLayer } from '../../../shared/scroll-host/page-layer';
 import type { ScrollHost } from '../../../shared/scroll-host/scroll-host';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { PaneBarComponent } from '../../../shared/pane-bar/pane-bar.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import {
   BACK_TO_TOP_AFTER_PX,
@@ -33,7 +32,13 @@ import { ArticleGestures } from './article-gestures.service';
  *  itself, the toolbar's actions and the nameplate are projected by the reader using it. */
 @Component({
   selector: 'app-article-layer',
-  imports: [ProgressRailComponent, IconComponent, SpinnerComponent, ToTopButtonComponent],
+  imports: [
+    ProgressRailComponent,
+    IconComponent,
+    PaneBarComponent,
+    SpinnerComponent,
+    ToTopButtonComponent,
+  ],
   providers: [ArticleGestures],
   templateUrl: './article-layer.component.html',
   styleUrl: './article-layer.component.scss',
@@ -58,7 +63,6 @@ export class ArticleLayerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
-  private readonly zone = inject(NgZone);
   private readonly scrollHosts = inject(ScrollHosts);
   private readonly pageLayer = inject(PageLayer, { optional: true });
   /** The overlay's article owns the page (#2038); the split pane scrolls its own box. */
@@ -70,7 +74,6 @@ export class ArticleLayerComponent {
       ? this.scrollHosts.forPage(element, this.pageLayer)
       : this.scrollHosts.forElement(element);
   });
-  private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
   protected readonly leftHanded = inject(HandednessService).leftHanded;
   readonly leaving = this.gestures.leaving;
@@ -94,7 +97,6 @@ export class ArticleLayerComponent {
       const scroller = this.scroller();
       if (scroller) onCleanup(scroller.listen(() => this.onScroll(scroller.scrollTop)));
     });
-    this.reserveToolbarHeight();
     effect(() => {
       this.resetKey();
       untracked(() => this.reset());
@@ -142,17 +144,8 @@ export class ArticleLayerComponent {
   }
 
   /** The toolbar floats over the scroller, which reserves its height (#1332). */
-  private reserveToolbarHeight(): void {
-    effect((onCleanup) => {
-      const bar = this.bar()?.nativeElement;
-      if (!bar) return;
-      const style = this.host.nativeElement.style;
-      onCleanup(
-        observeResize(this.zone, [bar], () => {
-          style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
-          this.barResized.emit();
-        }),
-      );
-    });
+  protected reserveToolbarHeight(height: number): void {
+    this.host.nativeElement.style.setProperty('--reader-bar-h', `${height}px`);
+    this.barResized.emit();
   }
 }

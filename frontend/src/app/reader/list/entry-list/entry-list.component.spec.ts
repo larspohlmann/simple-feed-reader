@@ -53,8 +53,8 @@ import {
 } from '../../../../testing/intersection-observer-testing';
 import {
   MockResizeObserver,
-  fireResizeOf,
   installMockResizeObserver,
+  resizeTo,
 } from '../../../../testing/resize-observer-testing';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
@@ -801,16 +801,14 @@ describe('EntryListComponent', () => {
       const host = fixture.nativeElement as HTMLElement;
       const frame = host.querySelector<HTMLElement>('app-list-frame')!;
       const header = host.querySelector<HTMLElement>('.list-header')!;
-      Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 53 });
-      fireResizeOf(header);
+      resizeTo(header, 53);
       expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
 
       // The reservation must not follow the bar down: the scroller's padding is
       // computed from this value, and shrinking it would move every row.
       fixture.componentInstance.collapsed.set(true);
       fixture.detectChanges();
-      Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 20 });
-      fireResizeOf(header);
+      resizeTo(header, 20);
       expect(frame.style.getPropertyValue('--list-bar-h')).toBe('53px');
       expect(header.classList).toContain('collapsed');
     });

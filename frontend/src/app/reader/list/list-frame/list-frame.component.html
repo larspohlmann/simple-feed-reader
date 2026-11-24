@@ -1,7 +1,12 @@
 <div class="list-frame lead">
-  <header class="list-header" #header [class.collapsed]="collapsed()">
+  <app-pane-bar
+    #header
+    class="list-header"
+    [class.collapsed]="collapsed()"
+    (resized)="publishBarHeight($event)"
+  >
     <ng-content select="[frameHeader]" />
-  </header>
+  </app-pane-bar>
 
   <ng-content select="[frameLead]" />
 

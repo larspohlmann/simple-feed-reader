@@ -1,4 +1,5 @@
 @use '../theme/breakpoints' as bp;
+@use '../theme/frost';
 
 /* A block host is the containing block the sticky top bar needs: a custom
    element defaults to `display: inline`, and an inline containing block makes
@@ -18,12 +19,7 @@
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
 
-  /* A translucent, blurred bar so content scrolls under it rather than
-     meeting a hard opaque edge; the solid colour is the fallback where
-     backdrop-filter is unsupported. */
-  background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
-  backdrop-filter: blur(12px) saturate(1.4);
+  @include frost.frosted(var(--surface-1), 82%);
 }
 
 .back {

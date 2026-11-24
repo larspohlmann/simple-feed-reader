@@ -1,0 +1,6 @@
+// A translucent fill over a blur: what passes beneath shows through, softened. Solid where unsupported.
+@mixin frosted($fill, $opacity) {
+  background: $fill;
+  background: color-mix(in srgb, #{$fill} #{$opacity}, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
+}

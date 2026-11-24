@@ -1,7 +1,8 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Locator, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 import { scrollPageTo } from './support/scroll';
+import { bottomBorderEdge } from './support/geometry';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
 // column (>720px) and the wide layout is active (>=900px), which keeps the app
@@ -11,15 +12,15 @@ const DESKTOP = { width: 1280, height: 900 };
 /** Long enough that the article scrolls well past its own sticky toolbar. */
 const BODY_HTML = Array.from(
   { length: 20 },
-  (_, i) =>
-    `<p>Paragraph ${i} of filler text, long enough to give the article real height so the reading pane can actually scroll.</p>`,
+  (_, index) =>
+    `<p>Paragraph ${index} of filler text, long enough to give the article real height so the reading pane can actually scroll.</p>`,
 ).join('');
 
-const ENTRIES = Array.from({ length: 10 }, (_, i) =>
+const ENTRIES = Array.from({ length: 10 }, (_, index) =>
   entryWire({
-    id: i + 1,
-    title: `Entry number ${i + 1}`,
-    url: `https://example.invalid/${i + 1}`,
+    id: index + 1,
+    title: `Entry number ${index + 1}`,
+    url: `https://example.invalid/${index + 1}`,
     summary: 'A summary long enough to give the row some height. '.repeat(3),
     excerpt: 'A summary long enough to give the row some height. '.repeat(3),
     publishedAt: '2026-07-25T10:00:00Z',
@@ -66,6 +67,14 @@ async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
+/** The fill a bar paints over what scrolls beneath it. */
+async function fillOf(locator: Locator): Promise<{ background: string; backdrop: string }> {
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, backdrop: style.backdropFilter };
+  });
+}
+
 /**
  * What the user's cursor would actually hit at the centre of `selector`.
  * `toBeVisible()` is not enough here: the app bar floats over the panes
@@ -75,14 +84,17 @@ async function settle(page: Page): Promise<void> {
  * itself or something inside it.
  */
 async function hitAtCentre(page: Page, selector: string): Promise<string> {
-  return page.evaluate((sel) => {
-    const el = document.querySelector(sel);
-    if (!el) return 'missing';
-    const r = el.getBoundingClientRect();
-    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) as HTMLElement;
+  return page.evaluate((target) => {
+    const element = document.querySelector(target);
+    if (!element) return 'missing';
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      rect.x + rect.width / 2,
+      rect.y + rect.height / 2,
+    ) as HTMLElement;
     if (!hit) return 'nothing';
     // Name whatever is on top, so a failure says which element is in the way.
-    return el.contains(hit) ? 'self' : `${hit.tagName.toLowerCase()}.${hit.className}`;
+    return element.contains(hit) ? 'self' : `${hit.tagName.toLowerCase()}.${hit.className}`;
   }, selector);
 }
 
@@ -160,7 +172,9 @@ test.describe('Article back button on desktop', () => {
     expect((await close.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
 
     // Scroll the reading pane: the toolbar sticks, and must stick below the bar.
-    await page.locator('app-reader-view .scroller').evaluate((el) => el.scrollTo({ top: 800 }));
+    await page
+      .locator('app-reader-view .scroller')
+      .evaluate((element) => element.scrollTo({ top: 800 }));
     await page.waitForTimeout(200);
 
     expect((await close.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
@@ -169,4 +183,34 @@ test.describe('Article back button on desktop', () => {
     await close.click();
     await expect(page.locator('app-reader-view .bar')).toBeHidden();
   });
+
+  // One pane bar for both (#2509): the article's toolbar draws its rule where the list header
+  // draws its own, and frosts what scrolls beneath it the same way.
+  for (const layout of ['magazine', 'pane'] as const) {
+    test(`the ${layout} article toolbar is the list header's box`, async ({ page }) => {
+      const signedIn = await signInWithLayout(page, layout);
+      test.skip(
+        !signedIn,
+        'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+      );
+
+      await stubEntries(page);
+      await page.reload();
+      await settle(page);
+      const headerRule = await bottomBorderEdge(page, '.list-header');
+      const headerFill = await fillOf(page.locator('.list-header'));
+
+      await page.getByText('Entry number 1', { exact: false }).first().click();
+      const toolbar = page.locator('app-reader-view .bar');
+      await expect(toolbar).toBeVisible();
+      await settle(page);
+
+      const toolbarRule = await bottomBorderEdge(page, 'app-reader-view .bar');
+      expect(
+        Math.abs(toolbarRule - headerRule),
+        'the toolbar rule is the header rule',
+      ).toBeLessThanOrEqual(0.5);
+      expect(await fillOf(toolbar)).toEqual(headerFill);
+    });
+  }
 });

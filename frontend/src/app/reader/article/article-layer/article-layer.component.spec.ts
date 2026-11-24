@@ -8,10 +8,7 @@ import {
   scrollerOf,
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
-import {
-  MockResizeObserver,
-  installMockResizeObserver,
-} from '../../../../testing/resize-observer-testing';
+import { installMockResizeObserver, resizeTo } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
 import { PAGE_MOVING_CLASS, PageLayer } from '../../../shared/scroll-host/page-layer';
@@ -30,6 +27,7 @@ import { ArticleGestures } from './article-gestures.service';
       (back)="closes = closes + 1"
       (scrolled)="scrolledTo.push($event)"
       (toTop)="toTops = toTops + 1"
+      (barResized)="barResizes = barResizes + 1"
     >
       <span articleBar class="probe">x</span>
       <span articleCorner class="corner-probe">c</span>
@@ -48,6 +46,7 @@ class LayerHostComponent {
   });
   closes = 0;
   toTops = 0;
+  barResizes = 0;
   readonly scrolledTo: number[] = [];
 }
 
@@ -108,6 +107,14 @@ describe('ArticleLayerComponent', () => {
   it('projects the toolbar slot into the bar and the article into the reader', () => {
     expect(element.querySelector('.bar .probe')).not.toBeNull();
     expect(element.querySelector('.reader article')!.textContent).toBe('body');
+  });
+
+  it('reserves the toolbar height', () => {
+    resizeTo(element.querySelector<HTMLElement>('app-pane-bar.bar')!, 56);
+
+    const layer = element.querySelector<HTMLElement>('app-article-layer')!;
+    expect(layer.style.getPropertyValue('--reader-bar-h')).toBe('56px');
+    expect(fixture.componentInstance.barResizes).toBe(1);
   });
 
   it('projects the corner slot into the corner actions, outside the scroller (#1914)', () => {
@@ -331,8 +338,7 @@ describe('ArticleLayerComponent on the page (#2038)', () => {
 
   it('leaves the page’s own scroll-padding alone when its toolbar resizes', () => {
     scrollerOf(fixture).style.setProperty('scroll-padding-top', '44px');
-    const bar = layerElement().querySelector('.bar')!;
-    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+    resizeTo(layerElement().querySelector<HTMLElement>('.bar')!, 56);
 
     expect(document.documentElement.style.getPropertyValue('scroll-padding-top')).toBe('');
   });

@@ -1,4 +1,3 @@
-@use '../../../theme/breakpoints' as bp;
 @use '../../../theme/list-chrome';
 @use '../../../theme/page-chrome';
 
@@ -31,14 +30,9 @@
 
 .list-header {
   @include list-chrome.floating-header;
-}
 
-/* Narrow layout: scrolled down, the header collapses to a slim bar. */
-@media (width < bp.$bp-lg) {
-  .list-header.collapsed {
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
-  }
+  flex-wrap: wrap;
+  container: list-header / inline-size;
 }
 
 /* Overlays the rows below the header, which keep their own `$header-clear`, so the

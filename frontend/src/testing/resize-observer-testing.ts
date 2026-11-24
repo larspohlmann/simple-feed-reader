@@ -25,6 +25,12 @@ export function installMockResizeObserver(): void {
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
 }
 
+/** Give `element` a laid-out height and fire its observer, as a real resize would. */
+export function resizeTo(element: HTMLElement, height: number): void {
+  Object.defineProperty(element, 'offsetHeight', { configurable: true, value: height });
+  fireResizeOf(element);
+}
+
 /** Fire the mock observer watching `element`, as a resize of it would. */
 export function fireResizeOf(element: Element): void {
   MockResizeObserver.instances.find((observer) => observer.targets.has(element))?.fire();
