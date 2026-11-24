@@ -10,6 +10,17 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release adds a classic theme and a notification dot on the browser tab.
+
+**Classic theme.** A second look for the reader, set in a serif typeface with
+warmer, calmer colours, in light and dark. Choose it in Settings → Preferences.
+
+**Notification dot on the tab.** Leave the reader in a background tab and
+still see when a Bluesky, Mastodon or Lemmy notification arrives: a dot
+appears on its tab icon.
+
 ## [v1.10.3] - 2026-11-23
 
 ### Highlights
