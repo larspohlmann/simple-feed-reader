@@ -229,8 +229,8 @@ descriptors, so the size and the line metrics are corrected in the files, not in
 only when classic is on: nothing else names the family, and the inline script preloads the Latin roman file
 for a cached classic. No request goes to another origin.
 
-- **Size.** Classic's text has an x-height of half the font size, 7.5px on a 15px line: the render the design
-  round approved, 5% under the system face's.
+- **Size.** Classic's text has an x-height equal to the system face's on a 15px line (7.9px, about 0.526em):
+  `SIZE_MATCH = 1.177`, `ASCENT = 0.99`, `DESCENT = 0.22`.
 - **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
   against Newsreader, and the alignment below is measured on Apple's only.
 - **Bound.** At 100% text size, the text's x-height centre against its icon's centre stays within 0.25px of

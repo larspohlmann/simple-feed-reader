@@ -12,7 +12,6 @@ const BASE_URL = 'http://localhost:4200';
 const VIEWPORT = { width: 1280, height: 900 };
 const OFFSET_TOLERANCE = 0.25;
 const X_HEIGHT_TOLERANCE = 0.2;
-const X_HEIGHT_TARGET = 0.5;
 const JUDGED_LINE = 15;
 const LINE_SIZES = [11, 13, JUDGED_LINE, 24];
 const FONT_TIMEOUT = 10_000;
@@ -412,15 +411,16 @@ async function main() {
       `${name.padEnd(12)}  ${format(graphite.offset).padStart(8)}  ${format(classic.offset).padStart(7)}  ${format(difference).padStart(10)}${verdict}`,
     );
   }
-  console.log(`x-height, px, against ${X_HEIGHT_TARGET}em (graphite for information only)`);
+  console.log(
+    `x-height, px, classic against graphite (${JUDGED_LINE}px judged, the rest for information)`,
+  );
   for (const size of LINE_SIZES) {
-    const target = X_HEIGHT_TARGET * size;
-    const difference = lines.classic[size] - target;
+    const difference = lines.classic[size] - lines.graphite[size];
     const judged = size === JUDGED_LINE;
     const verdict = judged && Math.abs(difference) > X_HEIGHT_TOLERANCE ? '  FAIL' : '';
     failed ||= verdict !== '';
     console.log(
-      `${String(size).padStart(2)}px line: classic ${lines.classic[size].toFixed(2)}, target ${target.toFixed(2)}, difference ${format(difference)}, graphite ${lines.graphite[size].toFixed(2)}${judged ? ' (judged)' : ''}${verdict}`,
+      `${String(size).padStart(2)}px line: graphite ${lines.graphite[size].toFixed(2)}, classic ${lines.classic[size].toFixed(2)}, difference ${format(difference)}${judged ? ' (judged)' : ''}${verdict}`,
     );
   }
   console.log(`classic family: ${rows[0].classic.family}`);
@@ -429,7 +429,7 @@ async function main() {
   }
   if (failed) {
     console.error(
-      `FAIL: an offset difference exceeds ${OFFSET_TOLERANCE}px, or a ${JUDGED_LINE}px line's x-height is more than ${X_HEIGHT_TOLERANCE}px from ${X_HEIGHT_TARGET}em`,
+      `FAIL: an offset difference exceeds ${OFFSET_TOLERANCE}px, or a ${JUDGED_LINE}px line's x-height is more than ${X_HEIGHT_TOLERANCE}px from graphite's`,
     );
     process.exitCode = 1;
   }
