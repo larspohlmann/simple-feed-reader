@@ -77,8 +77,9 @@ app-avatar {
 }
 
 .when {
-  flex: none;
-  max-width: calc(100% - var(--icon-md) - 3 * var(--space-1));
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: max-content;
 
   &::before {
     content: '· ';
