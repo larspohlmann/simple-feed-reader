@@ -282,9 +282,12 @@ describe('AuthService', () => {
   });
 
   it('logout clears the cached sidebar style, so the next account never inherits it', () => {
+    tokens.set('jwt');
     TestBed.inject(SidebarStyleService).set('airy');
+    TestBed.tick();
 
     service.logout();
+    TestBed.tick();
 
     expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBeNull();
     expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
@@ -302,9 +305,12 @@ describe('AuthService', () => {
   });
 
   it('logout clears the cached theme and its attribute, so the next account never inherits them', () => {
+    tokens.set('jwt');
     TestBed.inject(ThemeNameService).set('classic');
+    TestBed.tick();
 
     service.logout();
+    TestBed.tick();
 
     expect(localStorage.getItem(THEME_NAME_KEY)).toBeNull();
     expect(TestBed.inject(ThemeNameService).name()).toBe('graphite');

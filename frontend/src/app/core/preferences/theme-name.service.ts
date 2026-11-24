@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ThemeName } from '../../theme/themes/registry';
+import { DEFAULT_THEME_NAME, ThemeName } from '../../theme/themes/registry';
 import { CurrentUser } from '../auth/auth.service';
 import { CachedAccountChoice } from './cached-account-choice';
 import { THEME_NAMES, THEME_NAME_KEY } from './theme-name';
@@ -9,7 +9,12 @@ export class ThemeNameService extends CachedAccountChoice<'theme'> {
   readonly name = this.value;
 
   constructor() {
-    super({ key: THEME_NAME_KEY, choices: THEME_NAMES, fallback: 'graphite', field: 'theme' });
+    super({
+      key: THEME_NAME_KEY,
+      choices: THEME_NAMES,
+      fallback: DEFAULT_THEME_NAME,
+      field: 'theme',
+    });
     this.applyAttribute();
   }
 
@@ -30,7 +35,8 @@ export class ThemeNameService extends CachedAccountChoice<'theme'> {
 
   private applyAttribute(): void {
     const root = document.documentElement;
-    if (this.name() === 'classic') root.setAttribute('data-theme-name', 'classic');
-    else root.removeAttribute('data-theme-name');
+    const name = this.name();
+    if (name === DEFAULT_THEME_NAME) root.removeAttribute('data-theme-name');
+    else root.setAttribute('data-theme-name', name);
   }
 }

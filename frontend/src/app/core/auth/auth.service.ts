@@ -137,10 +137,6 @@ export class AuthService {
     // account see the previous one's toggle state until (or unless) its own
     // loadMe() resolves.
     this.preferences.reset();
-    this.magazineStyle.reset();
-    this.sidebarStyle.reset();
-    this.themeName.reset();
-    this.handedness.reset();
     this.sharing.reset();
     this.digest.reset();
     this.ai.reset();

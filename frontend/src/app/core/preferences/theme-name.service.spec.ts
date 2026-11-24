@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { CurrentUser } from '../auth/auth.service';
+import { TokenStore } from '../auth/token.store';
 import { PREFERENCES_WRITER } from './preferences-writer';
 import { THEME_NAME_KEY } from './theme-name';
 import { ThemeNameService } from './theme-name.service';
@@ -75,6 +77,43 @@ describe('ThemeNameService', () => {
 
     expect(service.name()).toBe('graphite');
     expect(localStorage.getItem(THEME_NAME_KEY)).toBeNull();
+    expect(attribute()).toBeNull();
+  });
+
+  it('drops the attribute and the cache key when the session ends without a logout', () => {
+    localStorage.setItem('sfr.jwt', 'account-a.jwt');
+    localStorage.setItem(THEME_NAME_KEY, 'classic');
+    const service = make();
+    TestBed.tick();
+
+    TestBed.inject(TokenStore).clear();
+    TestBed.tick();
+
+    expect(service.name()).toBe('graphite');
+    expect(localStorage.getItem(THEME_NAME_KEY)).toBeNull();
+    expect(attribute()).toBeNull();
+  });
+
+  it('keeps classic adopted on sign-in', () => {
+    const service = make();
+    TestBed.tick();
+
+    TestBed.inject(TokenStore).set('account-a.jwt');
+    service.adopt({ preferences: { theme: 'classic' } } as CurrentUser);
+    TestBed.tick();
+
+    expect(service.name()).toBe('classic');
+    expect(attribute()).toBe('classic');
+  });
+
+  it("adopting a graphite account replaces a classic another device's cache left", () => {
+    localStorage.setItem(THEME_NAME_KEY, 'classic');
+    const service = make();
+
+    service.adopt({ preferences: { theme: 'graphite' } } as CurrentUser);
+
+    expect(service.name()).toBe('graphite');
+    expect(localStorage.getItem(THEME_NAME_KEY)).toBe('graphite');
     expect(attribute()).toBeNull();
   });
 });

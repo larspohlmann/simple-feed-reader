@@ -375,3 +375,30 @@ test.describe('switching and signing out', () => {
     expect(await page.evaluate(() => localStorage.getItem('sfr.themeName'))).toBeNull();
   });
 });
+
+test.describe('a session that ends by a 401', () => {
+  test('lands on /login in graphite and loads no font there', async ({ page }) => {
+    const fontsAfterRedirect: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith('/fonts/') && new URL(page.url()).pathname === '/login') {
+        fontsAfterRedirect.push(path);
+      }
+    });
+    await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.themeName': 'classic' });
+    await stubMagazine(page, ENTRIES);
+    await page.route(
+      (url) => url.pathname === '/api/me',
+      (route) => route.fulfill({ status: 401, json: { title: 'Unauthorized' } }),
+    );
+
+    await page.goto('/');
+
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.locator('input[type=email]')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme-name', /.*/);
+    expect(await page.evaluate(() => localStorage.getItem('sfr.themeName'))).toBeNull();
+    expect(fontsAfterRedirect).toEqual([]);
+  });
+});
