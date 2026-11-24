@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import {
   ASTWithSource,
@@ -15,6 +15,7 @@ import {
   TmplAstSwitchBlock,
   TmplAstTemplate,
 } from '@angular/compiler';
+import { listFiles } from '../../testing/list-files';
 
 /**
  * #2524: inside a `text-scaled` container, an icon whose row's text scales sits in a
@@ -123,14 +124,6 @@ const EXEMPT: readonly Exemption[] = [
   },
 ];
 
-function sourceFiles(directory: string): string[] {
-  return readdirSync(join(SOURCE_ROOT, directory), { withFileTypes: true }).flatMap((entry) => {
-    const path = `${directory}/${entry.name}`;
-    if (entry.isDirectory()) return sourceFiles(path);
-    return entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts') ? [path] : [];
-  });
-}
-
 function readTemplate(
   file: string,
   source: string,
@@ -146,7 +139,11 @@ function readTemplate(
 
 function readComponents(): Map<string, Component> {
   const components = new Map<string, Component>();
-  for (const file of sourceFiles('app')) {
+  const sources = listFiles(
+    SOURCE_ROOT,
+    (path) => path.startsWith('app/') && path.endsWith('.ts') && !path.endsWith('.spec.ts'),
+  );
+  for (const file of sources) {
     const source = readFileSync(join(SOURCE_ROOT, file), 'utf8');
     const selector = /@Component\(\{[\s\S]*?selector:\s*'([^']+)'/.exec(source);
     const template = readTemplate(file, source);

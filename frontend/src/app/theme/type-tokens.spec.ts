@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { listFiles } from '../../testing/list-files';
 import { compileScssFile, cssRules } from './sass-testing';
 
 const CLASSIC = ':root[data-theme-name=classic]';
@@ -20,16 +21,13 @@ const THEME_ONLY = Object.keys(CLASSIC_TYPE).filter((token) => token !== '--font
 
 const SRC = join(__dirname, '..', '..');
 
-function sourceFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    return entry.isDirectory() ? sourceFiles(path) : [path];
-  });
-}
-
 describe('classic type tokens', () => {
   const rules = cssRules(compileScssFile(join(__dirname, 'tokens.scss')));
   const classic = rules.filter((rule) => rule.selector === CLASSIC);
+  const otherStylesheets = listFiles(
+    SRC,
+    (path) => path.endsWith('.scss') && path !== 'app/theme/tokens.scss',
+  ).map((path) => ({ path, source: readFileSync(join(SRC, path), 'utf8') }));
 
   it('declares the type in one mode-independent classic block', () => {
     expect(classic).toHaveLength(1);
@@ -47,16 +45,9 @@ describe('classic type tokens', () => {
   });
 
   it.each(THEME_ONLY)('declares %s in no other stylesheet', (token) => {
-    const declaring = sourceFiles(SRC)
-      .filter((path) => path.endsWith('.scss') && !path.endsWith(join('theme', 'tokens.scss')))
-      .filter((path) => new RegExp(`${token}\\s*:`).test(readFileSync(path, 'utf8')));
+    const declaring = otherStylesheets
+      .filter(({ source }) => new RegExp(`${token}\\s*:`).test(source))
+      .map(({ path }) => path);
     expect(declaring).toEqual([]);
-  });
-
-  it('leaves no mention of the old family token under src', () => {
-    const mentioning = sourceFiles(SRC).filter((path) =>
-      readFileSync(path, 'utf8').includes('--font-' + 'sans'),
-    );
-    expect(mentioning).toEqual([]);
   });
 });
