@@ -15,7 +15,6 @@ DESCENT = 0.22
 FRONTEND = Path(__file__).resolve().parents[2]
 PACKAGE = FRONTEND / 'node_modules' / '@fontsource-variable' / 'newsreader'
 OUTPUT = FRONTEND / 'public' / 'fonts'
-FAMILY = 'Newsreader Classic'
 FACES = {
     ('latin', 'normal'): 'newsreader-classic-latin-roman.woff2',
     ('latin', 'italic'): 'newsreader-classic-latin-italic.woff2',
@@ -60,21 +59,10 @@ def drop_line_metric_variations(font: TTFont) -> None:
         del font['MVAR']
 
 
-def rename_family(font: TTFont) -> None:
-    names = font['name']
-    full_name = f'{FAMILY} {names.getDebugName(2)}'
-    renamed = {1: FAMILY, 16: FAMILY, 21: FAMILY, 4: full_name, 6: full_name.replace(' ', '-', 1).replace(' ', '')}
-    for record in names.names:
-        if record.nameID in renamed:
-            record.string = renamed[record.nameID]
-
-
-def build_face(source: Path, target: Path, renames: bool) -> None:
+def build_face(source: Path, target: Path) -> None:
     font = TTFont(source, recalcTimestamp=False)
     seat_line(font, scale_em(font))
     drop_line_metric_variations(font)
-    if renames:
-        rename_family(font)
     font.flavor = 'woff2'
     font.save(target)
 
@@ -82,13 +70,18 @@ def build_face(source: Path, target: Path, renames: bool) -> None:
 def main() -> int:
     licence = (PACKAGE / 'LICENSE').read_text(encoding='utf-8')
     reserved = read_reserved_font_names(licence)
+    if reserved:
+        print(
+            f'The licence declares Reserved Font Names {reserved}: the faces must be renamed inside the files.',
+            file=sys.stderr,
+        )
+        return 1
     OUTPUT.mkdir(parents=True, exist_ok=True)
     for (subset, style), name in FACES.items():
         source = PACKAGE / 'files' / f'newsreader-{subset}-opsz-{style}.woff2'
-        build_face(source, OUTPUT / name, bool(reserved))
+        build_face(source, OUTPUT / name)
         print(f'{name} <- {source.name}')
     shutil.copyfile(PACKAGE / 'LICENSE', OUTPUT / 'OFL.txt')
-    print(f'Reserved Font Names: {reserved or "none"}; internal family {"renamed" if reserved else "kept"}')
     return 0
 
 

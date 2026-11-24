@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Measures where classic's text sits against its icons, compared with graphite's.
-// Usage: node scripts/fonts/measure-metrics.mjs --browser chromium|webkit [--styles <out.json>] [--graphite-only]
+// Usage: node scripts/fonts/measure-metrics.mjs --browser chromium|webkit
 import { chromium, webkit } from '@playwright/test';
 import { build } from 'esbuild';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -59,46 +58,6 @@ const CONTROLS = [
   },
 ];
 
-/** The elements whose type the classic theme converts, and the properties it may touch. */
-const STYLED = {
-  magazine: [
-    'app-magazine-block .title',
-    'app-magazine-block .dek',
-    'app-reader-header .brand',
-    'app-reader-header .brand .name',
-    'aside.sidebar .count',
-    'aside.sidebar .section-count',
-    'aside.sidebar .name',
-    'app-entry-pills .name',
-  ],
-  'magazine-text': ['app-magazine-block .title', 'app-magazine-block .dek'],
-  'magazine-shares': [
-    'app-magazine-block .title',
-    'app-magazine-block .dek',
-    'app-magazine-block app-link-card strong',
-  ],
-  article: [
-    'app-entry-row .title',
-    'app-entry-row .snippet',
-    'app-article-page .title',
-    'app-article-content',
-    'app-article-content p',
-    'app-article-content h2',
-    'app-link-card strong',
-    'app-entry-comments .title',
-    'app-social-counts-row .label',
-  ],
-};
-const STYLE_PROPERTIES = [
-  'font-family',
-  'font-size',
-  'font-weight',
-  'font-style',
-  'line-height',
-  'letter-spacing',
-  'font-variant-numeric',
-];
-
 const ARTICLE_BODY =
   '<p>The post itself, with <em>an italic phrase</em> in the running text.</p>' +
   '<h2>A section heading</h2><p>More of the article.</p>';
@@ -113,8 +72,6 @@ async function loadFixtures() {
         "export { presetLocalStorage } from './e2e/support/auth';",
         "export { stubFixtureImages } from './e2e/support/images';",
         "export { makeTag } from './src/app/reader/testing/tag.factory';",
-        "export { aLinkCard, aQuotedPost } from './src/testing/entry-testing';",
-        "export { aThreadPost } from './src/testing/thread-testing';",
       ].join('\n'),
       resolveDir: FRONTEND,
       loader: 'ts',
@@ -163,56 +120,6 @@ function magazineEntries(fixtures) {
   ];
 }
 
-function textEntries(fixtures) {
-  const long = 'Copy long enough for a pull quote to stand on its own, '.repeat(10);
-  return [1, 2, 3, 4, 5, 6, 7, 8].map((id) =>
-    fixtures.entryWire({
-      id,
-      title: `A story told in text ${id}`,
-      summary: long,
-      excerpt: long,
-      ...(id === 4 ? { titleDerived: true, excerpt: 'A short post.' } : {}),
-    }),
-  );
-}
-
-function shareEntries(fixtures) {
-  const picture = (id, width) => ({
-    imageUrl: `https://fixtures.invalid/${id}.jpg`,
-    imageWidth: width,
-    imageHeight: Math.round(width / 1.5),
-  });
-  const media = (id) => [
-    { url: `https://fixtures.invalid/m${id}.jpg`, kind: 'image', width: 1200, height: 800 },
-  ];
-  return [
-    fixtures.entryWire({
-      id: 1,
-      title: 'A shared link',
-      share: 'link',
-      linkCards: [fixtures.aLinkCard()],
-    }),
-    fixtures.entryWire({ id: 2, title: 'A shared picture', share: 'media', media: media(2) }),
-    fixtures.entryWire({
-      id: 3,
-      title: 'A quoting post',
-      share: 'quote',
-      quote: fixtures.aQuotedPost(),
-    }),
-    fixtures.entryWire({ id: 4, title: 'A thread', thread: [fixtures.aThreadPost()] }),
-    fixtures.entryWire({ id: 5, title: 'A small picture', ...picture(5, 200) }),
-    fixtures.entryWire({ id: 6, title: 'Another small picture', ...picture(6, 200) }),
-    fixtures.entryWire({ id: 7, title: 'A plain entry' }),
-    fixtures.entryWire({ id: 8, title: 'A last small picture', ...picture(8, 200) }),
-  ];
-}
-
-const ENTRIES = {
-  magazine: magazineEntries,
-  'magazine-text': textEntries,
-  'magazine-shares': shareEntries,
-};
-
 async function open(browser, fixtures, surface) {
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: VIEWPORT });
   const page = await context.newPage();
@@ -248,7 +155,7 @@ async function open(browser, fixtures, surface) {
     await page.locator('app-social-counts-row button.reply', { hasText: 'Add comment' }).waitFor();
   } else {
     const tag = fixtures.makeTag(7, 'Politics', { icon: 'label' });
-    const entries = ENTRIES[surface](fixtures);
+    const entries = magazineEntries(fixtures);
     await fixtures.stubFixtureImages(page);
     await fixtures.stubMagazine(page, entries, { tags: [tag], unreadCount: entries.length });
     await page.goto('/');
@@ -304,31 +211,6 @@ async function lineXHeights(page) {
   );
 }
 
-async function readStyles(page, selectors) {
-  return page.evaluate(
-    ({ selectors, properties }) =>
-      selectors.flatMap((selector) =>
-        [...document.querySelectorAll(selector)].map((element, index) => {
-          const block = element.closest(
-            'app-entry-hero, app-entry-thread, app-entry-link, app-entry-media, app-entry-quoting, ' +
-              'app-entry-wide, app-entry-quote, app-entry-split, app-entry-kicker, app-entry-thumb, ' +
-              'app-entry-compact, app-source-group, app-entry-row',
-          );
-          const style = getComputedStyle(element);
-          const where = block ? ` in ${block.tagName.toLowerCase()}` : '';
-          const kind = element.classList.contains('post') ? '.post' : '';
-          return {
-            key: `${selector}${kind}${where} #${index}`,
-            style: Object.fromEntries(
-              properties.map((name) => [name, style.getPropertyValue(name)]),
-            ),
-          };
-        }),
-      ),
-    { selectors, properties: STYLE_PROPERTIES },
-  );
-}
-
 async function setClassic(page, on) {
   await page.evaluate((classic) => {
     if (classic) document.documentElement.setAttribute('data-theme-name', 'classic');
@@ -351,8 +233,6 @@ async function main() {
   const { values } = parseArgs({
     options: {
       browser: { type: 'string', default: 'chromium' },
-      styles: { type: 'string' },
-      'graphite-only': { type: 'boolean', default: false },
     },
   });
   const browserType = BROWSERS[values.browser];
@@ -361,22 +241,16 @@ async function main() {
   const browser = await browserType.launch();
   const rows = [];
   const lines = {};
-  const styles = [];
   const requests = {};
   try {
-    for (const surface of ['magazine', 'magazine-text', 'magazine-shares', 'article']) {
+    for (const surface of ['magazine', 'article']) {
       const { page, fontRequests } = await open(browser, fixtures, surface);
-      styles.push(...(await readStyles(page, STYLED[surface])));
       const graphite = {};
       for (const control of CONTROLS.filter((candidate) => candidate.surface === surface)) {
         graphite[control.name] = await measureControl(page, control);
       }
       lines.graphite ??= await lineXHeights(page);
       requests[`${surface}, graphite`] = [...fontRequests];
-      if (values['graphite-only']) {
-        await page.context().close();
-        continue;
-      }
       await setClassic(page, true);
       for (const control of CONTROLS.filter((candidate) => candidate.surface === surface)) {
         const classic = await measureControl(page, control);
@@ -392,13 +266,6 @@ async function main() {
   } finally {
     await browser.close();
   }
-
-  if (values.styles) {
-    await mkdir(dirname(values.styles), { recursive: true });
-    await writeFile(values.styles, JSON.stringify(styles, null, 2));
-    console.log(`graphite styles of ${styles.length} elements written to ${values.styles}`);
-  }
-  if (values['graphite-only']) return;
 
   console.log(`${values.browser}: x-height centre minus icon centre, px, at 100% text size`);
   console.log('control       graphite  classic  difference');

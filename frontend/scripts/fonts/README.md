@@ -34,8 +34,8 @@ At the top of `build-newsreader.py`:
   0 and `USE_TYPO_METRICS` on. They decide where the baseline sits in a line box, so where the x-height's
   centre sits against an icon centred beside it. Newsreader's own 0.735 / 0.265 puts it 1 to 3px high.
 
-Variation deltas for the line metrics (MVAR) are dropped, the x-height's kept. The family is renamed inside
-the files only if the licence declares a Reserved Font Name; it declares none.
+Variation deltas for the line metrics (MVAR) are dropped, the x-height's kept. The licence declares no Reserved
+Font Name; if a new version does, the script stops, as the faces must then be renamed inside the files.
 
 ## Measure
 
@@ -53,9 +53,6 @@ in both. It exits non-zero when an offset difference exceeds 0.25px or classic's
 than 0.2px from graphite's, and lists the font files each theme requested.
 
 The fixtures are bundled with `esbuild`, which `@angular/build` brings in, not a dependency of its own.
-
-`--graphite-only --styles <file.json>` skips classic and writes the computed type of the elements classic
-converts, for a before/after diff of graphite.
 
 Graphite's offsets come from Apple's system face: run it on macOS. Tune by changing a constant, rebuilding and measuring
 again in both browsers; the line box rounds to whole pixels, so a step moves the result in jumps.
