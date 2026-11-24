@@ -8,14 +8,13 @@ use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Bluesky\BlueskyThreadReplies;
 use App\Service\Social\BlueskyPost\PostEmbedRenderer;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyThreadRepliesTest extends TestCase
@@ -65,7 +64,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         $contents = $this->fixture('Bluesky/self-thread-replies.json');
         $thread = JsonNodeModel::fromValue(json_decode($contents, true))->node('thread');
-        $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), SocialApiWiring::commentBodyRenderer());
         $node = $reader->parseReplies($thread->node('post')->string('uri') ?? '', $contents)[0];
 
         $selfReply = $reader->buildSelfReply($thread->nodes('replies')[0]->node('post'));
@@ -295,7 +294,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     /** @return list<ReplyNode> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
-        $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), SocialApiWiring::commentBodyRenderer());
 
         return $reader->parseReplies($post, $answer ?? $this->fixture('social/bluesky-post-thread.json'));
     }

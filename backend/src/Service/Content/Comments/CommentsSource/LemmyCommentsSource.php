@@ -6,6 +6,7 @@ namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsThrottledException;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
@@ -19,15 +20,12 @@ use App\Service\Content\Comments\Pass\CommentsRequest;
 use App\Service\Content\Comments\Pass\LemmyThread;
 use App\Service\Content\Comments\Support\LemmyPostAddress;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Text\MarkdownHtml;
 
 final readonly class LemmyCommentsSource implements CommentsSourceInterface
 {
     public function __construct(
         private CommentsEndpointFetcher $endpointFetcher,
-        private MarkdownHtml $markdown,
-        private EntrySanitizer $sanitizer,
+        private CommentBodyRenderer $bodies,
         private LemmyThreadReaderInterface $threadReader,
     ) {
     }
@@ -80,8 +78,7 @@ final readonly class LemmyCommentsSource implements CommentsSourceInterface
             ?? throw new CommentsUnavailableException('The Lemmy instance answered without a comment list.');
         $thread = new LemmyThread(
             $request->entry->getAuthorUrl(),
-            $this->markdown,
-            $this->sanitizer,
+            $this->bodies,
             null !== $request->audience->actingAccount,
         );
 

@@ -9,8 +9,6 @@ use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Service\Social\Mastodon\MastodonReplyThreadSource;
@@ -43,7 +41,7 @@ final class MastodonSelfThreadFoldTest extends DbTestCase
             new MastodonPostResolver($accountApi),
             $accountApi,
             SocialApiWiring::mastodonApiClient($http->client()),
-            new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover())),
+            new MastodonContextReplies(SocialApiWiring::commentBodyRenderer()),
         );
 
         SelfThreadEnrichers::build($this->entityManager, $clock, $source, new NullLogger())->enrich($entry->getFeed());

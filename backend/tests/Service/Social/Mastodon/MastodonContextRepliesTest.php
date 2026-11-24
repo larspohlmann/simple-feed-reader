@@ -7,13 +7,12 @@ namespace App\Tests\Service\Social\Mastodon;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Ingestion\Parser\Model\VisualMediaKind;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Social\Model\SocialCountsModel;
 use App\Service\Social\Social\Pass\ReplyNode;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 
 final class MastodonContextRepliesTest extends TestCase
@@ -42,7 +41,7 @@ final class MastodonContextRepliesTest extends TestCase
             $descendants,
             static fn (JsonNodeModel $candidate): bool => $candidate->string('id') === '201',
         ))[0];
-        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new MastodonContextReplies(SocialApiWiring::commentBodyRenderer());
         $node = $this->replies()[0]->replies[0];
 
         $selfReply = $reader->buildSelfReply($status);
@@ -108,7 +107,7 @@ final class MastodonContextRepliesTest extends TestCase
     public function testTheAccountsInstanceFilesRepliesUnderItsOwnIdForThePost(): void
     {
         $context = self::contextOf([self::statusOf('300', '9', []), self::statusOf('301', '110', [])]);
-        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new MastodonContextReplies(SocialApiWiring::commentBodyRenderer());
 
         $replies = $reader->parseReplies(self::POST, MastodonContextReplies::buildEnvelope('9', $context));
 
@@ -258,7 +257,7 @@ final class MastodonContextRepliesTest extends TestCase
 
     public function testAnAnswerNamingNoPostIsUnavailable(): void
     {
-        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new MastodonContextReplies(SocialApiWiring::commentBodyRenderer());
 
         $this->expectException(CommentsUnavailableException::class);
 
@@ -277,7 +276,7 @@ final class MastodonContextRepliesTest extends TestCase
     /** @return list<ReplyNode> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
-        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+        $reader = new MastodonContextReplies(SocialApiWiring::commentBodyRenderer());
 
         $envelope = MastodonContextReplies::buildEnvelope('110', $answer ?? $this->fixture(self::CONTEXT));
 

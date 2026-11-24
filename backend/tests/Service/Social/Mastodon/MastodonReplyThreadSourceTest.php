@@ -6,8 +6,6 @@ namespace App\Tests\Service\Social\Mastodon;
 
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Mastodon\MastodonContextReplies;
 use App\Service\Social\Mastodon\MastodonPostResolver;
 use App\Service\Social\Mastodon\MastodonReplyThreadSource;
@@ -192,7 +190,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
             new MastodonPostResolver($accountApi),
             $accountApi,
             SocialApiWiring::mastodonApiClient($http->client()),
-            new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover())),
+            new MastodonContextReplies(SocialApiWiring::commentBodyRenderer()),
         );
     }
 

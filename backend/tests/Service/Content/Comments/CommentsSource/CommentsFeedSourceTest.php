@@ -155,6 +155,18 @@ final class CommentsFeedSourceTest extends KernelTestCase
         self::assertStringNotContainsString('<script', $bodies[1]);
     }
 
+    public function testABareUrlInACommentIsALink(): void
+    {
+        $xml = '<?xml version="1.0"?><rss version="2.0"><channel><title>Comments</title><item><guid>c1</guid>'
+            . '<title>Re</title><description>&lt;p&gt;see https://example.org/thread&lt;/p&gt;</description>'
+            . '</item></channel></rss>';
+        $this->fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
+
+        $html = $this->comments(self::entry())[0]->html;
+
+        self::assertStringContainsString('<a href="https://example.org/thread"', $html);
+    }
+
     public function testMarksTheEntryAuthorsComments(): void
     {
         $this->serveRedditThread();

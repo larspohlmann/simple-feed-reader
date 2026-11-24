@@ -273,6 +273,15 @@ final class LemmyCommentsSourceTest extends KernelTestCase
         );
     }
 
+    public function testABareUrlInACommentIsALink(): void
+    {
+        $answer = (string) json_encode(['comments' => [
+            self::node(5, '0.5', ['content' => 'see https://example.org/thread']),
+        ]]);
+
+        self::assertStringContainsString('<a href="https://example.org/thread"', $this->read($answer)[0]->html);
+    }
+
     public function testATopLevelCommentsInterestIsItsScorePlusThreeTimesItsReplies(): void
     {
         $answer = (string) json_encode(['comments' => [

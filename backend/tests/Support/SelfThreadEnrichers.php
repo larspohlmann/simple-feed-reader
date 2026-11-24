@@ -7,8 +7,6 @@ namespace App\Tests\Support;
 use App\Entity\ThreadPost;
 use App\Repository\ThreadPostRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Social\Bluesky\BlueskyReplyThreadSource;
 use App\Service\Social\Bluesky\BlueskyThreadReplies;
 use App\Service\Social\BlueskyPost\AppViewClient;
@@ -70,7 +68,7 @@ final class SelfThreadEnrichers
         $source = new BlueskyReplyThreadSource(
             SocialApiWiring::blueskySessions(new MockHttpClient()),
             $appView,
-            new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover())),
+            new BlueskyThreadReplies(new PostEmbedRenderer(), SocialApiWiring::commentBodyRenderer()),
             6,
         );
 

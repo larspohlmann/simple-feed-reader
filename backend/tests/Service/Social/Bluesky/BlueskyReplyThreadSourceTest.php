@@ -6,8 +6,6 @@ namespace App\Tests\Service\Social\Bluesky;
 
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Sanitize\TrailingBlankRemover;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\HostThrottle;
@@ -186,7 +184,7 @@ final class BlueskyReplyThreadSourceTest extends TestCase
         return new BlueskyReplyThreadSource(
             SocialApiWiring::blueskySessions($http->client()),
             new AppViewClient($this->appView, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
-            new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover())),
+            new BlueskyThreadReplies(new PostEmbedRenderer(), SocialApiWiring::commentBodyRenderer()),
             6,
         );
     }

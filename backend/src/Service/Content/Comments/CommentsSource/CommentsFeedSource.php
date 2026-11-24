@@ -6,16 +6,17 @@ namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Content\Comments\Model\CommentsAudienceModel;
 use App\Service\Content\Comments\Model\CommentsEndpointModel;
 use App\Service\Content\Comments\Model\CommentsPageModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Content\Comments\Pass\CommentsRequest;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Ingestion\Parser\Exception\FeedParseException;
 use App\Service\Ingestion\Parser\FeedParser;
 use App\Service\Ingestion\Parser\Model\ParsedEntryModel;
@@ -25,7 +26,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
     public function __construct(
         private CommentsEndpointFetcher $endpointFetcher,
         private FeedParser $parser,
-        private EntrySanitizer $sanitizer,
+        private CommentBodyRenderer $bodies,
     ) {
     }
 
@@ -78,7 +79,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
                 new CommentAuthorModel($item->author, null, $item->authorUrl, $item->authorAvatarUrl),
                 $item->url,
                 $item->publishedAt,
-                (string) $this->sanitizer->sanitize($item->contentHtml),
+                (string) $this->bodies->buildHtml(CommentBodyModel::fromHtml($item->contentHtml ?? '')),
                 $item->author !== null && $item->author === $entry->getAuthor(),
             );
         }

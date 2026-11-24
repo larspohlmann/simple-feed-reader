@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Mastodon;
 
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\Support\HtmlEscape;
 use App\Service\Ingestion\Parser\Support\DateParser;
 use App\Service\Social\Mastodon\Pass\MastodonReplyThread;
@@ -25,7 +26,7 @@ use App\Service\Social\Social\Pass\ReplyNode;
 
 final readonly class MastodonContextReplies
 {
-    public function __construct(private EntrySanitizer $sanitizer)
+    public function __construct(private CommentBodyRenderer $bodies)
     {
     }
 
@@ -130,7 +131,7 @@ final readonly class MastodonContextReplies
             ? $content
             : sprintf('<details><summary>CW: %s</summary>%s</details>', HtmlEscape::text($warning), $content);
 
-        return $this->sanitizer->sanitize($folded) ?? '';
+        return $this->bodies->buildHtml(CommentBodyModel::fromHtml($folded)) ?? '';
     }
 
     private static function buildEmbeds(JsonNodeModel $status): CommentEmbedsModel
