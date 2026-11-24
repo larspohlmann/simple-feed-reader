@@ -28,7 +28,6 @@ import { provideRouteList } from './route-list-context';
 import { ListContext } from '../state/list-context';
 import { RefreshActions } from './refresh-actions.service';
 import { ListReload } from './list-reload.service';
-import { FaviconUnseenDot } from './favicon-unseen-dot.service';
 import { ReaderTabTitle } from './reader-tab-title.service';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
@@ -135,7 +134,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ListReload,
     LinkArticleSource,
     ReaderTabTitle,
-    FaviconUnseenDot,
     { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
@@ -348,7 +346,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   private readonly tabTitle = inject(ReaderTabTitle);
-  private readonly faviconDot = inject(FaviconUnseenDot);
 
   /** The drawer on a narrow layout, the collapsed column on a wide one. */
   openSidebar(): void {

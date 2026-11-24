@@ -31,6 +31,7 @@ import { pluralKey } from '../../../core/i18n/plural-key';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
+import { FaviconUnseenDot } from '../favicon-unseen-dot.service';
 
 /**
  * The app bar — the LIST's chrome, and only the list's. A full-screen article
@@ -55,6 +56,7 @@ import { selectionQueryParams } from '../../query/query';
   ],
   templateUrl: './reader-header.component.html',
   styleUrl: './reader-header.component.scss',
+  providers: [FaviconUnseenDot],
 })
 export class ReaderHeaderComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
@@ -99,6 +101,7 @@ export class ReaderHeaderComponent {
   readonly screen = inject(LayoutService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly faviconDot = inject(FaviconUnseenDot);
   protected readonly unseenNotifications = this.subscriptions.unseenNotifications;
   protected readonly unseenTotal = this.subscriptions.unseenNotificationsTotal;
   protected readonly badgeText = computed(() => badgeCount(this.unseenTotal()));
