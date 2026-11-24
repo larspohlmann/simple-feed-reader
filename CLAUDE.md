@@ -370,9 +370,24 @@ control, not ceremony — do not "simplify" it away, and do not delete
 
 ## Testing
 
+- **Gate cadence: the full set runs once per branch, not per task** (#2525).
+  - *During a task* (an SDD implementer included): run the tests that cover the code you
+    touched, plus `composer cs`/`composer stan` on the changed files; for frontend, the
+    relevant spec in the container. No full test legs, no `infection:diff`, no `npm run check`.
+  - *Reviewers and the controller* do not rerun gates an implementer already ran with
+    quoted output; they check the diff.
+  - *Once, before the PR*, after the final review and `/simplify`: cs, stan, md, tramp, both
+    test legs, `infection:diff`, PhpStorm lint, `npm run check` and `npm run build`, started
+    concurrently (Jest never alongside the test legs). This run is
+    `finishing-a-development-branch`'s "verify tests" step, not an extra one.
+  - *After a red gate*, rerun that gate and the tests covering the fix, not the whole set.
+  - *Only the side that changed*: a docs-only or frontend-only branch skips the backend
+    gates, and the reverse.
+  - *No local rerun after merging `develop` or pushing* unless the merge had conflicts;
+    CI covers it.
 - Backend unit/integration: `php bin/phpunit` (SQLite) natively, or
-  `docker compose exec php composer test:parallel` (MySQL). Run both legs before a PR;
-  they can run at the same time.
+  `docker compose exec php composer test:parallel` (MySQL). Both legs are part of the
+  pre-PR run; they can run at the same time.
 - **Direct-invocation tests mislead.** A listener test that bypasses the dispatcher
   can assert something the real wiring makes impossible — back it with a
   functional test.
