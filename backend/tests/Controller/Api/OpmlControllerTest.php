@@ -69,7 +69,8 @@ final class OpmlControllerTest extends ApiTestCase
             'feedUrls' => [],
         ]);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('validation_error', $this->payload($client)['type']);
     }
 
     public function testImportWithoutAFileIsRejected(): void
@@ -80,7 +81,8 @@ final class OpmlControllerTest extends ApiTestCase
             'feedUrls' => ['https://www.heise.de/rss/heise.rdf'],
         ]);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('invalid_opml', $this->payload($client)['type']);
     }
 
     public function testImportRejectsATagIdThatIsNotANumber(): void
@@ -150,7 +152,8 @@ final class OpmlControllerTest extends ApiTestCase
 
         $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-nofile@example.com')), []);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('invalid_opml', $this->payload($client)['type']);
     }
 
     public function testPreviewCarriesTheParentIntoTheDestinations(): void

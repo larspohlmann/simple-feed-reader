@@ -33,7 +33,7 @@ final class OpmlJson
     {
         return [
             'freeSlots' => $preview->freeSlots,
-            'root' => self::folder($preview->root, $preview->states),
+            'root' => self::formatFolder($preview->root, $preview->states),
         ];
     }
 
@@ -45,7 +45,7 @@ final class OpmlJson
      *     feeds: list<array{url: string, title: ?string, state: string}>, folders: list<array<string, mixed>>
      * }
      */
-    private static function folder(OpmlPlacedFolderModel $folder, array $states): array
+    private static function formatFolder(OpmlPlacedFolderModel $folder, array $states): array
     {
         return [
             'name' => $folder->name,
@@ -60,7 +60,7 @@ final class OpmlJson
                 $folder->feeds,
             ),
             'folders' => array_map(
-                static fn (OpmlPlacedFolderModel $child): array => self::folder($child, $states),
+                static fn (OpmlPlacedFolderModel $child): array => self::formatFolder($child, $states),
                 $folder->folders,
             ),
         ];

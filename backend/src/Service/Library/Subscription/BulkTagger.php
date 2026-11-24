@@ -65,12 +65,16 @@ final readonly class BulkTagger
 
     private function walkPath(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item): ?Tag
     {
-        $parent = null;
+        $reached = null;
         foreach ($item->tagPath as $name) {
-            $parent = $this->existingTag($batch, $name) ?? $this->newTagUnder($batch, $name, $item->tagStyle, $parent);
+            $existing = $this->existingTag($batch, $name);
+            if ($existing !== null && $existing->getParent() !== $reached) {
+                return $reached;
+            }
+            $reached = $existing ?? $this->newTagUnder($batch, $name, $item->tagStyle, $reached);
         }
 
-        return $parent;
+        return $reached;
     }
 
     private function newTagUnder(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style, ?Tag $parent): Tag

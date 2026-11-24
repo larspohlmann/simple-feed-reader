@@ -484,7 +484,7 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertEqualsCanonicalizing(['From Feedly', 'Tech (1)'], $this->namesOf($result->tagsCreated));
     }
 
-    public function testInPlaceNeverMovesATagItFinds(): void
+    public function testInPlaceNeverMovesATagItFindsAndStopsBeforeIt(): void
     {
         $user = $this->user('in-place-keep@example.com');
         $this->entityManager->persist(new Tag($user, 'Tech'));
@@ -497,18 +497,13 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertNull($this->storedTag($user, 'Tech')->getParent());
         self::assertNull($this->storedTag($user, 'News')->getParent());
         $subscription = $this->subscriptionTo($user, 'https://keep.example.com/rss.xml');
-        self::assertSame(['Tech'], $this->namesOf($subscription->getTags()->toArray()));
+        self::assertSame(['News'], $this->namesOf($subscription->getTags()->toArray()));
     }
 
-    public function testInPlaceLeavesANestedTagUnderItsOwnParent(): void
+    public function testInPlaceStopsAtAFirstTagThatIsNestedAndJoinsNoPathTag(): void
     {
         $user = $this->user('in-place-nested@example.com');
-        $shelf = new Tag($user, 'Shelf');
-        $reading = new Tag($user, 'Reading');
-        $reading->setParent($shelf);
-        $this->entityManager->persist($shelf);
-        $this->entityManager->persist($reading);
-        $this->entityManager->flush();
+        [$shelf, $reading] = $this->storeShelfWithReading($user);
 
         $result = $this->subscriber()->subscribeAllInPlace($user, [
             new BulkSubscribeItemModel('https://nested.example.com/rss.xml', 'Nested', ['Reading']),
@@ -516,8 +511,42 @@ final class BulkSubscriberTest extends DbTestCase
 
         self::assertSame($shelf, $reading->getParent());
         self::assertSame([], $result->tagsCreated);
-        $subscription = $this->subscriptionTo($user, 'https://nested.example.com/rss.xml');
-        self::assertSame(['Reading'], $this->namesOf($subscription->getTags()->toArray()));
+        self::assertCount(0, $this->subscriptionTo($user, 'https://nested.example.com/rss.xml')->getTags());
+    }
+
+    public function testInPlaceStopsAtATagUnderAnotherParentAndJoinsTheTagBeforeIt(): void
+    {
+        $user = $this->user('in-place-elsewhere@example.com');
+        [$shelf, $reading] = $this->storeShelfWithReading($user);
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://elsewhere.example.com/rss.xml', 'Away', ['News', 'Reading', 'Deep']),
+        ]);
+
+        self::assertSame($shelf, $reading->getParent());
+        $tags = $this->entityManager->getRepository(Tag::class);
+        self::assertNull($tags->findOneBy(['user' => $user, 'name' => 'Deep']));
+        self::assertSame(['News'], $this->namesOf($result->tagsCreated));
+        $subscription = $this->subscriptionTo($user, 'https://elsewhere.example.com/rss.xml');
+        self::assertSame(['News'], $this->namesOf($subscription->getTags()->toArray()));
+    }
+
+    public function testInPlaceCreatesANewPathTagUnderAStoredParent(): void
+    {
+        $user = $this->user('in-place-under-stored@example.com');
+        $news = new Tag($user, 'News');
+        $this->entityManager->persist($news);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAllInPlace($user, [
+            new BulkSubscribeItemModel('https://sport.example.com/rss.xml', 'Sport', ['News', 'Sport']),
+        ]);
+
+        self::assertSame($news, $this->storedTag($user, 'Sport')->getParent());
+        self::assertNull($news->getParent());
+        self::assertSame(['Sport'], $this->namesOf($result->tagsCreated));
+        $subscription = $this->subscriptionTo($user, 'https://sport.example.com/rss.xml');
+        self::assertSame(['Sport'], $this->namesOf($subscription->getTags()->toArray()));
     }
 
     public function testInPlaceJoinsTheChosenTagsAndNothingElse(): void
@@ -536,7 +565,7 @@ final class BulkSubscriberTest extends DbTestCase
         $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAllInPlace($user, [
-            new BulkSubscribeItemModel('https://chosen.example.com/rss.xml', 'Chosen', [], null, 'xml', [$one, $two]),
+            new BulkSubscribeItemModel('https://chosen.example.com/rss.xml', 'Chosen', chosenTags: [$one, $two]),
         ]);
 
         $subscription = $this->subscriptionTo($user, 'https://chosen.example.com/rss.xml');
@@ -567,7 +596,7 @@ final class BulkSubscriberTest extends DbTestCase
         $this->entityManager->flush();
 
         $this->subscriber()->subscribeAllInPlace($user, [
-            new BulkSubscribeItemModel('https://twice.example.com/rss.xml', 'Twice', ['Tech'], null, 'xml', [$tech]),
+            new BulkSubscribeItemModel('https://twice.example.com/rss.xml', 'Twice', ['Tech'], chosenTags: [$tech]),
         ]);
 
         $subscription = $this->subscriptionTo($user, 'https://twice.example.com/rss.xml');
@@ -648,6 +677,19 @@ final class BulkSubscriberTest extends DbTestCase
     private function namesOf(array $tags): array
     {
         return array_values(array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
+    }
+
+    /** @return array{Tag, Tag} */
+    private function storeShelfWithReading(User $user): array
+    {
+        $shelf = new Tag($user, 'Shelf');
+        $reading = new Tag($user, 'Reading');
+        $reading->setParent($shelf);
+        $this->entityManager->persist($shelf);
+        $this->entityManager->persist($reading);
+        $this->entityManager->flush();
+
+        return [$shelf, $reading];
     }
 
     private function storedTag(User $user, string $name): Tag

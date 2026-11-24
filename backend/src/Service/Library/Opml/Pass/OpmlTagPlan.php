@@ -51,18 +51,18 @@ final class OpmlTagPlan
     {
         $spot = $parentSpot . "\0" . mb_strtolower($name);
         if (!isset($this->finalNames[$spot])) {
-            $this->claim($spot, $parentSpot, $name);
+            $this->claimSpot($spot, $parentSpot, $name);
         }
 
         return $spot;
     }
 
-    private function claim(string $spot, ?string $parentSpot, string $name): void
+    private function claimSpot(string $spot, ?string $parentSpot, string $name): void
     {
         foreach (self::buildCandidates($name) as $candidate) {
             $reused = $this->findStoredAt($candidate, $parentSpot);
             if ($this->isFree($candidate, $reused)) {
-                $this->hold($spot, $candidate, $reused);
+                $this->holdName($spot, $candidate, $reused);
 
                 return;
             }
@@ -79,7 +79,7 @@ final class OpmlTagPlan
         return $reused !== null || !isset($this->storedByName[$key]);
     }
 
-    private function hold(string $spot, string $candidate, ?Tag $reused): void
+    private function holdName(string $spot, string $candidate, ?Tag $reused): void
     {
         $this->heldNames[mb_strtolower($candidate)] = true;
         $this->finalNames[$spot] = $reused?->getName() ?? $candidate;

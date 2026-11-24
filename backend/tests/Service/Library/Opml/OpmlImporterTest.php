@@ -281,7 +281,7 @@ final class OpmlImporterTest extends DbTestCase
         $result = $this->importer()->import($user, $this->everything($this->techFile(), 'From Feedly'));
 
         self::assertSame(1, $result->imported);
-        self::assertSame(['From Feedly', 'Tech', 'Tech (1)'], $this->tagNamesOfUser($user));
+        self::assertSame(['From Feedly', 'Tech', 'Tech (1)'], $this->collectTagNames($user));
     }
 
     public function testTheSecondOfTwoSameNamedFoldersKeepsItsNumberWhenTheFirstIsNotSelected(): void
@@ -446,7 +446,7 @@ final class OpmlImporterTest extends DbTestCase
     }
 
     /** @return list<string> sorted */
-    private function tagNamesOfUser(User $user): array
+    private function collectTagNames(User $user): array
     {
         $names = array_map(
             static fn (Tag $tag): string => $tag->getName(),

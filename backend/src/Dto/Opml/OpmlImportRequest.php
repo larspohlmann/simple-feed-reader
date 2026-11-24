@@ -15,7 +15,6 @@ final readonly class OpmlImportRequest
      * @param array<string, list<int>> $tagIdsByFeedUrl
      */
     public function __construct(
-        #[Assert\NotBlank]
         public string $opml = '',
         #[Assert\Length(max: 100)]
         public ?string $parentTagName = null,

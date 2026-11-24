@@ -22,11 +22,11 @@ final readonly class OpmlPlacementPlanner
         $tagPlan = new OpmlTagPlan($this->tags->findForUser($user->requireId()));
         $parentName = trim($parentTagName ?? '');
 
-        return self::place($tagPlan, $root, $parentName === '' ? [] : [$parentName]);
+        return self::placeFolder($tagPlan, $root, $parentName === '' ? [] : [$parentName]);
     }
 
     /** @param list<string> $parentPath */
-    private static function place(
+    private static function placeFolder(
         OpmlTagPlan $tagPlan,
         OpmlFolderModel $folder,
         array $parentPath,
@@ -34,7 +34,7 @@ final readonly class OpmlPlacementPlanner
         $path = $folder->name === null ? $parentPath : [...$parentPath, $folder->name];
         $destination = $tagPlan->resolve(array_slice($path, 0, Tag::MAX_DEPTH + 1));
         $folders = array_map(
-            static fn (OpmlFolderModel $child): OpmlPlacedFolderModel => self::place($tagPlan, $child, $path),
+            static fn (OpmlFolderModel $child): OpmlPlacedFolderModel => self::placeFolder($tagPlan, $child, $path),
             $folder->folders,
         );
 

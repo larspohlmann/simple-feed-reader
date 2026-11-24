@@ -9,7 +9,6 @@ use App\Service\Library\Opml\Model\OpmlFeedModel;
 use App\Service\Library\Opml\Model\OpmlPlacedFolderModel;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
 
-/** One import's selection, turned into the items for the selected feeds of a planned folder tree. */
 final readonly class OpmlImportItems
 {
     /** @var array<string, true> */

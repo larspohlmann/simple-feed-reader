@@ -46,7 +46,7 @@ final readonly class OpmlPreviewer
     {
         $states = [];
         foreach ($folder->feeds as $feed) {
-            $states[$feed->url] = self::stateOf($feed, $subscribedUrls);
+            $states[$feed->url] = self::resolveState($feed, $subscribedUrls);
         }
         foreach ($folder->folders as $child) {
             $states += self::stateEachFeed($child, $subscribedUrls);
@@ -56,7 +56,7 @@ final readonly class OpmlPreviewer
     }
 
     /** @param array<string, true> $subscribedUrls */
-    private static function stateOf(OpmlFeedModel $feed, array $subscribedUrls): OpmlFeedState
+    private static function resolveState(OpmlFeedModel $feed, array $subscribedUrls): OpmlFeedState
     {
         return match (true) {
             !SubscribableUrl::isSubscribable($feed->url) => OpmlFeedState::InvalidUrl,
