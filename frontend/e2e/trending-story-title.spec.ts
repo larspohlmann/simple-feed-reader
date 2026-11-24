@@ -337,6 +337,7 @@ test.describe("a story's list reads like any list (desktop)", () => {
 declare global {
   interface Window {
     storyAnimations: string[];
+    trendingPainted: string[];
   }
 }
 
@@ -497,9 +498,8 @@ test.describe("a story's article goes back to the story beneath it (phone)", () 
 
   const ARTICLE = '.article-overlay:not(.story-overlay) app-article-layer';
 
-  test('a swipe-back shows the story where it lay, without sliding it in again (#2527)', async ({
-    page,
-  }) => {
+  /** Opens the story's lead article over the story over Trending, once every slide has settled. */
+  async function openStoryArticle(page: Page): Promise<void> {
     const lead = leadOf(STORY_ID);
     await page.route(
       (url) => url.pathname === `/api/entries/${lead.id}`,
@@ -514,6 +514,19 @@ test.describe("a story's article goes back to the story beneath it (phone)", () 
     await layer(page).getByText(lead.title, { exact: true }).first().click();
     await expect(page.locator(`${ARTICLE} .reader`)).toBeVisible();
     await settleAnimations(page.locator('.main'));
+  }
+
+  async function swipeBack(page: Page): Promise<void> {
+    await touchDrag(page, `${ARTICLE} .reader`, { x: 20, y: 400 }, { x: 260, y: 410 });
+    await liftTouch(page, `${ARTICLE} .reader`);
+    await expect(page.locator(ARTICLE)).toHaveCount(0);
+    await settleAnimations(page.locator('.main'));
+  }
+
+  test('a swipe-back shows the story where it lay, without sliding it in again (#2527)', async ({
+    page,
+  }) => {
+    await openStoryArticle(page);
     await page.locator('.story-overlay').evaluate((story: HTMLElement) => {
       window.storyAnimations = [];
       story.addEventListener('animationstart', (event) => {
@@ -521,13 +534,29 @@ test.describe("a story's article goes back to the story beneath it (phone)", () 
       });
     });
 
-    await touchDrag(page, `${ARTICLE} .reader`, { x: 20, y: 400 }, { x: 260, y: 410 });
-    await liftTouch(page, `${ARTICLE} .reader`);
-    await expect(page.locator(ARTICLE)).toHaveCount(0);
-    await settleAnimations(page.locator('.main'));
+    await swipeBack(page);
 
     await expect(layer(page)).toBeVisible();
     expect(await page.evaluate(() => window.storyAnimations)).toEqual([]);
+  });
+
+  test('a swipe-back never paints Trending beneath the story (#2536)', async ({ page }) => {
+    await openStoryArticle(page);
+    await page.locator('.main > section.list').evaluate((trending) => {
+      window.trendingPainted = [];
+      const sample = (): void => {
+        if (getComputedStyle(trending).visibility !== 'hidden')
+          window.trendingPainted.push('painted');
+        if (document.querySelector('.article-overlay:not(.story-overlay)'))
+          requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+
+    await swipeBack(page);
+
+    await expect(layer(page)).toBeVisible();
+    expect(await page.evaluate(() => window.trendingPainted)).toEqual([]);
   });
 });
 
