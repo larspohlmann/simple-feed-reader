@@ -165,6 +165,8 @@ test.describe('palette', () => {
   });
 });
 
+const ROMAN_FILE = 'fonts/newsreader-classic-latin-roman.woff2';
+
 const TITLES = {
   hero: 'app-magazine-block app-entry-hero .title',
   wide: 'app-magazine-block app-entry-wide .title',
@@ -217,10 +219,12 @@ test.describe('type under classic', () => {
     for (const request of requests) {
       expect(new URL(request.url()).origin, `font request ${request.url()}`).toBe(origin);
     }
+    const roman = requests.filter((request) => request.url().endsWith(ROMAN_FILE));
+    expect(roman, 'the latin roman file is requested exactly once').toHaveLength(1);
+    expect((await roman[0].response())?.status(), 'the latin roman file did not load').toBe(200);
     expect(
-      requests.some((request) =>
-        request.url().endsWith('/fonts/newsreader-classic-latin-roman.woff2'),
-      ),
+      await page.evaluate(() => document.fonts.check("16px 'Newsreader Classic'")),
+      'the family is declared but not usable',
     ).toBe(true);
   });
 });
@@ -297,6 +301,7 @@ test.describe('first paint', () => {
         seen.atDomContentLoaded = attribute();
       });
     });
+    const requests = fontRequests(page);
     await stubMagazine(page, ENTRIES);
     await stubAccount(page, 'classic', held);
 
@@ -311,11 +316,18 @@ test.describe('first paint', () => {
     expect(seen['atDomContentLoaded'], 'the attribute was missing at DOMContentLoaded').toBe(
       'classic',
     );
-    await expect(page.locator('link[rel="preload"][as="font"][type="font/woff2"]')).toHaveAttribute(
-      'href',
-      '/fonts/newsreader-classic-latin-roman.woff2',
-    );
+    const preloadHref = await page
+      .locator('link[rel="preload"][as="font"][type="font/woff2"]')
+      .evaluate((link) => (link as HTMLLinkElement).href);
     release();
+    await expect(page.locator('.rows.magazine')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const roman = requests.filter((request) => request.url().endsWith(ROMAN_FILE));
+    expect(roman, 'the preload and the stylesheet fetch the file once, not twice').toHaveLength(1);
+    expect(roman[0].url(), 'the preload names another URL than the stylesheet').toBe(preloadHref);
+    expect((await roman[0].response())?.status()).toBe(200);
+    expect(await page.evaluate(() => document.fonts.check("16px 'Newsreader Classic'"))).toBe(true);
   });
 
   test('a cached name that is not a theme paints graphite', async ({ page }) => {
