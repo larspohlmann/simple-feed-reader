@@ -1,7 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { nextFrames, settleAnimations } from './support/animations';
 import { signInWithLayout } from './support/auth';
-import { entryWire } from './support/reader';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 import { liftTouch, touchDrag } from './support/scroll';
 import type { EntryDto } from '../src/app/reader/models';
 import type { TrendingResponseDto } from '../src/app/reader/trending/trending-page';
@@ -490,6 +490,45 @@ test.describe("a story's list goes back on the article's swipe (phone)", () => {
       expect(stubbed.trendingRequests()).toBe(requests);
     });
   }
+});
+
+test.describe("a story's article goes back to the story beneath it (phone)", () => {
+  test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
+
+  const ARTICLE = '.article-overlay:not(.story-overlay) app-article-layer';
+
+  test('a swipe-back shows the story where it lay, without sliding it in again (#2527)', async ({
+    page,
+  }) => {
+    const lead = leadOf(STORY_ID);
+    await page.route(
+      (url) => url.pathname === `/api/entries/${lead.id}`,
+      (route) => route.fulfill({ json: entryDetailJson(lead, '<p>Fixture article body</p>') }),
+    );
+    await page.route(`**/api/entries/${lead.id}/reader`, (route) =>
+      route.fulfill({ json: readerFailedJson('unextractable') }),
+    );
+    await page.route(`**/api/entries/${lead.id}/state`, (route) => route.fulfill({ json: {} }));
+    await openStoryFromTrending(page, 'magazine');
+    await settleAnimations(page.locator('.story-overlay'));
+    await layer(page).getByText(lead.title, { exact: true }).first().click();
+    await expect(page.locator(`${ARTICLE} .reader`)).toBeVisible();
+    await settleAnimations(page.locator('.main'));
+    await page.locator('.story-overlay').evaluate((story: HTMLElement) => {
+      window.storyAnimations = [];
+      story.addEventListener('animationstart', (event) => {
+        if (event.target === story) window.storyAnimations.push(event.animationName);
+      });
+    });
+
+    await touchDrag(page, `${ARTICLE} .reader`, { x: 20, y: 400 }, { x: 260, y: 410 });
+    await liftTouch(page, `${ARTICLE} .reader`);
+    await expect(page.locator(ARTICLE)).toHaveCount(0);
+    await settleAnimations(page.locator('.main'));
+
+    await expect(layer(page)).toBeVisible();
+    expect(await page.evaluate(() => window.storyAnimations)).toEqual([]);
+  });
 });
 
 test.describe("a story's list is a list of its own (desktop)", () => {
