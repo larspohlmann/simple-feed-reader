@@ -1542,7 +1542,6 @@
     "accountWithNotificationsOne": "Account, 1 unseen notification",
     "accountWithNotificationsOther": "Account, {{count}} unseen notifications",
     "settings": "Settings",
-    "admin": "Admin",
     "signOut": "Sign out",
     "readerView": "Reader view",
     "original": "Original view",
