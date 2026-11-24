@@ -2,7 +2,7 @@ import { WritableSignal, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
 import { PREFERENCES_WRITER, ReadingPreferences, writeTracked } from './preferences-writer';
 
-type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle';
+type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle' | 'theme';
 
 interface CachedAccountChoiceOptions<Field extends ChoiceField> {
   key: string;

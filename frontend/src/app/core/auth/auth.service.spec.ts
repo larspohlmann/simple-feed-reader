@@ -15,6 +15,8 @@ import { DigestService } from '../preferences/digest.service';
 import { SHARING_KEY, SharingSettings } from '../preferences/sharing';
 import { SIDEBAR_STYLE_KEY } from '../preferences/sidebar-style';
 import { SidebarStyleService } from '../preferences/sidebar-style.service';
+import { THEME_NAME_KEY } from '../preferences/theme-name';
+import { ThemeNameService } from '../preferences/theme-name.service';
 import { SharingService } from '../preferences/sharing.service';
 import { SHARING_WRITER } from '../preferences/sharing-writer';
 import { AiAvailabilityService } from '../ai-availability.service';
@@ -286,6 +288,27 @@ describe('AuthService', () => {
 
     expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBeNull();
     expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
+  });
+
+  it('adopts the account theme from /api/me and paints it', () => {
+    service.loadMe().subscribe();
+    const body = meFixture({ passkeyOfferAnswered: true });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush({ ...body, preferences: { ...body.preferences, theme: 'classic' } });
+
+    expect(TestBed.inject(ThemeNameService).name()).toBe('classic');
+    expect(document.documentElement.getAttribute('data-theme-name')).toBe('classic');
+  });
+
+  it('logout clears the cached theme and its attribute, so the next account never inherits them', () => {
+    TestBed.inject(ThemeNameService).set('classic');
+
+    service.logout();
+
+    expect(localStorage.getItem(THEME_NAME_KEY)).toBeNull();
+    expect(TestBed.inject(ThemeNameService).name()).toBe('graphite');
+    expect(document.documentElement.hasAttribute('data-theme-name')).toBe(false);
   });
 
   it('logout resets the sharing settings', () => {

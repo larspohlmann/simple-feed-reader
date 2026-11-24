@@ -11,6 +11,7 @@ import { LanguageService } from '../i18n/language.service';
 import { HandednessService } from '../preferences/handedness.service';
 import { MagazineStyleService } from '../preferences/magazine-style.service';
 import { SidebarStyleService } from '../preferences/sidebar-style.service';
+import { ThemeNameService } from '../preferences/theme-name.service';
 import { PreferencesService } from '../preferences/preferences.service';
 import { SharingSettings } from '../preferences/sharing';
 import { SharingService } from '../preferences/sharing.service';
@@ -31,6 +32,7 @@ export interface UserPreferences {
   passkeyOfferAnswered: boolean;
   magazineStyle: string;
   sidebarStyle: string;
+  theme: string;
   handedness: string;
   sharing: SharingSettings;
   trendingEnabled: boolean;
@@ -62,6 +64,7 @@ export class AuthService {
   private readonly preferences = inject(PreferencesService);
   private readonly magazineStyle = inject(MagazineStyleService);
   private readonly sidebarStyle = inject(SidebarStyleService);
+  private readonly themeName = inject(ThemeNameService);
   private readonly handedness = inject(HandednessService);
   private readonly sharing = inject(SharingService);
   private readonly digest = inject(DigestService);
@@ -99,6 +102,7 @@ export class AuthService {
     this.preferences.adopt(user);
     this.magazineStyle.adopt(user);
     this.sidebarStyle.adopt(user);
+    this.themeName.adopt(user);
     this.handedness.adopt(user);
     this.sharing.adopt(user);
     this.digest.adopt(user);
@@ -135,6 +139,7 @@ export class AuthService {
     this.preferences.reset();
     this.magazineStyle.reset();
     this.sidebarStyle.reset();
+    this.themeName.reset();
     this.handedness.reset();
     this.sharing.reset();
     this.digest.reset();
