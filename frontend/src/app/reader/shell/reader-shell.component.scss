@@ -215,14 +215,15 @@ app-reader-header.hidden {
 }
 
 /* A covered layer is not painted once the one above has slid over it: a scroll that outruns the
-   paint above showed it through (#2459). Painted while the layer above slides or a gesture moves it.
+   paint above showed it through (#2459). Painted while the layer above slides, or while a gesture
+   moves the layer directly above it: the ones further down stay covered, and painted they flashed (#2536).
    A transition, not an animation: replacing a layer's own `article-enter` replays it on unpinning (#2527). */
 .main > .page-pinned:not(.article-leave) {
   visibility: hidden;
   transition: visibility 0s $layer-slide;
 }
 
-.main:has(> .page-moving) > .page-pinned {
+.main > .page-pinned:has(+ .page-moving) {
   visibility: visible;
   transition: none;
 }
