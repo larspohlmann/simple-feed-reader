@@ -103,7 +103,7 @@ describe('ViewControlsComponent', () => {
   it('switches the theme mode', () => {
     const fixture = create();
     const theme = TestBed.inject(ThemeService);
-    const group = fixture.nativeElement.querySelector('[aria-label="Theme"]') as HTMLElement;
+    const group = fixture.nativeElement.querySelector('[aria-label="Appearance"]') as HTMLElement;
     const dark = group.querySelector('[title="Dark"]') as HTMLButtonElement;
     dark.click();
     expect(theme.mode()).toBe('dark');
