@@ -20,26 +20,26 @@ final class BareUrlLinks
 
     public static function linkIn(HTMLDocument $document, string $parsedHtml): string
     {
-        return self::linkTextNodes($document) === 0 ? $parsedHtml : ($document->body->innerHTML ?? $parsedHtml);
+        return self::linkTextNodes($document) ? ($document->body->innerHTML ?? $parsedHtml) : $parsedHtml;
     }
 
-    private static function linkTextNodes(HTMLDocument $document): int
+    private static function linkTextNodes(HTMLDocument $document): bool
     {
-        $linked = 0;
+        $linked = false;
         foreach (TextNodes::in($document->body) as $text) {
             if ($text->parentElement?->closest('a, code, pre') === null) {
-                $linked += self::linkInText($text, $document);
+                $linked = self::linkInText($text, $document) || $linked;
             }
         }
 
         return $linked;
     }
 
-    private static function linkInText(Text $text, HTMLDocument $document): int
+    private static function linkInText(Text $text, HTMLDocument $document): bool
     {
         $pieces = preg_split(self::BARE_URL_SPLIT, $text->data, -1, \PREG_SPLIT_DELIM_CAPTURE);
         if ($pieces === false || \count($pieces) < 2) {
-            return 0;
+            return false;
         }
 
         $nodes = [];
@@ -48,7 +48,7 @@ final class BareUrlLinks
         }
         $text->replaceWith(...$nodes);
 
-        return intdiv(\count($pieces), 2);
+        return true;
     }
 
     private static function anchor(HTMLDocument $document, string $url): Element

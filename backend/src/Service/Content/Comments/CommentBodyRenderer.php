@@ -20,22 +20,15 @@ final readonly class CommentBodyRenderer
 
     public function buildHtml(CommentBodyModel $body): ?string
     {
-        $html = $this->convertToHtml($body);
-
-        return $this->sanitizer->sanitize($html === null ? null : BareUrlLinks::linkHtml($html));
+        return $this->sanitizer->sanitize(BareUrlLinks::linkHtml($this->convertToHtml($body)));
     }
 
-    private function convertToHtml(CommentBodyModel $body): ?string
+    private function convertToHtml(CommentBodyModel $body): string
     {
         return match ($body->format) {
             CommentBodyFormat::Html => $body->source,
             CommentBodyFormat::Markdown => $this->markdown->toHtml($body->source),
-            CommentBodyFormat::PlainText => self::paragraphPlainText($body->source),
+            CommentBodyFormat::PlainText => ParagraphedText::asHtml($body->source, HtmlEscape::text(...)),
         };
-    }
-
-    private static function paragraphPlainText(string $text): ?string
-    {
-        return trim($text) === '' ? null : ParagraphedText::asHtml($text, HtmlEscape::text(...));
     }
 }
