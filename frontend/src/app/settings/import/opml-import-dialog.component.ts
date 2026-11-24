@@ -15,6 +15,7 @@ import {
   switchMap,
   takeUntil,
 } from 'rxjs';
+import { pluralKey } from '../../core/i18n/plural-key';
 import { parseProblem } from '../../core/problem';
 import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -23,7 +24,6 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
 import { FieldComponent } from '../../shared/field/field.component';
 import { inputValue } from '../../shared/input-value';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
-import { hostOf, parseUrl } from '../../shared/url-host';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SettingsApi } from '../settings-api';
 import { OpmlImportResult } from '../settings.models';
@@ -77,19 +77,18 @@ export class OpmlImportDialogComponent {
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
-  protected readonly counterKey = computed(() => {
-    const one = this.selection.freeSlots() === 1;
-    if (!this.selection.overLimit()) {
-      return one ? 'settings.opml.counterOne' : 'settings.opml.counter';
-    }
-    return one ? 'settings.opml.overLimitOne' : 'settings.opml.overLimit';
-  });
-  private readonly previewedParent = signal('');
+  protected readonly counterKey = computed(() =>
+    pluralKey(
+      this.selection.overLimit() ? 'settings.opml.overLimit' : 'settings.opml.counter',
+      this.selection.freeSlots(),
+    ),
+  );
+  private readonly previewedParent = signal<string | null>(null);
   protected readonly canImport = computed(
     () =>
       this.selection.selectedCount() > 0 &&
       !this.selection.overLimit() &&
-      this.parent().trim() === this.previewedParent(),
+      (this.parent().trim() || null) === this.previewedParent(),
   );
 
   private readonly typedParents = new Subject<string>();
@@ -102,9 +101,9 @@ export class OpmlImportDialogComponent {
       .pipe(
         debounceTime(PREVIEW_DEBOUNCE_MS),
         filter(() => !this.importing()),
-        map((parent) => parent.trim()),
+        map((parent) => parent.trim() || null),
         switchMap((parent) =>
-          this.api.previewOpml(this.data.opml, parent || null).pipe(
+          this.api.previewOpml(this.data.opml, parent).pipe(
             map((preview) => ({ parent, preview })),
             takeUntil(this.importStarts),
             catchError((error: HttpErrorResponse) => this.fail(error)),
@@ -130,11 +129,6 @@ export class OpmlImportDialogComponent {
   protected typeParent(event: Event): void {
     this.parent.set(inputValue(event));
     this.typedParents.next(this.parent());
-  }
-
-  protected hostLabel(url: string): string {
-    const parsed = parseUrl(url);
-    return parsed === null ? url : hostOf(parsed);
   }
 
   protected apply(): void {

@@ -35,4 +35,11 @@ export type OpmlImportRow =
       dropped: boolean;
       importableUrls: string[];
     }
-  | { kind: 'feed'; key: string; depth: number; feed: OpmlPreviewFeed; destination: string[] };
+  | {
+      kind: 'feed';
+      key: string;
+      depth: number;
+      feed: OpmlPreviewFeed;
+      host: string;
+      destination: string[];
+    };

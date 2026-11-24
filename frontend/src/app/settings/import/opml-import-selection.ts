@@ -1,4 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { toggled } from '../../core/toggled-set';
+import { hostOf, parseUrl } from '../../shared/url-host';
 import {
   OpmlImportRequest,
   OpmlImportRow,
@@ -9,34 +11,46 @@ import {
 
 type FolderRow = Extract<OpmlImportRow, { kind: 'folder' }>;
 
-function importableUrlsBelow(folder: OpmlPreviewFolder): string[] {
-  return [
-    ...folder.feeds.filter((feed) => feed.state === 'new').map((feed) => feed.url),
-    ...folder.folders.flatMap(importableUrlsBelow),
-  ];
+interface Flattened {
+  rows: OpmlImportRow[];
+  importableUrls: string[];
 }
 
-function flatten(folder: OpmlPreviewFolder, depth: number, path: string): OpmlImportRow[] {
+function hostLabel(url: string): string {
+  const parsed = parseUrl(url);
+  return parsed === null ? url : hostOf(parsed);
+}
+
+function flatten(folder: OpmlPreviewFolder, depth: number, path: string): Flattened {
   const feedRows = folder.feeds.map((feed: OpmlPreviewFeed): OpmlImportRow => ({
     kind: 'feed',
     key: feed.url,
     depth,
     feed,
+    host: hostLabel(feed.url),
     destination: folder.destination,
   }));
-  const folderRows = folder.folders.flatMap((child, index) => {
+  const importableUrls = folder.feeds
+    .filter((feed) => feed.state === 'new')
+    .map((feed) => feed.url);
+  const folderRows: OpmlImportRow[] = [];
+  folder.folders.forEach((child, index) => {
     const key = `${path}${index}`;
-    const row: OpmlImportRow = {
-      kind: 'folder',
-      key,
-      depth,
-      name: child.name ?? '',
-      dropped: child.dropped,
-      importableUrls: importableUrlsBelow(child),
-    };
-    return [row, ...flatten(child, depth + 1, `${key}.`)];
+    const below = flatten(child, depth + 1, `${key}.`);
+    folderRows.push(
+      {
+        kind: 'folder',
+        key,
+        depth,
+        name: child.name ?? '',
+        dropped: child.dropped,
+        importableUrls: below.importableUrls,
+      },
+      ...below.rows,
+    );
+    importableUrls.push(...below.importableUrls);
   });
-  return [...feedRows, ...folderRows];
+  return { rows: [...feedRows, ...folderRows], importableUrls };
 }
 
 function collectDroppedNames(folder: OpmlPreviewFolder): string[] {
@@ -52,10 +66,26 @@ export class OpmlImportSelection {
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
   private readonly tagChoices = signal<ReadonlyMap<string, ReadonlySet<number>>>(new Map());
 
-  readonly rows = computed<OpmlImportRow[]>(() => {
+  private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
-    return current === null ? [] : flatten(current.root, 0, 'f');
+    return current === null ? { rows: [], importableUrls: [] } : flatten(current.root, 0, 'f');
   });
+  private readonly importable = computed<ReadonlySet<string>>(
+    () => new Set(this.flattened().importableUrls),
+  );
+  readonly folderStates = computed(() => {
+    const states = new Map<string, 'all' | 'some' | 'none'>();
+    const selected = this.selectedUrls();
+    for (const row of this.flattened().rows) {
+      if (row.kind !== 'folder') continue;
+      const chosen = row.importableUrls.filter((url) => selected.has(url)).length;
+      if (chosen === 0) states.set(row.key, 'none');
+      else states.set(row.key, chosen === row.importableUrls.length ? 'all' : 'some');
+    }
+    return states;
+  });
+
+  readonly rows = computed(() => this.flattened().rows);
   readonly selected = this.selectedUrls.asReadonly();
   readonly selectedCount = computed(() => this.selectedUrls().size);
   readonly freeSlots = computed(() => this.preview()?.freeSlots ?? 0);
@@ -66,21 +96,17 @@ export class OpmlImportSelection {
   });
 
   load(preview: OpmlPreview): void {
-    const importable = new Set(importableUrlsBelow(preview.root));
     const isFirstLoad = this.preview() === null;
+    this.preview.set(preview);
+    const importable = this.importable();
     this.selectedUrls.update((previous) =>
       isFirstLoad ? importable : new Set([...previous].filter((url) => importable.has(url))),
     );
-    this.preview.set(preview);
   }
 
   toggleFeed(url: string): void {
-    if (!this.importableUrls().has(url)) return;
-    this.selectedUrls.update((previous) => {
-      const next = new Set(previous);
-      if (!next.delete(url)) next.add(url);
-      return next;
-    });
+    if (!this.importable().has(url)) return;
+    this.selectedUrls.update((previous) => toggled(previous, url));
   }
 
   toggleFolder(row: FolderRow): void {
@@ -96,13 +122,11 @@ export class OpmlImportSelection {
   }
 
   folderState(row: FolderRow): 'all' | 'some' | 'none' {
-    const chosen = row.importableUrls.filter((url) => this.selectedUrls().has(url)).length;
-    if (chosen === 0) return 'none';
-    return chosen === row.importableUrls.length ? 'all' : 'some';
+    return this.folderStates().get(row.key) ?? 'none';
   }
 
   selectAll(): void {
-    this.selectedUrls.set(this.importableUrls());
+    this.selectedUrls.set(this.importable());
   }
 
   selectNone(): void {
@@ -122,8 +146,7 @@ export class OpmlImportSelection {
   }
 
   toggleTag(url: string, tagId: number): void {
-    const next = new Set(this.chosenTags(url));
-    if (!next.delete(tagId)) next.add(tagId);
+    const next = toggled(this.chosenTags(url), tagId);
     this.tagChoices.update((previous) => new Map(previous).set(url, next));
   }
 
@@ -136,21 +159,15 @@ export class OpmlImportSelection {
   }
 
   toRequest(opml: string, parentTagName: string | null): OpmlImportRequest {
-    const feedUrls = this.rows()
-      .filter((row) => row.kind === 'feed' && this.selectedUrls().has(row.feed.url))
-      .map((row) => row.key);
+    const feedUrls = this.rows().flatMap((row) =>
+      row.kind === 'feed' && this.selectedUrls().has(row.feed.url) ? [row.feed.url] : [],
+    );
     const tagIdsByFeedUrl: Record<string, number[]> = {};
     for (const url of feedUrls) {
       const chosen = this.tagChoices().get(url);
       if (chosen !== undefined)
         tagIdsByFeedUrl[url] = [...chosen].sort((left, right) => left - right);
     }
-    const parent = parentTagName?.trim() ?? '';
-    return { opml, parentTagName: parent === '' ? null : parent, feedUrls, tagIdsByFeedUrl };
-  }
-
-  private importableUrls(): ReadonlySet<string> {
-    const current = this.preview();
-    return new Set(current === null ? [] : importableUrlsBelow(current.root));
+    return { opml, parentTagName, feedUrls, tagIdsByFeedUrl };
   }
 }

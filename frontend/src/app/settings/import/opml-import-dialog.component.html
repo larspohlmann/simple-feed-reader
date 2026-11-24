@@ -61,7 +61,7 @@
   <ul class="rows">
     @for (row of selection.rows(); track row.key) {
       @if (row.kind === 'folder') {
-        @let state = selection.folderState(row);
+        @let state = selection.folderStates().get(row.key);
         <li class="row is-folder" data-testid="opml-import-folder" [style.--depth]="row.depth">
           <label class="pick">
             <input
@@ -77,8 +77,9 @@
         </li>
       } @else {
         @let url = row.feed.url;
-        @let host = hostLabel(url);
+        @let host = row.host;
         @let title = row.feed.title ?? host;
+        @let changed = selection.isChanged(url);
         <li
           class="row"
           data-testid="opml-import-feed"
@@ -101,7 +102,7 @@
               </span>
             </label>
             @if (row.feed.state === 'new') {
-              @if (selection.isChanged(url)) {
+              @if (changed) {
                 <app-button
                   variant="ghost"
                   size="sm"
@@ -125,7 +126,7 @@
             }
           </div>
           @if (row.feed.state === 'new') {
-            @if (selection.isChanged(url)) {
+            @if (changed) {
               <app-tag-picker
                 class="tags"
                 [tags]="tags()"

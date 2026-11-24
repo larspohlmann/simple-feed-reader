@@ -157,7 +157,7 @@ describe('OpmlImportSelection', () => {
     selection.toggleTag('b1', 3);
     selection.changeTags('r');
     selection.toggleFeed('r');
-    expect(selection.toRequest('<opml/>', ' ')).toEqual({
+    expect(selection.toRequest('<opml/>', null)).toEqual({
       opml: '<opml/>',
       parentTagName: null,
       feedUrls: ['a1', 'b1'],
