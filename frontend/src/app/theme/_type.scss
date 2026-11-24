@@ -1,4 +1,3 @@
-// An entry or article title: a theme's title tokens, else the weight and line-height it is given.
 @mixin headline($weight, $line-height) {
   font-weight: var(--title-weight, $weight);
   line-height: var(--title-lh, $line-height);

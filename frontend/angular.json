@@ -33,7 +33,9 @@
               "fonts/newsreader-classic-latin-ext-italic.woff2",
               "fonts/newsreader-classic-latin-ext-roman.woff2",
               "fonts/newsreader-classic-latin-italic.woff2",
-              "fonts/newsreader-classic-latin-roman.woff2"
+              "fonts/newsreader-classic-latin-roman.woff2",
+              "fonts/newsreader-classic-vietnamese-italic.woff2",
+              "fonts/newsreader-classic-vietnamese-roman.woff2"
             ],
             "assets": [
               {

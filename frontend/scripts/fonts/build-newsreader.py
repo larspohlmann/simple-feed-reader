@@ -21,6 +21,8 @@ FACES = {
     ('latin', 'italic'): 'newsreader-classic-latin-italic.woff2',
     ('latin-ext', 'normal'): 'newsreader-classic-latin-ext-roman.woff2',
     ('latin-ext', 'italic'): 'newsreader-classic-latin-ext-italic.woff2',
+    ('vietnamese', 'normal'): 'newsreader-classic-vietnamese-roman.woff2',
+    ('vietnamese', 'italic'): 'newsreader-classic-vietnamese-italic.woff2',
 }
 LINE_METRIC_TAGS = {'hasc', 'hdsc', 'hlgp', 'hcla', 'hcld'}
 USE_TYPO_METRICS = 1 << 7

@@ -12,8 +12,15 @@ From `frontend/`, after `npm ci` (the only input is the dev dependency `@fontsou
 python3 scripts/fonts/build-newsreader.py
 ```
 
-Needs Python 3 with `fontTools` and `brotli`. The output is deterministic: an unchanged script rebuilds
-byte-identical files.
+Needs Python 3 with `fontTools` and `brotli`. It writes six files: Latin, Latin Extended and Vietnamese, each
+roman and italic, with the package's own subsets. The output is deterministic: with `@fontsource-variable/newsreader` 5.3.0,
+fontTools 4.65.0 and brotli 1.2.0 (the versions the shipped files were built with), an unchanged script
+rebuilds byte-identical files; another version may compress differently.
+
+The files are neither hashed nor versioned, so a browser's heuristic cache can serve a stale one after a
+constant changes. The first time the constants change after a release, give the URLs a version: a `?v=` on
+every URL in `theme/_fonts.scss`, on the preload in `index.html` and in `externalDependencies` in
+`angular.json`, or new file names in all three and in `FACES`.
 
 ## The three constants
 
