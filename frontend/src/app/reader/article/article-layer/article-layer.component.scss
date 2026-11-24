@@ -1,4 +1,5 @@
 @use '../../../theme/corner-circle-button' as circle;
+@use '../../../theme/list-chrome';
 
 /* `clip`, not `hidden`: the return swipe's overflow is cut without the host
    becoming a scroller the chrome would sit in (#1332). Isolated so the back-to-top
@@ -39,10 +40,18 @@
 /* Opaque and full-height so this overlay hides the still-mounted list until a
    swipe slides it aside. Reserves the chrome floating above it (#87). */
 .reader {
+  --sheet: var(--surface-2);
+
+  @include list-chrome.sheet-column(var(--sheet));
+
   position: relative;
   min-height: 100%;
   padding-top: var(--reader-top);
-  background: var(--surface-read);
+  background-color: var(--surface-0);
+}
+
+:host-context([data-theme='dark']) .reader {
+  --sheet: var(--surface-read);
 }
 
 /* Split pane: the shell's bar floats over this panel and the toolbar hangs
