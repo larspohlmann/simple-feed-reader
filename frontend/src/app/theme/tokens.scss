@@ -3,7 +3,9 @@
 @use './glass-rim';
 @use './icon-scale';
 @use './type-scale';
+@use './themes/classic';
 @use './themes/graphite';
+@use './themes/palette';
 
 // Light is the fallback when no attribute is set yet (before the no-flash
 // script or ThemeService runs).
@@ -11,7 +13,7 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  @include graphite.emit(graphite.$light);
+  @include palette.emit(graphite.$light);
   @include glass-rim.tokens(light);
   @include brightness.media-at-rest(light);
 
@@ -44,7 +46,7 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  @include graphite.emit(graphite.$dark);
+  @include palette.emit(graphite.$dark);
   @include glass-rim.tokens(dark);
   @include brightness.media-at-rest(dark);
 
@@ -69,8 +71,18 @@
   --mascot-chopsticks: #a8774d;
 }
 
+:root[data-theme-name='classic'][data-theme='light'] {
+  @include palette.emit(classic.$light);
+}
+
+:root[data-theme-name='classic'][data-theme='dark'] {
+  @include palette.emit(classic.$dark);
+}
+
 @include brightness.theme-steps('light', graphite.$light);
 @include brightness.theme-steps('dark', graphite.$dark);
+@include brightness.theme-steps('light', classic.$light, 'classic');
+@include brightness.theme-steps('dark', classic.$dark, 'classic');
 @include glass-rim.gradients;
 
 // Mode-invariant tokens (same in every theme).

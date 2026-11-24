@@ -76,15 +76,23 @@ function compileBlocks(): Block[] {
   );
 }
 
-const BLOCKS = compileBlocks();
+const ALL_BLOCKS = compileBlocks();
+const BLOCKS = ALL_BLOCKS.filter((block) => !block.selector.includes('data-theme-name'));
+const CLASSIC_BLOCKS = ALL_BLOCKS.filter((block) =>
+  block.selector.includes('[data-theme-name=classic]'),
+);
 
-function paletteAt(theme: Theme, step: number): Palette {
-  const block = BLOCKS.find((candidate) =>
+function findBlock(blocks: Block[], theme: Theme, step: number): Block | undefined {
+  return blocks.find((candidate) =>
     step === 0
       ? candidate.selector.includes(`[data-theme=${theme}]`) &&
         !candidate.selector.includes('data-brightness')
       : candidate.selector.includes(`[data-theme=${theme}][data-brightness="${step}"]`),
   );
+}
+
+function paletteAt(theme: Theme, step: number): Palette {
+  const block = findBlock(BLOCKS, theme, step);
   if (!block) throw new Error(`No block for ${theme} step ${step}`);
   return block.tokens;
 }
@@ -233,4 +241,81 @@ it('turns the body text pure white at the brightest dark step', () => {
 
 it('turns the body text pure black at the darkest light step', () => {
   expect(rgb(paletteAt('light', -6)['text-primary'])).toEqual([0, 0, 0]);
+});
+
+/** The classic palette as ruled; accent-soft is derived and checked on its own. */
+const CLASSIC: Record<Theme, Palette> = {
+  light: {
+    'surface-0': '#f2ecdd',
+    'surface-1': '#faf6ea',
+    'surface-2': '#fefbf2',
+    'surface-read': '#faf6ea',
+    'surface-sunken': '#eee7d6',
+    border: '#e4dcc9',
+    'border-strong': '#d0c7b0',
+    'text-primary': '#26231d',
+    'text-secondary': '#5c574b',
+    'text-muted': '#8e8878',
+    accent: '#2f6f62',
+    'on-accent': '#fff',
+    'favicon-backdrop': 'transparent',
+  },
+  dark: {
+    'surface-0': '#161511',
+    'surface-1': '#1d1b16',
+    'surface-2': '#25231d',
+    'surface-read': '#1f1d18',
+    'surface-sunken': '#17160f',
+    border: '#2c2a22',
+    'border-strong': '#3b382e',
+    'text-primary': '#cbc6b6',
+    'text-secondary': '#9e9988',
+    'text-muted': '#6d695b',
+    accent: '#6aa998',
+    'on-accent': '#0f1a17',
+    'favicon-backdrop': '#e8e4da',
+  },
+};
+
+describe.each(['light', 'dark'] as const)('classic %s', (theme) => {
+  const base = findBlock(CLASSIC_BLOCKS, theme, 0);
+
+  it('declares the ruled palette in its base block', () => {
+    if (!base) throw new Error(`No classic base block for ${theme}`);
+    for (const token of Object.keys(CLASSIC[theme])) {
+      expect(`${token}: ${base.tokens[token]}`).toBe(`${token}: ${CLASSIC[theme][token]}`);
+    }
+  });
+
+  it('declares the same 22 keys as graphite and nothing else', () => {
+    expect(Object.keys(base?.tokens ?? {}).sort()).toEqual(Object.keys(TODAY[theme]).sort());
+  });
+
+  it('copies graphite’s danger, success and warning colours', () => {
+    for (const token of Object.keys(TODAY[theme]).filter((key) =>
+      /danger|success|warning/.test(key),
+    )) {
+      expect(`${token}: ${base?.tokens[token]}`).toBe(`${token}: ${TODAY[theme][token]}`);
+    }
+  });
+
+  it('mixes accent-soft into a plain colour value', () => {
+    expect(base?.tokens['accent-soft']).toMatch(/^(#[0-9a-f]{6}|rgb\(\d+, \d+, \d+\))$/);
+  });
+
+  it.each(STEPS[theme])('step %i has its own block, dimmer or brighter than graphite’s', (step) => {
+    const classic = findBlock(CLASSIC_BLOCKS, theme, step);
+    if (!classic) throw new Error(`No classic block for ${theme} step ${step}`);
+    expect(classic.tokens['surface-0']).not.toBe(paletteAt(theme, step)['surface-0']);
+  });
+
+  it('emits exactly the steps brightness.ts declares', () => {
+    const steps = CLASSIC_BLOCKS.flatMap((block) => {
+      const match = new RegExp(`\\[data-theme=${theme}\\]\\[data-brightness="(-?\\d)"\\]`).exec(
+        block.selector,
+      );
+      return match ? [Number(match[1])] : [];
+    }).sort((left, right) => left - right);
+    expect(steps).toEqual([...STEPS[theme]]);
+  });
 });
