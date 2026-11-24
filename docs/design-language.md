@@ -631,7 +631,7 @@ Width and max-height are per-consumer and come from `--panel-w` / `--panel-max-h
 set on the consumer's host — not from inputs, so they stay in the stylesheet with
 the rest of the sizing. In use: 400px (confirm), 440px (edit subscription), 460px
 (tag form, and the component default), 520px (add feed), 760px (feed directory
-scope), 1040px (discover).
+scope, OPML import), 1040px (discover).
 
 Two further knobs exist, and both are **opt-in and useless apart** (#561):
 `--panel-h` gives the panel a definite height, and `--panel-body-container: size`
@@ -651,7 +651,9 @@ second: 520px for an avatar, a name and a state label per row, and `fillOnMobile
 because a follow list runs to thousands of rows and its footer must stay in reach.
 The feed directory scope dialog (#2176) is the third: 760px so its two checklists,
 countries and languages, sit side by side as in the agreed mockup; below `bp.$bp-md`
-they stack and the panel stays a card.
+they stack and the panel stays a card. The OPML import dialog (#2531) is the fourth:
+760px for a checkbox, a title, a host and a tag picker per row, and `fillOnMobile`
+because a file runs to hundreds of rows.
 
 **Not for:** a non-modal popover or dropdown menu. The panel declares
 `role="dialog" aria-modal="true"`.

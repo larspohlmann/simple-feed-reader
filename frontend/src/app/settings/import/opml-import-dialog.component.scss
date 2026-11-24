@@ -1,0 +1,139 @@
+:host {
+  display: contents;
+
+  --panel-w: 760px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.counter {
+  flex: 1;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter.is-over {
+  color: var(--warning);
+}
+
+.failure {
+  display: block;
+  padding-block: var(--space-3);
+}
+
+.dropped {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+.rows {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 calc(-1 * var(--row-pad-x));
+  padding: var(--row-pad-y) var(--row-pad-x);
+  padding-left: calc(var(--row-pad-x) + var(--depth, 0) * var(--space-5));
+  border-radius: var(--radius);
+}
+
+.row.is-chosen {
+  background: var(--accent-soft);
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.row.is-off .pick {
+  cursor: default;
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name,
+.host {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  font-weight: 500;
+}
+
+.row.is-folder .name {
+  font-weight: 600;
+}
+
+.row.is-off .name {
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.host {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.state {
+  padding: var(--space-0) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-align: right;
+}
+
+.destination,
+.tags {
+  margin: 0;
+  padding-left: calc(var(--space-3) + var(--space-4));
+}
+
+.destination {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .pick {
+    min-height: var(--tap-target);
+  }
+}
