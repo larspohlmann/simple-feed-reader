@@ -956,9 +956,8 @@ The article's collapsible panel: the header's Contents, Chapters and Transcript,
 and the chapter list under an embed (`app-embed-chapters`, #1886): a
 `label` input and an `open` model. The body is a projected `<ng-template>`, so
 a collapsed panel builds none of it (a transcript runs to hundreds of
-paragraphs). Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
-`.text-scaled`; a `<summary>` would scale with the text-size slider (#1880).
-Article panels therefore use it, not `<app-disclosure>`.
+paragraphs). Its toggle is a `<button>`; inside `.text-scaled` it follows the text size like
+every other control (#2524). Article panels use it, not `<app-disclosure>`.
 
 ---
 
@@ -1895,34 +1894,32 @@ brightness control and shares its shape (`segmented.stepper-bar`): `text_decreas
 a bar whose fill marks the step and whose label is the percentage, `text_increase`. Steps are 90–150 % in tens,
 default 100, per device and theme-independent (`sfr.textSize`), never per account.
 
-The setting is one root property, `--text-scale`. A reading container takes the
-global class `text-scaled`, which multiplies the `--fs-*` tokens and the inherited
-font size by it; today that is the list `.rows`, `.empty-wrap`, `.list-error`, the
-article `<article>` and its `.placeholder`, and the duplicates popover (a CDK overlay sits
-outside the page's containers, so it takes the class itself). Inside one, every `<button>` and
-`app-entry-pills` keep the fixed tokens and the inherited size; any class rule
-still overrides them. A block that scales as one takes
-`scales-with-text`: its buttons, pills and `--icon-*` tokens scale too, so a count never
-grows beside a fixed glyph; the entry's meta row (`app-entry-meta`) sets it on its host (#2457). A button typeset as running text (TOC
-entries, inline "Retry", "Also in") opts back in with `reads-as-text`.
+The setting is one root property, `--text-scale`. The content area takes the global class
+`text-scaled`: the list `.rows`, `.empty-wrap`, `.list-error`, the article `<article>` and its
+`.placeholder`, the notification rows, and the duplicates popover (a CDK overlay sits outside the
+page's containers, so it takes the class itself). The class multiplies the `--fs-*` and `--icon-*`
+tokens and the inherited font size by the scale, and sets `--icon-text-scale` (1 on `:root`),
+which `app-favicon` and a `size="md"` `app-avatar` multiply their own size by.
 
-Icons follow the row they sit in (#2524): when any text in a row scales, every icon in
-it scales, icon-only buttons included (a comment's delete beside Reply), so that row takes
-`scales-with-text`; a row whose text all stays fixed keeps fixed icons. "Icon" is a
-Material icon, a tag glyph, a network logo or a favicon (with the poster avatar that
-`app-favicon` shows in its place). A `scales-with-text` block also sets
-`--icon-text-scale` (1 on `:root`), which `app-favicon` multiplies its px `size` by.
-The kicker line is one such row: the pills and actions a grouped card projects into it
-scale with it, as in the meta row, and wrap to a second line inside the card when they do not
-fit. The article's head line (vote pill beside tag pills) and a source group's head (name
-beside tag pills) are rows too, pill text included. `icon-scale-coverage.spec.ts` lists every icon inside a
-`text-scaled` container that no scaled row holds; each must be a row or an exemption
-naming why its row's text is fixed. Avatars, pictures, spacing and widths never scale. The list header and the
-reader toolbar sit outside every `text-scaled` container, which is why their texts
-stay fixed. A new reading surface takes `text-scaled`. A control inside one stays fixed
-if it sizes its text with an `--fs-*` token or has no font-size rule of its own; a class
-rule like `font: inherit` with no token size outranks the reset and scales the control
-with the text (that is how the text-like `.note-link` and `.also-entry` scale).
+Inside it everything follows the text size, text and icons, in every control: buttons, pills,
+links and running text alike (#2524). "Icon" is a Material icon, a tag glyph, a network logo or a
+favicon, with the poster avatar `app-favicon` shows in its place. An avatar in front of text (a
+comment's byline, a quoted post's author, a notification row's actors) scales with it. There is no fixed-type control and no opt-in class: a new control
+sized by `--fs-*` and `--icon-*` tokens, or by inheritance, scales by itself. A row that no longer
+fits at 150 % on a phone wraps its actions to their own line (the kicker line), truncates a long
+label with an ellipsis (a quoted post's date), or collapses a bar's labels to their icons where
+the bar already does so at narrow widths.
+
+Pictures and spacing do not scale, and neither does a glyph that stands in for a picture or sits
+on one: the favicon in a story-sources mini card's picture tile (`--icon-text-scale: 1` on the
+tile), and the badges and play button over a thumbnail (`media-badge.media-badge` and the
+magazine's `.play` reset the type and icon tokens with `type-scale.fixed` and `icon-scale.fixed`).
+
+The control does not reach outside the content area: the app header, the sidebar and the phone
+drawer, the list header, the article's bar, the floating corner buttons, dialogs, menus and
+Settings keep their size at every step. A new reading surface takes `text-scaled`.
+`frontend/e2e/icons-follow-text-size.spec.ts` measures the rule: per surface, text, icons and
+avatars scale by the step, pictures and chrome stay, and nothing is cut at 150 % on a phone.
 
 ### Brightness control
 

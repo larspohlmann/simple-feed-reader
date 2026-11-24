@@ -21,7 +21,7 @@ A second theme next to graphite for readers who want the feel of a printed newsp
 
 ## Anti-goals
 
-- Graphite changes. With classic off, every page renders as it does today (the icon scaling below is the one intended difference, and only at a text size other than 100%).
+- Graphite changes. With classic off, every page renders as it does today (the text-size scaling below, which now reaches icons and every control, is the one intended difference, and only at a text size other than 100%).
 - Text riding high. Newsreader's own metrics lift text about 2px above the icons in pills and buttons; shipping that is a failure even if everything else is right.
 - A first frame in graphite colours on reload for an account that picked classic.
 
@@ -77,7 +77,7 @@ Type:
 
 ## Icons follow the text size (every theme)
 
-Rule: inside a container that follows the text-size control, a row of controls scales as one. When any text in the row scales, every icon in that row scales, icon-only buttons included (a comment's delete button beside Reply, the comments' refresh button); a row whose text all stays fixed keeps fixed icons. This is how the entry's meta row behaves today (#2457). "Icon" covers Material icons, tag glyphs, network logos and favicons set inline with text. Avatars, pictures and spacing do not scale.
+Rule: inside a container that follows the text-size control, text and icons scale in every control: buttons, pills, links and running text alike (#2524). "Icon" covers Material icons, tag glyphs, network logos and favicons set inline with text. Pictures and spacing do not scale; an avatar scales where it prefixes text. A glyph that stands in for a picture or sits on one (a picture tile's favicon, the play badge over a thumbnail) keeps its size, and nothing outside the content area follows the control.
 
 Measured on the list and an article with comments at 100% against 150%, these have scaling text beside a fixed icon today:
 
@@ -86,7 +86,7 @@ Measured on the list and an article with comments at 100% against 150%, these ha
 - the Reply and "Add comment" icon (`app-social-counts-row`)
 - the vote arrows in comments (`app-vote-pill`; the ones in the list's meta row already scale)
 
-The same measurement runs over the other scaled surfaces (notifications, link reader, thread replies, the duplicates popover) before the work is called done. A check in `npm run check` fails when a row ships with scaling text and a fixed icon. `docs/design-language.md` ("Text-size control") is updated: it says today that icons never scale.
+The same measurement runs over the other scaled surfaces (notifications, link reader, thread replies, the duplicates popover) before the work is called done. `frontend/e2e/icons-follow-text-size.spec.ts` measures the rule on each surface: text, icons and avatars that prefix text scale by the step, pictures and the chrome around the content stay, and nothing is cut at 150% on a phone. `docs/design-language.md` ("Text-size control") describes it.
 
 ## Calls made without a ruling
 
