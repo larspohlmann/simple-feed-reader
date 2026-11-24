@@ -59,7 +59,7 @@ export async function stubImages(page: Page): Promise<void> {
   );
 }
 
-/** `feed` reshapes the one feed, e.g. to give its entries tag pills. */
+/** `feed` reshapes the one feed, e.g. to give its entries tag pills; its tags are also the tag list. */
 export async function stubMagazine(
   page: Page,
   entries: EntryDto[],
@@ -67,11 +67,11 @@ export async function stubMagazine(
 ): Promise<void> {
   await stubOneFeedReader(page, 'Fixture feed');
   await stubImages(page);
+  const subscriptions = oneFeedJson('Fixture feed', feed);
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+    route.fulfill({ json: subscriptions }),
+  );
   if (feed.tags) {
-    const subscriptions = oneFeedJson('Fixture feed', feed);
-    await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
-      route.fulfill({ json: subscriptions }),
-    );
     await page.route(/\/api\/tags(?:[?#]|$)/, (route) =>
       route.fulfill({ json: { tags: feed.tags } }),
     );

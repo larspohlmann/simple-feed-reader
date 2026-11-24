@@ -20,6 +20,8 @@ import {
  * #2524: inside a `text-scaled` container, an icon whose row's text scales sits in a
  * `scales-with-text` row. Walks every template from each `text-scaled` element through the
  * components, projections and template outlets it renders, and lists each icon no scaled row holds.
+ * It sees only the tags in `ICON_TAGS` (a raw `material-symbols-outlined` span, or an `app-avatar`
+ * without `size`, is invisible to it) and reads static `class` attributes, never bound classes.
  */
 const SOURCE_ROOT = join(__dirname, '..', '..');
 const ICON_TAGS = ['app-icon', 'app-favicon', 'app-tag-glyph', 'app-network-logo'];
@@ -29,6 +31,7 @@ type TemplateNode = ReturnType<typeof parseTemplate>['nodes'][number];
 interface Exemption {
   file: string;
   tag: string;
+  sites: number;
   reason: string;
 }
 
@@ -66,61 +69,74 @@ const EXEMPT: readonly Exemption[] = [
   {
     file: 'app/reader/article/entry-comments/entry-comments.component.html',
     tag: 'app-icon',
+    sites: 1,
     reason: 'the "Load comments" list action is a button, so its label keeps the fixed type',
   },
   {
     file: 'app/reader/article/listen-row/listen-row.component.html',
     tag: 'app-icon',
+    sites: 2,
     reason: 'the listen and playlist buttons size their labels with --fs-sm, fixed in a button',
   },
   {
     file: 'app/reader/article/reader-panel/reader-panel.component.html',
     tag: 'app-icon',
+    sites: 1,
     reason: 'the panel toggle is a button, so its label keeps the fixed type',
   },
   {
     file: 'app/reader/entry/entry-actions/entry-actions.component.html',
     tag: 'app-icon',
+    sites: 7,
     reason: "the article's action row is icon buttons alone, with no text of its own",
   },
   {
     file: 'app/reader/entry/entry-like/entry-like.component.html',
     tag: 'app-icon',
+    sites: 2,
     reason: "the like button sits in the article's action row, whose text is fixed",
   },
   {
     file: 'app/reader/entry/entry-pills/entry-pills.component.html',
     tag: 'app-icon',
+    sites: 1,
     reason: 'pills keep the fixed type outside a scaled row',
   },
   {
     file: 'app/reader/entry/entry-pills/entry-pills.component.html',
     tag: 'app-network-logo',
+    sites: 1,
     reason: 'pills keep the fixed type outside a scaled row',
   },
   {
     file: 'app/reader/entry/entry-pills/entry-pills.component.html',
     tag: 'app-tag-glyph',
+    sites: 1,
     reason: 'pills keep the fixed type outside a scaled row',
   },
   {
     file: 'app/reader/link-card/open-in-reader.component.html',
     tag: 'app-icon',
+    sites: 1,
     reason: 'the open-in-reader label is a button sized with --fs-xs, fixed in a button',
   },
   {
     file: 'app/reader/list/magazine/source-group.component.html',
     tag: 'app-icon',
+    sites: 2,
     reason: 'the "more from" toggle is a button sized with --fs-sm, fixed in a button',
   },
   {
     file: 'app/reader/list/magazine/story-sources/story-sources.component.html',
     tag: 'app-favicon',
-    reason: "the tile favicon stands in for a source's thumbnail, and pictures keep their size",
+    sites: 1,
+    reason:
+      "the mini card's tile favicon stands in for the outlet's picture, and pictures keep their size",
   },
   {
     file: 'app/reader/list/short-badge/short-badge.component.html',
     tag: 'app-icon',
+    sites: 1,
     reason: 'a play badge over a thumbnail, with no visible text beside it',
   },
 ];
@@ -375,7 +391,11 @@ describe('icon scale coverage', () => {
     expect(bare.map(({ file, line, tag }) => `${file}:${line} <${tag}>`)).toEqual([]);
   });
 
-  it.each(EXEMPT)('still needs its exemption for $file <$tag>', (exemption) => {
-    expect(SITES.some((site) => covers(exemption, site))).toBe(true);
+  it.each(EXEMPT)('exempts exactly $sites <$tag> in $file', (exemption) => {
+    const sites = SITES.filter((site) => covers(exemption, site)).length;
+    expect({ file: exemption.file, sites }).toEqual({
+      file: exemption.file,
+      sites: exemption.sites,
+    });
   });
 });

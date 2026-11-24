@@ -5,7 +5,7 @@ import { entryWire } from './support/reader';
 
 /**
  * #2524: inside a text-scaled container a row of controls scales as one. Where a row's text follows
- * the text size, every icon in that row follows it too; the text itself stays at the size it had.
+ * the text size, every icon in that row follows it too, and so does the text of its pills and counts.
  * Every API read is stubbed, so the spec owns the rows it measures.
  */
 const DESKTOP = { width: 1280, height: 900 };
@@ -199,7 +199,8 @@ async function measure(browser: Browser, surface: Surface, step: Step): Promise<
   return measurement;
 }
 
-/** Recorded on `develop` before #2524: the rows' text keeps exactly these sizes. */
+/** The rows' text: `develop`'s sizes, except the grouped card's pill and like count, which now
+ *  scale with their kicker line. */
 const TEXT_SIZES: Record<Surface, Partial<Record<Step, Record<string, number>>>> = {
   magazine: {
     100: { kicker: 13, kickerSource: 13, alsoFootLead: 11, alsoFootEntry: 11 },
@@ -273,8 +274,11 @@ test.describe('icons follow the text size of their row', () => {
         expect.soft(scaled.texts, `text at ${step}%`).toEqual(TEXT_SIZES[surface][step]);
         expect.soft(scaled.sidebarIcons, 'sidebar icons').toEqual(normal.sidebarIcons);
         expect.soft(scaled.headerIcons, 'list header icons').toEqual(normal.headerIcons);
-        expect.soft(scaled.openInReaderIcon, 'open-in-reader icon').toBe(normal.openInReaderIcon);
-        expect.soft(scaled.deleteGlyph, 'delete beside reply').toBe(scaled.replyGlyph);
+        if (surface === 'article') {
+          expect.soft(scaled.openInReaderIcon, 'open-in-reader icon').toBe(normal.openInReaderIcon);
+          expect.soft(scaled.deleteGlyph, 'delete glyph').toBeGreaterThan(0);
+          expect.soft(scaled.deleteGlyph, 'delete beside reply').toBe(scaled.replyGlyph);
+        }
       }
     });
   }
