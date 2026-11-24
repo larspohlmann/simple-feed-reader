@@ -1,4 +1,10 @@
+@use 'icon-scale';
+@use 'type-scale';
+
 @mixin media-badge {
+  @include type-scale.fixed;
+  @include icon-scale.fixed;
+
   border-radius: var(--radius-pill);
   background: var(--media-scrim);
   color: var(--on-media-scrim);

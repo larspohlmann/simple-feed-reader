@@ -49,7 +49,7 @@
         {{ source.title() }}
       </h1>
     </div>
-    <p class="meta scales-with-text">
+    <p class="meta">
       <ng-content select="[pageByline]" />
       @if (readingMinutes(); as minutes) {
         · {{ 'reader.readingTime' | transloco: { minutes } }}
@@ -120,7 +120,7 @@
       }
       @if (source.failure() && !body() && source.openUrl(); as url) {
         <a
-          class="open-original scales-with-text"
+          class="open-original"
           appOwnInstanceHref
           [href]="url"
           target="_blank"
@@ -147,7 +147,7 @@
   </article>
   <ng-template #failureLine let-failure>
     {{ failure.messageKey | transloco }}
-    <button type="button" class="note-link reads-as-text" (click)="source.reload()">
+    <button type="button" class="note-link" (click)="source.reload()">
       {{ 'reader.retry' | transloco }}
     </button>
   </ng-template>

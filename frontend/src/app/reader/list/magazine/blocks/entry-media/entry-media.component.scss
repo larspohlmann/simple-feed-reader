@@ -1,5 +1,6 @@
 @use '../../magazine-card';
 @use '../../../../media/post-media-grid';
+@use '../../../../../theme/type-scale';
 
 :host {
   display: block;
@@ -38,6 +39,8 @@
 }
 
 .play {
+  @include type-scale.fixed;
+
   position: absolute;
   inset: 0;
   display: grid;

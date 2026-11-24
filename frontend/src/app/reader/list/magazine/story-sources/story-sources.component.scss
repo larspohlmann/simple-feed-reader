@@ -90,6 +90,8 @@
 }
 
 .thumb.tile {
+  --icon-text-scale: 1;
+
   display: grid;
   place-items: center;
   background: var(--surface-1);

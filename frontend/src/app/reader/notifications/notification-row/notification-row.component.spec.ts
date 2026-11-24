@@ -104,7 +104,7 @@ describe('NotificationRowComponent', () => {
     const unseen = render(group({ seen: false }));
     expect(unseen.querySelector('.dot')).not.toBeNull();
     expect(unseen.querySelector('.sr-only')?.textContent).toContain('Unseen');
-    expect(unseen.querySelector('.row')?.className).toBe('row scales-with-text');
+    expect(unseen.querySelector('.row')?.className).toBe('row');
 
     const seen = render(group({ seen: true }));
     expect(seen.querySelector('.dot')).toBeNull();

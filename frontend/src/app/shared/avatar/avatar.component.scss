@@ -8,8 +8,8 @@
 }
 
 :host(.md) {
-  width: var(--space-6);
-  height: var(--space-6);
+  width: calc(var(--space-6) * var(--icon-text-scale, 1));
+  height: calc(var(--space-6) * var(--icon-text-scale, 1));
 }
 
 .avatar {

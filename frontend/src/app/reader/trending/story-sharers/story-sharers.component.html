@@ -1,9 +1,9 @@
 @if (shown().length) {
-  <div class="sharers scales-with-text">
+  <div class="sharers">
     @for (sharer of shown(); track sharer.share.id) {
       <button
         type="button"
-        class="sharer reads-as-text"
+        class="sharer"
         [attr.title]="sharer.name"
         (click)="open(sharer.share, $event)"
         (keydown.enter)="$event.stopPropagation()"
@@ -19,7 +19,7 @@
     @if (hiddenCount() > 0) {
       <button
         type="button"
-        class="sharers-more reads-as-text"
+        class="sharers-more"
         (click)="showAll($event)"
         (keydown.enter)="$event.stopPropagation()"
         (keydown.space)="$event.stopPropagation()"

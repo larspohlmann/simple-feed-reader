@@ -1,12 +1,12 @@
 @if (copies().length) {
-  <div class="also-foot scales-with-text">
+  <div class="also-foot">
     <app-icon class="layers" [name]="icon()" size="sm" aria-hidden="true" />
     <span class="lead">{{ label() | transloco }}</span>
     @for (item of shown(); track item.copy.id) {
       @if (item.crossPost) {
         <button
           type="button"
-          class="also-entry reads-as-text"
+          class="also-entry"
           [attr.title]="item.feed"
           (click)="openCrossPost(item.copy, $event)"
           (keydown.enter)="$event.stopPropagation()"
@@ -26,7 +26,7 @@
       } @else {
         <button
           type="button"
-          class="also-entry reads-as-text"
+          class="also-entry"
           [attr.aria-expanded]="displayed()?.id === item.copy.id"
           [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
           [attr.title]="item.feed"
@@ -43,7 +43,7 @@
     @if (hiddenCount() > 0) {
       <button
         type="button"
-        class="also-more reads-as-text"
+        class="also-more"
         (click)="showAll($event)"
         (keydown.enter)="$event.stopPropagation()"
         (keydown.space)="$event.stopPropagation()"
