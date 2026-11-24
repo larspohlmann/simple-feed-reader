@@ -4,7 +4,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { EMPTY, Subject, catchError, debounceTime, filter, switchMap, takeUntil } from 'rxjs';
+import { EMPTY, Subject, catchError, debounceTime, filter, map, switchMap, takeUntil } from 'rxjs';
 import { parseProblem } from '../../core/problem';
 import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -67,8 +67,12 @@ export class OpmlImportDialogComponent {
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
+  private readonly previewedParent = signal('');
   protected readonly canImport = computed(
-    () => this.selection.selectedCount() > 0 && !this.selection.overLimit(),
+    () =>
+      this.selection.selectedCount() > 0 &&
+      !this.selection.overLimit() &&
+      this.parent().trim() === this.previewedParent(),
   );
 
   private readonly typedParents = new Subject<string>();
@@ -81,17 +85,20 @@ export class OpmlImportDialogComponent {
       .pipe(
         debounceTime(PREVIEW_DEBOUNCE_MS),
         filter(() => !this.importing()),
+        map((parent) => parent.trim()),
         switchMap((parent) =>
-          this.api.previewOpml(this.data.opml, parent.trim() || null).pipe(
+          this.api.previewOpml(this.data.opml, parent || null).pipe(
+            map((preview) => ({ parent, preview })),
             takeUntil(this.importStarts),
             catchError((error: HttpErrorResponse) => this.fail(error)),
           ),
         ),
         takeUntilDestroyed(),
       )
-      .subscribe((preview) => {
+      .subscribe(({ parent, preview }) => {
         this.failure.set(null);
         this.selection.load(preview);
+        this.previewedParent.set(parent);
       });
   }
 
@@ -111,14 +118,16 @@ export class OpmlImportDialogComponent {
     this.importing.set(true);
     this.dialogRef.disableClose = true;
     this.failure.set(null);
-    this.api.importOpml(this.selection.toRequest(this.data.opml, this.parent())).subscribe({
-      next: (result) => this.dialogRef.close(result),
-      error: (error: HttpErrorResponse) => {
-        this.importing.set(false);
-        this.dialogRef.disableClose = closeWasDisabled;
-        this.fail(error);
-      },
-    });
+    this.api
+      .importOpml(this.selection.toRequest(this.data.opml, this.previewedParent()))
+      .subscribe({
+        next: (result) => this.dialogRef.close(result),
+        error: (error: HttpErrorResponse) => {
+          this.importing.set(false);
+          this.dialogRef.disableClose = closeWasDisabled;
+          this.fail(error);
+        },
+      });
   }
 
   protected cancel(): void {

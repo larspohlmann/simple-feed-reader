@@ -50,12 +50,11 @@
     </div>
   </div>
 
-  @if (selection.droppedFolders(); as dropped) {
-    @if (dropped.length > 0) {
-      <app-warning-box class="dropped" data-testid="opml-import-dropped">
-        {{ 'settings.opml.dropped' | transloco: { names: dropped.join(', ') } }}
-      </app-warning-box>
-    }
+  @let dropped = selection.droppedFolders();
+  @if (dropped.length > 0) {
+    <app-warning-box class="dropped" data-testid="opml-import-dropped">
+      {{ 'settings.opml.dropped' | transloco: { names: dropped.join(', ') } }}
+    </app-warning-box>
   }
 
   <ul class="rows">

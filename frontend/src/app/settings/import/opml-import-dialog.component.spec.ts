@@ -214,6 +214,7 @@ describe('OpmlImportDialogComponent', () => {
 
     expect(textOf(byTestId('opml-import-failure'))).toContain('Bad parent');
     expect(textOf(feedRow('a1'))).toContain('→ X / A');
+    expect(buttonOf('opml-import-apply').disabled).toBe(true);
   });
 
   it('swaps the destination for the tag picker and back', () => {
@@ -257,7 +258,10 @@ describe('OpmlImportDialogComponent', () => {
   it('sends the selection and closes with the result', () => {
     mount();
     jest.useFakeTimers();
-    typeParent('P');
+    typeParent(' P ');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf(10, 'P'));
+    fixture.detectChanges();
     const expected = fixture.debugElement.injector.get(OpmlImportSelection).toRequest(OPML, 'P');
 
     press('opml-import-apply');
@@ -270,8 +274,6 @@ describe('OpmlImportDialogComponent', () => {
       skippedOverLimit: 0,
     };
     request.flush(result);
-    jest.advanceTimersByTime(300);
-    http.expectNone(PREVIEW);
 
     expect(close).toHaveBeenCalledWith(result);
   });
@@ -282,11 +284,30 @@ describe('OpmlImportDialogComponent', () => {
     typeParent('P');
     jest.advanceTimersByTime(300);
     const preview = http.expectOne(PREVIEW);
+    typeParent('');
 
     press('opml-import-apply');
 
     expect(preview.cancelled).toBe(true);
-    http.expectOne(IMPORT);
+    expect(http.expectOne(IMPORT).request.body.parentTagName).toBeNull();
+    jest.advanceTimersByTime(300);
+    http.expectNone(PREVIEW);
+  });
+
+  it('holds the import while a typed parent waits for its preview', () => {
+    mount();
+    jest.useFakeTimers();
+
+    typeParent('P');
+    expect(buttonOf('opml-import-apply').disabled).toBe(true);
+    jest.advanceTimersByTime(300);
+    const preview = http.expectOne(PREVIEW);
+    fixture.detectChanges();
+    expect(buttonOf('opml-import-apply').disabled).toBe(true);
+
+    preview.flush(previewOf(10, 'P'));
+    fixture.detectChanges();
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
   });
 
   it('stays open with its choices when the import fails', () => {
