@@ -6,6 +6,7 @@ namespace App\Service\Content\Comments\CommentsSource;
 
 use App\Entity\Entry;
 use App\Entity\User;
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\CommentsEndpointFetcher;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
@@ -25,6 +26,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
     public function __construct(
         private FeedFetcherInterface $fetcher,
         private CommentsEndpointFetcher $endpointFetcher,
+        private CommentBodyRenderer $bodies,
     ) {
     }
 
@@ -57,7 +59,7 @@ final readonly class SubstackCommentsSource implements CommentsSourceInterface
         $nodes = JsonNodeModel::fromValue(json_decode($answer, true))->listAt('comments')
             ?? throw new CommentsUnavailableException('Substack answered without a comment list.');
 
-        $thread = new SubstackThread(self::requirePost($entry), $entry->getAuthor());
+        $thread = new SubstackThread(self::requirePost($entry), $entry->getAuthor(), $this->bodies);
 
         return new CommentsPageModel($thread->comments($nodes));
     }

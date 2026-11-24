@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Content\Comments\Pass;
 
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Content\Comments\Model\SubstackPostModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Text\Support\LinkedPlainText;
 use App\Service\Ingestion\Parser\Support\DateParser;
 
 final readonly class SubstackThread
@@ -16,8 +17,11 @@ final readonly class SubstackThread
     private const string PROFILE = 'https://substack.com/@';
 
     /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(private SubstackPostModel $post, private ?string $entryAuthor)
-    {
+    public function __construct(
+        private SubstackPostModel $post,
+        private ?string $entryAuthor,
+        private CommentBodyRenderer $bodies,
+    ) {
     }
 
     /**
@@ -53,7 +57,7 @@ final readonly class SubstackThread
     private function parseComment(JsonNodeModel $node, int $depth): ?EntryCommentModel
     {
         $id = $node->int('id');
-        $html = LinkedPlainText::asHtml($node->text('body') ?? '');
+        $html = $this->bodies->buildHtml(CommentBodyModel::fromPlainText($node->text('body') ?? ''));
         if (null === $id || null === $html || $node->isTrue('deleted')) {
             return null;
         }

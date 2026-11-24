@@ -136,6 +136,11 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         self::assertStringContainsString('Thanks &lt;b&gt;Ada&lt;/b&gt;.', $comments[1]->html);
     }
 
+    public function testABodyPassesTheSanitizerLikeEveryOtherComment(): void
+    {
+        self::assertStringContainsString('target="_blank"', $this->comments()[0]->html);
+    }
+
     public function testMarksThePostAuthorsReplies(): void
     {
         self::assertSame(

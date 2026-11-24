@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Content\Comments\Pass;
 
 use App\Enum\VoteScore;
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Content\Comments\Model\CommentVoteModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Content\Comments\Support\LemmyAuthor;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
-use App\Service\Foundation\Text\MarkdownHtml;
 use App\Service\Ingestion\Parser\Support\DateParser;
 
 final readonly class LemmyThread
@@ -19,8 +19,7 @@ final readonly class LemmyThread
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         private ?string $entryAuthorUrl,
-        private MarkdownHtml $markdown,
-        private EntrySanitizer $sanitizer,
+        private CommentBodyRenderer $bodies,
         private bool $carriesVotes,
     ) {
     }
@@ -154,7 +153,7 @@ final readonly class LemmyThread
         if ($comment->isTrue('removed') || $comment->isTrue('deleted')) {
             return null;
         }
-        $html = $this->sanitizer->sanitize($this->markdown->toHtml($comment->text('content') ?? ''));
+        $html = $this->bodies->buildHtml(CommentBodyModel::fromMarkdown($comment->text('content') ?? ''));
         if (null === $html) {
             return null;
         }
