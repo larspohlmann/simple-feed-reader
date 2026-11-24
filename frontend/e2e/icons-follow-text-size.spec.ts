@@ -1,7 +1,8 @@
 import { Browser, expect, Page, test } from '@playwright/test';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { presetLocalStorage } from './support/auth';
 import { AVATAR, FAVICON, POST, stubArticle, stubMagazine } from './support/icon-rows';
-import { entryWire } from './support/reader';
+import { entryDetailJson, entryWire, oneFeedJson } from './support/reader';
 
 /**
  * #2524: inside a text-scaled container a row of controls scales as one. Where a row's text follows
@@ -331,4 +332,139 @@ test.describe("a grouped card's kicker on a phone", () => {
     ).toBe(true);
     await page.context().close();
   });
+});
+
+const PILL_TAGS = [
+  makeTag(7, 'Politics', { icon: 'label' }),
+  makeTag(8, 'Science', { icon: 'science' }),
+];
+
+const PILL_ROWS = {
+  articleHead: 'app-reader-view .head-line',
+  groupHead: 'app-source-group .ghead',
+};
+
+type PillRow = keyof typeof PILL_ROWS;
+
+/** The article's head line carries the post's vote pill beside the feed's tag pills; a source
+ *  group's head carries its name beside the same tags. */
+interface PillRowView {
+  row: PillRow;
+  step: Step;
+  viewport?: { width: number; height: number };
+}
+
+async function openPillRow(browser: Browser, { row, step, viewport = DESKTOP }: PillRowView) {
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport });
+  const page = await context.newPage();
+  await presetLocalStorage(page, {
+    'sfr.textSize': String(step),
+    'sfr.layout': row === 'articleHead' ? 'pane' : 'magazine',
+  });
+  if (row === 'groupHead') {
+    await stubMagazine(page, GROUPED_ENTRIES, { id: 2, tags: PILL_TAGS });
+    await page.goto('/');
+  } else {
+    const scored = { ...POST, score: 12, myVote: null };
+    await stubArticle(page);
+    await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+      route.fulfill({ json: oneFeedJson('Fixture feed', { tags: PILL_TAGS }) }),
+    );
+    await page.route(/\/api\/tags(?:[?#]|$)/, (route) =>
+      route.fulfill({ json: { tags: PILL_TAGS } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/entries',
+      (route) => route.fulfill({ json: { entries: [scored], nextCursor: null } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/entries/1',
+      (route) =>
+        route.request().method() === 'GET'
+          ? route.fulfill({ json: entryDetailJson(scored, '<p>The post itself.</p>') })
+          : route.fallback(),
+    );
+    await page.goto('/?subscription=1');
+    await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+    await expect(page.locator(`${PILL_ROWS[row]} app-vote-pill`)).toBeVisible();
+  }
+  await expect(page.locator(`${PILL_ROWS[row]} app-entry-pills a.pill`)).toHaveCount(2);
+  await page.evaluate(() => document.fonts.ready);
+  return page;
+}
+
+interface PillRowMeasurement {
+  icons: number[];
+  texts: number[];
+  escapes: string[];
+}
+
+/** Icon heights and text sizes in the row, and every part of it that is cut or leaves the row. */
+async function measurePillRow(page: Page, row: PillRow): Promise<PillRowMeasurement> {
+  return page
+    .locator(PILL_ROWS[row])
+    .first()
+    .evaluate((container, icons) => {
+      const outer = container.getBoundingClientRect();
+      const parts = [...container.querySelectorAll('*')].filter(
+        (part) => part.getBoundingClientRect().width > 0,
+      );
+      const escapes = parts.flatMap((part) => {
+        const box = part.getBoundingClientRect();
+        const label = `${part.tagName.toLowerCase()}.${[...part.classList].join('.')}`;
+        const outside =
+          box.left < outer.left - 0.5 ||
+          box.right > outer.right + 0.5 ||
+          box.top < outer.top - 0.5 ||
+          box.bottom > outer.bottom + 0.5;
+        const cut =
+          getComputedStyle(part).overflowX !== 'visible' && part.scrollWidth > part.clientWidth;
+        return [
+          ...(outside ? [`${label} leaves the row`] : []),
+          ...(cut ? [`${label} is cut`] : []),
+        ];
+      });
+      const texts = [...container.querySelectorAll('.name, .number')].map((text) =>
+        parseFloat(getComputedStyle(text).fontSize),
+      );
+      const heights = [...container.querySelectorAll(icons)].map((icon) => {
+        const box = icon.tagName === 'APP-ICON' ? icon.querySelector('span')! : icon;
+        return box.getBoundingClientRect().height;
+      });
+      return { icons: heights, texts, escapes };
+    }, ICONS);
+}
+
+test.describe('a row of pills scales as one', () => {
+  for (const row of Object.keys(PILL_ROWS) as PillRow[]) {
+    test(`${row}: icons and pill text grow with the text size, and nothing leaves the row on a phone`, async ({
+      browser,
+    }) => {
+      const normalPage = await openPillRow(browser, { row, step: 100 });
+      const normal = await measurePillRow(normalPage, row);
+      await normalPage.context().close();
+      const scaledPage = await openPillRow(browser, { row, step: 150 });
+      const scaled = await measurePillRow(scaledPage, row);
+      await scaledPage.context().close();
+
+      expect(normal.icons.length, 'no icon in the row').toBeGreaterThan(0);
+      expect(normal.texts.length, 'no pill text in the row').toBeGreaterThan(0);
+      normal.icons.forEach((height, index) =>
+        expect
+          .soft(Math.abs(scaled.icons[index] - height * 1.5), `icon ${index}`)
+          .toBeLessThanOrEqual(0.5),
+      );
+      normal.texts.forEach((size, index) =>
+        expect.soft(scaled.texts[index], `text ${index}`).toBeCloseTo(size * 1.5, 1),
+      );
+
+      const phonePage = await openPillRow(browser, {
+        row,
+        step: 150,
+        viewport: { width: 390, height: 760 },
+      });
+      expect((await measurePillRow(phonePage, row)).escapes).toEqual([]);
+      await phonePage.context().close();
+    });
+  }
 });

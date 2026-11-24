@@ -57,9 +57,9 @@
   </ng-container>
   <app-entry-discussion-link pageMetaTail [entry]="e" (jump)="scrollToComments()" />
   <ng-container pageHead>
-    <div class="head-line">
+    <div class="head-line scales-with-text">
       @if (e.score !== null && e.myVote === null) {
-        <app-vote-pill class="scales-with-text" [score]="e.score" [myVote]="null" />
+        <app-vote-pill [score]="e.score" [myVote]="null" />
       }
       <app-entry-pills
         [tags]="tags()"

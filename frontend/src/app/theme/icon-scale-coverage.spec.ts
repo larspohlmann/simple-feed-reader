@@ -97,24 +97,6 @@ const EXEMPT: readonly Exemption[] = [
     reason: "the like button sits in the article's action row, whose text is fixed",
   },
   {
-    file: 'app/reader/entry/entry-pills/entry-pills.component.html',
-    tag: 'app-icon',
-    sites: 1,
-    reason: 'pills keep the fixed type outside a scaled row',
-  },
-  {
-    file: 'app/reader/entry/entry-pills/entry-pills.component.html',
-    tag: 'app-network-logo',
-    sites: 1,
-    reason: 'pills keep the fixed type outside a scaled row',
-  },
-  {
-    file: 'app/reader/entry/entry-pills/entry-pills.component.html',
-    tag: 'app-tag-glyph',
-    sites: 1,
-    reason: 'pills keep the fixed type outside a scaled row',
-  },
-  {
     file: 'app/reader/link-card/open-in-reader.component.html',
     tag: 'app-icon',
     sites: 1,
