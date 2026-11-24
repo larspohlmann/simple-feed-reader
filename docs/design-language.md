@@ -216,7 +216,7 @@ no other block. A sidebar count needs no token: Newsreader's default figures are
 | `--title-weight` | `600` | the weight `type.headline()` is given | entry and article titles, the Trending story headline and the comments heading (`theme/_type.scss:2`) |
 | `--title-tracking` | `-0.006em` | `normal` | the same mixin (`theme/_type.scss:4`) |
 | `--title-lh` | `1.2` | the line height `type.headline()` is given | the same mixin (`theme/_type.scss:3`) |
-| `--summary-lh` | `1.45` | `1.5` or `1.4` per surface | a summary line: the row's snippet (`reader/list/entry-row/entry-row.component.scss:68`) and the dek of a magazine card (`_magazine-card.scss:50`), the hero, split and thumb (`entry-hero`, `entry-split`, `entry-thumb` component styles) |
+| `--summary-lh` | `1.45` | the line height `type.summary()` is given, `1.5` or `1.4` per surface | a summary line, through `type.summary()` (`theme/_type.scss:8`): the row's snippet (`reader/list/entry-row/entry-row.component.scss`), the dek of a magazine card (`_magazine-card.scss`), the hero, split and thumb (`entry-hero`, `entry-split`, `entry-thumb` component styles) |
 | `--read-lh` | `1.62` | `1.75` | the article body (`reader/article/article-content/article-content.component.scss:20`) |
 | `--read-heading-weight` | `650` | `650` | the article's headings (`article-content.component.scss:30`) |
 | `--app-name-weight` | `700` | `700` | the app name in the header (`reader/shell/header/reader-header.component.scss:84`) |

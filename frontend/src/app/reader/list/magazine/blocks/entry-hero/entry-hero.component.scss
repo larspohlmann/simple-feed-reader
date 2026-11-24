@@ -55,7 +55,9 @@
 .dek {
   margin: 0;
   color: var(--text-secondary);
-  line-height: var(--summary-lh, 1.5);
+
+  @include type.summary(1.5);
+
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
