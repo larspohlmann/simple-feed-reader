@@ -16,7 +16,6 @@ final readonly class SubstackThread
 {
     private const string PROFILE = 'https://substack.com/@';
 
-    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         private SubstackPostModel $post,
         private ?string $entryAuthor,

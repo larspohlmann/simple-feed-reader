@@ -16,7 +16,6 @@ use App\Service\Ingestion\Parser\Support\DateParser;
 
 final readonly class LemmyThread
 {
-    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         private ?string $entryAuthorUrl,
         private CommentBodyRenderer $bodies,

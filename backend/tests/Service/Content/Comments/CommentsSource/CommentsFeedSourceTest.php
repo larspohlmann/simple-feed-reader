@@ -162,7 +162,9 @@ final class CommentsFeedSourceTest extends KernelTestCase
             . '</item></channel></rss>';
         $this->fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
 
-        self::assertStringContainsString('<a href="https://example.org/thread"', $this->comments(self::entry())[0]->html);
+        $html = $this->comments(self::entry())[0]->html;
+
+        self::assertStringContainsString('<a href="https://example.org/thread"', $html);
     }
 
     public function testMarksTheEntryAuthorsComments(): void
