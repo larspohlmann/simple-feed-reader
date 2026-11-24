@@ -265,7 +265,9 @@ app-story-title {
 /* `:not(.leaving)` with `~`, not `+`: a slot whose only predecessors are
    collapsing draws no rule — the removed-first-entry case. On the inner
    wrapper, not the slot, so leaving can zero it (#723). */
-.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot {
+.rows.magazine.airy
+  > .magazine-slot:not(.leaving)
+  ~ .magazine-slot:not(app-list-divider + *, app-run-header + *) {
   > .row-slot-inner {
     border-top: 1px solid var(--airy-rule);
     padding-top: var(--magazine-gap);
