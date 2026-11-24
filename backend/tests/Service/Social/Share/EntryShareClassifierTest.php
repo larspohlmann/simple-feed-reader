@@ -292,6 +292,14 @@ final class EntryShareClassifierTest extends TestCase
         self::assertNull($this->classified(self::discussionThread('<p>Just text</p>'))->getShareKind());
     }
 
+    public function testATextCrossPostSharesNothingThroughItsCredit(): void
+    {
+        $body = '<p>cross-posted from: <a href="https://lemmy.test/post/1">https://lemmy.test/post/1</a></p>'
+            . '<blockquote><p>Just text</p></blockquote>';
+
+        self::assertNull($this->classified(self::discussionThread($body))->getShareKind());
+    }
+
     public function testADiscussionThreadWithAPictureAndNoLinkSharesNothing(): void
     {
         $entry = self::discussionThread('<p>Just text</p>', [new EntryMedium('https://img.example/a.jpg', 'image')]);
