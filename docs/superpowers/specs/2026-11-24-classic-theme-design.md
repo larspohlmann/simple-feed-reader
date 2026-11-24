@@ -57,7 +57,7 @@ The danger, success and warning colours were graphite's in the round and are not
 Type:
 
 - One family for the whole app: Newsreader (variable; optical size, weights 400–700, roman and italic), falling back to Georgia, then `serif`. Icons keep Material Symbols.
-- Apparent size equals graphite's: Newsreader's x-height is matched to the system face (the overlay used `font-size-adjust: 0.5`, which draws Newsreader about 8% larger than its nominal size).
+- Apparent size equals graphite's: Newsreader's x-height is matched to the system face (the rebuilt files measure 7.90px on a 15px line in Chromium and 7.89px in WebKit, as the system face does, about 0.526em; the overlay's `font-size-adjust: 0.5` drew it about 5% smaller).
 - Entry and article titles (not post text): weight 600, letter-spacing `-0.006em`, line-height 1.2.
 - Summaries and deks: line-height 1.45. Article body: line-height 1.62; headings inside it weight 650.
 - The app name in the header: weight 700, 1.2em.

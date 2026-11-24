@@ -211,26 +211,30 @@ fallback is the only value it ever sees. A new consumer keeps that shape; a toke
 no other block. A sidebar count needs no token: Newsreader's default figures are lining, and graphite's
 `tabular-nums` turns on the face's `tnum`, so the counts align in both themes.
 
-| Token | Classic | Fallback | For (one consumer) |
+| Token | Classic | Fallback | For |
 |---|---|---|---|
-| `--title-weight` | `600` | the weight `type.headline()` is given | entry and article titles (`theme/_type.scss:3`) |
-| `--title-tracking` | `-0.006em` | `normal` | the same mixin (`theme/_type.scss:5`) |
-| `--title-lh` | `1.2` | the line height `type.headline()` is given | the same mixin (`theme/_type.scss:4`) |
-| `--summary-lh` | `1.45` | `1.5` in a row, `1.4` in a magazine card | a summary line (`reader/list/entry-row/entry-row.component.scss:68`) |
+| `--title-weight` | `600` | the weight `type.headline()` is given | entry and article titles, the Trending story headline and the comments heading (`theme/_type.scss:2`) |
+| `--title-tracking` | `-0.006em` | `normal` | the same mixin (`theme/_type.scss:4`) |
+| `--title-lh` | `1.2` | the line height `type.headline()` is given | the same mixin (`theme/_type.scss:3`) |
+| `--summary-lh` | `1.45` | `1.5` or `1.4` per surface | a summary line: the row's snippet (`reader/list/entry-row/entry-row.component.scss:68`) and the dek of a magazine card (`_magazine-card.scss:50`), the hero, split and thumb (`entry-hero`, `entry-split`, `entry-thumb` component styles) |
 | `--read-lh` | `1.62` | `1.75` | the article body (`reader/article/article-content/article-content.component.scss:20`) |
 | `--read-heading-weight` | `650` | `650` | the article's headings (`article-content.component.scss:30`) |
 | `--app-name-weight` | `700` | `700` | the app name in the header (`reader/shell/header/reader-header.component.scss:84`) |
 | `--app-name-size` | `1.2em` | `1em` | the same (`reader-header.component.scss:90`) |
 
 Classic's `--font-text` is `'Newsreader Classic', georgia, serif`. The family is Newsreader, self-hosted
-(OFL-1.1, `public/fonts/OFL.txt`) in four woff2 files in `public/fonts/`: Latin and Latin Extended, roman and
-italic, declared in `theme/_fonts.scss`. Safari supports neither `size-adjust` nor the `*-override`
+(OFL-1.1, `public/fonts/OFL.txt`) in six woff2 files in `public/fonts/`: Latin, Latin Extended and Vietnamese, roman
+and italic, declared in `theme/_fonts.scss`. Safari supports neither `size-adjust` nor the `*-override`
 descriptors, so the size and the line metrics are corrected in the files, not in CSS. The files are requested
 only when classic is on: nothing else names the family, and the inline script preloads the Latin roman file
 for a cached classic. No request goes to another origin.
 
 - **Size.** Classic's text has an x-height equal to the system face's on a 15px line (7.9px, about 0.526em):
   `SIZE_MATCH = 1.177`, `ASCENT = 0.99`, `DESCENT = 0.22`.
+- **Descenders.** Newsreader's g, j, p, q and y reach 0.312em below the baseline, more than a line height
+  under about 1.33 leaves below it. A one-line box that ellipsises therefore clips sideways only
+  (`overflow: clip visible`, as the list header's title does), so the tail is never cut;
+  `e2e/classic-theme.spec.ts` checks the room under that title.
 - **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
   against Newsreader, and the alignment below is measured on Apple's only.
 - **Bound.** At 100% text size, the text's x-height centre against its icon's centre stays within 0.25px of
@@ -329,7 +333,7 @@ rate so they stay themselves and only soften; **text** interpolates toward an
 extreme, black when dimming and white when brightening, reaching it exactly at
 the range end (light reaches black at `-6`; dark stays short of black so text
 holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
-dim instead of being pinned. `--media-brightness` is per theme (#1691): light
+dim instead of being pinned. `--media-brightness` is per mode (#1691): light
 has none at and above the default and `0.92…0.52` (8 % per step) when dimming;
 dark rests at `0.85` at every step and dims 20 % per step to `0.25`, or a white
 picture outshines the dimmed text. One guarded rule in `styles/_base.scss`
@@ -1909,7 +1913,9 @@ Material icon, a tag glyph, a network logo or a favicon (with the poster avatar 
 `app-favicon` shows in its place). A `scales-with-text` block also sets
 `--icon-text-scale` (1 on `:root`), which `app-favicon` multiplies its px `size` by.
 The kicker line is one such row: the pills and actions a grouped card projects into it
-scale with it, as in the meta row. `icon-scale-coverage.spec.ts` lists every icon inside a
+scale with it, as in the meta row, and wrap to a second line inside the card when they do not
+fit. The article's head line (vote pill beside tag pills) and a source group's head (name
+beside tag pills) are rows too, pill text included. `icon-scale-coverage.spec.ts` lists every icon inside a
 `text-scaled` container that no scaled row holds; each must be a row or an exemption
 naming why its row's text is fixed. Avatars, pictures, spacing and widths never scale. The list header and the
 reader toolbar sit outside every `text-scaled` container, which is why their texts
@@ -1929,7 +1935,7 @@ fills with brightness — empty at the darkest step, full at the brightest — s
 the light default sits at the full end and the dark default at the middle.
 Clicking the bar resets to the default; the moon disables at the floor and the
 sun at the top. A visually hidden `<output aria-live="polite">` reads the value.
-Steps are per device and per theme (`sfr.brightness.light` / `.dark`), never per
+Steps are per device and per mode (`sfr.brightness.light` / `.dark`), never per
 account.
 
 ### Sticky and scroll
