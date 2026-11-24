@@ -79,6 +79,19 @@
   @include palette.emit(classic.$dark);
 }
 
+:root[data-theme-name='classic'] {
+  --font-text: 'Newsreader Classic', georgia, serif;
+  --title-weight: 600;
+  --title-tracking: -0.006em;
+  --title-lh: 1.2;
+  --summary-lh: 1.45;
+  --read-lh: 1.62;
+  --read-heading-weight: 650;
+  --brand-weight: 700;
+  --brand-size: 1.2em;
+  --count-numerals: lining-nums tabular-nums;
+}
+
 @include brightness.theme-steps('light', graphite.$light);
 @include brightness.theme-steps('dark', graphite.$dark);
 @include brightness.theme-steps('light', classic.$light, 'classic');

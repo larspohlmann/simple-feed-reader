@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/type';
 @use '../post-text';
 
 @mixin chrome {
@@ -35,9 +36,10 @@
 }
 
 @mixin headline {
+  @include type.headline(500, 1.5);
+
   margin: 0;
   font-size: var(--fs-lg);
-  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -45,7 +47,7 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--fs-sm);
-  line-height: 1.4;
+  line-height: var(--summary-lh, 1.4);
   display: -webkit-box;
   -webkit-line-clamp: $lines;
   -webkit-box-orient: vertical;

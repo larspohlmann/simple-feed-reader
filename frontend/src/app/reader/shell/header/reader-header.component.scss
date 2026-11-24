@@ -81,12 +81,13 @@ header {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-weight: 700;
+  font-weight: var(--brand-weight, 700);
   color: var(--text-primary);
   text-decoration: none;
 }
 
 .brand .name {
+  font-size: var(--brand-size, 1em);
   white-space: nowrap;
 }
 

@@ -9,6 +9,7 @@ $outlier-lines: 30;
   font-size: var(--fs-base);
   font-weight: 400;
   line-height: var(--lh-normal);
+  letter-spacing: normal;
   display: -webkit-box;
   -webkit-line-clamp: $outlier-lines;
   -webkit-box-orient: vertical;

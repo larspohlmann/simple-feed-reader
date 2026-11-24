@@ -17,7 +17,7 @@ $prose: ':where(:not(.reader-island *))';
   display: block;
   color: var(--text-primary);
   font-size: var(--fs-read);
-  line-height: 1.75;
+  line-height: var(--read-lh, 1.75);
 }
 
 :host ::ng-deep p#{$prose} {
@@ -27,7 +27,7 @@ $prose: ':where(:not(.reader-island *))';
 :host ::ng-deep :is(h1, h2, h3, h4, h5, h6)#{$prose} {
   margin: var(--space-6) 0 var(--space-3);
   line-height: 1.3;
-  font-weight: 650;
+  font-weight: var(--read-heading-weight, 650);
   color: var(--text-primary);
 }
 

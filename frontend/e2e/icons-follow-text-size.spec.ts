@@ -1,10 +1,7 @@
 import { Browser, expect, Page, test } from '@playwright/test';
-import { CommentsResponse } from '../src/app/reader/entry-comment';
-import { aCommentPost, aLinkCard, anEntryComment } from '../src/testing/entry-testing';
 import { presetLocalStorage } from './support/auth';
-import { ONE_PIXEL_PNG } from './support/images';
-import type { EntryDto } from '../src/app/reader/models';
-import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
+import { AVATAR, FAVICON, POST, stubArticle, stubMagazine } from './support/icon-rows';
+import { entryWire } from './support/reader';
 
 /**
  * #2524: inside a text-scaled container a row of controls scales as one. Where a row's text follows
@@ -12,9 +9,6 @@ import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from 
  * Every API read is stubbed, so the spec owns the rows it measures.
  */
 const DESKTOP = { width: 1280, height: 900 };
-const ICON_HOST = 'icons.invalid';
-const AVATAR = `https://${ICON_HOST}/avatar.png`;
-const FAVICON = `https://${ICON_HOST}/favicon.png`;
 
 const COPY = entryWire({ id: 20, title: 'The same story elsewhere', source: 'Golem' });
 
@@ -59,40 +53,6 @@ const GROUPED_ENTRIES = [
   groupedEntry(11, 'Netzpolitik', 4),
 ];
 
-const POST = entryWire({
-  id: 1,
-  title: 'A post with comments',
-  faviconUrl: FAVICON,
-  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
-  comments: 'auto',
-  discussionUrl: 'https://bsky.invalid/post/1',
-});
-
-const COMMENTS: CommentsResponse = {
-  status: 'ok',
-  fetchedAt: new Date().toISOString(),
-  omitted: 0,
-  comments: [
-    anEntryComment({
-      author: 'Own Reply',
-      html: '<p>A reply the reader may delete.</p>',
-      post: aCommentPost({ isOwn: true }),
-    }),
-    anEntryComment({
-      author: 'Lemmy Voter',
-      html: '<p>A comment the reader votes on.</p>',
-      score: 7,
-      vote: { address: 'https://lemmy.invalid/comment/1', myVote: 0, canReply: true },
-    }),
-    anEntryComment({
-      author: 'Scored Comment',
-      html: '<p>A comment with a score.</p>',
-      score: 3,
-      linkCard: aLinkCard(),
-    }),
-  ],
-};
-
 /** The rows that scale as one; each holds text that follows the text size. */
 const ROWS = {
   kicker: 'app-entry-kicker-line',
@@ -118,51 +78,6 @@ interface Measurement {
   openInReaderIcon: number;
   deleteGlyph: number;
   replyGlyph: number;
-}
-
-async function stubImages(page: Page): Promise<void> {
-  await page.route(
-    (url) => url.hostname === ICON_HOST,
-    (route) => route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG }),
-  );
-}
-
-async function stubMagazine(page: Page, entries: EntryDto[]): Promise<void> {
-  await stubOneFeedReader(page, 'Fixture feed');
-  await stubImages(page);
-  await page.route(
-    (url) => url.pathname === '/api/entries',
-    (route) => route.fulfill({ json: { entries, nextCursor: null } }),
-  );
-}
-
-async function stubArticle(page: Page): Promise<void> {
-  await stubOneFeedReader(page, 'Fixture feed');
-  await stubImages(page);
-  await page.route('**/api/client-errors', (route) => route.fulfill({ status: 204 }));
-  await page.route(
-    (url) => url.pathname === '/api/entries',
-    (route) => route.fulfill({ json: { entries: [POST], nextCursor: null } }),
-  );
-  await page.route(
-    (url) => url.pathname === '/api/entries/1',
-    (route) =>
-      route.request().method() === 'GET'
-        ? route.fulfill({ json: entryDetailJson(POST, '<p>The post itself.</p>') })
-        : route.fallback(),
-  );
-  await page.route(
-    (url) => url.pathname === '/api/entries/1/reader',
-    (route) => route.fulfill({ json: readerFailedJson() }),
-  );
-  await page.route(
-    (url) => url.pathname === '/api/entries/1/social',
-    (route) => route.fulfill({ json: { likes: 4, reposts: 1, replies: 6, quotes: 0 } }),
-  );
-  await page.route(
-    (url) => url.pathname === '/api/entries/1/comments',
-    (route) => route.fulfill({ json: COMMENTS }),
-  );
 }
 
 interface View {
