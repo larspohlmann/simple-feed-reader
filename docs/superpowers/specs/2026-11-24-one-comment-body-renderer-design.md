@@ -30,9 +30,9 @@ Self-thread posts (`ThreadPost`) are built from the Mastodon/Bluesky reply model
   pass the sanitizer like every other body (anchors gain `target`/`rel`).
 - #2512, on top: the renderer links bare URLs in the text of every body (outside `a`, `code`,
   `pre`) before sanitizing, so the new anchors get `target="_blank"`/`rel` like the rest. The
-  HTML-aware linker private to `Social/Share/Support/SharedLinks` moves to `Foundation/Text/Support`
-  and both use it. Plain text then needs no linking of its own: it is escaped and paragraphed, and
-  the shared step links it.
+  HTML-aware linker private to `Social/Share/Support/SharedLinks` moves to `Foundation/Html/Support`
+  (beside `TextNodes`) and both use it. Plain text keeps `LinkedPlainText`; the shared step finds
+  its URLs already linked and leaves them.
 
 ## Non-goals
 
