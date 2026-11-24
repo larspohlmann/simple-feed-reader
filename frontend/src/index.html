@@ -31,7 +31,7 @@
           var step = parseInt(localStorage.getItem('sfr.brightness.' + theme), 10);
           var clamped = Math.max(dark ? -3 : -6, Math.min(dark ? 3 : 0, isNaN(step) ? 0 : step));
           document.documentElement.setAttribute('data-brightness', String(clamped));
-          // Theme name: values mirror THEME_NAMES in app/core/preferences/theme-name.ts.
+          // Theme name: values mirror THEMES in app/theme/themes/registry.ts.
           if (localStorage.getItem('sfr.themeName') === 'classic') {
             document.documentElement.setAttribute('data-theme-name', 'classic');
             var preload = document.createElement('link');

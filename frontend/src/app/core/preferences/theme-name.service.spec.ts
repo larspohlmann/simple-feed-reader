@@ -14,7 +14,9 @@ describe('ThemeNameService', () => {
     TestBed.configureTestingModule({
       providers: [{ provide: PREFERENCES_WRITER, useValue: { write } }],
     });
-    return TestBed.inject(ThemeNameService);
+    const service = TestBed.inject(ThemeNameService);
+    TestBed.tick();
+    return service;
   }
 
   beforeEach(() => {
@@ -53,6 +55,7 @@ describe('ThemeNameService', () => {
     const service = make();
 
     service.set('classic');
+    TestBed.tick();
 
     expect(write).toHaveBeenCalledWith({ theme: 'classic' });
     expect(localStorage.getItem(THEME_NAME_KEY)).toBe('classic');
@@ -62,8 +65,11 @@ describe('ThemeNameService', () => {
   it('removes the attribute when graphite is picked again', () => {
     const service = make();
     service.set('classic');
+    TestBed.tick();
+    expect(attribute()).toBe('classic');
 
     service.set('graphite');
+    TestBed.tick();
 
     expect(write).toHaveBeenLastCalledWith({ theme: 'graphite' });
     expect(attribute()).toBeNull();
@@ -72,8 +78,11 @@ describe('ThemeNameService', () => {
   it('reset removes the attribute and the cache key', () => {
     const service = make();
     service.set('classic');
+    TestBed.tick();
+    expect(attribute()).toBe('classic');
 
     service.reset();
+    TestBed.tick();
 
     expect(service.name()).toBe('graphite');
     expect(localStorage.getItem(THEME_NAME_KEY)).toBeNull();
@@ -111,6 +120,7 @@ describe('ThemeNameService', () => {
     const service = make();
 
     service.adopt({ preferences: { theme: 'graphite' } } as CurrentUser);
+    TestBed.tick();
 
     expect(service.name()).toBe('graphite');
     expect(localStorage.getItem(THEME_NAME_KEY)).toBe('graphite');

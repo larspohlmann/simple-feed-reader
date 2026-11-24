@@ -299,6 +299,7 @@ describe('AuthService', () => {
     ctrl
       .expectOne('https://api.test/api/me')
       .flush({ ...body, preferences: { ...body.preferences, theme: 'classic' } });
+    TestBed.tick();
 
     expect(TestBed.inject(ThemeNameService).name()).toBe('classic');
     expect(document.documentElement.getAttribute('data-theme-name')).toBe('classic');
@@ -308,6 +309,7 @@ describe('AuthService', () => {
     tokens.set('jwt');
     TestBed.inject(ThemeNameService).set('classic');
     TestBed.tick();
+    expect(document.documentElement.getAttribute('data-theme-name')).toBe('classic');
 
     service.logout();
     TestBed.tick();
