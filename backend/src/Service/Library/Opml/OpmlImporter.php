@@ -4,36 +4,34 @@ declare(strict_types=1);
 
 namespace App\Service\Library\Opml;
 
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Foundation\Url\Support\MixcloudUrl;
-use App\Service\Library\Opml\Exception\InvalidOpmlException;
+use App\Repository\TagRepository;
 use App\Service\Library\Opml\Model\OpmlImportResultModel;
+use App\Service\Library\Opml\Model\OpmlImportSelectionModel;
+use App\Service\Library\Opml\Pass\OpmlImportItems;
 use App\Service\Library\Subscription\BulkSubscriber;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
 
-/** Imports OPML into subscriptions WITHOUT fetching anything, mapping its outline tree onto BulkSubscriber items. */
+/** Subscribes to the selected feeds of an OPML file WITHOUT fetching anything, under their planned or chosen tags. */
 final readonly class OpmlImporter
 {
-    private const int MAX_BYTES = 1_048_576;
-
     public function __construct(
-        private OpmlBodyReader $bodyReader,
+        private OpmlDocumentReader $reader,
+        private OpmlPlacementPlanner $planner,
+        private TagRepository $tags,
         private BulkSubscriber $subscriber,
     ) {
     }
 
-    public function import(User $user, string $opml): OpmlImportResultModel
+    public function import(User $user, OpmlImportSelectionModel $selection): OpmlImportResultModel
     {
-        if ($opml === '' || \strlen($opml) > self::MAX_BYTES) {
-            throw new InvalidOpmlException('The OPML body is empty or larger than 1 MB.');
-        }
-
-        $body = $this->bodyReader->read($opml);
-
-        $items = $this->collectFeeds($body, []);
+        $root = $this->planner->plan($user, $this->reader->read($selection->opml), $selection->parentTagName);
+        $chosenTags = $this->findChosenTags($user, $selection->tagIdsByFeedUrl);
+        $items = new OpmlImportItems($selection->feedUrls, $chosenTags)->collect($root);
         $permitted = $this->withoutScraped($items);
-        $result = $this->subscriber->subscribeAll($user, $permitted);
+        $result = $this->subscriber->subscribeAllInPlace($user, $permitted);
 
         return new OpmlImportResultModel(
             imported: $result->imported,
@@ -44,38 +42,24 @@ final readonly class OpmlImporter
     }
 
     /**
-     * Depth-first; a feed carries every named group above it, outermost first.
+     * @param array<string, list<int>> $tagIdsByFeedUrl
      *
-     * @param list<string> $groupPath
-     *
-     * @return list<BulkSubscribeItemModel>
+     * @return array<string, list<Tag>> only the account's own tags
      */
-    private function collectFeeds(\DOMElement $node, array $groupPath): array
+    private function findChosenTags(User $user, array $tagIdsByFeedUrl): array
     {
-        $items = [];
-        foreach ($node->childNodes as $child) {
-            if (!$child instanceof \DOMElement || $child->localName !== 'outline') {
-                continue;
-            }
-
-            $xmlUrl = trim($child->getAttribute('xmlUrl'));
-            if ($xmlUrl !== '') {
-                $items[] = new BulkSubscribeItemModel(
-                    feedUrl: $xmlUrl,
-                    tagPath: $groupPath,
-                    sourceFormat: $this->resolveSourceFormat($child, $xmlUrl),
-                );
-                continue;
-            }
-
-            $groupName = $this->groupName($child);
-            $childPath = $groupName === null ? $groupPath : [...$groupPath, $groupName];
-            foreach ($this->collectFeeds($child, $childPath) as $item) {
-                $items[] = $item;
-            }
+        $tagIds = array_values(array_unique(array_merge(...array_values($tagIdsByFeedUrl))));
+        $tagsById = [];
+        foreach ($this->tags->findAllByIdsForUser($user->requireId(), $tagIds) as $tag) {
+            $tagsById[$tag->requireId()] = $tag;
         }
 
-        return $items;
+        return array_map(
+            static fn (array $feedTagIds): array => array_values(
+                array_intersect_key($tagsById, array_flip($feedTagIds)),
+            ),
+            $tagIdsByFeedUrl,
+        );
     }
 
     /**
@@ -89,25 +73,5 @@ final readonly class OpmlImporter
             $items,
             static fn (BulkSubscribeItemModel $item): bool => $item->sourceFormat !== SourceFormat::SCRAPED,
         ));
-    }
-
-    private function resolveSourceFormat(\DOMElement $outline, string $xmlUrl): string
-    {
-        if (!$outline->hasAttribute('sourceFormat')) {
-            return MixcloudUrl::isCloudcastsUrl($xmlUrl) ? SourceFormat::MIXCLOUD_API : SourceFormat::XML;
-        }
-        $declared = trim($outline->getAttribute('sourceFormat'));
-
-        return SourceFormat::isVerbatim($declared) ? $declared : SourceFormat::XML;
-    }
-
-    private function groupName(\DOMElement $outline): ?string
-    {
-        $name = trim($outline->getAttribute('text'));
-        if ($name === '') {
-            $name = trim($outline->getAttribute('title'));
-        }
-
-        return $name === '' ? null : $name;
     }
 }

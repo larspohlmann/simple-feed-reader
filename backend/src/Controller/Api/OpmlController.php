@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Opml\OpmlImportRequest;
 use App\Entity\User;
 use App\Http\OpmlJson;
 use App\Service\Library\Opml\OpmlExporter;
 use App\Service\Library\Opml\OpmlImporter;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -38,8 +39,8 @@ final readonly class OpmlController
     }
 
     #[Route('/import', name: 'api_opml_import', methods: ['POST'])]
-    public function import(#[CurrentUser] User $user, Request $request): JsonResponse
+    public function import(#[CurrentUser] User $user, #[MapRequestPayload] OpmlImportRequest $request): JsonResponse
     {
-        return new JsonResponse(OpmlJson::imported($this->importer->import($user, $request->getContent())));
+        return new JsonResponse(OpmlJson::imported($this->importer->import($user, $request->toSelection())));
     }
 }
