@@ -107,7 +107,7 @@ const ROWS = {
 
 const ICONS = 'app-icon, app-favicon img, app-tag-glyph, app-network-logo';
 
-type Step = 100 | 150;
+type Step = 90 | 100 | 150;
 type Surface = 'magazine' | 'grouped' | 'article';
 
 interface Measurement {
@@ -279,14 +279,15 @@ async function measure(browser: Browser, surface: Surface, step: Step): Promise<
 }
 
 /** Recorded on `develop` before #2524: the rows' text keeps exactly these sizes. */
-const TEXT_SIZES: Record<Surface, Record<Step, Record<string, number>>> = {
+const TEXT_SIZES: Record<Surface, Partial<Record<Step, Record<string, number>>>> = {
   magazine: {
     100: { kicker: 13, kickerSource: 13, alsoFootLead: 11, alsoFootEntry: 11 },
     150: { kicker: 19.5, kickerSource: 19.5, alsoFootLead: 16.5, alsoFootEntry: 16.5 },
   },
   grouped: {
+    90: { when: 11.7, shortPill: 9.9, likeCount: 11.7 },
     100: { when: 13, shortPill: 11, likeCount: 13 },
-    150: { when: 19.5, shortPill: 11, likeCount: 13 },
+    150: { when: 19.5, shortPill: 16.5, likeCount: 19.5 },
   },
   article: {
     100: {
@@ -318,29 +319,42 @@ const TEXT_SIZES: Record<Surface, Record<Step, Record<string, number>>> = {
   },
 };
 
+/** The grouped card's kicker holds pills and actions too, so it is checked below 100% as well. */
+const STEPS: Record<Surface, Exclude<Step, 100>[]> = {
+  magazine: [150],
+  grouped: [90, 150],
+  article: [150],
+};
+
 test.describe('icons follow the text size of their row', () => {
   for (const surface of ['magazine', 'grouped', 'article'] as const) {
     test(`on the ${surface}, a scaled row's icons grow with its text, and nothing else moves`, async ({
       browser,
     }) => {
       const normal = await measure(browser, surface, 100);
-      const large = await measure(browser, surface, 150);
-
-      for (const row of ROWS_ON[surface]) {
-        expect(normal.icons[row].length, `${row} shows no icon to measure`).toBeGreaterThan(0);
-        expect(large.icons[row].length, row).toBe(normal.icons[row].length);
-        normal.icons[row].forEach((height, index) => {
-          expect
-            .soft(Math.abs(large.icons[row][index] - height * 1.5), `${row} icon ${index}`)
-            .toBeLessThanOrEqual(0.5);
-        });
-      }
       expect.soft(normal.texts, 'text at 100%').toEqual(TEXT_SIZES[surface][100]);
-      expect.soft(large.texts, 'text at 150%').toEqual(TEXT_SIZES[surface][150]);
-      expect.soft(large.sidebarIcons, 'sidebar icons').toEqual(normal.sidebarIcons);
-      expect.soft(large.headerIcons, 'list header icons').toEqual(normal.headerIcons);
-      expect.soft(large.openInReaderIcon, 'open-in-reader icon').toBe(normal.openInReaderIcon);
-      expect.soft(large.deleteGlyph, 'delete beside reply').toBe(large.replyGlyph);
+
+      for (const step of STEPS[surface]) {
+        const scaled = await measure(browser, surface, step);
+        const factor = step / 100;
+        for (const row of ROWS_ON[surface]) {
+          expect(normal.icons[row].length, `${row} shows no icon to measure`).toBeGreaterThan(0);
+          expect(scaled.icons[row].length, row).toBe(normal.icons[row].length);
+          normal.icons[row].forEach((height, index) => {
+            expect
+              .soft(
+                Math.abs(scaled.icons[row][index] - height * factor),
+                `${row} icon ${index} at ${step}%`,
+              )
+              .toBeLessThanOrEqual(0.5);
+          });
+        }
+        expect.soft(scaled.texts, `text at ${step}%`).toEqual(TEXT_SIZES[surface][step]);
+        expect.soft(scaled.sidebarIcons, 'sidebar icons').toEqual(normal.sidebarIcons);
+        expect.soft(scaled.headerIcons, 'list header icons').toEqual(normal.headerIcons);
+        expect.soft(scaled.openInReaderIcon, 'open-in-reader icon').toBe(normal.openInReaderIcon);
+        expect.soft(scaled.deleteGlyph, 'delete beside reply').toBe(scaled.replyGlyph);
+      }
     });
   }
 });

@@ -54,7 +54,7 @@ describe('text-scaled scope', () => {
   const scope = ruleOf(file, '.text-scaled');
   const reset = ruleOf(
     file,
-    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *), app-entry-kicker-line *)',
+    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills):where(:not(.scales-with-text *))',
   );
   const scalesWithText = ruleOf(file, ':where(.text-scaled) .scales-with-text');
 

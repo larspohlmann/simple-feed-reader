@@ -1855,8 +1855,8 @@ it scales, icon-only buttons included (a comment's delete beside Reply), so that
 Material icon, a tag glyph, a network logo or a favicon (with the poster avatar that
 `app-favicon` shows in its place). A `scales-with-text` block also sets
 `--icon-text-scale` (1 on `:root`), which `app-favicon` multiplies its px `size` by.
-The kicker line is a row for its icons only: the pills and actions a grouped card projects
-into it keep their fixed text. `icon-scale-coverage.spec.ts` lists every icon inside a
+The kicker line is one such row: the pills and actions a grouped card projects into it
+scale with it, as in the meta row. `icon-scale-coverage.spec.ts` lists every icon inside a
 `text-scaled` container that no scaled row holds; each must be a row or an exemption
 naming why its row's text is fixed. Avatars, pictures, spacing and widths never scale. The list header and the
 reader toolbar sit outside every `text-scaled` container, which is why their texts
