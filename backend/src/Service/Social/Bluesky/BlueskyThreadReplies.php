@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Bluesky;
 
+use App\Service\Content\Comments\CommentBodyRenderer;
 use App\Service\Content\Comments\Exception\CommentsUnavailableException;
 use App\Service\Content\Comments\Model\CommentAuthorModel;
+use App\Service\Content\Comments\Model\CommentBodyModel;
 use App\Service\Content\Comments\Model\CommentEmbedsModel;
 use App\Service\Content\Comments\Model\EntryCommentModel;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
-use App\Service\Foundation\Sanitize\EntrySanitizer;
 use App\Service\Foundation\Text\Support\HtmlAnchor;
 use App\Service\Ingestion\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingestion\Parser\Support\DateParser;
@@ -26,7 +27,7 @@ final readonly class BlueskyThreadReplies
 {
     private const string THREAD_VIEW = 'app.bsky.feed.defs#threadViewPost';
 
-    public function __construct(private PostEmbedRenderer $embeds, private EntrySanitizer $sanitizer)
+    public function __construct(private PostEmbedRenderer $embeds, private CommentBodyRenderer $bodies)
     {
     }
 
@@ -133,7 +134,7 @@ final readonly class BlueskyThreadReplies
         $text = BlueskyRichText::asHtml($record->text('text') ?? '', $record->nodes('facets')) ?? '';
         $link = $uncardedLink === null ? '' : sprintf('<p>%s</p>', HtmlAnchor::to($uncardedLink, $uncardedLink));
 
-        return $this->sanitizer->sanitize($text . $link) ?? '';
+        return $this->bodies->buildHtml(CommentBodyModel::fromHtml($text . $link)) ?? '';
     }
 
     private static function buildEmbeds(?RenderedEmbedModel $rendered): CommentEmbedsModel
