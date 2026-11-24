@@ -21,12 +21,17 @@ export function storyListLink(storyId: number): [string, number] {
 export const STORY_LIST_QUERY_PARAMS = { entry: null, link: null } as const;
 
 /** The navigation state of a story the sidebar opens as the root, as a feed is: no way back to the list beneath (#2518). */
-export interface StoryRootState {
-  readonly rootStory: number;
+export function storyRootState(storyId: number): { readonly rootStory: number } {
+  return { rootStory: storyId };
 }
 
-export function storyRootState(storyId: number): StoryRootState {
-  return { rootStory: storyId };
+export function parseRootStory(state: unknown): number | null {
+  return typeof state === 'object' &&
+    state !== null &&
+    'rootStory' in state &&
+    typeof state.rootStory === 'number'
+    ? state.rootStory
+    : null;
 }
 
 /** A Trending story is viewed once any of its entries was opened: by the server's word, which counts

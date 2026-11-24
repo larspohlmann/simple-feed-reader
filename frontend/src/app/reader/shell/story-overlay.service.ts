@@ -6,7 +6,7 @@ import { filter } from 'rxjs';
 import { ListPreferences } from '../list/list-preferences.service';
 import { SelectionOf, sameSelection, trendingStorySelection } from '../query/query';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
-import { StoryRootState } from '../trending/story';
+import { parseRootStory } from '../trending/story';
 import { ReaderRouteState } from './reader-route-state.service';
 
 const ONTO_THE_LIST: NavigationExtras = { queryParamsHandling: 'preserve' };
@@ -22,7 +22,7 @@ export class StoryOverlay {
 
   readonly storyId = inject(ReaderRouteState).storyId;
   readonly open = computed(() => this.storyId() !== null);
-  private readonly rootStoryId = signal(rootStoryOf(this.location.getState()));
+  private readonly rootStoryId = signal(parseRootStory(this.location.getState()));
   /** A story the sidebar opened is the root (#2518): no back arrow, and the swipe opens the drawer. */
   readonly returnsToList = computed(() => this.open() && this.storyId() !== this.rootStoryId());
   readonly selection = computed(
@@ -56,15 +56,7 @@ export class StoryOverlay {
 
   /** Opening or closing one of the root story's articles navigates without the sidebar's mark. */
   private rootStoryAfterNavigation(): number | null {
-    const marked = rootStoryOf(this.location.getState());
-    if (marked !== null) return marked;
     const root = this.rootStoryId();
-    return root === this.storyId() ? root : null;
+    return parseRootStory(this.location.getState()) ?? (root === this.storyId() ? root : null);
   }
-}
-
-function rootStoryOf(state: unknown): number | null {
-  if (typeof state !== 'object' || state === null || !('rootStory' in state)) return null;
-  const { rootStory } = state as StoryRootState;
-  return typeof rootStory === 'number' ? rootStory : null;
 }
