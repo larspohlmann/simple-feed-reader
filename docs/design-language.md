@@ -16,8 +16,9 @@ or in a comment at the definition site — read that before changing it.
 
 All tokens are CSS custom properties declared in
 `frontend/src/app/theme/tokens.scss`. Colour tokens are mode-dependent and come
-from a theme mixin (`theme/themes/_graphite.scss`); everything below is
-mode-invariant.
+from a theme's palette (`theme/themes/_graphite.scss`, `_classic.scss`);
+everything below is mode-invariant and the same in every theme, except the
+type tokens that [Themes](#themes) lists.
 
 ### Spacing
 
@@ -163,7 +164,7 @@ one that must never get tighter.
 
 | Token | Value | For |
 |---|---|---|
-| `--font-sans` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the only family |
+| `--font-text` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the app's one family; theme-owned, classic sets its own (see [Themes](#themes)) |
 | `--fs-xs` | `11px` | badges, counts |
 | `--fs-sm` | `13px` | secondary text, dense rows, `size="sm"` buttons |
 | `--fs-dense` | `14px` | the sidebar's nested rows and its row menu (#1749) |
@@ -174,6 +175,7 @@ one that must never get tighter.
 | `--lh-tight` | `1.25` | headings |
 | `--lh-normal` | `1.5` | body copy |
 
+A component never names a family: `src/styles/_base.scss` sets `font-family: var(--font-text)` on `body` and everything inherits it.
 The `--fs-*` values live in `theme/_type-scale.scss`; `text-scaled` containers multiply them (see *Text-size control*).
 
 **`--fs-read` is deliberately a step above `--fs-base`.** Long-form reading wants
@@ -189,6 +191,57 @@ already patched themselves that way and every other block had not, which is how
 the bug survived. A surface that must hold one line says so with
 `white-space: nowrap` (the magazine kicker line, the sidebar rows), and the
 inherited rule is inert there.
+
+### Themes
+
+Two themes, named in `theme/themes/registry.ts`: `graphite` (the default) and `classic` (warm paper, set in
+Newsreader). The account's preference `theme` carries the name; `sfr.themeName` caches it per device so the
+first frame is painted before the account answers; `<html>` carries it as `data-theme-name`, absent for
+graphite. `data-theme` and `sfr.theme` keep meaning the mode (light / dark), so a theme is a palette per mode:
+`:root[data-theme-name='classic'][data-theme='light']` and `…='dark'`, and the brightness steps repeat under
+the same selector.
+
+**A theme lives in `src/app/theme/**`, `src/styles/**`, the inline script in `index.html` and the theme-name
+service, and nowhere else.** No component, template or service branches on a theme's name, and no rule uses
+`!important` to win against one. A surface that differs per theme reads a token.
+
+Classic sets nine type tokens in `:root[data-theme-name='classic']` (`theme/tokens.scss`). A consumer reads
+`var(--token, literal)` with the literal graphite renders today, so graphite defines none of them and the
+fallback is the only value it ever sees. A new consumer keeps that shape; a token a theme sets is declared in
+no other block.
+
+| Token | Classic | Fallback | For (one consumer) |
+|---|---|---|---|
+| `--title-weight` | `600` | the weight `type.headline()` is given | entry and article titles (`theme/_type.scss:3`) |
+| `--title-tracking` | `-0.006em` | `normal` | the same mixin (`theme/_type.scss:5`) |
+| `--title-lh` | `1.2` | the line height `type.headline()` is given | the same mixin (`theme/_type.scss:4`) |
+| `--summary-lh` | `1.45` | `1.5` in a row, `1.4` in a magazine card | a summary line (`reader/list/entry-row/entry-row.component.scss:68`) |
+| `--read-lh` | `1.62` | `1.75` | the article body (`reader/article/article-content/article-content.component.scss:20`) |
+| `--read-heading-weight` | `650` | `650` | the article's headings (`article-content.component.scss:30`) |
+| `--app-name-weight` | `700` | `700` | the app name in the header (`reader/shell/header/reader-header.component.scss:84`) |
+| `--app-name-size` | `1.2em` | `1em` | the same (`reader-header.component.scss:90`) |
+| `--count-numerals` | `lining-nums tabular-nums` | `tabular-nums` | a sidebar row's count (`reader/shell/sidebar/_sidebar-row.scss:137`) |
+
+Classic's `--font-text` is `'Newsreader Classic', georgia, serif`. The family is Newsreader, self-hosted
+(OFL-1.1, `public/fonts/OFL.txt`) in four woff2 files in `public/fonts/`: Latin and Latin Extended, roman and
+italic, declared in `theme/_fonts.scss`. Safari supports neither `size-adjust` nor the `*-override`
+descriptors, so the size and the line metrics are corrected in the files, not in CSS. The files are requested
+only when classic is on: nothing else names the family, and the inline script preloads the Latin roman file
+for a cached classic. No request goes to another origin.
+
+- **Size.** Classic's text has an x-height of half the font size, 7.5px on a 15px line: the render the design
+  round approved, 5% under the system face's.
+- **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
+  against Newsreader, and the alignment below is measured on Apple's only.
+- **Bound.** At 100% text size, the text's x-height centre against its icon's centre stays within 0.25px of
+  graphite's in the tag pill, the vote pill, Reply, "Add comment" and a sidebar row. A change to the face, the
+  line metrics or an icon row is measured against it.
+- **Rebuilding.** `frontend/scripts/fonts/README.md` holds the three constants, the build command and the
+  measuring script; the files are rebuilt, never edited.
+- **URLs are relative.** `_fonts.scss` and the preload say `fonts/…`, not `/fonts/…`, because the `strato`
+  build runs under the base `/reader/`. The four paths are listed under `externalDependencies` in
+  `angular.json` so the bundler leaves them alone: adding or renaming a font file means editing that list
+  too.
 
 ### Breakpoints
 
@@ -265,10 +318,10 @@ any one component's stylesheet.
 
 `<html>` carries `data-brightness` next to `data-theme`: dark spans `-3`…`3`
 (0 today), light spans `-6`…`0` (0 the brightest — light panels start at full
-brightness, so light only dims). Step 0 is the palette in
-`themes/_graphite.scss` verbatim; every other step is derived at build time by
+brightness, so light only dims). Step 0 is the active theme's palette
+(`themes/_graphite.scss`, `_classic.scss`) verbatim; every other step is derived at build time by
 `theme/_brightness.scss` and emitted as its own `:root[data-theme][data-brightness]`
-block. A step is a lightness dial over three planes, each moving in OKLCH with
+block, repeated under `[data-theme-name='classic']` for classic. A step is a lightness dial over three planes, each moving in OKLCH with
 hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
 backgrounds) scale multiplicatively, fast when dimming and gently when
 brightening; **colours** (accent, status hues, on-accent) scale at a gentler
