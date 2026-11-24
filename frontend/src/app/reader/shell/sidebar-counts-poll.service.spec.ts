@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../../core/api';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import {
+  SIDEBAR_HIDDEN_POLL_INTERVAL_MS,
   SIDEBAR_POLL_IDLE_LIMIT_MS,
   SIDEBAR_POLL_MARKER_FLOOR_TICKS,
   SidebarCountsPoll,
@@ -194,19 +195,55 @@ describe('SidebarCountsPoll', () => {
     expect(refreshes()).toBe(0);
   });
 
-  it('sends nothing at all while the tab is hidden', async () => {
-    await start(null);
+  it('keeps a slow counts fetch while the tab is hidden', async () => {
+    await start('a');
     setVisibility('hidden');
 
-    await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 10);
-
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 9);
     expect(refreshes()).toBe(0);
+
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS - SIDEBAR_RELOAD_INTERVAL_MS * 9);
+    expect(reloadCounts).toHaveBeenCalledTimes(1);
+    expect(reloadFull).not.toHaveBeenCalled();
+  });
+
+  it('a hidden tick fetches counts without reading the marker', async () => {
+    await start('a');
+    const markerReads = fetchMock.mock.calls.length;
+    setVisibility('hidden');
+
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS * 2);
+
+    expect(reloadCounts).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(markerReads);
+  });
+
+  it('the idle limit never stops a hidden tab', async () => {
+    await start('a');
+    setVisibility('hidden');
+    await elapse(SIDEBAR_POLL_IDLE_LIMIT_MS);
+    const beforeNextTick = reloadCounts.mock.calls.length;
+
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS);
+
+    expect(reloadCounts).toHaveBeenCalledTimes(beforeNextTick + 1);
+  });
+
+  it('hiding a page the idle limit wrote off starts the slow fetch', async () => {
+    await start('a');
+    await elapse(SIDEBAR_POLL_IDLE_LIMIT_MS);
+    const beforeHiding = refreshes();
+    setVisibility('hidden');
+
+    await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS);
+
+    expect(refreshes()).toBe(beforeHiding + 1);
   });
 
   it('does a full reload the moment a hidden tab is shown again', async () => {
     await start(null);
     setVisibility('hidden');
-    await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 10);
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS * 5);
 
     setVisibility('visible');
 

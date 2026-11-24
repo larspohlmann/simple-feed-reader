@@ -12,6 +12,10 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
  *  open and visible with nobody at the screen. Two hours outlasts a lunch break. */
 export const SIDEBAR_POLL_IDLE_LIMIT_MS = 2 * 60 * 60 * 1000;
 
+/** How often a hidden tab fetches counts. The favicon dot (#2515) has to stay
+ *  current in a background tab, and nothing else wakes it. */
+export const SIDEBAR_HIDDEN_POLL_INTERVAL_MS = 5 * 60 * 1000;
+
 /** The floor under the change marker (#720). Every tenth tick fetches counts
  *  even when the marker hasn't moved -- five minutes, the refresh worker's own
  *  period -- so a touch site nobody wrote degrades gracefully instead of
@@ -41,10 +45,12 @@ const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel'] as const;
  * Reloads the two stores that hold every count (badges, list heading, tab
  * title all read them, #709), so one tick moves every surface at once.
  *
- * Three rules stop it from being a background tax: a hidden tab doesn't poll
- * (refreshes when shown again); an untouched page is dropped after
- * `SIDEBAR_POLL_IDLE_LIMIT_MS` until the next touch; each store refuses a tick
- * inside its freshness window or on top of one already out.
+ * Three rules stop it from being a background tax: a hidden tab ticks only every
+ * `SIDEBAR_HIDDEN_POLL_INTERVAL_MS`, fetches counts without reading the marker (it
+ * tracks shared feed content, not one user's notifications) and is never dropped
+ * as idle, so the favicon dot stays current (#2515); an untouched visible page is
+ * dropped after `SIDEBAR_POLL_IDLE_LIMIT_MS` until the next touch; each store
+ * refuses a tick inside its freshness window or on top of one already out.
  *
  * Reader-provided, so it can't outlive the reader; a logout ends it too.
  */
@@ -57,6 +63,7 @@ export class SidebarCountsPoll {
   private readonly apiBase = inject(API_BASE_URL);
 
   private timerId: ReturnType<typeof setInterval> | null = null;
+  private timerIsHidden = false;
   private lastActivityAt = Date.now();
 
   /** The marker value the last tick saw. A tick fetches only when the live
@@ -76,7 +83,7 @@ export class SidebarCountsPoll {
   };
 
   constructor() {
-    onTabVisibilityChange((hidden) => (hidden ? this.stopTicking() : this.regainTab()));
+    onTabVisibilityChange((hidden) => (hidden ? this.startTicking() : this.regainTab()));
     // Everything this service schedules stays OUT of the Angular zone: a
     // `wheel` listener inside it would run change detection on every scroll
     // notch, and an interval would never let the zone go stable. Store
@@ -120,9 +127,14 @@ export class SidebarCountsPoll {
   }
 
   private async tick(): Promise<void> {
-    // Both give-up conditions are read here rather than trusted to the handlers
-    // that set them: `visibilitychange` does not fire in every teardown path,
+    // Both conditions are read here rather than trusted to the handlers that
+    // set them: `visibilitychange` does not fire in every teardown path,
     // and nothing at all fires when a page simply goes quiet.
+    if (isTabHidden()) {
+      this.startTicking();
+      this.refreshCounts();
+      return;
+    }
     if (this.givenUp()) {
       this.stopTicking();
       return;
@@ -130,6 +142,10 @@ export class SidebarCountsPoll {
     const token = await this.readMarker();
     // The marker read is a round trip; the tab may have been hidden or gone
     // idle while it was out.
+    if (isTabHidden()) {
+      this.startTicking();
+      return;
+    }
     if (this.givenUp()) {
       this.stopTicking();
       return;
@@ -185,7 +201,7 @@ export class SidebarCountsPoll {
   }
 
   private givenUp(): boolean {
-    return this.isIdle() || isTabHidden();
+    return !isTabHidden() && this.isIdle();
   }
 
   private isIdle(): boolean {
@@ -193,9 +209,13 @@ export class SidebarCountsPoll {
   }
 
   private startTicking(): void {
-    if (this.timerId !== null) return;
+    const hidden = isTabHidden();
+    if (this.timerId !== null && this.timerIsHidden === hidden) return;
+    this.stopTicking();
+    this.timerIsHidden = hidden;
+    const interval = hidden ? SIDEBAR_HIDDEN_POLL_INTERVAL_MS : SIDEBAR_RELOAD_INTERVAL_MS;
     this.zone.runOutsideAngular(() => {
-      this.timerId = setInterval(() => void this.tick(), SIDEBAR_RELOAD_INTERVAL_MS);
+      this.timerId = setInterval(() => void this.tick(), interval);
     });
   }
 
