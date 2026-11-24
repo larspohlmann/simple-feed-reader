@@ -98,6 +98,7 @@ final class RestoreLoadPass
         $this->accountSettings->reading->setScrapeFallbackEnabled($line->reading->scrapeFallbackEnabled);
         $this->accountSettings->reading->setMagazineStyle($line->reading->magazineStyle);
         $this->accountSettings->reading->setSidebarStyle($line->reading->sidebarStyle);
+        $this->accountSettings->reading->setTheme($line->reading->theme);
         $this->accountSettings->reading->setHandedness($line->reading->handedness);
         $this->accountSettings->sharing->setEnabled($line->sharingEnabled);
         $this->accountSettings->sharing->setHiddenTargets($line->hiddenShareTargets);

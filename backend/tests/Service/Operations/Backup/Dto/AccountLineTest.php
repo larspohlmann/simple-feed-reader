@@ -9,6 +9,7 @@ use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
+use App\Enum\Theme;
 use App\Service\Operations\Backup\Dto\AccountLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Service\Operations\Backup\Model\AccountNetworkSwitchesModel;
@@ -168,6 +169,43 @@ final class AccountLineTest extends TestCase
         AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'sidebarStyle' => 5]);
     }
 
+    public function testItReadsTheTheme(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'theme' => 'classic',
+        ]);
+
+        self::assertSame(Theme::Classic, $line->reading->theme);
+    }
+
+    public function testAMissingThemeFallsBackToGraphite(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame(Theme::Graphite, $line->reading->theme);
+    }
+
+    public function testAnInvalidThemeFallsBackToGraphite(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'theme' => 'sepia',
+        ]);
+
+        self::assertSame(Theme::Graphite, $line->reading->theme);
+    }
+
+    public function testANonStringThemeIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Field "theme" is missing or not a string.');
+
+        AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'theme' => 5]);
+    }
+
     public function testItReadsTheHandedness(): void
     {
         $line = AccountLine::fromLine([
@@ -306,6 +344,7 @@ final class AccountLineTest extends TestCase
         $settings->reading->setScrapeFallbackEnabled(true);
         $settings->reading->setMagazineStyle(MagazineStyle::Airy);
         $settings->reading->setSidebarStyle(SidebarStyle::Airy);
+        $settings->reading->setTheme(Theme::Classic);
         $settings->reading->setHandedness(Handedness::Left);
         $settings->reading->setTrendingEnabled(false);
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
@@ -319,7 +358,7 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
-            . '"sidebarStyle":"airy","handedness":"left","sharingEnabled":true,'
+            . '"sidebarStyle":"airy","theme":"classic","handedness":"left","sharingEnabled":true,'
             . '"hiddenShareTargets":["mastodon","email"],'
             . '"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'

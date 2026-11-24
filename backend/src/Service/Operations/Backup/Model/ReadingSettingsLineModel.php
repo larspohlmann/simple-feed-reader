@@ -8,6 +8,7 @@ use App\Entity\ReadingSettings;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SidebarStyle;
+use App\Enum\Theme;
 use App\Service\Operations\Backup\Support\LineField;
 use App\Service\Operations\Backup\Support\LineFieldWithDefault;
 
@@ -17,6 +18,7 @@ final readonly class ReadingSettingsLineModel
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
         public SidebarStyle $sidebarStyle,
+        public Theme $theme,
         public Handedness $handedness,
         public bool $trendingEnabled,
     ) {
@@ -36,6 +38,9 @@ final readonly class ReadingSettingsLineModel
             sidebarStyle: SidebarStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'sidebarStyle', SidebarStyle::Boxed->value),
             ) ?? SidebarStyle::Boxed,
+            theme: Theme::tryFrom(
+                LineFieldWithDefault::string($line, 'theme', Theme::Graphite->value),
+            ) ?? Theme::Graphite,
             handedness: Handedness::tryFrom(
                 LineFieldWithDefault::string($line, 'handedness', Handedness::Right->value),
             ) ?? Handedness::Right,
@@ -49,6 +54,7 @@ final readonly class ReadingSettingsLineModel
             scrapeFallbackEnabled: $settings->isScrapeFallbackEnabled(),
             magazineStyle: $settings->getMagazineStyle(),
             sidebarStyle: $settings->getSidebarStyle(),
+            theme: $settings->getTheme(),
             handedness: $settings->getHandedness(),
             trendingEnabled: $settings->isTrendingEnabled(),
         );

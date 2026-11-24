@@ -45,6 +45,7 @@ final class BackupFieldDeclarations
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
             'sidebarStyle' => 'sidebarStyle',
+            'theme' => 'theme',
             'handedness' => 'handedness',
             'trendingEnabled' => 'trendingEnabled',
         ],
