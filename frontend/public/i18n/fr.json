@@ -1542,7 +1542,6 @@
     "accountWithNotificationsOne": "Compte, 1 notification non vue",
     "accountWithNotificationsOther": "Compte, {{count}} notifications non vues",
     "settings": "Paramètres",
-    "admin": "Administration",
     "signOut": "Se déconnecter",
     "readerView": "Mode lecture",
     "original": "Vue originale",

@@ -49,7 +49,7 @@ describe('SettingsHubComponent', () => {
     isWide.set(true);
     const fixture = mount();
     await fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe('/settings/organise');
+    expect(TestBed.inject(Router).url).toBe('/settings/preferences');
   });
 
   it('forwards when the viewport grows past the breakpoint while open', async () => {
@@ -59,6 +59,6 @@ describe('SettingsHubComponent', () => {
     isWide.set(true);
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe('/settings/organise');
+    expect(TestBed.inject(Router).url).toBe('/settings/preferences');
   });
 });
