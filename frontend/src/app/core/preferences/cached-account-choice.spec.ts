@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { CurrentUser } from '../auth/auth.service';
+import { TokenStore } from '../auth/token.store';
 import { CachedAccountChoice } from './cached-account-choice';
 import { PREFERENCES_WRITER, ReadingPreferences } from './preferences-writer';
 
@@ -113,5 +114,30 @@ describe('CachedAccountChoice', () => {
     expect(choice.value()).toBe('boxed');
     expect(localStorage.getItem(LETTER_KEY)).toBeNull();
     expect(choice.saveFailed()).toBe(false);
+  });
+
+  it('resets when the session ends without a logout, as a 401 ends it', () => {
+    localStorage.setItem('sfr.jwt', 'account-a.jwt');
+    const choice = make();
+    choice.adopt(userWith('airy'));
+    TestBed.tick();
+
+    TestBed.inject(TokenStore).clear();
+    TestBed.tick();
+
+    expect(choice.value()).toBe('boxed');
+    expect(localStorage.getItem(LETTER_KEY)).toBeNull();
+  });
+
+  it('keeps a value adopted on sign-in', () => {
+    const choice = make();
+    TestBed.tick();
+
+    TestBed.inject(TokenStore).set('account-a.jwt');
+    choice.adopt(userWith('airy'));
+    TestBed.tick();
+
+    expect(choice.value()).toBe('airy');
+    expect(localStorage.getItem(LETTER_KEY)).toBe('airy');
   });
 });

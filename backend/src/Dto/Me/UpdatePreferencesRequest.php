@@ -8,6 +8,7 @@ use App\Entity\ReadingSettingsChange;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SidebarStyle;
+use App\Enum\Theme;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdatePreferencesRequest
@@ -16,6 +17,7 @@ final readonly class UpdatePreferencesRequest
         public ?bool $scrapeFallbackEnabled = null,
         public ?MagazineStyle $magazineStyle = null,
         public ?SidebarStyle $sidebarStyle = null,
+        public ?Theme $theme = null,
         public ?Handedness $handedness = null,
         public ?bool $trendingEnabled = null,
     ) {
@@ -33,6 +35,7 @@ final readonly class UpdatePreferencesRequest
             scrapeFallbackEnabled: $this->scrapeFallbackEnabled,
             magazineStyle: $this->magazineStyle,
             sidebarStyle: $this->sidebarStyle,
+            theme: $this->theme,
             handedness: $this->handedness,
             trendingEnabled: $this->trendingEnabled,
         );

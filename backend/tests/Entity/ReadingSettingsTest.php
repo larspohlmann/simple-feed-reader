@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
 use App\Enum\SidebarStyle;
+use App\Enum\Theme;
 use App\Tests\Support\UnsavedUserSettings;
 use PHPUnit\Framework\TestCase;
 
@@ -22,6 +23,7 @@ final class ReadingSettingsTest extends TestCase
         self::assertFalse($settings->isScrapeFallbackEnabled());
         self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
         self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
+        self::assertSame(Theme::Graphite, $settings->getTheme());
         self::assertTrue($settings->isTrendingEnabled());
     }
 
@@ -38,6 +40,21 @@ final class ReadingSettingsTest extends TestCase
     public function testAChangeNamingOnlyTheSidebarStyleIsNotEmpty(): void
     {
         self::assertFalse((new ReadingSettingsChange(sidebarStyle: SidebarStyle::Airy))->isEmpty());
+    }
+
+    public function testApplyingAThemeLeavesTheSidebarStyleAlone(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->apply(new ReadingSettingsChange(theme: Theme::Classic));
+
+        self::assertSame(Theme::Classic, $settings->getTheme());
+        self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
+    }
+
+    public function testAChangeNamingOnlyTheThemeIsNotEmpty(): void
+    {
+        self::assertFalse((new ReadingSettingsChange(theme: Theme::Classic))->isEmpty());
     }
 
     public function testScrapeFallbackCanBeEnabled(): void

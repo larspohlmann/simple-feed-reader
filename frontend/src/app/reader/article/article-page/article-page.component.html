@@ -147,7 +147,7 @@
   </article>
   <ng-template #failureLine let-failure>
     {{ failure.messageKey | transloco }}
-    <button type="button" class="note-link reads-as-text" (click)="source.reload()">
+    <button type="button" class="note-link" (click)="source.reload()">
       {{ 'reader.retry' | transloco }}
     </button>
   </ng-template>

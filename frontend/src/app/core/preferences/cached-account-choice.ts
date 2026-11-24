@@ -1,8 +1,10 @@
 import { WritableSignal, inject, signal } from '@angular/core';
 import { CurrentUser } from '../auth/auth.service';
+import { onIdentityChange } from '../auth/session-identity';
+import { TokenStore } from '../auth/token.store';
 import { PREFERENCES_WRITER, ReadingPreferences, writeTracked } from './preferences-writer';
 
-type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle';
+type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle' | 'theme';
 
 interface CachedAccountChoiceOptions<Field extends ChoiceField> {
   key: string;
@@ -15,12 +17,17 @@ interface CachedAccountChoiceOptions<Field extends ChoiceField> {
 export abstract class CachedAccountChoice<Field extends ChoiceField> {
   private readonly writer = inject(PREFERENCES_WRITER);
 
+  private readonly tokens = inject(TokenStore);
+
   readonly value: WritableSignal<ReadingPreferences[Field]>;
 
   readonly saveFailed = signal(false);
 
   protected constructor(private readonly options: CachedAccountChoiceOptions<Field>) {
     this.value = signal(this.parse(localStorage.getItem(options.key)) ?? options.fallback);
+    onIdentityChange(() => {
+      if (this.tokens.token() === null) this.reset();
+    });
   }
 
   set(choice: ReadingPreferences[Field]): void {
@@ -35,7 +42,7 @@ export abstract class CachedAccountChoice<Field extends ChoiceField> {
     this.cache(choice);
   }
 
-  /** Cache included: the next account must not inherit this one's choice. */
+  /** Runs when the session ends, by logout or by a 401: the next account must not inherit this one's choice. */
   reset(): void {
     localStorage.removeItem(this.options.key);
     this.value.set(this.options.fallback);

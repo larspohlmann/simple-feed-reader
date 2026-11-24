@@ -31,6 +31,9 @@
     "sidebarStyle": "Seitenleisten-Stil",
     "sidebarStyleHint": "Wie die Seitenleiste dargestellt wird.",
     "sidebarStyleSaveFailed": "Der Seitenleisten-Stil konnte nicht in deinem Konto gespeichert werden.",
+    "theme": "Design",
+    "themeHint": "Farben und Schrift der gesamten App.",
+    "themeSaveFailed": "Das Design konnte nicht in deinem Konto gespeichert werden.",
     "sharing": "Teilen",
     "sharingEnabled": "Artikel teilen",
     "sharingEnabledHint": "Der Teilen-Knopf und das Teilen einer Textauswahl. Ausgeschaltet, oder mit allen Zielen unten aus, verschwinden beide.",
@@ -44,6 +47,10 @@
     "sidebarStyleOption": {
       "boxed": "Mit Rahmen",
       "airy": "Luftig"
+    },
+    "themeOption": {
+      "graphite": "Graphit",
+      "classic": "Klassisch"
     },
     "handedness": "Händigkeit",
     "handednessHint": "In welcher Ecke die schwebenden Knöpfe auf einem Touchscreen sitzen.",
@@ -1741,7 +1748,7 @@
       "pane": "Spalten-Layout"
     },
     "theme": {
-      "aria": "Design",
+      "aria": "Erscheinungsbild",
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"

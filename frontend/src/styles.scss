@@ -2,6 +2,7 @@
 // DOM classes carry no rules: a dialog renders as a plain block below the
 // fold (#85). Loaded here, not angular.json, so every build gets it.
 @use '@angular/cdk/overlay-prebuilt.css';
+@use './app/theme/fonts';
 @use './app/theme/tokens';
 @use './app/theme/breakpoints' as bp;
 @use './app/theme/utilities';

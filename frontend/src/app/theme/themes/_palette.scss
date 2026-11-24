@@ -1,0 +1,5 @@
+@mixin emit($palette) {
+  @each $name, $value in $palette {
+    --#{$name}: #{$value};
+  }
+}

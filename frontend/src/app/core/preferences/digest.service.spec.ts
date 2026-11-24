@@ -36,6 +36,7 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
     sidebarStyle: 'boxed',
+    theme: 'graphite',
     handedness: 'right',
     sharing: SHARING_EVERYTHING,
     trendingEnabled: true,

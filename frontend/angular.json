@@ -29,6 +29,7 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "externalDependencies": ["fonts/newsreader-classic-*.woff2"],
             "assets": [
               {
                 "glob": "**/*",

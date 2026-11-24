@@ -29,6 +29,12 @@
   color: var(--text-muted);
 }
 
+/* With no source to shrink, a grouped card's pills and actions move to a second line
+   when the scaled line cannot hold them (#2524). */
+.kicker.sourceless {
+  flex-wrap: wrap;
+}
+
 /* All sit after the elastic source, so all must refuse to shrink — a
    flex item's default `min-width: auto` is what would otherwise let the
    time itself get clipped instead of the source. */

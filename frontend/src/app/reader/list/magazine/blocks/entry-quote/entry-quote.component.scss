@@ -1,3 +1,4 @@
+@use '../../../../../theme/type';
 @use '../../magazine-card';
 
 :host {
@@ -37,13 +38,14 @@
 
 .pull {
   margin: 0;
-  font-family: var(--font-voice);
   font-size: var(--fs-lg);
   line-height: 1.4;
   color: var(--text-primary);
 }
 
 .title {
+  @include type.headline(400, 1.5);
+
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-secondary);

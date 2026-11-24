@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../post-body';
+@use '../../../theme/type';
 
 :host {
   display: block;
@@ -16,9 +17,10 @@
 }
 
 .title {
+  @include type.headline(500, var(--lh-tight));
+
   margin: 0;
   font-size: var(--fs-lg);
-  line-height: var(--lh-tight);
 }
 
 .total-separator,

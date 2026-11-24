@@ -16,8 +16,9 @@ or in a comment at the definition site — read that before changing it.
 
 All tokens are CSS custom properties declared in
 `frontend/src/app/theme/tokens.scss`. Colour tokens are mode-dependent and come
-from a theme mixin (`theme/themes/_graphite.scss`); everything below is
-mode-invariant.
+from a theme's palette (`theme/themes/_graphite.scss`, `_classic.scss`);
+everything below is mode-invariant and the same in every theme, except the
+type tokens that [Themes](#themes) lists.
 
 ### Spacing
 
@@ -163,7 +164,7 @@ one that must never get tighter.
 
 | Token | Value | For |
 |---|---|---|
-| `--font-sans` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the only family |
+| `--font-text` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the app's one family; theme-owned, classic sets its own (see [Themes](#themes)) |
 | `--fs-xs` | `11px` | badges, counts |
 | `--fs-sm` | `13px` | secondary text, dense rows, `size="sm"` buttons |
 | `--fs-dense` | `14px` | the sidebar's nested rows and its row menu (#1749) |
@@ -174,6 +175,7 @@ one that must never get tighter.
 | `--lh-tight` | `1.25` | headings |
 | `--lh-normal` | `1.5` | body copy |
 
+A component never names a family: `src/styles/_base.scss` sets `font-family: var(--font-text)` on `body` and everything inherits it.
 The `--fs-*` values live in `theme/_type-scale.scss`; `text-scaled` containers multiply them (see *Text-size control*).
 
 **`--fs-read` is deliberately a step above `--fs-base`.** Long-form reading wants
@@ -189,6 +191,61 @@ already patched themselves that way and every other block had not, which is how
 the bug survived. A surface that must hold one line says so with
 `white-space: nowrap` (the magazine kicker line, the sidebar rows), and the
 inherited rule is inert there.
+
+### Themes
+
+Two themes, named in `theme/themes/registry.ts`: `graphite` (the default) and `classic` (warm paper, set in
+Newsreader). The account's preference `theme` carries the name; `sfr.themeName` caches it per device so the
+first frame is painted before the account answers; `<html>` carries it as `data-theme-name`, absent for
+graphite. `data-theme` and `sfr.theme` keep meaning the mode (light / dark), so a theme is a palette per mode:
+`:root[data-theme-name='classic'][data-theme='light']` and `…='dark'`, and the brightness steps repeat under
+the same selector.
+
+**A theme lives in `src/app/theme/**`, `src/styles/**`, the inline script in `index.html` and the theme-name
+service, and nowhere else.** No component, template or service branches on a theme's name, and no rule uses
+`!important` to win against one. A surface that differs per theme reads a token.
+
+Classic sets eight type tokens in `:root[data-theme-name='classic']` (`theme/tokens.scss`). A consumer reads
+`var(--token, literal)` with the literal graphite renders today, so graphite defines none of them and the
+fallback is the only value it ever sees. A new consumer keeps that shape; a token a theme sets is declared in
+no other block. A sidebar count needs no token: Newsreader's default figures are lining, and graphite's
+`tabular-nums` turns on the face's `tnum`, so the counts align in both themes.
+
+| Token | Classic | Fallback | For |
+|---|---|---|---|
+| `--title-weight` | `600` | the weight `type.headline()` is given | entry and article titles, the Trending story headline and the comments heading (`theme/_type.scss:2`) |
+| `--title-tracking` | `-0.006em` | `normal` | the same mixin (`theme/_type.scss:4`) |
+| `--title-lh` | `1.2` | the line height `type.headline()` is given | the same mixin (`theme/_type.scss:3`) |
+| `--summary-lh` | `1.45` | the line height `type.summary()` is given, `1.5` or `1.4` per surface | a summary line, through `type.summary()` (`theme/_type.scss:8`): the row's snippet (`reader/list/entry-row/entry-row.component.scss`), the dek of a magazine card (`_magazine-card.scss`), the hero, split and thumb (`entry-hero`, `entry-split`, `entry-thumb` component styles) |
+| `--read-lh` | `1.62` | `1.75` | the article body (`reader/article/article-content/article-content.component.scss:20`) |
+| `--read-heading-weight` | `650` | `650` | the article's headings (`article-content.component.scss:30`) |
+| `--app-name-weight` | `700` | `700` | the app name in the header (`reader/shell/header/reader-header.component.scss:84`) |
+| `--app-name-size` | `1.2em` | `1em` | the same (`reader-header.component.scss:90`) |
+
+Classic's `--font-text` is `'Newsreader Classic', georgia, serif`. The family is Newsreader, self-hosted
+(OFL-1.1, `public/fonts/OFL.txt`) in six woff2 files in `public/fonts/`: Latin, Latin Extended and Vietnamese, roman
+and italic, declared in `theme/_fonts.scss`. Safari supports neither `size-adjust` nor the `*-override`
+descriptors, so the size and the line metrics are corrected in the files, not in CSS. The files are requested
+only when classic is on: nothing else names the family, and the inline script preloads the Latin roman file
+for a cached classic. No request goes to another origin.
+
+- **Size.** Classic's text has an x-height equal to the system face's on a 15px line (7.9px, about 0.526em):
+  `SIZE_MATCH = 1.177`, `ASCENT = 0.99`, `DESCENT = 0.22`.
+- **Descenders.** Newsreader's g, j, p, q and y reach 0.312em below the baseline, more than a line height
+  under about 1.33 leaves below it. A one-line box that ellipsises therefore clips sideways only
+  (`overflow: clip visible`, as the list header's title does), so the tail is never cut;
+  `e2e/classic-theme.spec.ts` checks the room under that title.
+- **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
+  against Newsreader, and the alignment below is measured on Apple's only.
+- **Bound.** At 100% text size, the text's x-height centre against its icon's centre stays within 0.25px of
+  graphite's in the tag pill, the vote pill, Reply, "Add comment" and a sidebar row. A change to the face, the
+  line metrics or an icon row is measured against it.
+- **Rebuilding.** `frontend/scripts/fonts/README.md` holds the three constants, the build command and the
+  measuring script; the files are rebuilt, never edited.
+- **URLs are relative.** `_fonts.scss` and the preload say `fonts/…`, not `/fonts/…`, because the `strato`
+  build runs under the base `/reader/`. One wildcard, `fonts/newsreader-classic-*.woff2`, under
+  `externalDependencies` in `angular.json` keeps the bundler off them, so a new file under that name needs no
+  edit there.
 
 ### Breakpoints
 
@@ -265,10 +322,10 @@ any one component's stylesheet.
 
 `<html>` carries `data-brightness` next to `data-theme`: dark spans `-3`…`3`
 (0 today), light spans `-6`…`0` (0 the brightest — light panels start at full
-brightness, so light only dims). Step 0 is the palette in
-`themes/_graphite.scss` verbatim; every other step is derived at build time by
+brightness, so light only dims). Step 0 is the active theme's palette
+(`themes/_graphite.scss`, `_classic.scss`) verbatim; every other step is derived at build time by
 `theme/_brightness.scss` and emitted as its own `:root[data-theme][data-brightness]`
-block. A step is a lightness dial over three planes, each moving in OKLCH with
+block, repeated under `[data-theme-name='classic']` for classic. A step is a lightness dial over three planes, each moving in OKLCH with
 hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
 backgrounds) scale multiplicatively, fast when dimming and gently when
 brightening; **colours** (accent, status hues, on-accent) scale at a gentler
@@ -276,7 +333,7 @@ rate so they stay themselves and only soften; **text** interpolates toward an
 extreme, black when dimming and white when brightening, reaching it exactly at
 the range end (light reaches black at `-6`; dark stays short of black so text
 holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
-dim instead of being pinned. `--media-brightness` is per theme (#1691): light
+dim instead of being pinned. `--media-brightness` is per mode (#1691): light
 has none at and above the default and `0.92…0.52` (8 % per step) when dimming;
 dark rests at `0.85` at every step and dims 20 % per step to `0.25`, or a white
 picture outshines the dimmed text. One guarded rule in `styles/_base.scss`
@@ -899,9 +956,8 @@ The article's collapsible panel: the header's Contents, Chapters and Transcript,
 and the chapter list under an embed (`app-embed-chapters`, #1886): a
 `label` input and an `open` model. The body is a projected `<ng-template>`, so
 a collapsed panel builds none of it (a transcript runs to hundreds of
-paragraphs). Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
-`.text-scaled`; a `<summary>` would scale with the text-size slider (#1880).
-Article panels therefore use it, not `<app-disclosure>`.
+paragraphs). Its toggle is a `<button>`; inside `.text-scaled` it follows the text size like
+every other control (#2524).
 
 ---
 
@@ -1838,22 +1894,33 @@ brightness control and shares its shape (`segmented.stepper-bar`): `text_decreas
 a bar whose fill marks the step and whose label is the percentage, `text_increase`. Steps are 90–150 % in tens,
 default 100, per device and theme-independent (`sfr.textSize`), never per account.
 
-The setting is one root property, `--text-scale`. A reading container takes the
-global class `text-scaled`, which multiplies the `--fs-*` tokens and the inherited
-font size by it; today that is the list `.rows`, `.empty-wrap`, `.list-error`, the
-article `<article>` and its `.placeholder`, and the duplicates popover (a CDK overlay sits
-outside the page's containers, so it takes the class itself). Inside one, every `<button>` and
-`app-entry-pills` keep the fixed tokens and the inherited size; any class rule
-still overrides them. A block that scales as one takes
-`scales-with-text`: its buttons, pills and `--icon-*` tokens scale too, so a count never
-grows beside a fixed glyph; the entry's meta row (`app-entry-meta`) sets it on its host (#2457). A button typeset as running text (TOC
-entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons (outside a
-`scales-with-text` block), spacing, images and widths are px tokens and never scale. The list header and the
-reader toolbar sit outside every `text-scaled` container, which is why their texts
-stay fixed. A new reading surface takes `text-scaled`. A control inside one stays fixed
-if it sizes its text with an `--fs-*` token or has no font-size rule of its own; a class
-rule like `font: inherit` with no token size outranks the reset and scales the control
-with the text (that is how the text-like `.note-link` and `.also-entry` scale).
+The setting is one root property, `--text-scale`. The content area takes the global class
+`text-scaled`: the list `.rows`, `.empty-wrap`, `.list-error`, the article `<article>` and its
+`.placeholder`, the notification rows, and the duplicates popover (a CDK overlay sits outside the
+page's containers, so it takes the class itself). The class multiplies the `--fs-*` and `--icon-*`
+tokens and the inherited font size by the scale, and sets `--icon-text-scale` (1 on `:root`),
+which `app-favicon` and a `size="md"` `app-avatar` multiply their own size by.
+
+Inside it everything follows the text size, text and icons, in every control: buttons, pills,
+links and running text alike (#2524). "Icon" is a Material icon, a tag glyph, a network logo or a
+favicon, with the poster avatar `app-favicon` shows in its place. An avatar in front of text (a
+comment's byline, a quoted post's author, a notification row's actors) scales with it. There is no fixed-type control and no opt-in class: a new control
+sized by `--fs-*` and `--icon-*` tokens, or by inheritance, scales by itself. A row that no longer
+fits at 150 % on a phone wraps its actions to their own line (the kicker line), truncates a long
+label with an ellipsis (a quoted post's date), or collapses a bar's labels to their icons where
+the bar already does so at narrow widths.
+
+Controls and labels on a picture scale like any other: the ALT and GIF badges, the Short badge,
+the play button over a thumbnail and "Open in reader" on a link card, text and glyph alike; at 150 %
+each still sits inside its picture. What keeps its size is the picture itself (thumbnails, picture
+tiles) and a glyph that stands in for one: the favicon in a story-sources mini card's tile
+(`--icon-text-scale: 1` on `.thumb.tile`). Spacing does not scale.
+
+The control does not reach outside the content area: the app header, the sidebar and the phone
+drawer, the list header, the article's bar, the floating corner buttons, dialogs, menus and
+Settings keep their size at every step. A new reading surface takes `text-scaled`.
+`frontend/e2e/icons-follow-text-size.spec.ts` measures the rule: per surface, text, icons and
+avatars scale by the step, pictures and chrome stay, and nothing is cut at 150 % on a phone.
 
 ### Brightness control
 
@@ -1866,7 +1933,7 @@ fills with brightness — empty at the darkest step, full at the brightest — s
 the light default sits at the full end and the dark default at the middle.
 Clicking the bar resets to the default; the moon disables at the floor and the
 sun at the top. A visually hidden `<output aria-live="polite">` reads the value.
-Steps are per device and per theme (`sfr.brightness.light` / `.dark`), never per
+Steps are per device and per mode (`sfr.brightness.light` / `.dark`), never per
 account.
 
 ### Sticky and scroll
@@ -2199,7 +2266,7 @@ relative units for the budget, not a layout guarantee.
 | **Thread** (#1668) | per entry (`threadHeight`) | the root and its replies on `<app-thread-line>`, counted `n/N`; the root keeps what its own share shows (a media or quote share's media through `<app-post-media>`, a quote's `<app-quoted-post layout="block">`, a link share's card or its placeholder), and each reply's media and card sit under that reply | an entry with its author's self-replies folded in (`sharesThread`: `thread` is not empty) — pinned ahead of Link |
 | **Quoting** (#1612) | per entry (`quotingHeight`) | the post's own media through `<app-post-media>`, then the quoted post nested in `<app-quoted-post layout="block">`: avatar, name, @handle, narrow time; the quoted text clamps at 8 lines, the post's own at 6; the quoted media in the media share's grid, a video playable in place. The quoted post's link card follows its media. Clicking the video plays it, the rest of the box opens the quoted post, the rest of the card the entry | a quote share (`sharesQuotedPost`: `share` is `quote` and `quote` is set) — pinned like Link |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
-| **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
+| **Quote** | 180px | suppressed — the first sentence is set as the pull quote instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |
 | **Kicker** | 140px | none — oversized title only | the entry has a summary to show as a dek |
 | **Thumb** | 90px | fixed 88px box, `aspect-ratio: 4 / 3` | any persisted image; a portrait cover keeps its shape (never narrower than 9:16), 66px tall |

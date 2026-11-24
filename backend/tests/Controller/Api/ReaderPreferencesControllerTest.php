@@ -17,6 +17,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         'scrapeFallbackEnabled' => false,
         'magazineStyle' => 'boxed',
         'sidebarStyle' => 'boxed',
+        'theme' => 'graphite',
         'handedness' => 'right',
         'trendingEnabled' => true,
     ];
@@ -62,6 +63,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
             'scrapeFallbackEnabled' => $preferences['scrapeFallbackEnabled'],
             'magazineStyle' => $preferences['magazineStyle'],
             'sidebarStyle' => $preferences['sidebarStyle'],
+            'theme' => $preferences['theme'],
             'handedness' => $preferences['handedness'],
             'trendingEnabled' => $preferences['trendingEnabled'],
         ];
@@ -81,6 +83,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
                 'scrapeFallbackEnabled' => true,
                 'magazineStyle' => 'boxed',
                 'sidebarStyle' => 'boxed',
+                'theme' => 'graphite',
                 'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
@@ -110,6 +113,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         yield 'scrape fallback' => ['scrapeFallbackEnabled', true];
         yield 'magazine style' => ['magazineStyle', 'airy'];
         yield 'sidebar style' => ['sidebarStyle', 'airy'];
+        yield 'theme' => ['theme', 'classic'];
         yield 'handedness' => ['handedness', 'left'];
         yield 'trending' => ['trendingEnabled', false];
     }
@@ -177,6 +181,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         yield 'a string for trending' => ['{"trendingEnabled":"false"}'];
         yield 'an unknown magazine style' => ['{"magazineStyle":"cards"}'];
         yield 'an unknown sidebar style' => ['{"sidebarStyle":"cards"}'];
+        yield 'an unknown theme' => ['{"theme":"sepia"}'];
         yield 'an unknown handedness' => ['{"handedness":"both"}'];
     }
 

@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
+@use '../../../theme/type';
 
 :host {
   display: block;
@@ -31,6 +32,8 @@ article {
 }
 
 .title {
+  @include type.headline(500, 1.25);
+
   font-size: var(--fs-xl);
   margin: 0;
   color: var(--text-primary);

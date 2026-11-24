@@ -1,3 +1,5 @@
+@use '../../../theme/type';
+
 :host {
   display: flex;
   align-items: flex-start;
@@ -27,7 +29,8 @@
 }
 
 .title {
-  font-weight: 700;
+  @include type.headline(700, var(--lh-tight));
+
   color: var(--text-primary);
 }
 

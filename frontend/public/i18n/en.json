@@ -31,6 +31,9 @@
     "sidebarStyle": "Sidebar style",
     "sidebarStyleHint": "How the sidebar is drawn.",
     "sidebarStyleSaveFailed": "The sidebar style could not be saved to your account.",
+    "theme": "Theme",
+    "themeHint": "Colours and typeface of the whole app.",
+    "themeSaveFailed": "The theme could not be saved to your account.",
     "sharing": "Sharing",
     "sharingEnabled": "Share articles",
     "sharingEnabledHint": "The share button and sharing a text selection. Switched off, or with every target below off, both disappear.",
@@ -44,6 +47,10 @@
     "sidebarStyleOption": {
       "boxed": "Boxed",
       "airy": "Airy"
+    },
+    "themeOption": {
+      "graphite": "Graphite",
+      "classic": "Classic"
     },
     "handedness": "Handedness",
     "handednessHint": "Which corner the floating buttons sit in on a touch screen.",
@@ -1741,7 +1748,7 @@
       "pane": "Pane layout"
     },
     "theme": {
-      "aria": "Theme",
+      "aria": "Appearance",
       "light": "Light",
       "dark": "Dark",
       "system": "System"

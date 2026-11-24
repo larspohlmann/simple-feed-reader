@@ -1,0 +1,9 @@
+@mixin headline($weight, $line-height) {
+  font-weight: var(--title-weight, $weight);
+  line-height: var(--title-lh, $line-height);
+  letter-spacing: var(--title-tracking, normal);
+}
+
+@mixin summary($line-height) {
+  line-height: var(--summary-lh, $line-height);
+}

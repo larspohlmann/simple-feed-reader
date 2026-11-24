@@ -3,11 +3,13 @@ import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
 import { MagazineStyle } from './magazine-style';
 import { SidebarStyle } from './sidebar-style';
+import { ThemeName } from '../../theme/themes/registry';
 
 export interface ReadingPreferences {
   scrapeFallbackEnabled: boolean;
   magazineStyle: MagazineStyle;
   sidebarStyle: SidebarStyle;
+  theme: ThemeName;
   handedness: Handedness;
   trendingEnabled: boolean;
 }
