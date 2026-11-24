@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/cor
 import { Router } from '@angular/router';
 import { LayoutService } from '../reader/layout.service';
 import { SettingsNavComponent } from './settings-nav.component';
+import { SETTINGS_SECTIONS } from './settings-sections';
 
 /** The mobile landing page of the settings area — the "hub" of hub-and-spoke.
  *  A desktop viewport already shows the same navigation in the shell's rail,
- *  so this page forwards to the first section instead; replaceUrl keeps the
+ *  so this page forwards to the first section (Preferences) instead; replaceUrl keeps the
  *  redirect out of the back stack. The effect also catches the viewport
  *  crossing the breakpoint while the hub is open. */
 @Component({
@@ -22,7 +23,7 @@ export class SettingsHubComponent {
   constructor() {
     effect(() => {
       if (this.layout.isWide()) {
-        void this.router.navigate(['/settings/organise'], { replaceUrl: true });
+        void this.router.navigate(['/settings', SETTINGS_SECTIONS[0].path], { replaceUrl: true });
       }
     });
   }
