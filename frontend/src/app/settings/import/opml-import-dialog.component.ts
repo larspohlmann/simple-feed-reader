@@ -1,10 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { EMPTY, Subject, catchError, debounceTime, filter, map, switchMap, takeUntil } from 'rxjs';
+import {
+  EMPTY,
+  Subject,
+  catchError,
+  debounceTime,
+  filter,
+  map,
+  pairwise,
+  switchMap,
+  takeUntil,
+} from 'rxjs';
 import { parseProblem } from '../../core/problem';
 import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -67,6 +77,13 @@ export class OpmlImportDialogComponent {
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
+  protected readonly counterKey = computed(() => {
+    const one = this.selection.freeSlots() === 1;
+    if (!this.selection.overLimit()) {
+      return one ? 'settings.opml.counterOne' : 'settings.opml.counter';
+    }
+    return one ? 'settings.opml.overLimitOne' : 'settings.opml.overLimit';
+  });
   private readonly previewedParent = signal('');
   protected readonly canImport = computed(
     () =>
@@ -100,6 +117,14 @@ export class OpmlImportDialogComponent {
         this.selection.load(preview);
         this.previewedParent.set(parent);
       });
+    toObservable(this.tags)
+      .pipe(
+        map((tags) => tags.length),
+        pairwise(),
+        filter(([before, after]) => after > before),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.typedParents.next(this.parent()));
   }
 
   protected typeParent(event: Event): void {

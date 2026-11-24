@@ -11,6 +11,7 @@
         autocomplete="off"
         data-testid="opml-import-parent"
         [value]="parent()"
+        [disabled]="importing()"
         (input)="typeParent($event)"
       />
     </app-field>
@@ -27,7 +28,7 @@
         [class.is-over]="selection.overLimit()"
       >
         {{
-          (selection.overLimit() ? 'settings.opml.overLimit' : 'settings.opml.counter')
+          counterKey()
             | transloco: { selected: selection.selectedCount(), free: selection.freeSlots() }
         }}
       </p>

@@ -51,14 +51,17 @@ describe('OpmlSectionComponent', () => {
     return fixture.nativeElement;
   }
 
-  async function pick(
+  function pick(fixture: ReturnType<typeof mount>, contents: string): Promise<HTMLInputElement> {
+    return pickFile(fixture, { text: () => Promise.resolve(contents) } as File);
+  }
+
+  async function pickFile(
     fixture: ReturnType<typeof mount>,
-    contents: string,
+    file: File,
   ): Promise<HTMLInputElement> {
     const input = (fixture.nativeElement as HTMLElement).querySelector(
       'input[type=file]',
     ) as HTMLInputElement;
-    const file = { text: () => Promise.resolve(contents) } as File;
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
     Object.defineProperty(input, 'value', {
       get: () => 'C:\\fakepath\\feeds.opml',
@@ -164,22 +167,45 @@ describe('OpmlSectionComponent', () => {
   it('shows the reason and opens nothing when the file cannot be read', async () => {
     const fixture = mount();
     await pick(fixture, 'nope');
-    ctrl
-      .expectOne('https://api.test/api/opml/preview')
-      .flush(
-        {
-          type: 'about:blank',
-          title: 'Unprocessable',
-          status: 422,
-          detail: 'Not a well-formed OPML 2.0 document.',
-        },
-        { status: 422, statusText: 'Unprocessable' },
-      );
+    ctrl.expectOne('https://api.test/api/opml/preview').flush(
+      {
+        type: 'about:blank',
+        title: 'Unprocessable',
+        status: 422,
+        detail: 'Not a well-formed OPML 2.0 document.',
+      },
+      { status: 422, statusText: 'Unprocessable' },
+    );
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Not a well-formed OPML 2.0 document.',
     );
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it('says the file could not be read when reading it fails', async () => {
+    const fixture = mount();
+    await pickFile(fixture, { text: () => Promise.reject(new Error('gone')) } as File);
+    await Promise.resolve();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-error-banner')?.textContent).toContain(
+      'This file could not be read.',
+    );
+    expect(element.textContent).not.toContain('Reading the file');
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('clears the last result when a new file is picked', async () => {
+    const fixture = mount();
+    await pick(fixture, '<opml/>');
+    flushPreview();
+    closed.next({ imported: 2, alreadySubscribed: 1, invalid: 0, skippedOverLimit: 0 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Imported 2');
+    await pick(fixture, '<opml/>');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Imported 2');
+    flushPreview();
   });
 
   it('shows the result and reloads when the dialog imported', async () => {

@@ -58,14 +58,16 @@ describe('OpmlImportDialogComponent', () => {
   let fixture: ComponentFixture<OpmlImportDialogComponent>;
   let http: HttpTestingController;
   const close = jest.fn();
+  const initialTags = [makeTag(7, 'Mine'), makeTag(8, 'Child', { parentId: 7 })];
   const tagsStub = {
-    tags: signal([makeTag(7, 'Mine'), makeTag(8, 'Child', { parentId: 7 })]),
+    tags: signal(initialTags),
     load: jest.fn(),
   };
 
   function mount(preview: OpmlPreview = previewOf()): void {
     close.mockClear();
     tagsStub.load.mockClear();
+    tagsStub.tags.set(initialTags);
     TestBed.configureTestingModule({
       imports: [OpmlImportDialogComponent, provideTranslocoTesting()],
       providers: [
@@ -230,12 +232,80 @@ describe('OpmlImportDialogComponent', () => {
   });
 
   it('disables import over the limit and says why', () => {
-    mount(previewOf(1));
+    mount(previewOf(2));
 
     expect(buttonOf('opml-import-apply').disabled).toBe(true);
     expect(textOf(byTestId('opml-import-counter'))).toBe(
-      '3 selected, but only 1 slots are left. Clear some to import.',
+      '3 selected, but only 2 slots are left. Clear some to import.',
     );
+  });
+
+  it('says a single slot over the limit in the singular', () => {
+    mount(previewOf(1));
+
+    expect(textOf(byTestId('opml-import-counter'))).toBe(
+      '3 selected, but only 1 slot is left. Clear some to import.',
+    );
+  });
+
+  it('counts a single free slot in the singular', () => {
+    mount(previewOf(1));
+
+    press('opml-import-select-none');
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    expect(textOf(byTestId('opml-import-counter'))).toBe('1 selected · 1 slot left');
+  });
+
+  it('asks for a new preview of the current parent when a tag is created', () => {
+    mount();
+    jest.useFakeTimers();
+    typeParent('P');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf(10, 'P'));
+    fixture.detectChanges();
+
+    tagsStub.tags.update((tags) => [...tags, makeTag(9, 'Tech')]);
+    fixture.detectChanges();
+    jest.advanceTimersByTime(300);
+
+    const request = http.expectOne(PREVIEW);
+    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P' });
+    request.flush(previewOf(10, 'P'));
+  });
+
+  it('asks for no new preview when the tags shrink', () => {
+    mount();
+    jest.useFakeTimers();
+
+    tagsStub.tags.update((tags) => tags.slice(1));
+    fixture.detectChanges();
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+  });
+
+  it('locks the parent while importing and leaves import enabled after a failure', () => {
+    mount();
+    jest.useFakeTimers();
+    typeParent('P');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf(10, 'P'));
+    fixture.detectChanges();
+
+    press('opml-import-apply');
+    expect(byTestId<HTMLInputElement>('opml-import-parent')!.disabled).toBe(true);
+    http
+      .expectOne(IMPORT)
+      .flush(
+        { type: 'about:blank', title: 'Down', status: 503 },
+        { status: HttpStatusCode.ServiceUnavailable, statusText: 'Service Unavailable' },
+      );
+    fixture.detectChanges();
+
+    expect(byTestId<HTMLInputElement>('opml-import-parent')!.disabled).toBe(false);
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
   });
 
   it('counts the selection and the free slots', () => {

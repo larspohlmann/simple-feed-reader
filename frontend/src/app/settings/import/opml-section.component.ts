@@ -1,7 +1,7 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../../core/problem';
 import { downloadOpmlExport } from './opml-export';
 import { SettingsApi } from '../settings-api';
@@ -26,6 +26,7 @@ export class OpmlSectionComponent {
   private readonly subs = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
   private readonly refresh = inject(RefreshService);
+  private readonly i18n = inject(TranslocoService);
 
   readonly previewing = signal(false);
   readonly exporting = signal(false);
@@ -44,10 +45,20 @@ export class OpmlSectionComponent {
     if (!file || this.previewing()) return;
     this.previewing.set(true);
     this.importError.set(null);
+    this.result.set(null);
     file
       .text()
       .then((contents) => this.preview(contents))
-      .catch(() => this.previewing.set(false));
+      .catch(() => this.failToRead());
+  }
+
+  private failToRead(): void {
+    this.previewing.set(false);
+    this.importError.set({
+      type: 'unreadable_file',
+      title: this.i18n.translate('settings.opml.unreadable'),
+      status: 0,
+    });
   }
 
   private preview(contents: string): void {
