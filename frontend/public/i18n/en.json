@@ -86,7 +86,9 @@
       "selectAll": "Select all",
       "selectNone": "Select none",
       "counter": "{{selected}} selected · {{free}} slots left",
+      "counterOne": "{{selected}} selected · 1 slot left",
       "overLimit": "{{selected}} selected, but only {{free}} slots are left. Clear some to import.",
+      "overLimitOne": "{{selected}} selected, but only 1 slot is left. Clear some to import.",
       "stateSubscribed": "Already subscribed",
       "stateScraped": "Scraped feeds cannot be imported",
       "stateInvalidUrl": "Not a valid feed address",
@@ -97,7 +99,8 @@
       "dropped": "Nested too deep. Feeds in these folders go into the folder above: {{names}}",
       "applyCount": "Import {{count}}",
       "selectFolder": "Select folder {{name}}",
-      "selectFeed": "Select {{name}}"
+      "selectFeed": "Select {{name}}",
+      "unreadable": "This file could not be read."
     },
     "backup": {
       "title": "Account backup",

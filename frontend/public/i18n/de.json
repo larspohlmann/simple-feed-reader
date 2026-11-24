@@ -86,7 +86,9 @@
       "selectAll": "Alle auswählen",
       "selectNone": "Keine auswählen",
       "counter": "{{selected}} ausgewählt · {{free}} Plätze frei",
+      "counterOne": "{{selected}} ausgewählt · 1 Platz frei",
       "overLimit": "{{selected}} ausgewählt, aber nur {{free}} Plätze frei. Wähle einige ab, um zu importieren.",
+      "overLimitOne": "{{selected}} ausgewählt, aber nur 1 Platz frei. Wähle einige ab, um zu importieren.",
       "stateSubscribed": "Bereits abonniert",
       "stateScraped": "Generierte Feeds lassen sich nicht importieren",
       "stateInvalidUrl": "Keine gültige Feed-Adresse",
@@ -97,7 +99,8 @@
       "dropped": "Zu tief verschachtelt. Feeds aus diesen Ordnern landen im Ordner darüber: {{names}}",
       "applyCount": "{{count}} importieren",
       "selectFolder": "Ordner {{name}} auswählen",
-      "selectFeed": "{{name}} auswählen"
+      "selectFeed": "{{name}} auswählen",
+      "unreadable": "Diese Datei konnte nicht gelesen werden."
     },
     "backup": {
       "title": "Konto-Backup",

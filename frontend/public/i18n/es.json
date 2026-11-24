@@ -86,7 +86,9 @@
       "selectAll": "Seleccionar todo",
       "selectNone": "No seleccionar nada",
       "counter": "{{selected}} seleccionados · {{free}} plazas libres",
+      "counterOne": "{{selected}} seleccionados · 1 plaza libre",
       "overLimit": "{{selected}} seleccionados, pero solo quedan {{free}} plazas. Quita algunos para importar.",
+      "overLimitOne": "{{selected}} seleccionados, pero solo queda 1 plaza. Quita algunos para importar.",
       "stateSubscribed": "Ya suscrito",
       "stateScraped": "Los feeds extraídos de una página no se pueden importar",
       "stateInvalidUrl": "Dirección de feed no válida",
@@ -97,7 +99,8 @@
       "dropped": "Demasiados niveles. Los feeds de estas carpetas van a la carpeta superior: {{names}}",
       "applyCount": "Importar {{count}}",
       "selectFolder": "Seleccionar la carpeta {{name}}",
-      "selectFeed": "Seleccionar {{name}}"
+      "selectFeed": "Seleccionar {{name}}",
+      "unreadable": "No se pudo leer este archivo."
     },
     "backup": {
       "title": "Copia de seguridad",

@@ -86,7 +86,9 @@
       "selectAll": "Tout sélectionner",
       "selectNone": "Tout désélectionner",
       "counter": "{{selected}} sélectionnés · {{free}} places libres",
+      "counterOne": "{{selected}} sélectionnés · 1 place libre",
       "overLimit": "{{selected}} sélectionnés, mais il ne reste que {{free}} places. Désélectionnez-en pour importer.",
+      "overLimitOne": "{{selected}} sélectionnés, mais il ne reste qu'une place. Désélectionnez-en pour importer.",
       "stateSubscribed": "Déjà abonné",
       "stateScraped": "Les flux extraits d'une page ne peuvent pas être importés",
       "stateInvalidUrl": "Adresse de flux non valide",
@@ -97,7 +99,8 @@
       "dropped": "Imbrication trop profonde. Les flux de ces dossiers vont dans le dossier au-dessus : {{names}}",
       "applyCount": "Importer {{count}}",
       "selectFolder": "Sélectionner le dossier {{name}}",
-      "selectFeed": "Sélectionner {{name}}"
+      "selectFeed": "Sélectionner {{name}}",
+      "unreadable": "Ce fichier n'a pas pu être lu."
     },
     "backup": {
       "title": "Sauvegarde du compte",
