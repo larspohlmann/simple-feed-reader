@@ -29,11 +29,15 @@ describe('SidebarCountsPoll', () => {
   /** jsdom reports 'visible' and has no way to set it; both halves of the
    *  visibility rule need it writable. */
   function setVisibility(state: DocumentVisibilityState): void {
+    setVisibilityWithoutEvent(state);
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+
+  function setVisibilityWithoutEvent(state: DocumentVisibilityState): void {
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
       get: () => state,
     });
-    document.dispatchEvent(new Event('visibilitychange'));
   }
 
   /** How many times the poll refreshed anything. The saved-searches store is
@@ -258,10 +262,7 @@ describe('SidebarCountsPoll', () => {
   it('a visible tick on the hidden timer goes back to the steady cadence', async () => {
     await start('a');
     setVisibility('hidden');
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'visible',
-    });
+    setVisibilityWithoutEvent('visible');
 
     await elapse(SIDEBAR_HIDDEN_POLL_INTERVAL_MS);
     expect(refreshes()).toBe(0);

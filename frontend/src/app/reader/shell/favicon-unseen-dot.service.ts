@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { DestroyRef, Injectable, effect, inject } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject } from '@angular/core';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 
 const BADGED_VECTOR_HREF = 'favicon-unseen.svg?v=1';
@@ -10,20 +10,23 @@ const BADGED_RASTER_HREF = 'favicon-unseen-32.png?v=1';
 export class FaviconUnseenDot {
   private readonly icons = Array.from(
     inject(DOCUMENT).head.querySelectorAll<HTMLLinkElement>('link[rel="icon"]'),
-    (link) => ({ link, plainHref: link.getAttribute('href') ?? '' }),
+    (link) => ({
+      link,
+      plainHref: link.getAttribute('href') ?? '',
+      badgedHref:
+        link.getAttribute('type') === 'image/svg+xml' ? BADGED_VECTOR_HREF : BADGED_RASTER_HREF,
+    }),
   );
 
   constructor() {
     const unseenTotal = inject(SubscriptionsStore).unseenNotificationsTotal;
-    effect(() => (unseenTotal() > 0 ? this.showBadged() : this.showPlain()));
+    const anyUnseen = computed(() => unseenTotal() > 0);
+    effect(() => (anyUnseen() ? this.showBadged() : this.showPlain()));
     inject(DestroyRef).onDestroy(() => this.showPlain());
   }
 
   private showBadged(): void {
-    for (const { link } of this.icons) {
-      const isVector = link.getAttribute('type') === 'image/svg+xml';
-      link.setAttribute('href', isVector ? BADGED_VECTOR_HREF : BADGED_RASTER_HREF);
-    }
+    for (const { link, badgedHref } of this.icons) link.setAttribute('href', badgedHref);
   }
 
   private showPlain(): void {
