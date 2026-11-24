@@ -284,9 +284,20 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $opml = $export->getContent();
             self::assertStringContainsString('xmlUrl=', $opml, 'export should list the subscribed feed');
 
+            $headers = ['Authorization' => 'Bearer ' . $token];
+            $preview = $this->http->request('POST', '/api/opml/preview', [
+                'headers' => $headers,
+                'json' => ['opml' => $opml, 'parentTagName' => null],
+            ]);
+            self::assertSame(Response::HTTP_OK, $preview->getStatusCode());
+
             $reimport = $this->http->request('POST', '/api/opml/import', [
-                'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'text/x-opml'],
-                'body' => $opml,
+                'headers' => $headers,
+                'json' => [
+                    'opml' => $opml,
+                    'parentTagName' => null,
+                    'feedUrls' => $this->previewedFeedUrls($preview->toArray()),
+                ],
             ]);
             self::assertSame(Response::HTTP_OK, $reimport->getStatusCode());
             self::assertGreaterThanOrEqual(
@@ -451,6 +462,23 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
             'body' => json_encode($changes, JSON_THROW_ON_ERROR),
         ]);
+    }
+
+    /**
+     * @param array<mixed> $folder
+     *
+     * @return list<string>
+     */
+    private function previewedFeedUrls(array $folder): array
+    {
+        $urls = [];
+        array_walk_recursive($folder, static function (mixed $value, mixed $key) use (&$urls): void {
+            if ($key === 'url' && is_string($value)) {
+                $urls[] = $value;
+            }
+        });
+
+        return $urls;
     }
 
     /**

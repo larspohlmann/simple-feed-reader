@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Opml\OpmlImportRequest;
+use App\Dto\Opml\OpmlPreviewRequest;
 use App\Entity\User;
 use App\Http\OpmlJson;
 use App\Service\Library\Opml\OpmlExporter;
 use App\Service\Library\Opml\OpmlImporter;
+use App\Service\Library\Opml\OpmlPreviewer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -21,6 +23,7 @@ final readonly class OpmlController
     public function __construct(
         private OpmlExporter $exporter,
         private OpmlImporter $importer,
+        private OpmlPreviewer $previewer,
     ) {
     }
 
@@ -36,6 +39,14 @@ final readonly class OpmlController
             'Content-Type' => 'text/x-opml; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="feeds.opml"',
         ]);
+    }
+
+    #[Route('/preview', name: 'api_opml_preview', methods: ['POST'])]
+    public function preview(#[CurrentUser] User $user, #[MapRequestPayload] OpmlPreviewRequest $request): JsonResponse
+    {
+        return new JsonResponse(
+            OpmlJson::preview($this->previewer->preview($user, $request->opml, $request->parentTagName)),
+        );
     }
 
     #[Route('/import', name: 'api_opml_import', methods: ['POST'])]

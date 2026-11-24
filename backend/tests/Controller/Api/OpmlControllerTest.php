@@ -109,6 +109,65 @@ final class OpmlControllerTest extends ApiTestCase
         self::assertSame('invalid_opml', $this->payload($client)['type']);
     }
 
+    public function testPreviewRequiresAuth(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/api/opml/preview');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testPreviewListsTheFileWithoutSubscribing(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('opml-preview@example.com');
+
+        $this->postPreview($client, $headers, ['opml' => $this->fixture()]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $body = $this->payload($client);
+        self::assertIsInt($body['freeSlots']);
+        self::assertIsArray($body['root']);
+        self::assertCount(0, $this->entityManager()->getRepository(Subscription::class)->findBy(['user' => $user]));
+    }
+
+    public function testPreviewOfAnUnreadableFileIsAProblem(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-bad@example.com')), [
+            'opml' => 'not xml',
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $type = $this->payload($client)['type'];
+        self::assertIsString($type);
+        self::assertStringEndsWith('invalid_opml', $type);
+    }
+
+    public function testPreviewWithoutAFileIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-nofile@example.com')), []);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testPreviewCarriesTheParentIntoTheDestinations(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-parent@example.com')), [
+            'opml' => $this->fixture(),
+            'parentTagName' => 'From Feedly',
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        self::assertSame(['From Feedly'], $root['destination']);
+    }
+
     private function fixture(): string
     {
         return (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
@@ -123,6 +182,20 @@ final class OpmlControllerTest extends ApiTestCase
         $client->request(
             'POST',
             '/api/opml/import',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /**
+     * @param array{HTTP_AUTHORIZATION: string} $headers
+     * @param array<string, mixed>               $body
+     */
+    private function postPreview(KernelBrowser $client, array $headers, array $body): void
+    {
+        $client->request(
+            'POST',
+            '/api/opml/preview',
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
