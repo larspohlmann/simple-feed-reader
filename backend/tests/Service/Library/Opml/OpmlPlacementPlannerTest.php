@@ -191,6 +191,24 @@ final class OpmlPlacementPlannerTest extends DbTestCase
         self::assertSame(['P', str_repeat('a', 96) . ' (1)'], $root->folders[0]->destination);
     }
 
+    public function testALongFolderNameIsCutToTheColumn(): void
+    {
+        $root = $this->plan(null, self::folder(str_repeat('a', 100) . 'b'));
+
+        self::assertSame([str_repeat('a', 100)], $root->folders[0]->destination);
+    }
+
+    public function testAFolderTwoLevelsTooDeepTakesTheLastKeptDestination(): void
+    {
+        $fifth = self::folder('A', self::folder('B', self::folder('C', self::folder('D', self::folder('E')))));
+
+        $root = $this->plan(null, $fifth);
+
+        $dropped = $root->folders[0]->folders[0]->folders[0]->folders[0]->folders[0];
+        self::assertTrue($dropped->dropped);
+        self::assertSame(['A', 'B', 'C'], $dropped->destination);
+    }
+
     public function testFeedsStayWithTheirFolder(): void
     {
         $feeds = [new OpmlFeedModel('https://a.example/feed.xml', 'A feed', 'rss')];

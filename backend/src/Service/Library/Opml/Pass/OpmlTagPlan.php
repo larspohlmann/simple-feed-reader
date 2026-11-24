@@ -6,7 +6,6 @@ namespace App\Service\Library\Opml\Pass;
 
 use App\Entity\Tag;
 
-/** The final tag name of every spot one import plans: a stored tag where it sits at that spot, else a free name. */
 final class OpmlTagPlan
 {
     private const int NAME_LIMIT = 100;
@@ -60,26 +59,33 @@ final class OpmlTagPlan
 
     private function claim(string $spot, ?string $parentSpot, string $name): void
     {
-        $candidate = $name;
-        for ($number = 1; !$this->isFreeAt($candidate, $parentSpot); ++$number) {
-            $candidate = self::buildNumberedName($name, $number);
+        foreach (self::buildCandidates($name) as $candidate) {
+            $reused = $this->findStoredAt($candidate, $parentSpot);
+            if ($this->isFree($candidate, $reused)) {
+                $this->hold($spot, $candidate, $reused);
+
+                return;
+            }
         }
+    }
+
+    private function isFree(string $candidate, ?Tag $reused): bool
+    {
+        $key = mb_strtolower($candidate);
+        if (isset($this->heldNames[$key])) {
+            return false;
+        }
+
+        return $reused !== null || !isset($this->storedByName[$key]);
+    }
+
+    private function hold(string $spot, string $candidate, ?Tag $reused): void
+    {
         $this->heldNames[mb_strtolower($candidate)] = true;
-        $reused = $this->findStoredAt($candidate, $parentSpot);
         $this->finalNames[$spot] = $reused?->getName() ?? $candidate;
         if ($reused !== null) {
             $this->reusedTags[$spot] = $reused;
         }
-    }
-
-    private function isFreeAt(string $candidate, ?string $parentSpot): bool
-    {
-        if (isset($this->heldNames[mb_strtolower($candidate)])) {
-            return false;
-        }
-
-        return !isset($this->storedByName[mb_strtolower($candidate)])
-            || $this->findStoredAt($candidate, $parentSpot) !== null;
     }
 
     private function findStoredAt(string $candidate, ?string $parentSpot): ?Tag
@@ -88,16 +94,21 @@ final class OpmlTagPlan
             return null;
         }
         $parent = $parentSpot === null ? null : $this->reusedTags[$parentSpot];
+
         return array_find(
             $this->storedByName[mb_strtolower($candidate)] ?? [],
-            static fn (Tag $tag): bool => $tag->getParent() === $parent,
+            static fn (Tag $tag): bool => $tag->getParent()?->requireId() === $parent?->requireId(),
         );
     }
 
-    private static function buildNumberedName(string $name, int $number): string
+    /** @return \Generator<int, string> */
+    private static function buildCandidates(string $name): \Generator
     {
-        $suffix = sprintf(' (%d)', $number);
+        yield $name;
+        for ($number = 1;; ++$number) {
+            $suffix = sprintf(' (%d)', $number);
 
-        return mb_substr($name, 0, self::NAME_LIMIT - mb_strlen($suffix)) . $suffix;
+            yield mb_substr($name, 0, self::NAME_LIMIT - mb_strlen($suffix)) . $suffix;
+        }
     }
 }
