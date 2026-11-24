@@ -19,8 +19,9 @@ rebuilds byte-identical files; another version may compress differently.
 
 The files are neither hashed nor versioned, so a browser's heuristic cache can serve a stale one after a
 constant changes. The first time the constants change after a release, give the URLs a version: a `?v=` on
-every URL in `theme/_fonts.scss`, on the preload in `index.html` and in `externalDependencies` in
-`angular.json`, or new file names in all three and in `FACES`.
+every URL in `theme/_fonts.scss`, on the preload in `index.html` and on the wildcard under
+`externalDependencies` in `angular.json`, or new file names in the first two and in `FACES` that still match
+that wildcard (`fonts/newsreader-classic-*.woff2`).
 
 ## The three constants
 

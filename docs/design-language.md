@@ -243,9 +243,9 @@ for a cached classic. No request goes to another origin.
 - **Rebuilding.** `frontend/scripts/fonts/README.md` holds the three constants, the build command and the
   measuring script; the files are rebuilt, never edited.
 - **URLs are relative.** `_fonts.scss` and the preload say `fonts/…`, not `/fonts/…`, because the `strato`
-  build runs under the base `/reader/`. The six paths are listed under `externalDependencies` in
-  `angular.json` so the bundler leaves them alone: adding or renaming a font file means editing that list
-  too.
+  build runs under the base `/reader/`. One wildcard, `fonts/newsreader-classic-*.woff2`, under
+  `externalDependencies` in `angular.json` keeps the bundler off them, so a new file under that name needs no
+  edit there.
 
 ### Breakpoints
 
