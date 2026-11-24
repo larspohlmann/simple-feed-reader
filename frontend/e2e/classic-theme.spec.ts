@@ -290,6 +290,49 @@ test.describe('the Trending story headline is a title', () => {
   });
 });
 
+/** Newsreader's deepest descender among g, j, p, q and y at `size`, in em, read from the served face. */
+function descenderDepth(page: Page, size: number): Promise<number> {
+  return page.evaluate((pixels) => {
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.font = `${pixels}px 'Newsreader Classic'`;
+    return context.measureText('gjpqy').actualBoundingBoxDescent / pixels;
+  }, size);
+}
+
+/** Room below the baseline of `selector`'s text, down to the nearest box that clips it vertically. */
+function roomBelowBaseline(page: Page, selector: string): Promise<{ room: number; size: number }> {
+  return page
+    .locator(selector)
+    .first()
+    .evaluate((element) => {
+      const marker = document.createElement('span');
+      marker.style.cssText = 'display: inline-block; width: 0; height: 0;';
+      element.append(marker);
+      const baseline = marker.getBoundingClientRect().bottom;
+      marker.remove();
+      let clipBottom = Infinity;
+      for (let node: Element | null = element; node; node = node.parentElement) {
+        if (getComputedStyle(node).overflowY === 'visible') continue;
+        clipBottom = node.getBoundingClientRect().top + node.clientTop + node.clientHeight;
+        break;
+      }
+      return { room: clipBottom - baseline, size: parseFloat(getComputedStyle(element).fontSize) };
+    });
+}
+
+test.describe('descenders under classic', () => {
+  test("a one-line title's clipping box leaves room for the deepest descender", async ({
+    page,
+  }) => {
+    await openTrending(page, 'classic');
+    await expect(page.locator('app-list-header h2')).toContainText('g');
+    const { room, size } = await roomBelowBaseline(page, 'app-list-header h2');
+    const depth = await descenderDepth(page, size);
+    expect(depth, 'the descender depth was not read from the face').toBeGreaterThan(0.25);
+    expect(room, 'the list header cuts a descender').toBeGreaterThanOrEqual(depth * size);
+  });
+});
+
 test.describe('type under graphite', () => {
   test('requests no font file, links no preload, and keeps every recorded literal', async ({
     page,

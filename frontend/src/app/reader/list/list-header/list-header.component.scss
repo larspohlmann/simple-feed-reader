@@ -86,7 +86,7 @@ h2 {
   /* A long feed title must truncate rather than shove the Unread/All
            toggle off-screen (notably on mobile). */
   min-width: 0;
-  overflow: hidden;
+  overflow: clip visible;
   text-overflow: ellipsis;
   white-space: nowrap;
 
