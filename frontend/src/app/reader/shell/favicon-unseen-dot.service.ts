@@ -5,8 +5,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 const BADGED_VECTOR_HREF = 'favicon-unseen.svg?v=1';
 const BADGED_RASTER_HREF = 'favicon-unseen-32.png?v=1';
 
-/** Puts a dot on the tab's favicon while a notification is unseen (#2515).
- *  Injected for its effect. */
+/** Injected for its effect. */
 @Injectable()
 export class FaviconUnseenDot {
   private readonly icons = Array.from(
