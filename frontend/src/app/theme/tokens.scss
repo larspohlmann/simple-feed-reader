@@ -89,7 +89,6 @@
   --read-heading-weight: 650;
   --app-name-weight: 700;
   --app-name-size: 1.2em;
-  --count-numerals: lining-nums tabular-nums;
 }
 
 @include brightness.theme-steps('light', graphite.$light);

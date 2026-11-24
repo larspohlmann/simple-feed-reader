@@ -205,10 +205,11 @@ the same selector.
 service, and nowhere else.** No component, template or service branches on a theme's name, and no rule uses
 `!important` to win against one. A surface that differs per theme reads a token.
 
-Classic sets nine type tokens in `:root[data-theme-name='classic']` (`theme/tokens.scss`). A consumer reads
+Classic sets eight type tokens in `:root[data-theme-name='classic']` (`theme/tokens.scss`). A consumer reads
 `var(--token, literal)` with the literal graphite renders today, so graphite defines none of them and the
 fallback is the only value it ever sees. A new consumer keeps that shape; a token a theme sets is declared in
-no other block.
+no other block. A sidebar count needs no token: Newsreader's default figures are lining, and graphite's
+`tabular-nums` turns on the face's `tnum`, so the counts align in both themes.
 
 | Token | Classic | Fallback | For (one consumer) |
 |---|---|---|---|
@@ -220,7 +221,6 @@ no other block.
 | `--read-heading-weight` | `650` | `650` | the article's headings (`article-content.component.scss:30`) |
 | `--app-name-weight` | `700` | `700` | the app name in the header (`reader/shell/header/reader-header.component.scss:84`) |
 | `--app-name-size` | `1.2em` | `1em` | the same (`reader-header.component.scss:90`) |
-| `--count-numerals` | `lining-nums tabular-nums` | `tabular-nums` | a sidebar row's count (`reader/shell/sidebar/_sidebar-row.scss:137`) |
 
 Classic's `--font-text` is `'Newsreader Classic', georgia, serif`. The family is Newsreader, self-hosted
 (OFL-1.1, `public/fonts/OFL.txt`) in four woff2 files in `public/fonts/`: Latin and Latin Extended, roman and

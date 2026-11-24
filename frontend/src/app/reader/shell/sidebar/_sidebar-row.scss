@@ -134,7 +134,7 @@
     margin-left: auto;
     color: var(--text-secondary);
     font-size: var(--fs-sm);
-    font-variant-numeric: var(--count-numerals, tabular-nums);
+    font-variant-numeric: tabular-nums;
     text-align: right;
   }
 
@@ -406,7 +406,7 @@
     flex: none;
     color: var(--text-secondary);
     font-size: var(--fs-sm);
-    font-variant-numeric: var(--count-numerals, tabular-nums);
+    font-variant-numeric: tabular-nums;
   }
 
   .section-head.current .label,

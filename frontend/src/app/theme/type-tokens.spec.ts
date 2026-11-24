@@ -14,7 +14,6 @@ const CLASSIC_TYPE = {
   '--read-heading-weight': '650',
   '--app-name-weight': '700',
   '--app-name-size': '1.2em',
-  '--count-numerals': 'lining-nums tabular-nums',
 };
 
 const THEME_ONLY = Object.keys(CLASSIC_TYPE).filter((token) => token !== '--font-text');

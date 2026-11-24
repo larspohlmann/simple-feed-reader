@@ -94,6 +94,47 @@ async function openList(page: Page, theme: string, view: ListView = {}): Promise
   await page.evaluate(() => document.fonts.ready);
 }
 
+const STORY_TITLE = 'Hamburg dockworkers strike';
+
+async function openTrending(page: Page, theme: string): Promise<void> {
+  await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': 'magazine' });
+  await stubMagazine(page, ENTRIES);
+  await stubAccount(page, theme);
+  const lead = { ...entryWire({ id: 70, title: 'The lead article', source: 'Heise' }), shares: [] };
+  await page.route(
+    (url) => url.pathname === '/api/trending',
+    (route) =>
+      route.fulfill({
+        json: {
+          window: 'day',
+          builtAt: '2026-11-18T08:00:00Z',
+          stories: [
+            {
+              id: 7,
+              title: STORY_TITLE,
+              synopsis: null,
+              followed: false,
+              outletCount: 1,
+              viewed: false,
+              shareCount: 0,
+              createdAt: '2026-11-17T08:00:00Z',
+              lastAddedAt: '2026-11-18T07:00:00Z',
+              leadEntryId: lead.id,
+              articles: [lead],
+            },
+          ],
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/trending/followed',
+    (route) => route.fulfill({ json: { stories: [], nextBuildDueAt: null } }),
+  );
+  await page.goto('/?view=trending&window=day');
+  await expect(page.locator('app-story-headline .title')).toHaveText(STORY_TITLE);
+  await page.evaluate(() => document.fonts.ready);
+}
+
 function token(page: Page, name: string): Promise<string> {
   return page.evaluate(
     (property) => getComputedStyle(document.documentElement).getPropertyValue(property).trim(),
@@ -226,6 +267,26 @@ test.describe('type under classic', () => {
       await page.evaluate(() => document.fonts.check("16px 'Newsreader Classic'")),
       'the family is declared but not usable',
     ).toBe(true);
+  });
+});
+
+test.describe('the Trending story headline is a title', () => {
+  test('classic sets it like every other title', async ({ page }) => {
+    await openTrending(page, 'classic');
+    const headline = await styleOf(page, 'app-story-headline .title');
+    expect(headline.weight).toBe('600');
+    expect(parseFloat(headline.letterSpacing)).toBeCloseTo(-0.006 * parseFloat(headline.size), 2);
+    expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.2 * parseFloat(headline.size), 2);
+  });
+
+  test("graphite keeps develop's literals", async ({ page }) => {
+    await openTrending(page, 'graphite');
+    const headline = await styleOf(page, 'app-story-headline .title');
+    expect(pick(headline, { weight: '', lineHeight: '', letterSpacing: '' })).toEqual({
+      weight: '700',
+      lineHeight: '18.75px',
+      letterSpacing: 'normal',
+    });
   });
 });
 
