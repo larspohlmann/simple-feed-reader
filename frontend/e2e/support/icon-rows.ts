@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { CommentsResponse } from '../../src/app/reader/entry-comment';
 import type { EntryDto, SubscriptionDto } from '../../src/app/reader/models';
 import { aCommentPost, aLinkCard, anEntryComment } from '../../src/testing/entry-testing';
-import { ONE_PIXEL_PNG } from './images';
+import { stubImageHost } from './images';
 import {
   entryDetailJson,
   entryWire,
@@ -52,21 +52,9 @@ export const COMMENTS: CommentsResponse = {
   ],
 };
 
-export async function stubImages(page: Page): Promise<void> {
-  await page.route(
-    (url) => url.hostname === ICON_HOST,
-    (route) => route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG }),
-  );
-}
-
-/** `feed` reshapes the one feed, e.g. to give its entries tag pills; its tags are also the tag list. */
-export async function stubMagazine(
-  page: Page,
-  entries: EntryDto[],
-  feed: Partial<SubscriptionDto> = {},
-): Promise<void> {
+async function stubFeedReader(page: Page, feed: Partial<SubscriptionDto>): Promise<void> {
   await stubOneFeedReader(page, 'Fixture feed');
-  await stubImages(page);
+  await stubImageHost(page, ICON_HOST);
   const subscriptions = oneFeedJson('Fixture feed', feed);
   await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
     route.fulfill({ json: subscriptions }),
@@ -76,25 +64,43 @@ export async function stubMagazine(
       route.fulfill({ json: { tags: feed.tags } }),
     );
   }
+}
+
+/** `feed` reshapes the one feed, e.g. to give its entries tag pills; its tags are also the tag list. */
+export async function stubMagazine(
+  page: Page,
+  entries: EntryDto[],
+  feed: Partial<SubscriptionDto> = {},
+): Promise<void> {
+  await stubFeedReader(page, feed);
   await page.route(
     (url) => url.pathname === '/api/entries',
     (route) => route.fulfill({ json: { entries, nextCursor: null } }),
   );
 }
 
-export async function stubArticle(page: Page, body: string = POST_BODY): Promise<void> {
-  await stubOneFeedReader(page, 'Fixture feed');
-  await stubImages(page);
+interface ArticleStub {
+  post?: EntryDto;
+  body?: string;
+  feed?: Partial<SubscriptionDto>;
+}
+
+/** `post` replaces the one entry with id 1, e.g. to give it a score; `feed` is as for `stubMagazine`. */
+export async function stubArticle(
+  page: Page,
+  { post = POST, body = POST_BODY, feed = {} }: ArticleStub = {},
+): Promise<void> {
+  await stubFeedReader(page, feed);
   await page.route('**/api/client-errors', (route) => route.fulfill({ status: 204 }));
   await page.route(
     (url) => url.pathname === '/api/entries',
-    (route) => route.fulfill({ json: { entries: [POST], nextCursor: null } }),
+    (route) => route.fulfill({ json: { entries: [post], nextCursor: null } }),
   );
   await page.route(
     (url) => url.pathname === '/api/entries/1',
     (route) =>
       route.request().method() === 'GET'
-        ? route.fulfill({ json: entryDetailJson(POST, body) })
+        ? route.fulfill({ json: entryDetailJson(post, body) })
         : route.fallback(),
   );
   await page.route(

@@ -1,6 +1,7 @@
 import { Page, Request, expect, test } from '@playwright/test';
 import { presetLocalStorage, STUB_PROFILE } from './support/auth';
 import { stubMagazine } from './support/icon-rows';
+import { imageEntries } from './support/images';
 import { entryWire } from './support/reader';
 
 /**
@@ -9,16 +10,6 @@ import { entryWire } from './support/reader';
  * entries it measures.
  */
 test.use({ viewport: { width: 1280, height: 900 } });
-
-const IMG =
-  'data:image/svg+xml;base64,' +
-  Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#8a8a86"/></svg>',
-  ).toString('base64');
-
-function imageEntry(id: number, source: string) {
-  return { ...entryWire({ id, source }), imageUrl: IMG, imageWidth: 1200, imageHeight: 800 };
-}
 
 const POST = entryWire({
   id: 9,
@@ -30,13 +21,7 @@ const POST = entryWire({
 });
 
 const ENTRIES = [
-  imageEntry(1, 'Heise'),
-  imageEntry(2, 'Tagesschau'),
-  imageEntry(3, 'Heise'),
-  imageEntry(4, 'Der Spiegel'),
-  imageEntry(5, 'Tagesschau'),
-  imageEntry(6, 'Der Spiegel'),
-  imageEntry(7, 'Heise'),
+  ...imageEntries((id, source) => entryWire({ id, source })),
   entryWire({ id: 8, title: 'A plain entry', source: 'Golem' }),
   POST,
 ];
@@ -282,7 +267,7 @@ test.describe('the Trending story headline is a title', () => {
   test("graphite keeps develop's literals", async ({ page }) => {
     await openTrending(page, 'graphite');
     const headline = await styleOf(page, 'app-story-headline .title');
-    expect(pick(headline, { weight: '', lineHeight: '', letterSpacing: '' })).toEqual({
+    expect(headline).toMatchObject({
       weight: '700',
       lineHeight: '18.75px',
       letterSpacing: 'normal',
@@ -347,10 +332,8 @@ test.describe('type under graphite', () => {
     ).toEqual([]);
     await expect(page.locator('link[rel="preload"][as="font"]')).toHaveCount(0);
 
-    const literal = async (selector: string, expected: Partial<Style>) => {
-      const style = await styleOf(page, selector);
-      expect({ selector, ...pick(style, expected) }).toEqual({ selector, ...expected });
-    };
+    const literal = async (selector: string, expected: Partial<Style>) =>
+      expect(await styleOf(page, selector), selector).toMatchObject(expected);
     await literal(TITLES.hero, { weight: '500', lineHeight: '31.2px', letterSpacing: 'normal' });
     await literal(TITLES.split, { weight: '500', lineHeight: '20.25px', letterSpacing: 'normal' });
     await literal(TITLES.thumb, { weight: '500', lineHeight: '20.25px', letterSpacing: 'normal' });
@@ -372,7 +355,7 @@ test.describe('type under graphite', () => {
     await openList(page, 'graphite', { layout: 'pane' });
 
     const title = await styleOf(page, 'app-entry-row .title');
-    expect(pick(title, { weight: '', lineHeight: '', letterSpacing: '' })).toEqual({
+    expect(title).toMatchObject({
       weight: '500',
       lineHeight: '18.75px',
       letterSpacing: 'normal',
@@ -380,10 +363,6 @@ test.describe('type under graphite', () => {
     expect((await styleOf(page, 'app-entry-row .snippet')).lineHeight).toBe('19.5px');
   });
 });
-
-function pick(style: Style, keys: Partial<Style>): Partial<Style> {
-  return Object.fromEntries(Object.keys(keys).map((key) => [key, style[key as keyof Style]]));
-}
 
 test.describe('first paint', () => {
   test('the attribute and the font preload are there before the account answers', async ({

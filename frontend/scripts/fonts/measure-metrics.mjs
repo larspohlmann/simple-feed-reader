@@ -135,7 +135,7 @@ async function open(browser, fixtures, surface) {
     'sfr.layout': surface === 'article' ? 'pane' : 'magazine',
   });
   if (surface === 'article') {
-    await fixtures.stubArticle(page, ARTICLE_BODY);
+    await fixtures.stubArticle(page, { body: ARTICLE_BODY });
     await page.route(
       (url) => url.pathname === '/api/entries/1/social/viewer',
       (route) =>

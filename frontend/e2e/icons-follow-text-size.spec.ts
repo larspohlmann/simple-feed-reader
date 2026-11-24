@@ -2,7 +2,7 @@ import { Browser, expect, Page, test } from '@playwright/test';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { presetLocalStorage } from './support/auth';
 import { AVATAR, FAVICON, POST, stubArticle, stubMagazine } from './support/icon-rows';
-import { entryDetailJson, entryWire, oneFeedJson } from './support/reader';
+import { entryWire } from './support/reader';
 
 /**
  * #2524: inside a text-scaled container a row of controls scales as one. Where a row's text follows
@@ -66,7 +66,8 @@ const ROWS = {
   countsRow: 'app-social-counts-row',
 };
 
-const ICONS = 'app-icon, app-favicon img, app-tag-glyph, app-network-logo';
+/** What each icon draws: an `app-icon`'s glyph span, any other icon itself. */
+const GLYPHS = 'app-icon > span, app-favicon img, app-tag-glyph, app-network-logo';
 
 type Step = 90 | 100 | 150;
 type Surface = 'magazine' | 'grouped' | 'article';
@@ -87,54 +88,65 @@ interface View {
   viewport?: { width: number; height: number };
 }
 
-async function open(browser: Browser, { surface, step, viewport = DESKTOP }: View): Promise<Page> {
-  const context = await browser.newContext({
-    baseURL: test.info().project.use.baseURL,
-    viewport,
-  });
+interface Setup {
+  step: Step;
+  layout: 'pane' | 'magazine';
+  viewport: { width: number; height: number };
+}
+
+async function openPage(
+  browser: Browser,
+  { step, layout, viewport }: Setup,
+  load: (page: Page) => Promise<void>,
+): Promise<Page> {
+  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport });
   const page = await context.newPage();
-  await presetLocalStorage(page, {
-    'sfr.textSize': String(step),
-    'sfr.layout': surface === 'article' ? 'pane' : 'magazine',
-  });
-  if (surface === 'magazine') {
-    await stubMagazine(page, LIST_ENTRIES);
-    await page.goto('/');
-    await expect(page.locator('.also-foot').first()).toBeVisible();
-    await expect(page.locator('app-entry-kicker-line img.avatar').first()).toBeVisible();
-  } else if (surface === 'grouped') {
-    await stubMagazine(page, GROUPED_ENTRIES);
-    await page.goto('/');
-    await expect(page.locator(`${ROWS.groupedKicker} app-entry-pills .pill`).first()).toBeVisible();
-    await expect(page.locator(`${ROWS.groupedKicker} app-entry-like .count`).first()).toBeVisible();
-  } else {
-    await stubArticle(page);
-    await page.goto('/?subscription=1');
-    await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
-    await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
-    await expect(page.locator('app-entry-comments button.delete')).toBeVisible();
-    await expect(page.locator('app-open-in-reader app-icon').first()).toBeAttached();
-  }
+  await presetLocalStorage(page, { 'sfr.textSize': String(step), 'sfr.layout': layout });
+  await load(page);
   await page.evaluate(() => document.fonts.ready);
   return page;
 }
 
-function glyphHeight(element: Element): number {
-  const box = element.tagName === 'APP-ICON' ? element.querySelector('span')! : element;
-  return box.getBoundingClientRect().height;
+async function open(browser: Browser, { surface, step, viewport = DESKTOP }: View): Promise<Page> {
+  const layout = surface === 'article' ? 'pane' : 'magazine';
+  return openPage(browser, { step, layout, viewport }, async (page) => {
+    if (surface === 'magazine') {
+      await stubMagazine(page, LIST_ENTRIES);
+      await page.goto('/');
+      await expect(page.locator('.also-foot').first()).toBeVisible();
+      await expect(page.locator('app-entry-kicker-line img.avatar').first()).toBeVisible();
+    } else if (surface === 'grouped') {
+      await stubMagazine(page, GROUPED_ENTRIES);
+      await page.goto('/');
+      await expect(
+        page.locator(`${ROWS.groupedKicker} app-entry-pills .pill`).first(),
+      ).toBeVisible();
+      await expect(
+        page.locator(`${ROWS.groupedKicker} app-entry-like .count`).first(),
+      ).toBeVisible();
+    } else {
+      await stubArticle(page);
+      await page.goto('/?subscription=1');
+      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
+      await expect(page.locator('app-entry-comments button.delete')).toBeVisible();
+      await expect(page.locator('app-open-in-reader app-icon').first()).toBeAttached();
+    }
+  });
 }
 
 async function iconHeights(page: Page, selector: string): Promise<number[]> {
-  return page.locator(selector).evaluateAll(
-    (elements, icons) =>
-      elements.flatMap((element) =>
-        [...element.querySelectorAll(icons)].map((icon) => {
-          const box = icon.tagName === 'APP-ICON' ? icon.querySelector('span')! : icon;
-          return box.getBoundingClientRect().height;
-        }),
-      ),
-    ICONS,
-  );
+  return page
+    .locator(selector)
+    .evaluateAll(
+      (elements, glyphs) =>
+        elements.flatMap((element) =>
+          [...element.querySelectorAll(glyphs)].map(
+            (glyph) => glyph.getBoundingClientRect().height,
+          ),
+        ),
+      GLYPHS,
+    );
 }
 
 async function fontSize(page: Page, selector: string): Promise<number> {
@@ -186,7 +198,15 @@ async function measure(browser: Browser, surface: Surface, step: Step): Promise<
     texts[name] = await fontSize(page, selector);
   }
   const single = (selector: string) =>
-    surface === 'article' ? page.locator(selector).first().evaluate(glyphHeight) : 0;
+    surface === 'article'
+      ? page
+          .locator(selector)
+          .first()
+          .evaluate(
+            (icon, glyphs) => icon.querySelector(glyphs)!.getBoundingClientRect().height,
+            GLYPHS,
+          )
+      : 0;
   const measurement = {
     icons,
     texts,
@@ -355,42 +375,20 @@ interface PillRowView {
 }
 
 async function openPillRow(browser: Browser, { row, step, viewport = DESKTOP }: PillRowView) {
-  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport });
-  const page = await context.newPage();
-  await presetLocalStorage(page, {
-    'sfr.textSize': String(step),
-    'sfr.layout': row === 'articleHead' ? 'pane' : 'magazine',
+  const layout = row === 'articleHead' ? 'pane' : 'magazine';
+  return openPage(browser, { step, layout, viewport }, async (page) => {
+    if (row === 'groupHead') {
+      await stubMagazine(page, GROUPED_ENTRIES, { id: 2, tags: PILL_TAGS });
+      await page.goto('/');
+    } else {
+      const scored = { ...POST, score: 12, myVote: null };
+      await stubArticle(page, { post: scored, feed: { tags: PILL_TAGS } });
+      await page.goto('/?subscription=1');
+      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      await expect(page.locator(`${PILL_ROWS[row]} app-vote-pill`)).toBeVisible();
+    }
+    await expect(page.locator(`${PILL_ROWS[row]} app-entry-pills a.pill`)).toHaveCount(2);
   });
-  if (row === 'groupHead') {
-    await stubMagazine(page, GROUPED_ENTRIES, { id: 2, tags: PILL_TAGS });
-    await page.goto('/');
-  } else {
-    const scored = { ...POST, score: 12, myVote: null };
-    await stubArticle(page);
-    await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
-      route.fulfill({ json: oneFeedJson('Fixture feed', { tags: PILL_TAGS }) }),
-    );
-    await page.route(/\/api\/tags(?:[?#]|$)/, (route) =>
-      route.fulfill({ json: { tags: PILL_TAGS } }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/entries',
-      (route) => route.fulfill({ json: { entries: [scored], nextCursor: null } }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/entries/1',
-      (route) =>
-        route.request().method() === 'GET'
-          ? route.fulfill({ json: entryDetailJson(scored, '<p>The post itself.</p>') })
-          : route.fallback(),
-    );
-    await page.goto('/?subscription=1');
-    await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
-    await expect(page.locator(`${PILL_ROWS[row]} app-vote-pill`)).toBeVisible();
-  }
-  await expect(page.locator(`${PILL_ROWS[row]} app-entry-pills a.pill`)).toHaveCount(2);
-  await page.evaluate(() => document.fonts.ready);
-  return page;
 }
 
 interface PillRowMeasurement {
@@ -404,7 +402,7 @@ async function measurePillRow(page: Page, row: PillRow): Promise<PillRowMeasurem
   return page
     .locator(PILL_ROWS[row])
     .first()
-    .evaluate((container, icons) => {
+    .evaluate((container, glyphs) => {
       const outer = container.getBoundingClientRect();
       const parts = [...container.querySelectorAll('*')].filter(
         (part) => part.getBoundingClientRect().width > 0,
@@ -427,12 +425,11 @@ async function measurePillRow(page: Page, row: PillRow): Promise<PillRowMeasurem
       const texts = [...container.querySelectorAll('.name, .number')].map((text) =>
         parseFloat(getComputedStyle(text).fontSize),
       );
-      const heights = [...container.querySelectorAll(icons)].map((icon) => {
-        const box = icon.tagName === 'APP-ICON' ? icon.querySelector('span')! : icon;
-        return box.getBoundingClientRect().height;
-      });
+      const heights = [...container.querySelectorAll(glyphs)].map(
+        (glyph) => glyph.getBoundingClientRect().height,
+      );
       return { icons: heights, texts, escapes };
-    }, ICONS);
+    }, GLYPHS);
 }
 
 test.describe('a row of pills scales as one', () => {
