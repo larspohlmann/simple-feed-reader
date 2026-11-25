@@ -7,6 +7,7 @@ namespace App\Service\Outbound\Fetch;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Whether a failed request is worth re-driving over the next address family; both fetch paths ask it. A route failure
@@ -19,6 +20,22 @@ final readonly class CrossFamilyFailover
         Response::HTTP_GONE,
         Response::HTTP_TOO_MANY_REQUESTS,
     ];
+
+    private const array REPEATABLE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+    public function allowsRetryAfterFailure(
+        string $method,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): bool {
+        return $this->isWarranted($transportError)
+            && ($this->isRepeatable($method) || 0.0 === $failed->getInfo('pretransfer_time'));
+    }
+
+    public function allowsRetryAfterStatus(string $method, int $statusCode): bool
+    {
+        return $this->isRepeatable($method) && $this->isRetryableStatus($statusCode);
+    }
 
     public function isWarranted(?\Throwable $transportError): bool
     {
@@ -34,5 +51,10 @@ final readonly class CrossFamilyFailover
     {
         return $statusCode >= Response::HTTP_BAD_REQUEST
             && !\in_array($statusCode, self::ROUTE_INDEPENDENT_STATUSES, true);
+    }
+
+    private function isRepeatable(string $method): bool
+    {
+        return \in_array(strtoupper($method), self::REPEATABLE_METHODS, true);
     }
 }

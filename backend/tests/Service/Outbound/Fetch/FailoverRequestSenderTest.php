@@ -10,10 +10,13 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\PinnedRequestOptions;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\DecoratorTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class FailoverRequestSenderTest extends TestCase
 {
@@ -21,7 +24,7 @@ final class FailoverRequestSenderTest extends TestCase
 
     private const array DUAL_STACK = ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34'];
 
-    private function sender(MockHttpClient $client): FailoverRequestSender
+    private function sender(HttpClientInterface $client): FailoverRequestSender
     {
         return FetchWiring::failoverSender($client, $this->noEgressProxy());
     }
@@ -208,5 +211,101 @@ final class FailoverRequestSenderTest extends TestCase
 
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
         self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testAWriteThatResetBeforeItLeftIsSentOverTheNextFamily(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['error' => 'Connection reset by peer', 'pretransfer_time' => 0.0]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sendDualStack($client, 'POST');
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    public function testAWriteThatResetAfterItLeftIsNotSentAgain(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['error' => 'Connection reset by peer', 'pretransfer_time' => 0.05]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        try {
+            $this->sendDualStack($client, 'POST');
+            self::fail('The reset should surface.');
+        } catch (TransportExceptionInterface) {
+            self::assertSame(1, $client->getRequestsCount());
+        }
+    }
+
+    public function testAWriteAnsweredWithAnErrorStatusKeepsThatAnswer(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sendDualStack($client, 'POST');
+
+        self::assertSame(Response::HTTP_BAD_GATEWAY, $response->getStatusCode());
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testALowercaseWriteIsAWriteToo(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sender($this->uppercasingClient($client))->send(
+            'post',
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
+
+        self::assertSame(Response::HTTP_BAD_GATEWAY, $response->getStatusCode());
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    private function uppercasingClient(HttpClientInterface $inner): HttpClientInterface
+    {
+        return new class ($inner) implements HttpClientInterface {
+            use DecoratorTrait;
+
+            /**
+             * @param array<string, mixed> $options
+             */
+            public function request(string $method, string $url, array $options = []): ResponseInterface
+            {
+                return $this->client->request(strtoupper($method), $url, $options);
+            }
+        };
+    }
+
+    private function dualStackClient(MockResponse $overIpv6, MockResponse $overIpv4): MockHttpClient
+    {
+        return new MockHttpClient(
+            static function (string $method, string $url, array $options) use ($overIpv6, $overIpv4): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+
+                return str_contains($resolve['dual.example.com'], ':') ? $overIpv6 : $overIpv4;
+            },
+        );
+    }
+
+    private function sendDualStack(MockHttpClient $client, string $method): ResponseInterface
+    {
+        return $this->sender($client)->send(
+            $method,
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
     }
 }

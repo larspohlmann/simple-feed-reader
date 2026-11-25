@@ -159,14 +159,14 @@ final readonly class FailoverRequestSender
                 $status = $response->getStatusCode();
             } catch (TransportExceptionInterface $transportError) {
                 $response->cancel();
-                if ($canFailOver && $this->failover->isWarranted($transportError)) {
+                if ($canFailOver && $this->failover->allowsRetryAfterFailure($method, $response, $transportError)) {
                     continue;
                 }
 
                 throw $transportError;
             }
 
-            if ($canFailOver && $this->failover->isRetryableStatus($status)) {
+            if ($canFailOver && $this->failover->allowsRetryAfterStatus($method, $status)) {
                 $response->cancel();
 
                 continue;
