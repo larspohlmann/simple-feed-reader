@@ -79,7 +79,7 @@
         @let url = row.feed.url;
         @let host = row.host;
         @let title = row.feed.title ?? host;
-        @let changed = selection.isChanged(url);
+        @let changed = selection.modeOf(url) !== 'folder';
         <li
           class="row"
           data-testid="opml-import-feed"
@@ -107,7 +107,7 @@
                   variant="ghost"
                   size="sm"
                   data-testid="opml-import-use-folder"
-                  (click)="selection.useFolder(url)"
+                  (click)="selection.setMode(url, 'folder')"
                 >
                   {{ 'settings.opml.useFolder' | transloco }}
                 </app-button>
@@ -116,7 +116,7 @@
                   variant="ghost"
                   size="sm"
                   data-testid="opml-import-change-tags"
-                  (click)="selection.changeTags(url)"
+                  (click)="selection.setMode(url, 'tagsOnly')"
                 >
                   {{ 'settings.opml.changeTags' | transloco }}
                 </app-button>

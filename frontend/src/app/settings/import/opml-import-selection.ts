@@ -4,6 +4,8 @@ import { hostOf, parseUrl } from '../../shared/url-host';
 import {
   OpmlImportRequest,
   OpmlImportRow,
+  OpmlTagChoice,
+  OpmlTagMode,
   OpmlPreview,
   OpmlPreviewFeed,
   OpmlPreviewFolder,
@@ -64,7 +66,7 @@ function collectDroppedNames(folder: OpmlPreviewFolder): string[] {
 export class OpmlImportSelection {
   private readonly preview = signal<OpmlPreview | null>(null);
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
-  private readonly tagChoices = signal<ReadonlyMap<string, ReadonlySet<number>>>(new Map());
+  private readonly tagChoices = signal<ReadonlyMap<string, OpmlTagChoice>>(new Map());
 
   private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
@@ -88,6 +90,9 @@ export class OpmlImportSelection {
   readonly rows = computed(() => this.flattened().rows);
   readonly selected = this.selectedUrls.asReadonly();
   readonly selectedCount = computed(() => this.selectedUrls().size);
+  readonly allTicked = computed(
+    () => this.selectedCount() > 0 && this.selectedCount() === this.importable().size,
+  );
   readonly freeSlots = computed(() => this.preview()?.freeSlots ?? 0);
   readonly overLimit = computed(() => this.selectedCount() > this.freeSlots());
   readonly droppedFolders = computed(() => {
@@ -133,27 +138,37 @@ export class OpmlImportSelection {
     this.selectedUrls.set(new Set());
   }
 
-  isChanged(url: string): boolean {
-    return this.tagChoices().has(url);
+  modeOf(url: string): OpmlTagMode {
+    return this.tagChoices().get(url)?.mode ?? 'folder';
   }
 
   chosenTags(url: string): ReadonlySet<number> {
-    return this.tagChoices().get(url) ?? new Set();
+    return this.tagChoices().get(url)?.tagIds ?? new Set();
   }
 
-  changeTags(url: string): void {
-    this.tagChoices.update((previous) => new Map(previous).set(url, new Set()));
+  setMode(url: string, mode: OpmlTagMode): void {
+    this.tagChoices.update((previous) => {
+      const next = new Map(previous);
+      if (mode === 'folder') next.delete(url);
+      else next.set(url, { mode, tagIds: this.chosenTags(url) });
+      return next;
+    });
   }
 
   toggleTag(url: string, tagId: number): void {
-    const next = toggled(this.chosenTags(url), tagId);
-    this.tagChoices.update((previous) => new Map(previous).set(url, next));
+    const mode = this.modeOf(url);
+    if (mode === 'folder') return;
+    const tagIds = toggled(this.chosenTags(url), tagId);
+    this.tagChoices.update((previous) => new Map(previous).set(url, { mode, tagIds }));
   }
 
-  useFolder(url: string): void {
+  applyToTicked(mode: OpmlTagMode, tagIds: ReadonlySet<number>): void {
     this.tagChoices.update((previous) => {
       const next = new Map(previous);
-      next.delete(url);
+      for (const url of this.selectedUrls()) {
+        if (mode === 'folder') next.delete(url);
+        else next.set(url, { mode, tagIds });
+      }
       return next;
     });
   }
@@ -163,11 +178,20 @@ export class OpmlImportSelection {
       row.kind === 'feed' && this.selectedUrls().has(row.feed.url) ? [row.feed.url] : [],
     );
     const tagIdsByFeedUrl: Record<string, number[]> = {};
+    const addedTagIdsByFeedUrl: Record<string, number[]> = {};
     for (const url of feedUrls) {
-      const chosen = this.tagChoices().get(url);
-      if (chosen !== undefined)
-        tagIdsByFeedUrl[url] = [...chosen].sort((left, right) => left - right);
+      const choice = this.tagChoices().get(url);
+      if (choice === undefined) continue;
+      const target = choice.mode === 'tagsOnly' ? tagIdsByFeedUrl : addedTagIdsByFeedUrl;
+      target[url] = [...choice.tagIds].sort((left, right) => left - right);
     }
-    return { opml, parentTagName, feedUrls, tagIdsByFeedUrl };
+    return {
+      opml,
+      parentTagName,
+      feedUrls,
+      tagIdsByFeedUrl,
+      addedTagIdsByFeedUrl,
+      folderNames: {},
+    };
   }
 }

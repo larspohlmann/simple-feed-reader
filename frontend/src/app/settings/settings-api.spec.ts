@@ -147,6 +147,8 @@ describe('SettingsApi', () => {
       parentTagName: null,
       feedUrls: ['https://a.test/feed'],
       tagIdsByFeedUrl: { 'https://a.test/feed': [3] },
+      addedTagIdsByFeedUrl: {},
+      folderNames: {},
     };
     api.importOpml(request).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/opml/import');

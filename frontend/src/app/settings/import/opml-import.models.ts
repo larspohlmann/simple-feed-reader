@@ -24,6 +24,15 @@ export interface OpmlImportRequest {
   parentTagName: string | null;
   feedUrls: string[];
   tagIdsByFeedUrl: Record<string, number[]>;
+  addedTagIdsByFeedUrl: Record<string, number[]>;
+  folderNames: Record<string, string>;
+}
+
+export type OpmlTagMode = 'folder' | 'folderPlusTags' | 'tagsOnly';
+
+export interface OpmlTagChoice {
+  mode: Exclude<OpmlTagMode, 'folder'>;
+  tagIds: ReadonlySet<number>;
 }
 
 export type OpmlImportRow =

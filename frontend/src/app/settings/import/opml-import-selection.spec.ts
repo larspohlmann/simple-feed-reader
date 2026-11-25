@@ -133,7 +133,7 @@ describe('OpmlImportSelection', () => {
 
   it('keeps the selection and the changed tags across a new preview', () => {
     selection.toggleFeed('r');
-    selection.changeTags('a1');
+    selection.setMode('a1', 'tagsOnly');
     selection.toggleTag('a1', 7);
     selection.load(previewOf(10, 'Y'));
     expect([...selection.selected()].sort()).toEqual(['a1', 'b1']);
@@ -152,16 +152,18 @@ describe('OpmlImportSelection', () => {
   });
 
   it('builds the request from the selection', () => {
-    selection.changeTags('b1');
+    selection.setMode('b1', 'tagsOnly');
     selection.toggleTag('b1', 9);
     selection.toggleTag('b1', 3);
-    selection.changeTags('r');
+    selection.setMode('r', 'tagsOnly');
     selection.toggleFeed('r');
     expect(selection.toRequest('<opml/>', null)).toEqual({
       opml: '<opml/>',
       parentTagName: null,
       feedUrls: ['a1', 'b1'],
       tagIdsByFeedUrl: { b1: [3, 9] },
+      addedTagIdsByFeedUrl: {},
+      folderNames: {},
     });
   });
 
@@ -169,23 +171,110 @@ describe('OpmlImportSelection', () => {
     expect(selection.toRequest('<opml/>', 'Imported').parentTagName).toBe('Imported');
   });
 
-  it('use folder forgets the changed tags', () => {
-    selection.changeTags('a1');
-    selection.useFolder('a1');
-    expect(selection.isChanged('a1')).toBe(false);
+  it('a feed starts in folder mode', () => {
+    expect(selection.modeOf('a1')).toBe('folder');
+  });
+
+  it('setMode folder clears its tags', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 4);
+    selection.setMode('a1', 'folder');
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect([...selection.chosenTags('a1')]).toEqual([]);
     expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({});
   });
 
-  it('an empty choice is sent as untagged', () => {
-    selection.changeTags('a1');
-    expect(selection.isChanged('a1')).toBe(true);
+  it('an empty tags only choice is sent as untagged', () => {
+    selection.setMode('a1', 'tagsOnly');
+    expect(selection.modeOf('a1')).toBe('tagsOnly');
     expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [] });
   });
 
   it('toggles a tag off again', () => {
-    selection.changeTags('a1');
+    selection.setMode('a1', 'tagsOnly');
     selection.toggleTag('a1', 4);
     selection.toggleTag('a1', 4);
     expect([...selection.chosenTags('a1')]).toEqual([]);
+  });
+
+  it('ignores a tag toggle on a feed in folder mode', () => {
+    selection.toggleTag('a1', 4);
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect([...selection.chosenTags('a1')]).toEqual([]);
+  });
+
+  it('switching between the tag modes keeps the chosen tags', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 4);
+    selection.setMode('a1', 'folderPlusTags');
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+    selection.setMode('a1', 'tagsOnly');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('applyToTicked writes the mode and tags onto every ticked feed and replaces earlier choices', () => {
+    selection.toggleFeed('r');
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 1);
+    selection.setMode('r', 'tagsOnly');
+    selection.toggleTag('r', 5);
+    selection.applyToTicked('folderPlusTags', new Set([2, 3]));
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([2, 3]);
+    expect(selection.modeOf('b1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('b1')]).toEqual([2, 3]);
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect([...selection.chosenTags('r')]).toEqual([5]);
+  });
+
+  it('applyToTicked folder clears the ticked feeds choices', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.setMode('b1', 'folderPlusTags');
+    selection.applyToTicked('folder', new Set([1]));
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect(selection.modeOf('b1')).toBe('folder');
+    expect([...selection.chosenTags('a1')]).toEqual([]);
+  });
+
+  it('allTicked is true only when every importable feed is ticked', () => {
+    expect(selection.allTicked()).toBe(true);
+    selection.toggleFeed('a1');
+    expect(selection.allTicked()).toBe(false);
+    selection.selectAll();
+    expect(selection.allTicked()).toBe(true);
+    selection.selectNone();
+    expect(selection.allTicked()).toBe(false);
+  });
+
+  it('allTicked is false when nothing is importable', () => {
+    selection.load(previewOf(10, 'X', 'subscribed'));
+    selection.toggleFeed('a1');
+    selection.toggleFeed('r');
+    expect(selection.allTicked()).toBe(false);
+  });
+
+  it('toRequest splits the two tag modes into their maps', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 8);
+    selection.toggleTag('a1', 2);
+    selection.setMode('b1', 'folderPlusTags');
+    selection.toggleTag('b1', 6);
+    selection.toggleTag('b1', 5);
+    expect(selection.toRequest('<opml/>', null)).toEqual({
+      opml: '<opml/>',
+      parentTagName: null,
+      feedUrls: ['r', 'a1', 'b1'],
+      tagIdsByFeedUrl: { a1: [2, 8] },
+      addedTagIdsByFeedUrl: { b1: [5, 6] },
+      folderNames: {},
+    });
+  });
+
+  it('a choice survives a re-preview of the same file', () => {
+    selection.setMode('a1', 'folderPlusTags');
+    selection.load(previewOf());
+    selection.load(previewOf());
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
   });
 });
