@@ -171,7 +171,7 @@
                 [value]="row.tagName"
                 [attr.aria-label]="'settings.opml.renameFolder' | transloco: { name: row.name }"
                 (keydown.enter)="commitRename(row, $event)"
-                (keydown.escape)="cancelRename()"
+                (keydown.escape)="cancelRename(); $event.stopPropagation()"
                 (blur)="commitRename(row, $event)"
               />
             } @else {
