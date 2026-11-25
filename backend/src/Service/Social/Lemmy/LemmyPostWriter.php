@@ -9,7 +9,6 @@ use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\Model\LemmyPostAttemptModel;
 use App\Service\Social\Lemmy\Support\LemmyPostLimits;
 use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;

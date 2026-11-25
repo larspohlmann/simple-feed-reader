@@ -25,7 +25,6 @@ use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
-use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -480,7 +479,9 @@ final class LemmyPostWriterTest extends TestCase
                     return new MockResponse(['']);
                 }
 
-                return self::LISTING === $method . ' ' . $url ? $listing() : Assert::fail('Unrouted request: ' . $url);
+                self::assertSame(self::LISTING, $method . ' ' . $url, 'Unrouted request');
+
+                return $listing();
             },
         );
     }
