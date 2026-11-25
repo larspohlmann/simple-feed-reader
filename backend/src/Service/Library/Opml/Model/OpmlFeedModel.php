@@ -10,6 +10,7 @@ final readonly class OpmlFeedModel
         public string $url,
         public ?string $title,
         public string $sourceFormat,
+        public ?string $siteUrl = null,
     ) {
     }
 }

@@ -222,7 +222,14 @@
               />
               <span class="who">
                 <span class="name">{{ title }}</span>
-                <span class="host">{{ host }}</span>
+                <a
+                  class="host"
+                  data-testid="opml-import-site"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [href]="row.siteHref"
+                  >{{ host }}</a
+                >
               </span>
             </label>
             @if (row.feed.state === 'new') {

@@ -128,6 +128,17 @@
   font-size: var(--fs-sm);
 }
 
+a.host {
+  align-self: flex-start;
+  max-width: 100%;
+  text-decoration: none;
+}
+
+a.host:hover,
+a.host:focus-visible {
+  text-decoration: underline;
+}
+
 .state {
   padding: var(--space-0) var(--space-2);
   color: var(--text-muted);

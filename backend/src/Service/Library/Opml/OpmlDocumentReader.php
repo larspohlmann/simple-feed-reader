@@ -48,6 +48,7 @@ final readonly class OpmlDocumentReader
                         $xmlUrl,
                         $this->readTitle($child),
                         $this->resolveSourceFormat($child, $xmlUrl),
+                        $this->readSiteUrl($child),
                     );
                 }
                 continue;
@@ -70,6 +71,17 @@ final readonly class OpmlDocumentReader
         $title = $this->readName($outline);
 
         return $title === null ? null : mb_substr($title, 0, self::MAX_TITLE_LENGTH);
+    }
+
+    private function readSiteUrl(\DOMElement $outline): ?string
+    {
+        $siteUrl = trim($outline->getAttribute('htmlUrl'));
+        $parts = parse_url($siteUrl);
+        if ($parts === false || !isset($parts['host'])) {
+            return null;
+        }
+
+        return \in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true) ? $siteUrl : null;
     }
 
     private function readName(\DOMElement $outline): ?string

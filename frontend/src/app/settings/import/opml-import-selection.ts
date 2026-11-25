@@ -23,6 +23,12 @@ function hostLabel(url: string): string {
   return parsed === null ? url : hostOf(parsed);
 }
 
+function siteHrefOf(feed: OpmlPreviewFeed): string {
+  if (feed.siteUrl !== null) return feed.siteUrl;
+  const parsed = parseUrl(feed.url);
+  return parsed === null ? feed.url : `${parsed.protocol}//${parsed.host}/`;
+}
+
 function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
   const path = ancestors.length === 0 ? 'f' : `${ancestors[ancestors.length - 1]}.`;
   const feedRows = folder.feeds.map((feed: OpmlPreviewFeed): OpmlImportRow => ({
@@ -32,6 +38,7 @@ function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]):
     ancestors,
     feed,
     host: hostLabel(feed.url),
+    siteHref: siteHrefOf(feed),
     destination: folder.destination,
   }));
   const importableUrls = folder.feeds

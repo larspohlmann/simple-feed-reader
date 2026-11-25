@@ -3,7 +3,7 @@ import { OpmlFeedState, OpmlImportRow, OpmlPreview, OpmlPreviewFeed } from './op
 import { OpmlImportSelection, toPosition } from './opml-import-selection';
 
 function feed(url: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
-  return { url, title: null, state };
+  return { url, title: null, siteUrl: null, state };
 }
 
 function previewOf(
@@ -75,6 +75,38 @@ describe('OpmlImportSelection', () => {
       'feed:b1:2',
       'feed:b2:2',
       'folder:f1:0',
+    ]);
+  });
+
+  it('a feed links to its site from the file', () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [{ ...feed('https://alwaysbeta.de/feed/'), siteUrl: 'https://alwaysbeta.de/' }],
+        folders: [],
+      },
+    });
+    const row = selection.rows()[0];
+    expect(row.kind === 'feed' && row.siteHref).toBe('https://alwaysbeta.de/');
+  });
+
+  it("a feed without a site links to its feed's origin", () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [feed('https://blog.example/feed.xml'), feed('not a url')],
+        folders: [],
+      },
+    });
+    expect(selection.rows().map((row) => row.kind === 'feed' && row.siteHref)).toEqual([
+      'https://blog.example/',
+      'not a url',
     ]);
   });
 

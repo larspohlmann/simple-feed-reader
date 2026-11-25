@@ -26,7 +26,8 @@ final class OpmlJson
     /**
      * @return array{freeSlots: int, root: array{
      *     name: ?string, dropped: bool, destination: list<string>,
-     *     feeds: list<array{url: string, title: ?string, state: string}>, folders: list<array<string, mixed>>
+     *     feeds: list<array{url: string, title: ?string, siteUrl: ?string, state: string}>,
+     *     folders: list<array<string, mixed>>
      * }}
      */
     public static function preview(OpmlPreviewModel $preview): array
@@ -42,7 +43,8 @@ final class OpmlJson
      *
      * @return array{
      *     name: ?string, dropped: bool, destination: list<string>,
-     *     feeds: list<array{url: string, title: ?string, state: string}>, folders: list<array<string, mixed>>
+     *     feeds: list<array{url: string, title: ?string, siteUrl: ?string, state: string}>,
+     *     folders: list<array<string, mixed>>
      * }
      */
     private static function formatFolder(OpmlPlacedFolderModel $folder, array $states): array
@@ -55,6 +57,7 @@ final class OpmlJson
                 static fn (OpmlFeedModel $feed): array => [
                     'url' => $feed->url,
                     'title' => $feed->title,
+                    'siteUrl' => $feed->siteUrl,
                     'state' => $states[$feed->url]->value,
                 ],
                 $folder->feeds,

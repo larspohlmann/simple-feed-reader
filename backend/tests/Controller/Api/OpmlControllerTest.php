@@ -132,6 +132,30 @@ final class OpmlControllerTest extends ApiTestCase
         self::assertCount(0, $this->entityManager()->getRepository(Subscription::class)->findBy(['user' => $user]));
     }
 
+    public function testPreviewListsEachFeedsSiteUrl(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-site@example.com')), [
+            'opml' => '<?xml version="1.0"?><opml version="2.0"><body>'
+                . '<outline text="always beta" xmlUrl="https://alwaysbeta.de/feed/" htmlUrl="https://alwaysbeta.de/"/>'
+                . '<outline text="bare" xmlUrl="https://bare.example/feed"/>'
+                . '</body></opml>',
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        $feeds = $root['feeds'];
+        self::assertIsArray($feeds);
+        $siteUrls = [];
+        foreach ($feeds as $feed) {
+            self::assertIsArray($feed);
+            $siteUrls[] = $feed['siteUrl'];
+        }
+        self::assertSame(['https://alwaysbeta.de/', null], $siteUrls);
+    }
+
     public function testPreviewOfAnUnreadableFileIsAProblem(): void
     {
         $client = self::createClient();

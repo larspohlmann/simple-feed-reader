@@ -3,6 +3,7 @@ export type OpmlFeedState = 'new' | 'subscribed' | 'scraped' | 'invalid_url';
 export interface OpmlPreviewFeed {
   url: string;
   title: string | null;
+  siteUrl: string | null;
   state: OpmlFeedState;
 }
 
@@ -58,5 +59,6 @@ export type OpmlImportRow =
       ancestors: string[];
       feed: OpmlPreviewFeed;
       host: string;
+      siteHref: string;
       destination: string[];
     };

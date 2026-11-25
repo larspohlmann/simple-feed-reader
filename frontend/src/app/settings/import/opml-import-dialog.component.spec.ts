@@ -23,7 +23,7 @@ const IMPORT = `${BASE}/api/opml/import`;
 const OPML = '<opml version="2.0"><body/></opml>';
 
 function feed(name: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
-  return { url: `https://${name}.test/feed`, title: null, state };
+  return { url: `https://${name}.test/feed`, title: null, siteUrl: null, state };
 }
 
 function previewOf(freeSlots = 10, destinationPrefix = 'X'): OpmlPreview {
@@ -137,6 +137,22 @@ describe('OpmlImportDialogComponent', () => {
       expect(checkbox(feedRow(name)).checked).toBe(false);
       expect(checkbox(feedRow(name)).disabled).toBe(true);
     }
+  });
+
+  it('the site link opens in a new tab and leaves the tick alone', () => {
+    mount();
+    const link = feedRow('a1').querySelector<HTMLAnchorElement>(
+      '[data-testid="opml-import-site"]',
+    )!;
+
+    expect(link.getAttribute('href')).toBe('https://a1.test/');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+    link.addEventListener('click', (event) => event.preventDefault());
+    link.click();
+    fixture.detectChanges();
+
+    expect(checkbox(feedRow('a1')).checked).toBe(true);
   });
 
   it('shows each new feed its destination', () => {
