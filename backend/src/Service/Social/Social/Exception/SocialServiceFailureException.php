@@ -10,4 +10,9 @@ abstract class SocialServiceFailureException extends SocialNetworkUnreachableExc
     {
         parent::__construct($message, previous: $previous);
     }
+
+    final protected static function buildAnsweredCause(string $serviceName, int $status): \RuntimeException
+    {
+        return new \RuntimeException(sprintf('%s answered %d.', $serviceName, $status));
+    }
 }

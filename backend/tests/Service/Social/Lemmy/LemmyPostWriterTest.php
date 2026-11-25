@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Lemmy;
 
 use App\Entity\SocialAccount;
-use App\Service\Outbound\Fetch\IpValidator;
 use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
-use App\Service\Outbound\Fetch\UrlGuard;
-use App\Service\Social\Lemmy\LemmyAccountApi;
-use App\Service\Social\Lemmy\LemmyApiClient;
 use App\Service\Social\Lemmy\LemmyOwnPosts;
 use App\Service\Social\Lemmy\LemmyPostWriter;
 use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
@@ -25,12 +21,10 @@ use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Model\SocialPostModel;
-use App\Service\Social\Social\StoredCredential;
-use App\Tests\Support\FetchWiring;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -43,8 +37,8 @@ final class LemmyPostWriterTest extends TestCase
     use ReadsFixtures;
 
     private const string COMMENT = 'POST https://lemmy.example/api/v3/comment';
-    private const string POST = 'POST https://lemmy.example/api/v3/post';
     private const string POST_PATH = 'https://lemmy.example/api/v3/post';
+    private const string POST = 'POST ' . self::POST_PATH;
     private const string SENT_AT = '2026-11-25 11:36:09';
     private const string LISTING = 'GET https://lemmy.example/api/v3/user'
         . '?username=lars%40lemmy.example&sort=New&limit=10';
@@ -331,10 +325,7 @@ final class LemmyPostWriterTest extends TestCase
     {
         $http = new RoutedHttpClient([self::POST => new MockResponse(['']), self::LISTING => self::ownListing()]);
 
-        $published = $this->writer($http)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-        );
+        $published = $this->publishTitled($http);
 
         self::assertEquals(
             new PublishedPostModel('https://lemmy.example/post/501', 'https://lemmy.example/post/501'),
@@ -348,10 +339,7 @@ final class LemmyPostWriterTest extends TestCase
         $http = self::instanceHoldingThePost($clock, 8, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
 
         try {
-            $this->writer($http, $clock)->publish(
-                $this->account(),
-                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-            );
+            $this->publishTitled($http, $clock);
             self::fail('A post that never shows up may have gone through.');
         } catch (SocialWriteOutcomeUnknownException) {
             self::assertCount(6, self::listingRequests($http));
@@ -363,14 +351,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $clock = new MockClock(self::SENT_AT);
         $answers = [new MockResponse('{"posts":[]}'), new MockResponse('{"posts":[]}'), self::ownListing()];
-        $http = self::instanceHoldingThePost($clock, 8, static function () use (&$answers): MockResponse {
-            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
-        });
+        $http = self::instanceHoldingThePost($clock, 8, self::queuedListings($answers));
 
-        $published = $this->writer($http, $clock)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-        );
+        $published = $this->publishTitled($http, $clock);
 
         self::assertSame('https://lemmy.example/post/501', $published->url);
         self::assertCount(3, self::listingRequests($http));
@@ -391,14 +374,9 @@ final class LemmyPostWriterTest extends TestCase
     {
         $clock = new MockClock(self::SENT_AT);
         $answers = [new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]), self::ownListing()];
-        $http = self::instanceHoldingThePost($clock, 8, static function () use (&$answers): MockResponse {
-            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
-        });
+        $http = self::instanceHoldingThePost($clock, 8, self::queuedListings($answers));
 
-        $published = $this->writer($http, $clock)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-        );
+        $published = $this->publishTitled($http, $clock);
 
         self::assertSame('https://lemmy.example/post/501', $published->url);
         self::assertCount(2, self::listingRequests($http));
@@ -414,10 +392,7 @@ final class LemmyPostWriterTest extends TestCase
         );
 
         try {
-            $this->writer($http, $clock)->publish(
-                $this->account(),
-                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-            );
+            $this->publishTitled($http, $clock);
             self::fail('A lookup that fails may not hide a lost post.');
         } catch (SocialWriteOutcomeUnknownException) {
             self::assertCount(6, self::listingRequests($http));
@@ -431,10 +406,7 @@ final class LemmyPostWriterTest extends TestCase
             self::LISTING => self::ownListing(),
         ]);
 
-        $published = $this->writer($http)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-        );
+        $published = $this->publishTitled($http);
 
         self::assertSame('https://lemmy.example/post/501', $published->url);
     }
@@ -449,6 +421,25 @@ final class LemmyPostWriterTest extends TestCase
         } catch (SocialWriteOutcomeUnknownException) {
             self::assertCount(1, $http->requests);
         }
+    }
+
+    private function publishTitled(RoutedHttpClient $http, ?MockClock $clock = null): PublishedPostModel
+    {
+        return $this->writer($http, $clock)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+    }
+
+    /**
+     * @param list<MockResponse> $answers
+     * @return \Closure(): MockResponse
+     */
+    private static function queuedListings(array &$answers): \Closure
+    {
+        return static function () use (&$answers): MockResponse {
+            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
+        };
     }
 
     private function assertLookups(int $holdSeconds, int $expectedLookups, int $lastLookupSecond): void
@@ -467,10 +458,7 @@ final class LemmyPostWriterTest extends TestCase
         );
 
         try {
-            $this->writer($http, $clock)->publish(
-                $this->account(),
-                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-            );
+            $this->publishTitled($http, $clock);
             self::fail('A post that never shows up may have gone through.');
         } catch (SocialWriteOutcomeUnknownException) {
             self::assertCount($expectedLookups, $lookedUpAt);
@@ -486,7 +474,7 @@ final class LemmyPostWriterTest extends TestCase
     ): RoutedHttpClient {
         return RoutedHttpClient::answering(
             static function (string $method, string $url) use ($clock, $holdSeconds, $listing): MockResponse {
-                if ('POST ' . self::POST_PATH === $method . ' ' . $url) {
+                if (self::POST === $method . ' ' . $url) {
                     $clock->sleep($holdSeconds);
 
                     return new MockResponse(['']);
@@ -538,10 +526,7 @@ final class LemmyPostWriterTest extends TestCase
 
     private function writer(RoutedHttpClient $http, ?MockClock $clock = null): LemmyPostWriter
     {
-        $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
-        $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
-
-        $lemmy = new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
+        $lemmy = SocialApiWiring::lemmyAccountApi($http->client());
 
         return new LemmyPostWriter($lemmy, new LemmyOwnPosts($lemmy), $clock ?? new MockClock(self::SENT_AT));
     }

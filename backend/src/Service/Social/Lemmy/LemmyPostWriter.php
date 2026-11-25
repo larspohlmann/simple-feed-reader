@@ -22,10 +22,7 @@ use App\Service\Social\Publishing\Model\PostEmbed\QuotedPostEmbedModel;
 use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
-use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Model\PostDeletion;
@@ -74,7 +71,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         $deadline = $attempt->sentAt->modify(sprintf('+%d seconds', self::LANDING_WAIT_SECONDS));
 
         while (true) {
-            $landed = $this->findLanded($account, $attempt);
+            $landed = $this->ownPosts->findJustPublished($account, $attempt);
             if (null !== $landed) {
                 return $landed;
             }
@@ -82,21 +79,6 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
                 return null;
             }
             $this->clock->sleep(self::LANDING_POLL_SECONDS);
-        }
-    }
-
-    private function findLanded(SocialAccount $account, LemmyPostAttemptModel $attempt): ?PublishedPostModel
-    {
-        try {
-            return $this->ownPosts->findJustPublished($account, $attempt);
-        } catch (
-            SocialCredentialsRejectedException
-            | SocialPostRefusedException
-            | SocialPostNotFoundException
-            | SocialNetworkThrottledException
-            | SocialNetworkUnreachableException
-        ) {
-            return null;
         }
     }
 

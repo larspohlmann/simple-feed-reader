@@ -10,6 +10,11 @@ use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Social\Lemmy\Model\LemmyPostAttemptModel;
 use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
+use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Social\Exception\SocialPostRefusedException;
 
 final readonly class LemmyOwnPosts
 {
@@ -22,11 +27,21 @@ final readonly class LemmyOwnPosts
 
     public function findJustPublished(SocialAccount $account, LemmyPostAttemptModel $attempt): ?PublishedPostModel
     {
-        $answer = $this->lemmy->get($account, sprintf(
-            '/api/v3/user?username=%s&sort=New&limit=%d',
-            rawurlencode($account->getIdentity()),
-            self::LOOKUP_LIMIT,
-        ));
+        try {
+            $answer = $this->lemmy->get($account, sprintf(
+                '/api/v3/user?username=%s&sort=New&limit=%d',
+                rawurlencode($account->getIdentity()),
+                self::LOOKUP_LIMIT,
+            ));
+        } catch (
+            SocialCredentialsRejectedException
+            | SocialPostRefusedException
+            | SocialPostNotFoundException
+            | SocialNetworkThrottledException
+            | SocialNetworkUnreachableException
+        ) {
+            return null;
+        }
         $earliest = $attempt->sentAt->modify(sprintf('-%d seconds', self::RECENT_WINDOW_SECONDS));
 
         foreach (JsonNodeModel::fromValue($answer->json())->nodes('posts') as $view) {

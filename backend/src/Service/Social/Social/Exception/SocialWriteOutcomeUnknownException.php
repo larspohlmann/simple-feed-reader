@@ -13,7 +13,7 @@ final class SocialWriteOutcomeUnknownException extends SocialServiceFailureExcep
         return new self(
             $serviceName,
             self::formatMessage($serviceName),
-            new \RuntimeException(sprintf('%s answered %d.', $serviceName, $status)),
+            self::buildAnsweredCause($serviceName, $status),
         );
     }
 
