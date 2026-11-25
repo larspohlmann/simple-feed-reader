@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
+import { ICON_SIZE_TOKEN, IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
 import { TagInclusion } from '../../models';
@@ -35,4 +35,6 @@ export class SidebarGroupRowComponent {
     return inclusion === null ? [] : ownExcludedSurfaces(inclusion);
   });
   protected readonly excluded = computed(() => this.excludedSurfaces().length > 0);
+  /** The lead slot wraps the glyph and its marker, so it publishes the glyph's box for its own. */
+  protected readonly glyphBox = computed(() => ICON_SIZE_TOKEN[this.glyphSize()]);
 }

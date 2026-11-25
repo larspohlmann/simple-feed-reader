@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import type { TagDto } from '../src/app/reader/models';
 import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aSubscription } from '../src/testing/subscription-testing';
@@ -52,15 +53,24 @@ const SOCIAL_ACCOUNTS: SocialAccountRefDto[] = [
   },
 ];
 
-async function openSidebar(page: Page, theme: ThemeName, style: SidebarStyle): Promise<void> {
+/** How the sidebar is opened: its theme and style, its tags, and the networks hidden from All items. */
+interface SidebarSetup {
+  theme: ThemeName;
+  style: SidebarStyle;
+  tags?: TagDto[];
+  excludedNetworks?: string[];
+}
+
+async function openSidebar(
+  page: Page,
+  { theme, style, tags = [NEWS, WORLD], excludedNetworks = [] }: SidebarSetup,
+): Promise<void> {
   await stubOneFeedReader(page, 'Fixture feed', [savedSearchWire({ id: 1, term: 'climate' })]);
   const subscriptions = subscriptionsJson(SUBSCRIPTIONS, { socialAccounts: SOCIAL_ACCOUNTS });
   await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
     route.fulfill({ json: subscriptions }),
   );
-  await page.route(/\/api\/tags(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: { tags: [NEWS, WORLD] } }),
-  );
+  await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags } }));
   await page.route(/\/api\/saved-searches(?:[?#]|$)/, (route) =>
     route.fulfill({ json: savedSearchesJson(savedSearchWire({ id: 1, term: 'climate' })) }),
   );
@@ -70,6 +80,9 @@ async function openSidebar(page: Page, theme: ThemeName, style: SidebarStyle): P
     'sfr.layout': 'magazine',
     'sfr.mastodon.profiles.collapsed': 'false',
   });
+  await page.route('**/api/all-items/excluded-networks', (route) =>
+    route.fulfill({ json: { excludedNetworks } }),
+  );
   await page.goto('/');
   await expectTheme(page, theme);
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
@@ -222,7 +235,7 @@ test.use({ viewport: { width: 1280, height: 900 } });
 for (const theme of ['graphite', 'classic'] as const) {
   for (const style of ['boxed', 'airy'] as const) {
     test.describe(`the ${style} sidebar, ${theme}`, () => {
-      test.beforeEach(async ({ page }) => openSidebar(page, theme, style));
+      test.beforeEach(async ({ page }) => openSidebar(page, { theme, style }));
 
       test('every row on its own surface starts and gaps its lead by one lead space', async ({
         page,
@@ -309,6 +322,54 @@ for (const theme of ['graphite', 'classic'] as const) {
             `social rail ${socialRail} vs ${head.leadCentre}`,
           ).toBeLessThanOrEqual(TOLERANCE);
         });
+      }
+    });
+  }
+}
+
+const EXCLUDED_NEWS = makeTag(1, 'News', { position: 0, includeInAllItems: false });
+
+/** A lead slot holding its glyph and the exclusion marker, per row. */
+const MARKED_LEADS = {
+  'a tag': { slot: `${TAG_ROW(1)} .favicon-slot`, glyph: 'app-tag-glyph' },
+  'the network head': {
+    slot: '[data-testid="sidebar-social-mastodon"] .favicon-slot',
+    glyph: 'app-network-logo',
+  },
+};
+
+for (const theme of ['graphite', 'classic'] as const) {
+  for (const style of ['boxed', 'airy'] as const) {
+    test(`the ${style} ${theme} exclusion marker overhangs its glyph's bottom-right corner`, async ({
+      page,
+    }) => {
+      await openSidebar(page, {
+        theme,
+        style,
+        tags: [EXCLUDED_NEWS, WORLD],
+        excludedNetworks: ['mastodon'],
+      });
+      for (const [name, { slot, glyph }] of Object.entries(MARKED_LEADS)) {
+        const corner = await page.locator(slot).evaluate((element, glyphSelector) => {
+          const glyphBox = element.querySelector(glyphSelector)!.getBoundingClientRect();
+          const marker = element.querySelector('app-feed-exclusion-marker')!;
+          const markerBox = marker.getBoundingClientRect();
+          const markerStyle = getComputedStyle(marker);
+          return {
+            right: markerBox.right - glyphBox.right,
+            bottom: markerBox.bottom - glyphBox.bottom,
+            overhangRight: -parseFloat(markerStyle.right),
+            overhangBottom: -parseFloat(markerStyle.bottom),
+          };
+        }, glyph);
+        expect(
+          Math.abs(corner.right - corner.overhangRight),
+          `${name}: right ${corner.right} vs ${corner.overhangRight}`,
+        ).toBeLessThanOrEqual(TOLERANCE);
+        expect(
+          Math.abs(corner.bottom - corner.overhangBottom),
+          `${name}: bottom ${corner.bottom} vs ${corner.overhangBottom}`,
+        ).toBeLessThanOrEqual(TOLERANCE);
       }
     });
   }

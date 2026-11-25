@@ -12,9 +12,9 @@
   display: contents;
 }
 
-.section-head app-network-logo {
-  width: var(--icon-dense);
-  height: var(--icon-dense);
+/* The slot wraps the logo and its marker, so both carry the logo's box. */
+.section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-dense);
 }
 
 .section-head .section-link {
@@ -104,9 +104,8 @@
 }
 
 /* The airy sidebar: the network's name is its heading, and its rows hang one step in on a hairline. */
-:host-context(.sidebar-airy) .section-head app-network-logo {
-  width: var(--icon-md);
-  height: var(--icon-md);
+:host-context(.sidebar-airy) .section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-md);
 }
 
 /* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon". */
@@ -131,9 +130,8 @@
   border-top-color: var(--airy-hrule);
 }
 
-.organising .section-head app-network-logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+.organising .section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-sm);
 }
 
 .organising .rows {
