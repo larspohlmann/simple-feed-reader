@@ -764,6 +764,9 @@ weights.
 | `disabled` | `boolean` | `false` — renders off in every variant: no fill, a faint outline, muted text; `loading` keeps the variant |
 | `block` | `boolean` (attribute) | `false` — stretch to the container's width |
 | `focusInitial` | `boolean` (attribute) | `false` |
+| `ariaLabel` | `string` | unset — the real `<button>`'s accessible name, for a label hidden on narrow screens |
+| `ariaExpanded` | `boolean \| null` | `null` — set on a button that shows or hides a region |
+| `ariaDescribedBy` | `string \| null` | `null` — ids of the text that says more than the label does |
 
 | Variant | Weight | Use for |
 |---|---|---|
@@ -1025,7 +1028,8 @@ group.
 ### `<app-file-drop>`
 
 A dashed drop target that is also a file picker: drag a file onto it, click
-anywhere on it, or use its "Choose file" button. It only hands the caller a
+anywhere on it, or use its "Choose file" button. It fills the width of its
+container, also inside a flex column that aligns its items to the start. It only hands the caller a
 `File`; reading, parsing and uploading stay with the caller.
 
 | Input / output | Type | Default |
