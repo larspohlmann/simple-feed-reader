@@ -127,7 +127,7 @@ describe('OpmlSectionComponent', () => {
     const fixture = mount();
     await pick(fixture, '<opml/>');
     const request = ctrl.expectOne('https://api.test/api/opml/preview');
-    expect(request.request.body).toEqual({ opml: '<opml/>', parentTagName: null });
+    expect(request.request.body).toEqual({ opml: '<opml/>', parentTagName: null, folderNames: {} });
     request.flush(preview);
     expect(open).toHaveBeenCalledTimes(1);
     expect(open.mock.calls[0][0]).toBe(OpmlImportDialogComponent);
@@ -235,7 +235,7 @@ describe('OpmlSectionComponent', () => {
     const fixture = mount();
     await pick(fixture, '<opml/>');
     const request = ctrl.expectOne('https://api.test/api/opml/preview');
-    expect(request.request.body).toEqual({ opml: '<opml/>', parentTagName: null });
+    expect(request.request.body).toEqual({ opml: '<opml/>', parentTagName: null, folderNames: {} });
     request.flush(preview);
     expect(open).toHaveBeenCalledTimes(1);
     expect(open.mock.calls[0][1].data).toEqual({ opml: '<opml/>', preview });

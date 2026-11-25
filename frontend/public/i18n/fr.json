@@ -103,6 +103,8 @@
       "destination": "→ {{path}}",
       "untagged": "Aucune étiquette",
       "toggleFolder": "Afficher ou masquer {{name}}",
+      "renameFolder": "Renommer {{name}}",
+      "resetFolder": "Utiliser le nom du fichier",
       "collapseAll": "Tout réduire",
       "expandAll": "Tout développer",
       "tagTicked": "Étiqueter les flux cochés",

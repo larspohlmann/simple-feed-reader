@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -31,7 +40,13 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SettingsApi } from '../settings-api';
 import { OpmlImportResult } from '../settings.models';
-import { OpmlFeedState, OpmlPreview, OpmlTagMode } from './opml-import.models';
+import {
+  OpmlFeedState,
+  OpmlImportRow,
+  OpmlPlacement,
+  OpmlPreview,
+  OpmlTagMode,
+} from './opml-import.models';
 import { OpmlImportSelection } from './opml-import-selection';
 
 export interface OpmlImportDialogData {
@@ -40,6 +55,15 @@ export interface OpmlImportDialogData {
 }
 
 const PREVIEW_DEBOUNCE_MS = 300;
+
+type FolderRow = Extract<OpmlImportRow, { kind: 'folder' }>;
+
+function placementKey(placement: OpmlPlacement): string {
+  const names = Object.entries(placement.folderNames).sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
+  return JSON.stringify([placement.parentTagName, names]);
+}
 
 const TAG_MODES: readonly OpmlTagMode[] = ['folder', 'folderPlusTags', 'tagsOnly'];
 
@@ -99,39 +123,53 @@ export class OpmlImportDialogComponent {
       this.selection.freeSlots(),
     ),
   );
-  private readonly previewedParent = signal<string | null>(null);
-  protected readonly canImport = computed(
-    () =>
+  private readonly currentPlacement = computed<OpmlPlacement>(() => ({
+    parentTagName: this.parent().trim() || null,
+    folderNames: this.selection.folderNames(),
+  }));
+  private readonly previewedPlacement = signal<OpmlPlacement | null>({
+    parentTagName: null,
+    folderNames: {},
+  });
+  protected readonly canImport = computed(() => {
+    const previewed = this.previewedPlacement();
+    return (
       this.selection.selectedCount() > 0 &&
       !this.selection.overLimit() &&
-      (this.parent().trim() || null) === this.previewedParent(),
-  );
+      previewed !== null &&
+      placementKey(previewed) === placementKey(this.currentPlacement())
+    );
+  });
+  protected readonly editingKey = signal<string | null>(null);
+  private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('renameInput');
 
-  private readonly typedParents = new Subject<string>();
+  private readonly placements = new Subject<OpmlPlacement>();
   private readonly importStarts = new Subject<void>();
 
   constructor() {
     this.selection.load(this.data.preview);
     if (this.tags().length === 0) this.tagsStore.load();
-    this.typedParents
+    this.placements
       .pipe(
         debounceTime(PREVIEW_DEBOUNCE_MS),
         filter(() => !this.importing()),
-        map((parent) => parent.trim() || null),
-        switchMap((parent) =>
-          this.api.previewOpml(this.data.opml, parent).pipe(
-            map((preview) => ({ parent, preview })),
+        switchMap((placement) =>
+          this.api.previewOpml(this.data.opml, placement).pipe(
+            map((preview) => ({ placement, preview })),
             takeUntil(this.importStarts),
             catchError((error: HttpErrorResponse) => this.fail(error)),
           ),
         ),
         takeUntilDestroyed(),
       )
-      .subscribe(({ parent, preview }) => {
+      .subscribe(({ placement, preview }) => {
         this.failure.set(null);
         this.selection.load(preview);
-        this.previewedParent.set(parent);
+        this.previewedPlacement.set(placement);
       });
+    effect(() => {
+      this.renameInput()?.nativeElement.select();
+    });
     toObservable(this.tags)
       .pipe(
         map((tags) => tags.length),
@@ -139,12 +177,39 @@ export class OpmlImportDialogComponent {
         filter(([before, after]) => after > before),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.typedParents.next(this.parent()));
+      .subscribe(() => this.placements.next(this.currentPlacement()));
   }
 
   protected typeParent(event: Event): void {
     this.parent.set(inputValue(event));
-    this.typedParents.next(this.parent());
+    this.placements.next(this.currentPlacement());
+  }
+
+  protected startRename(row: FolderRow): void {
+    this.editingKey.set(row.key);
+  }
+
+  protected commitRename(row: FolderRow, event: Event): void {
+    if (this.editingKey() !== row.key) return;
+    this.editingKey.set(null);
+    this.renameTo(row, inputValue(event));
+  }
+
+  protected cancelRename(): void {
+    this.editingKey.set(null);
+  }
+
+  protected resetFolder(row: FolderRow): void {
+    this.selection.resetFolder(row);
+    this.placements.next(this.currentPlacement());
+  }
+
+  private renameTo(row: FolderRow, name: string): void {
+    const before = placementKey(this.currentPlacement());
+    this.selection.renameFolder(row, name);
+    if (placementKey(this.currentPlacement()) !== before) {
+      this.placements.next(this.currentPlacement());
+    }
   }
 
   protected tagNames(tagIds: ReadonlySet<number>): string {
@@ -178,7 +243,9 @@ export class OpmlImportDialogComponent {
     this.dialogRef.disableClose = true;
     this.failure.set(null);
     this.api
-      .importOpml(this.selection.toRequest(this.data.opml, this.previewedParent()))
+      .importOpml(
+        this.selection.toRequest(this.data.opml, this.previewedPlacement()?.parentTagName ?? null),
+      )
       .subscribe({
         next: (result) => this.dialogRef.close(result),
         error: (error: HttpErrorResponse) => {

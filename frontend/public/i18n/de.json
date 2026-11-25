@@ -103,6 +103,8 @@
       "destination": "→ {{path}}",
       "untagged": "Kein Tag",
       "toggleFolder": "{{name}} ein- oder ausblenden",
+      "renameFolder": "{{name}} umbenennen",
+      "resetFolder": "Namen aus der Datei verwenden",
       "collapseAll": "Alle einklappen",
       "expandAll": "Alle ausklappen",
       "tagTicked": "Markierte Feeds taggen",

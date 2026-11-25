@@ -66,7 +66,7 @@ export class OpmlSectionComponent {
   }
 
   private preview(contents: string): void {
-    this.api.previewOpml(contents, null).subscribe({
+    this.api.previewOpml(contents, { parentTagName: null, folderNames: {} }).subscribe({
       next: (preview) => {
         this.previewing.set(false);
         this.openDialog({ opml: contents, preview });

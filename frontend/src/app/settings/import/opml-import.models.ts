@@ -19,6 +19,11 @@ export interface OpmlPreview {
   root: OpmlPreviewFolder;
 }
 
+export interface OpmlPlacement {
+  parentTagName: string | null;
+  folderNames: Record<string, string>;
+}
+
 export interface OpmlImportRequest {
   opml: string;
   parentTagName: string | null;
@@ -42,6 +47,7 @@ export type OpmlImportRow =
       depth: number;
       ancestors: string[];
       name: string;
+      tagName: string;
       dropped: boolean;
       importableUrls: string[];
     }

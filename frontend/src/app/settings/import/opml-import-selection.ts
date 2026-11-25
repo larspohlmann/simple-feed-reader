@@ -48,6 +48,7 @@ function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]):
         depth,
         ancestors,
         name: child.name ?? '',
+        tagName: child.destination.at(-1) ?? child.name ?? '',
         dropped: child.dropped,
         importableUrls: below.importableUrls,
       },
@@ -56,6 +57,10 @@ function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]):
     importableUrls.push(...below.importableUrls);
   });
   return { rows: [...feedRows, ...folderRows], importableUrls };
+}
+
+export function toPosition(folderKey: string): string {
+  return folderKey.slice(1);
 }
 
 function collectDroppedNames(folder: OpmlPreviewFolder): string[] {
@@ -71,6 +76,7 @@ export class OpmlImportSelection {
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
   private readonly tagChoices = signal<ReadonlyMap<string, OpmlTagChoice>>(new Map());
   private readonly collapsedKeys = signal<ReadonlySet<string>>(new Set());
+  private readonly renamedFolders = signal<ReadonlyMap<string, string>>(new Map());
 
   private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
@@ -90,6 +96,10 @@ export class OpmlImportSelection {
     }
     return states;
   });
+
+  readonly folderNames = computed<Record<string, string>>(() =>
+    Object.fromEntries(this.renamedFolders()),
+  );
 
   readonly rows = computed(() => this.flattened().rows);
   readonly visibleRows = computed(() => {
@@ -139,6 +149,25 @@ export class OpmlImportSelection {
       }
       return next;
     });
+  }
+
+  renameFolder(row: FolderRow, name: string): void {
+    const trimmed = name.trim();
+    const position = toPosition(row.key);
+    this.renamedFolders.update((previous) => {
+      const next = new Map(previous);
+      if (trimmed === '' || trimmed === row.name) next.delete(position);
+      else next.set(position, trimmed);
+      return next;
+    });
+  }
+
+  resetFolder(row: FolderRow): void {
+    this.renameFolder(row, '');
+  }
+
+  isRenamed(row: FolderRow): boolean {
+    return this.renamedFolders().has(toPosition(row.key));
   }
 
   isCollapsed(folderKey: string): boolean {
@@ -222,7 +251,7 @@ export class OpmlImportSelection {
       feedUrls,
       tagIdsByFeedUrl,
       addedTagIdsByFeedUrl,
-      folderNames: {},
+      folderNames: this.folderNames(),
     };
   }
 }

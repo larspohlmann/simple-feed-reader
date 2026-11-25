@@ -103,6 +103,8 @@
       "destination": "→ {{path}}",
       "untagged": "Sin etiqueta",
       "toggleFolder": "Mostrar u ocultar {{name}}",
+      "renameFolder": "Renombrar {{name}}",
+      "resetFolder": "Usar el nombre del archivo",
       "collapseAll": "Contraer todo",
       "expandAll": "Expandir todo",
       "tagTicked": "Etiquetar los feeds marcados",

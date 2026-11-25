@@ -195,7 +195,7 @@ describe('OpmlImportDialogComponent', () => {
     http.expectNone(PREVIEW);
     jest.advanceTimersByTime(1);
     const request = http.expectOne(PREVIEW);
-    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P' });
+    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P', folderNames: {} });
     request.flush(previewOf(10, 'P'));
     fixture.detectChanges();
 
@@ -375,7 +375,7 @@ describe('OpmlImportDialogComponent', () => {
     jest.advanceTimersByTime(300);
 
     const request = http.expectOne(PREVIEW);
-    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P' });
+    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P', folderNames: {} });
     request.flush(previewOf(10, 'P'));
   });
 
@@ -514,5 +514,144 @@ describe('OpmlImportDialogComponent', () => {
     mount();
 
     expect(textOf(byTestId('opml-import-dropped'))).toContain('Deep');
+  });
+  const editButton = (folder: string): HTMLButtonElement =>
+    folderRow(folder).querySelector('[data-testid="opml-import-rename-folder"]')!;
+  const renameInput = (row: HTMLElement): HTMLInputElement | null =>
+    row.querySelector('[data-testid="opml-import-rename-input"]');
+  const startRename = (folder: string, value: string): HTMLInputElement => {
+    const row = folderRow(folder);
+    editButton(folder).click();
+    fixture.detectChanges();
+    const input = renameInput(row)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    return input;
+  };
+  const key = (input: HTMLInputElement, name: string): void => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+    fixture.detectChanges();
+  };
+
+  it('committing a rename previews with the new folder names', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    const request = http.expectOne(PREVIEW);
+    expect(request.request.body).toEqual({
+      opml: OPML,
+      parentTagName: null,
+      folderNames: { '0': 'Gadgets' },
+    });
+    request.flush(previewOf());
+  });
+
+  it('shows the planned tag name on the folder row and offers a reset after a rename', () => {
+    mount();
+    jest.useFakeTimers();
+    expect(textOf(folderRow('A'))).toContain('A');
+    expect(folderRow('A').querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+    expect(editButton('A').getAttribute('aria-label')).toBe('Rename A');
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    const preview = previewOf();
+    preview.root.folders[0].destination = ['Gadgets'];
+    http.expectOne(PREVIEW).flush(preview);
+    fixture.detectChanges();
+
+    expect(textOf(folderRow('Gadgets').querySelector('.name'))).toBe('Gadgets');
+    expect(
+      folderRow('Gadgets').querySelector('[data-testid="opml-import-reset-folder"]'),
+    ).not.toBeNull();
+  });
+
+  it('Escape cancels a rename without a preview', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', 'Gadgets'), 'Escape');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(element().querySelector('[data-testid="opml-import-rename-input"]')).toBeNull();
+    expect(selectionOf().folderNames()).toEqual({});
+  });
+
+  it('blur commits a rename', () => {
+    mount();
+    jest.useFakeTimers();
+
+    startRename('A', 'Gadgets').dispatchEvent(new Event('blur'));
+    jest.advanceTimersByTime(300);
+
+    http.expectOne(PREVIEW).flush(previewOf());
+  });
+
+  it('import waits for the preview of the current renames', () => {
+    mount();
+    jest.useFakeTimers();
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    expect(buttonOf('opml-import-apply').disabled).toBe(true);
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
+  });
+
+  it('a rename and a parent change are previewed together', () => {
+    mount();
+    jest.useFakeTimers();
+
+    typeParent('P');
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    const request = http.expectOne(PREVIEW);
+    expect(request.request.body).toEqual({
+      opml: OPML,
+      parentTagName: 'P',
+      folderNames: { '0': 'Gadgets' },
+    });
+    request.flush(previewOf(10, 'P'));
+  });
+
+  it('ticks and tag choices survive the renames preview', () => {
+    mount();
+    jest.useFakeTimers();
+    checkbox(feedRow('b1')).click();
+    pickMode(feedRow('a1'), 'Only tags');
+    toggleTagIn(feedRow('a1'), 7);
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    expect(checkbox(feedRow('b1')).checked).toBe(false);
+    expect(selectionOf().toRequest(OPML, null).tagIdsByFeedUrl).toEqual({
+      'https://a1.test/feed': [7],
+    });
+  });
+
+  it('imports with the previewed renames', () => {
+    mount();
+    jest.useFakeTimers();
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    press('opml-import-apply');
+
+    const request = http.expectOne(IMPORT);
+    expect(request.request.body.folderNames).toEqual({ '0': 'Gadgets' });
+    request.flush({});
   });
 });

@@ -156,8 +156,47 @@
                 [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
                 (change)="selection.toggleFolder(row)"
               />
-              <span class="name">{{ row.name }}</span>
+              @if (editingKey() !== row.key) {
+                <span class="name">{{ row.tagName }}</span>
+              }
             </label>
+            @if (editingKey() === row.key) {
+              <input
+                #renameInput
+                type="text"
+                class="rename"
+                maxlength="100"
+                autocomplete="off"
+                data-testid="opml-import-rename-input"
+                [value]="row.tagName"
+                [attr.aria-label]="'settings.opml.renameFolder' | transloco: { name: row.name }"
+                (keydown.enter)="commitRename(row, $event)"
+                (keydown.escape)="cancelRename()"
+                (blur)="commitRename(row, $event)"
+              />
+            } @else {
+              <button
+                appIconButton
+                type="button"
+                data-testid="opml-import-rename-folder"
+                [disabled]="importing()"
+                [attr.aria-label]="'settings.opml.renameFolder' | transloco: { name: row.name }"
+                (click)="startRename(row)"
+              >
+                <app-icon name="edit" size="md" />
+              </button>
+              @if (selection.isRenamed(row)) {
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="opml-import-reset-folder"
+                  [disabled]="importing()"
+                  (click)="resetFolder(row)"
+                >
+                  {{ 'settings.opml.resetFolder' | transloco }}
+                </app-button>
+              }
+            }
           </div>
         </li>
       } @else {

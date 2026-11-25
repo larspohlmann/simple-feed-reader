@@ -135,6 +135,11 @@
   text-align: right;
 }
 
+.rename {
+  flex: 1;
+  min-width: 0;
+}
+
 .destination,
 .tags {
   margin: 0;

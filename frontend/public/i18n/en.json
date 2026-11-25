@@ -103,6 +103,8 @@
       "destination": "→ {{path}}",
       "untagged": "No tag",
       "toggleFolder": "Show or hide {{name}}",
+      "renameFolder": "Rename {{name}}",
+      "resetFolder": "Use the file's name",
       "collapseAll": "Collapse all",
       "expandAll": "Expand all",
       "tagTicked": "Tag ticked feeds",

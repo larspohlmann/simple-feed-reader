@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { OpmlFeedState, OpmlImportRow, OpmlPreview, OpmlPreviewFeed } from './opml-import.models';
-import { OpmlImportSelection } from './opml-import-selection';
+import { OpmlImportSelection, toPosition } from './opml-import-selection';
 
 function feed(url: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
   return { url, title: null, state };
@@ -327,5 +327,67 @@ describe('OpmlImportSelection', () => {
     expect(unticked.addedTagIdsByFeedUrl).toEqual({});
     selection.toggleFeed('a1');
     expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [3] });
+  });
+  it('toPosition maps row keys to positions', () => {
+    expect(toPosition('f0')).toBe('0');
+    expect(toPosition('f0.2.1')).toBe('0.2.1');
+  });
+
+  it('renaming back to the files name drops the override', () => {
+    const folder = folderRow(selection, 'A');
+    selection.renameFolder(folder, 'Gadgets');
+    expect(selection.isRenamed(folder)).toBe(true);
+
+    selection.renameFolder(folder, ' A ');
+
+    expect(selection.isRenamed(folder)).toBe(false);
+    expect(selection.folderNames()).toEqual({});
+  });
+
+  it('a blank rename drops the override', () => {
+    const folder = folderRow(selection, 'A');
+    selection.renameFolder(folder, 'Gadgets');
+
+    selection.renameFolder(folder, '   ');
+
+    expect(selection.folderNames()).toEqual({});
+  });
+
+  it('resetFolder drops the override', () => {
+    const folder = folderRow(selection, 'B');
+    selection.renameFolder(folder, 'Gadgets');
+
+    selection.resetFolder(folder);
+
+    expect(selection.isRenamed(folder)).toBe(false);
+  });
+
+  it('toRequest carries folderNames by position, trimmed', () => {
+    selection.renameFolder(folderRow(selection, 'A'), ' Gadgets ');
+    selection.renameFolder(folderRow(selection, 'B'), 'Phones');
+
+    expect(selection.toRequest('<opml/>', null).folderNames).toEqual({
+      '0': 'Gadgets',
+      '0.0': 'Phones',
+    });
+  });
+
+  it('the folder row shows the planned tag name', () => {
+    expect(folderRow(selection, 'A').tagName).toBe('A');
+    expect(folderRow(selection, 'Deep').tagName).toBe('Deep');
+    selection.load({
+      freeSlots: 10,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [],
+        folders: [
+          { name: 'Tech', dropped: false, destination: ['Tech (1)'], feeds: [], folders: [] },
+        ],
+      },
+    });
+
+    expect(folderRow(selection, 'Tech').tagName).toBe('Tech (1)');
   });
 });
