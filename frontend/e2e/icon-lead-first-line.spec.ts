@@ -3,7 +3,13 @@ import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aStory } from '../src/testing/entry-testing';
 import { settleAnimations } from './support/animations';
 import { presetLocalStorage } from './support/auth';
-import { LeadParts, measureFirstLine, stubAccountTheme, ThemeName } from './support/first-line';
+import {
+  expectTheme,
+  LeadParts,
+  measureFirstLine,
+  stubAccountTheme,
+  ThemeName,
+} from './support/first-line';
 import {
   NOTIFICATION,
   POST,
@@ -68,12 +74,6 @@ async function openPage(browser: Browser, { step }: Setup, viewport = PHONE): Pr
     'sfr.theme': 'light',
   });
   return page;
-}
-
-async function expectTheme(page: Page, theme: ThemeName): Promise<void> {
-  const html = page.locator('html');
-  if (theme === 'classic') await expect(html).toHaveAttribute('data-theme-name', 'classic');
-  else await expect(html).not.toHaveAttribute('data-theme-name', /.*/);
 }
 
 async function settle(page: Page, theme: ThemeName): Promise<void> {

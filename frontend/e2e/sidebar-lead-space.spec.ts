@@ -3,7 +3,7 @@ import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { presetLocalStorage } from './support/auth';
-import { stubAccountTheme, ThemeName } from './support/first-line';
+import { expectTheme, stubAccountTheme, ThemeName } from './support/first-line';
 import {
   savedSearchesJson,
   savedSearchWire,
@@ -71,6 +71,7 @@ async function openSidebar(page: Page, theme: ThemeName, style: SidebarStyle): P
     'sfr.mastodon.profiles.collapsed': 'false',
   });
   await page.goto('/');
+  await expectTheme(page, theme);
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
   await expect(sidebar.getByRole('link', { name: /All items/ })).toBeVisible();
   await sidebar.getByRole('button', { name: 'Toggle saved searches' }).click();
@@ -340,6 +341,7 @@ async function openBusyNetwork(page: Page, theme: ThemeName, style: SidebarStyle
   await stubAccountTheme(page, theme, style);
   await presetLocalStorage(page, { 'sfr.theme': 'dark', 'sfr.layout': 'magazine' });
   await page.goto('/');
+  await expectTheme(page, theme);
   await expect(page.getByTestId('sidebar-social-mastodon').locator('.section-count')).toHaveText(
     '2477',
   );

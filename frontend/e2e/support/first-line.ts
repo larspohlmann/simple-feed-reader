@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { STUB_PROFILE } from './auth';
 
 /** An icon and the text it leads: the icon's mark, the element whose first line it hangs on, and
@@ -80,6 +80,7 @@ export async function measureFirstLine({
       );
     }),
   ]);
+  await iconHandle?.dispose();
   return {
     iconCentre,
     capMiddle: line.capMiddle,
@@ -89,6 +90,13 @@ export async function measureFirstLine({
 }
 
 export type ThemeName = 'graphite' | 'classic';
+
+/** Waits until the page wears `theme`: graphite carries no theme-name attribute. */
+export async function expectTheme(page: Page, theme: ThemeName): Promise<void> {
+  const html = page.locator('html');
+  if (theme === 'classic') await expect(html).toHaveAttribute('data-theme-name', 'classic');
+  else await expect(html).not.toHaveAttribute('data-theme-name', /.*/);
+}
 
 const PREFERENCES = {
   scrapeFallbackEnabled: false,
