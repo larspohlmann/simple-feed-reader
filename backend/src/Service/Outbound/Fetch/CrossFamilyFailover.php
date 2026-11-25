@@ -32,6 +32,16 @@ final readonly class CrossFamilyFailover
             && ($this->isRepeatable($method) || 0 === $failed->getInfo('request_size'));
     }
 
+    public function isPossiblyDelivered(
+        string $method,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): bool {
+        return $this->isWarranted($transportError)
+            && !$this->isRepeatable($method)
+            && 0 !== $failed->getInfo('request_size');
+    }
+
     public function allowsRetryAfterStatus(string $method, int $statusCode): bool
     {
         return $this->isRepeatable($method) && $this->isRetryableStatus($statusCode);

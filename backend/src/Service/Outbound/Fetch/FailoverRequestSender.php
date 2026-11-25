@@ -8,6 +8,7 @@ use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Outbound\Fetch\Exception\ProxiedAttemptFailedException;
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 use App\Service\Outbound\Fetch\Support\EgressOptions;
@@ -185,7 +186,7 @@ final readonly class FailoverRequestSender
             $mayGoDirect = $proxy->directFallback
                 && $this->failover->allowsRetryAfterFailure($judgedMethod, $response, $transportError);
             if (!$mayGoDirect) {
-                throw $transportError;
+                throw $this->buildSurfacedError($judgedMethod, $response, $transportError);
             }
 
             throw new ProxiedAttemptFailedException(previous: $transportError);
@@ -237,7 +238,7 @@ final readonly class FailoverRequestSender
                     continue;
                 }
 
-                throw $transportError;
+                throw $this->buildSurfacedError($judgedMethod, $response, $transportError);
             }
 
             if ($canFailOver && $this->failover->allowsRetryAfterStatus($judgedMethod, $status)) {
@@ -250,5 +251,15 @@ final readonly class FailoverRequestSender
         }
 
         throw new \LogicException('A non-empty attempt list always returns or throws on its final family.');
+    }
+
+    private function buildSurfacedError(
+        string $judgedMethod,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): TransportExceptionInterface {
+        return $this->failover->isPossiblyDelivered($judgedMethod, $failed, $transportError)
+            ? new RequestMayHaveLeftException($transportError->getMessage(), previous: $transportError)
+            : $transportError;
     }
 }

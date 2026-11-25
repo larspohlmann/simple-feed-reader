@@ -8,6 +8,7 @@ use App\Enum\ProxyType;
 use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
 use App\Tests\Support\FetchWiring;
@@ -197,8 +198,10 @@ final class FailoverRequestSenderProxyTest extends TestCase
         try {
             $sender->send('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
             self::fail('The transport error must surface.');
-        } catch (TransportExceptionInterface) {
+        } catch (RequestMayHaveLeftException $exception) {
             self::assertCount(1, $calls);
+            self::assertInstanceOf(TransportExceptionInterface::class, $exception->getPrevious());
+            self::assertSame('reset', $exception->getMessage());
         }
     }
 

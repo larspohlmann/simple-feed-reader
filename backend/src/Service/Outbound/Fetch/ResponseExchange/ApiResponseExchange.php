@@ -48,8 +48,6 @@ final readonly class ApiResponseExchange implements ResponseExchangeInterface
 
     private function allowsAnotherRoute(ApiRequestModel $request, int $status): bool
     {
-        return $request->isRead()
-            ? $this->failover->isRetryableStatus($status)
-            : $this->failover->allowsRetryAfterStatus($request->method, $status);
+        return $request->isRead() && $this->failover->isRetryableStatus($status);
     }
 }

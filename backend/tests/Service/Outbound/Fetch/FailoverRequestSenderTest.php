@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\FailoverRequestSender;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
@@ -236,8 +237,52 @@ final class FailoverRequestSenderTest extends TestCase
         try {
             $this->sendDualStack($client, 'POST');
             self::fail('The reset should surface.');
-        } catch (TransportExceptionInterface) {
+        } catch (RequestMayHaveLeftException $exception) {
             self::assertSame(1, $client->getRequestsCount());
+            self::assertInstanceOf(TransportExceptionInterface::class, $exception->getPrevious());
+            self::assertSame('Connection reset by peer', $exception->getMessage());
+        }
+    }
+
+    public function testAWriteWhoseSizeIsUnknownMayHaveLeft(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['error' => 'Connection reset by peer']),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $this->expectException(RequestMayHaveLeftException::class);
+
+        $this->sendDualStack($client, 'POST');
+    }
+
+    public function testAWriteThatNeverLeftOnTheFinalFamilyKeepsItsTransportError(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'Connection refused', 'request_size' => 0]),
+        ]);
+
+        try {
+            $this->sender($client)
+                ->send('POST', 'https://example.com/post', new GuardedUrlModel('example.com', ['93.184.216.34']), []);
+            self::fail('The refusal should surface.');
+        } catch (TransportExceptionInterface $exception) {
+            self::assertNotInstanceOf(RequestMayHaveLeftException::class, $exception);
+        }
+    }
+
+    public function testAReadThatResetOnTheFinalFamilyKeepsItsTransportError(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 122]),
+        ]);
+
+        try {
+            $this->sender($client)
+                ->send('GET', 'https://example.com/post', new GuardedUrlModel('example.com', ['93.184.216.34']), []);
+            self::fail('The reset should surface.');
+        } catch (TransportExceptionInterface $exception) {
+            self::assertNotInstanceOf(RequestMayHaveLeftException::class, $exception);
         }
     }
 
