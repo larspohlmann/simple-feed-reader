@@ -4,21 +4,25 @@ import type { SocialAccountRefDto } from '../src/app/reader/social-feed';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aSubscription } from '../src/testing/subscription-testing';
 import { presetLocalStorage } from './support/auth';
-import { expectTheme, stubAccountTheme, ThemeName } from './support/first-line';
 import {
-  savedSearchesJson,
-  savedSearchWire,
-  stubOneFeedReader,
-  subscriptionsJson,
-} from './support/reader';
+  expectNear,
+  expectTheme,
+  measureContentHeight,
+  measureToken,
+  stubAccountTheme,
+  ThemeName,
+} from './support/first-line';
+import { savedSearchWire, stubOneFeedReader, subscriptionsJson } from './support/reader';
 
 /**
  * #2558: a sidebar row's left inset and its icon-to-name gap are both `(row height − 1cap) / 2`,
  * measured on that row; an indented run starts at its parent row's label. Every read is stubbed.
  */
-const TOLERANCE = 0.5;
-
 type SidebarStyle = 'boxed' | 'airy';
+
+const VARIANTS = (['graphite', 'classic'] as const).flatMap((theme) =>
+  (['boxed', 'airy'] as const).map((style) => ({ theme, style })),
+);
 
 const NEWS = makeTag(1, 'News', { position: 0 });
 const WORLD = makeTag(2, 'World', { parentId: 1, position: 0 });
@@ -71,9 +75,6 @@ async function openSidebar(
     route.fulfill({ json: subscriptions }),
   );
   await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags } }));
-  await page.route(/\/api\/saved-searches(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: savedSearchesJson(savedSearchWire({ id: 1, term: 'climate' })) }),
-  );
   await stubAccountTheme(page, theme, style);
   await presetLocalStorage(page, {
     'sfr.theme': 'light',
@@ -112,52 +113,35 @@ interface LeadMeasure {
 
 /** `row` is the element whose height and font set the lead space; `lead` and `label` sit inside it. */
 async function measure(page: Page, { row, lead, label }: Lead): Promise<LeadMeasure> {
-  return page.evaluate(
-    ([rowSelector, leadSelector, labelSelector]) => {
-      const find = (selector: string): HTMLElement => {
-        const element = document.querySelector<HTMLElement>(selector);
-        if (!element) throw new Error(`no ${selector}`);
-        return element;
-      };
-      const rowElement = find(rowSelector!);
-      const rowStyle = getComputedStyle(rowElement);
-      const rowBox = rowElement.getBoundingClientRect();
-      const probe = document.createElement('span');
-      probe.style.cssText = 'position: absolute; width: 1cap; visibility: hidden';
-      rowElement.append(probe);
-      const cap = parseFloat(getComputedStyle(probe).width);
-      probe.remove();
-      const px = (value: string) => parseFloat(value) || 0;
-      const height =
-        rowBox.height -
-        px(rowStyle.paddingTop) -
-        px(rowStyle.paddingBottom) -
-        px(rowStyle.borderTopWidth) -
-        px(rowStyle.borderBottomWidth);
-      // A head that bleeds to the card's edges starts, for its label, where it would without the bleed.
-      const left = rowBox.left - px(rowStyle.marginLeft);
-      const labelLeft = find(labelSelector!).getBoundingClientRect().left;
-      let leadLeft = labelLeft;
-      let leadRight = labelLeft;
-      if (leadSelector) {
-        const leadElement = find(leadSelector);
-        const leadStyle = getComputedStyle(leadElement);
-        const leadBox = leadElement.getBoundingClientRect();
-        // A lead's column is its box padded by its start margin on both sides (a favicon's 2px).
-        leadLeft = leadBox.left - px(leadStyle.marginLeft);
-        leadRight = leadBox.right + px(leadStyle.marginLeft);
-      }
-      return {
-        expected: (height - cap) / 2,
-        start: leadLeft - left,
-        gap: labelLeft - leadRight,
-        leadLeft,
-        leadCentre: (leadLeft + leadRight) / 2,
-        labelLeft,
-      };
-    },
-    [row, lead, label],
-  );
+  const rowElement = page.locator(row);
+  const [height, cap, left, labelLeft, leadColumn] = await Promise.all([
+    measureContentHeight(rowElement),
+    measureToken(rowElement, '1cap'),
+    // A head that bleeds to the card's edges starts, for its label, where it would without the bleed.
+    rowElement.evaluate(
+      (element) =>
+        element.getBoundingClientRect().left -
+        (parseFloat(getComputedStyle(element).marginLeft) || 0),
+    ),
+    page.locator(label).evaluate((element) => element.getBoundingClientRect().left),
+    // A lead's column is its box padded by its start margin on both sides (a favicon's 2px).
+    lead
+      ? page.locator(lead).evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const margin = parseFloat(getComputedStyle(element).marginLeft) || 0;
+          return { left: box.left - margin, right: box.right + margin };
+        })
+      : null,
+  ]);
+  const { left: leadLeft, right: leadRight } = leadColumn ?? { left: labelLeft, right: labelLeft };
+  return {
+    expected: (height - cap) / 2,
+    start: leadLeft - left,
+    gap: labelLeft - leadRight,
+    leadLeft,
+    leadCentre: (leadLeft + leadRight) / 2,
+    labelLeft,
+  };
 }
 
 const TAG_ROW = (id: number) => `.taghead[data-tag-id="${id}"] app-sidebar-group-row`;
@@ -169,7 +153,7 @@ const feedRow = (scope: string): Lead => ({
 });
 const groupRow = (row: string): Lead => ({ row, lead: `${row} .lead`, label: `${row} .name` });
 
-/** Rows on their own surface: the lead starts one lead space in. */
+/** Rows on their own surface: the lead starts one lead space in, and its gap is one lead space. */
 const OWN_SURFACE: Record<string, Lead> = {
   'a view': {
     row: 'app-sidebar-views .nav.all',
@@ -188,7 +172,8 @@ const OWN_SURFACE: Record<string, Lead> = {
   'a social feed kind': groupRow(SOCIAL_KIND_ROW),
 };
 
-/** Section heads: their label (or the social head's lead) follows the head's own formula. */
+/** Section heads: their label (or the social head's lead) follows the head's own formula; a head
+ *  with a lead gaps it by the same lead space. */
 const HEADS: Record<string, Lead> = {
   'the saved searches head': {
     row: '.savedsearch-head',
@@ -215,116 +200,88 @@ const RUNS: Record<string, { child: Lead; parent: Lead }> = {
     child: feedRow('app-sidebar-social-section .tagfeeds'),
     parent: groupRow(SOCIAL_KIND_ROW),
   },
+  'a child tag’s glyph': { child: groupRow(TAG_ROW(2)), parent: groupRow(TAG_ROW(1)) },
 };
 
 /** The x an airy rail's hairline starts at. */
 async function railLeft(page: Page, host: string, pseudo: '::before' | '::after'): Promise<number> {
   return page.evaluate(
     ([selector, element]) => {
-      const box = document.querySelector(selector!)!.getBoundingClientRect();
-      return (
-        box.left + parseFloat(getComputedStyle(document.querySelector(selector!)!, element).left)
-      );
+      const rail = document.querySelector(selector!)!;
+      return rail.getBoundingClientRect().left + parseFloat(getComputedStyle(rail, element).left);
     },
     [host, pseudo],
   );
 }
 
-test.use({ viewport: { width: 1280, height: 900 } });
+/** The lead starts and gaps by one lead space; a lead-less head only starts by it. */
+async function expectLeadSpaces(page: Page, name: string, lead: Lead): Promise<void> {
+  const row = await measure(page, lead);
+  expectNear(row.start, row.expected, `${name}: inset`);
+  if (lead.lead) expectNear(row.gap, row.expected, `${name}: gap`);
+}
 
-for (const theme of ['graphite', 'classic'] as const) {
-  for (const style of ['boxed', 'airy'] as const) {
-    test.describe(`the ${style} sidebar, ${theme}`, () => {
-      test.beforeEach(async ({ page }) => openSidebar(page, { theme, style }));
+const DESKTOP = { width: 1280, height: 900 };
 
-      test('every row on its own surface starts and gaps its lead by one lead space', async ({
-        page,
-      }) => {
-        for (const [name, lead] of Object.entries(OWN_SURFACE)) {
-          const row = await measure(page, lead);
-          expect(
-            Math.abs(row.start - row.expected),
-            `${name}: inset ${row.start} vs ${row.expected}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-          expect(
-            Math.abs(row.gap - row.expected),
-            `${name}: gap ${row.gap} vs ${row.expected}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-        }
-      });
+test.use({ viewport: DESKTOP });
 
-      test('a section head follows its own formula', async ({ page }) => {
-        for (const [name, lead] of Object.entries(HEADS)) {
-          const head = await measure(page, lead);
-          expect(
-            Math.abs(head.start - head.expected),
-            `${name}: inset ${head.start} vs ${head.expected}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-          if (lead.lead) {
-            expect(
-              Math.abs(head.gap - head.expected),
-              `${name}: gap ${head.gap} vs ${head.expected}`,
-            ).toBeLessThanOrEqual(TOLERANCE);
-          }
-        }
-      });
+for (const { theme, style } of VARIANTS) {
+  test.describe(`the ${style} sidebar, ${theme}`, () => {
+    // The measurements only read: one sidebar serves them all.
+    test.describe.configure({ mode: 'serial' });
+    let page: Page;
 
-      test('an indented run starts at its parent’s label and keeps its own gap', async ({
-        page,
-      }) => {
-        for (const [name, { child, parent }] of Object.entries(RUNS)) {
-          const [childRow, parentRow] = [await measure(page, child), await measure(page, parent)];
-          expect(
-            Math.abs(childRow.leadLeft - parentRow.labelLeft),
-            `${name}: lead ${childRow.leadLeft} vs label ${parentRow.labelLeft}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-          expect(
-            Math.abs(childRow.gap - childRow.expected),
-            `${name}: gap ${childRow.gap} vs ${childRow.expected}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-        }
-      });
+    test.beforeAll(async ({ browser }) => {
+      page = await browser.newPage({ baseURL: test.info().project.use.baseURL, viewport: DESKTOP });
+      await openSidebar(page, { theme, style });
+    });
 
-      test('the items after the name keep the row’s own gap', async ({ page }) => {
-        const gap = await page.evaluate(() => {
-          const row = document.querySelector('.feeds-card app-sidebar-feed-row')!;
-          const count = row.querySelector('.count')!.getBoundingClientRect();
-          const menu = row.querySelector('app-sidebar-row-menu')!.getBoundingClientRect();
-          return menu.left - count.right;
-        });
-        expect(Math.abs(gap - 12), `count → ⋯ ${gap} vs --space-3`).toBeLessThanOrEqual(TOLERANCE);
-      });
+    test.afterAll(async () => {
+      await page.context().close();
+    });
 
-      test('a child tag’s glyph starts at its parent tag’s label', async ({ page }) => {
-        const [child, parent] = [
-          await measure(page, groupRow(TAG_ROW(2))),
-          await measure(page, groupRow(TAG_ROW(1))),
-        ];
-        expect(
-          Math.abs(child.leadLeft - parent.labelLeft),
-          `glyph ${child.leadLeft} vs label ${parent.labelLeft}`,
-        ).toBeLessThanOrEqual(TOLERANCE);
-      });
-
-      if (style === 'airy') {
-        test('a rail runs through its parent lead’s centre', async ({ page }) => {
-          const tag = await measure(page, groupRow(TAG_ROW(1)));
-          const tagRail = await railLeft(page, '.tag-group.open', '::after');
-          expect(
-            Math.abs(tagRail - tag.leadCentre),
-            `tag rail ${tagRail} vs ${tag.leadCentre}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-
-          const head = await measure(page, HEADS['the social head']!);
-          const socialRail = await railLeft(page, 'app-sidebar-social-section .rows', '::before');
-          expect(
-            Math.abs(socialRail - head.leadCentre),
-            `social rail ${socialRail} vs ${head.leadCentre}`,
-          ).toBeLessThanOrEqual(TOLERANCE);
-        });
+    test('every row on its own surface starts and gaps its lead by one lead space', async () => {
+      for (const [name, lead] of Object.entries(OWN_SURFACE)) {
+        await expectLeadSpaces(page, name, lead);
       }
     });
-  }
+
+    test('a section head follows its own formula', async () => {
+      for (const [name, lead] of Object.entries(HEADS)) {
+        await expectLeadSpaces(page, name, lead);
+      }
+    });
+
+    test('an indented run starts at its parent’s label and keeps its own gap', async () => {
+      for (const [name, { child, parent }] of Object.entries(RUNS)) {
+        const [childRow, parentRow] = [await measure(page, child), await measure(page, parent)];
+        expectNear(childRow.leadLeft, parentRow.labelLeft, `${name}: lead against label`);
+        expectNear(childRow.gap, childRow.expected, `${name}: gap`);
+      }
+    });
+
+    test('the items after the name keep the row’s own gap', async () => {
+      const gap = await page.evaluate(() => {
+        const row = document.querySelector('.feeds-card app-sidebar-feed-row')!;
+        const count = row.querySelector('.count')!.getBoundingClientRect();
+        const menu = row.querySelector('app-sidebar-row-menu')!.getBoundingClientRect();
+        return menu.left - count.right;
+      });
+      expectNear(gap, 12, 'count → ⋯ against --space-3');
+    });
+
+    if (style === 'airy') {
+      test('a rail runs through its parent lead’s centre', async () => {
+        const tag = await measure(page, groupRow(TAG_ROW(1)));
+        const tagRail = await railLeft(page, '.tag-group.open', '::after');
+        expectNear(tagRail, tag.leadCentre, 'tag rail');
+
+        const head = await measure(page, HEADS['the social head']!);
+        const socialRail = await railLeft(page, 'app-sidebar-social-section .rows', '::before');
+        expectNear(socialRail, head.leadCentre, 'social rail');
+      });
+    }
+  });
 }
 
 const EXCLUDED_NEWS = makeTag(1, 'News', { position: 0, includeInAllItems: false });
@@ -338,41 +295,33 @@ const MARKED_LEADS = {
   },
 };
 
-for (const theme of ['graphite', 'classic'] as const) {
-  for (const style of ['boxed', 'airy'] as const) {
-    test(`the ${style} ${theme} exclusion marker overhangs its glyph's bottom-right corner`, async ({
-      page,
-    }) => {
-      await openSidebar(page, {
-        theme,
-        style,
-        tags: [EXCLUDED_NEWS, WORLD],
-        excludedNetworks: ['mastodon'],
-      });
-      for (const [name, { slot, glyph }] of Object.entries(MARKED_LEADS)) {
-        const corner = await page.locator(slot).evaluate((element, glyphSelector) => {
-          const glyphBox = element.querySelector(glyphSelector)!.getBoundingClientRect();
-          const marker = element.querySelector('app-feed-exclusion-marker')!;
-          const markerBox = marker.getBoundingClientRect();
-          const markerStyle = getComputedStyle(marker);
-          return {
-            right: markerBox.right - glyphBox.right,
-            bottom: markerBox.bottom - glyphBox.bottom,
-            overhangRight: -parseFloat(markerStyle.right),
-            overhangBottom: -parseFloat(markerStyle.bottom),
-          };
-        }, glyph);
-        expect(
-          Math.abs(corner.right - corner.overhangRight),
-          `${name}: right ${corner.right} vs ${corner.overhangRight}`,
-        ).toBeLessThanOrEqual(TOLERANCE);
-        expect(
-          Math.abs(corner.bottom - corner.overhangBottom),
-          `${name}: bottom ${corner.bottom} vs ${corner.overhangBottom}`,
-        ).toBeLessThanOrEqual(TOLERANCE);
-      }
+for (const { theme, style } of VARIANTS) {
+  test(`the ${style} ${theme} exclusion marker overhangs its glyph's bottom-right corner`, async ({
+    page,
+  }) => {
+    await openSidebar(page, {
+      theme,
+      style,
+      tags: [EXCLUDED_NEWS, WORLD],
+      excludedNetworks: ['mastodon'],
     });
-  }
+    for (const [name, { slot, glyph }] of Object.entries(MARKED_LEADS)) {
+      const corner = await page.locator(slot).evaluate((element, glyphSelector) => {
+        const glyphBox = element.querySelector(glyphSelector)!.getBoundingClientRect();
+        const marker = element.querySelector('app-feed-exclusion-marker')!;
+        const markerBox = marker.getBoundingClientRect();
+        const markerStyle = getComputedStyle(marker);
+        return {
+          right: markerBox.right - glyphBox.right,
+          bottom: markerBox.bottom - glyphBox.bottom,
+          overhangRight: -parseFloat(markerStyle.right),
+          overhangBottom: -parseFloat(markerStyle.bottom),
+        };
+      }, glyph);
+      expectNear(corner.right, corner.overhangRight, `${name}: right`);
+      expectNear(corner.bottom, corner.overhangBottom, `${name}: bottom`);
+    }
+  });
 }
 
 /** The widest network head: a four-digit count, the '+', the bell with a badge, ⋯ and the chevron. */
@@ -409,34 +358,26 @@ async function openBusyNetwork(page: Page, theme: ThemeName, style: SidebarStyle
   await page.evaluate(() => document.fonts.ready);
 }
 
-for (const theme of ['graphite', 'classic'] as const) {
-  for (const style of ['boxed', 'airy'] as const) {
-    test(`the ${style} ${theme} network head keeps its name whole beside a four-digit count`, async ({
-      page,
-    }) => {
-      await openBusyNetwork(page, theme, style);
-      const head = await page.getByTestId('sidebar-social-mastodon').evaluate((element) => {
-        const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
-        const label = element.querySelector<HTMLElement>('.label')!;
-        return {
-          room: label.clientWidth,
-          needed: label.scrollWidth,
-          composeToBell:
-            box('app-sidebar-notifications-bell').left - box('app-sidebar-compose-button').right,
-          bellToCount: box('.section-rest').left - box('app-sidebar-notifications-bell').right,
-        };
-      });
-      expect(head.needed, `"Mastodon" needs ${head.needed}, has ${head.room}`).toBeLessThanOrEqual(
-        head.room,
-      );
-      expect(
-        Math.abs(head.composeToBell + 4),
-        `'+' → bell ${head.composeToBell}`,
-      ).toBeLessThanOrEqual(TOLERANCE);
-      expect(
-        Math.abs(head.bellToCount - 4),
-        `bell → count ${head.bellToCount}`,
-      ).toBeLessThanOrEqual(TOLERANCE);
+for (const { theme, style } of VARIANTS) {
+  test(`the ${style} ${theme} network head keeps its name whole beside a four-digit count`, async ({
+    page,
+  }) => {
+    await openBusyNetwork(page, theme, style);
+    const head = await page.getByTestId('sidebar-social-mastodon').evaluate((element) => {
+      const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+      const label = element.querySelector<HTMLElement>('.label')!;
+      return {
+        room: label.clientWidth,
+        needed: label.scrollWidth,
+        composeToBell:
+          box('app-sidebar-notifications-bell').left - box('app-sidebar-compose-button').right,
+        bellToCount: box('.section-rest').left - box('app-sidebar-notifications-bell').right,
+      };
     });
-  }
+    expect(head.needed, `"Mastodon" needs ${head.needed}, has ${head.room}`).toBeLessThanOrEqual(
+      head.room,
+    );
+    expectNear(head.composeToBell, -4, "'+' → bell");
+    expectNear(head.bellToCount, 4, 'bell → count');
+  });
 }

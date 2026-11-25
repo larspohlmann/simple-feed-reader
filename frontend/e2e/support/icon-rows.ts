@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import { CommentsResponse } from '../../src/app/reader/entry-comment';
 import type { EntryDto, SubscriptionDto } from '../../src/app/reader/models';
 import type {
@@ -35,6 +35,9 @@ export const POST = entryWire({
   comments: 'auto',
   discussionUrl: 'https://bsky.invalid/post/1',
 });
+
+/** The post with a score, so its article carries a vote pill. */
+export const SCORED_POST = { ...POST, score: 22, myVote: null };
 
 const POST_BODY = '<p>The post itself.</p>';
 
@@ -128,6 +131,12 @@ export async function stubArticle(
     (url) => url.pathname === '/api/entries/1/comments',
     (route) => route.fulfill({ json: COMMENTS }),
   );
+}
+
+/** Opens the post from the list, once its three comments are in. */
+export async function openArticle(page: Page): Promise<void> {
+  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+  await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
 }
 
 function notificationActor(displayName: string, handle: string): NotificationActorDto {

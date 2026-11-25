@@ -1,6 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { aSubscription } from '../../src/testing/subscription-testing';
-import { POST, stubArticle } from './icon-rows';
+import { openArticle, SCORED_POST, stubArticle } from './icon-rows';
 import { subscriptionsJson } from './reader';
 
 const SOCIAL_ACCOUNTS = [
@@ -15,7 +15,7 @@ const SOCIAL_ACCOUNTS = [
 
 /** The article reader, with a connected Bluesky account (a hinted share item) and unseen notifications. */
 export async function stubMenus(page: Page): Promise<void> {
-  await stubArticle(page, { post: { ...POST, score: 22, myVote: null } });
+  await stubArticle(page, { post: SCORED_POST });
   const body = subscriptionsJson(
     [aSubscription({ title: 'Fixture feed', unreadCount: 1, entryCount: 1 })],
     { socialAccounts: SOCIAL_ACCOUNTS, notifications: [{ network: 'bluesky', unseenCount: 4 }] },
@@ -30,18 +30,23 @@ export async function openAccountMenu(page: Page): Promise<Locator> {
   return menu;
 }
 
+const POPOVER_MENU = '.cdk-overlay-container .menu[role="menu"]';
+
 async function openArticleShare(page: Page): Promise<void> {
-  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
-  await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
+  await openArticle(page);
   await page.locator('app-reader-view app-share-button').getByRole('button').first().click();
+}
+
+async function expectPopover(page: Page): Promise<Locator> {
+  const menu = page.locator(POPOVER_MENU);
+  await expect(menu).toBeVisible();
+  return menu;
 }
 
 /** The share popover of an open article, on a fine pointer. */
 export async function openShareMenu(page: Page): Promise<Locator> {
   await openArticleShare(page);
-  const menu = page.locator('.cdk-overlay-container .menu[role="menu"]');
-  await expect(menu).toBeVisible();
-  return menu;
+  return expectPopover(page);
 }
 
 /** The share action sheet of an open article, on a coarse pointer. */
@@ -54,10 +59,7 @@ export async function openShareSheet(page: Page): Promise<Locator> {
 
 /** The repost popover of the article's first comment, on a fine pointer. */
 export async function openRepostMenu(page: Page): Promise<Locator> {
-  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
-  await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
+  await openArticle(page);
   await page.locator('app-reader-view button.repost').first().click();
-  const menu = page.locator('.cdk-overlay-container .menu[role="menu"]');
-  await expect(menu).toBeVisible();
-  return menu;
+  return expectPopover(page);
 }
