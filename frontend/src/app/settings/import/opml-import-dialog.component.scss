@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 :host {
   display: contents;
 
@@ -38,8 +40,9 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+
+  @include glass-rim.ring;
 }
 
 .bulk-actions {
