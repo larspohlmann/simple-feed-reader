@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../button/button.component';
 import { IconComponent } from '../icon/icon.component';
@@ -18,12 +18,13 @@ export class FileDropComponent {
   readonly disabled = input(false);
   readonly picked = output<File>();
 
-  protected readonly over = signal(false);
+  protected readonly over = computed(() => this.depth() > 0);
+  private readonly depth = signal(0);
   protected readonly rejected = signal(false);
 
   protected onDragEnter(event: DragEvent): void {
     event.preventDefault();
-    if (!this.disabled()) this.over.set(true);
+    if (!this.disabled()) this.depth.update((depth) => depth + 1);
   }
 
   protected onDragOver(event: DragEvent): void {
@@ -31,12 +32,12 @@ export class FileDropComponent {
   }
 
   protected onDragLeave(): void {
-    this.over.set(false);
+    this.depth.update((depth) => Math.max(0, depth - 1));
   }
 
   protected onDrop(event: DragEvent): void {
     event.preventDefault();
-    this.over.set(false);
+    this.depth.set(0);
     if (this.disabled()) return;
     const files = Array.from(event.dataTransfer?.files ?? []);
     const match = files.find((file) => matchesAccept(file, this.accept()));

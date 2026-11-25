@@ -112,6 +112,26 @@ describe('FileDropComponent', () => {
   });
 });
 
+describe('FileDropComponent drag depth', () => {
+  it('stays marked while the drag moves between the target and its children', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const target = fixture.nativeElement.querySelector('.target') as HTMLElement;
+    const child = target.querySelector('button') as HTMLElement;
+    const fire = (element: HTMLElement, type: string) => {
+      element.dispatchEvent(new Event(type, { bubbles: true }));
+      fixture.detectChanges();
+    };
+    fire(target, 'dragenter');
+    fire(child, 'dragenter');
+    fire(target, 'dragleave');
+    expect(target.classList).toContain('is-over');
+    fire(child, 'dragleave');
+    expect(target.classList).not.toContain('is-over');
+  });
+});
+
 describe('matchesAccept', () => {
   it('matches a suffix case-insensitively', () => {
     expect(matchesAccept(new File([''], 'Feeds.OPML'), '.opml')).toBe(true);
