@@ -16,6 +16,12 @@ final class ProfileMergesTest extends TestCase
 {
     private const string SAME_TIME = '2031-05-07 08:00:00';
 
+    private const array WORD_POOL = [
+        'Kalbo', 'Paskel', 'Gimbor', 'Hodrin', 'Lumpo', 'Fradel', 'Quobin', 'Wistel', 'Trumbel', 'Hopsik',
+        'Lavren', 'Moskut', 'Zorbel', 'Quintar', 'Pemla', 'Fuskit', 'Drabbit', 'Wenko', 'Glimsy', 'Hobrat',
+        'Ulmira', 'Sevpot', 'Kandor', 'Brantu', 'Cresmo', 'Dolvik', 'Ephrim', 'Fandro', 'Garnet', 'Hollis',
+    ];
+
     private const array ALIKE_HEADLINES = [
         'Zorbel Quintar Pemla',
         'Zorbel Quintar Fuskit',
@@ -65,13 +71,6 @@ final class ProfileMergesTest extends TestCase
         self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], [[1, 4]]));
     }
 
-    public function testGroupsInTheBandWithoutCrossLinksStayApart(): void
-    {
-        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
-
-        self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
-    }
-
     public function testLinksInsideOneGroupDoNotCountTowardTheDensity(): void
     {
         $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
@@ -100,11 +99,54 @@ final class ProfileMergesTest extends TestCase
         self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], $everyCrossLink));
     }
 
+    public function testGroupsJustBelowTheLinkedMergeSimilarityStayApartHoweverDense(): void
+    {
+        $run = $this->runWithWordCounts(6, 3, 16, 3, 3);
+
+        self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], self::crossLinks(3, 3)));
+    }
+
+    public function testADensityJustBelowATenthStaysApart(): void
+    {
+        $run = $this->runWithWordCounts(3, 3, 5, 3, 7);
+
+        self::assertSame(
+            [[1, 2, 3], range(4, 10)],
+            $this->merged($run, [[1, 2, 3], range(4, 10)], [[1, 4], [2, 5]]),
+        );
+    }
+
+    public function testADensityExactlyATenthMerges(): void
+    {
+        $run = $this->runWithWordCounts(3, 3, 5, 4, 5);
+
+        self::assertSame(
+            [range(1, 9)],
+            $this->merged($run, [range(1, 4), range(5, 9)], [[1, 5], [2, 6]]),
+        );
+    }
+
+    public function testAShortBandPairStaysApartWhileAStrongerPairMergesInTheSameRound(): void
+    {
+        self::assertSame(
+            [[1, 2, 3, 10, 11, 12], [4, 5, 6]],
+            $this->merged($this->bandPairWithATwinRun(), self::bandPairWithATwinGroups()),
+        );
+    }
+
+    public function testALaterRoundJudgesTheDensityOfTheMergedGroups(): void
+    {
+        self::assertSame(
+            [[1, 2, 3, 10, 11, 12], [4, 5, 6]],
+            $this->merged($this->bandPairWithATwinRun(), self::bandPairWithATwinGroups(), [[1, 4]]),
+        );
+    }
+
     public function testGroupsAboveTheMergeSimilarityMergeWithoutAnyLink(): void
     {
-        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin');
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel');
 
-        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], []));
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
     }
 
     public function testTheDensityMustReachATenth(): void
@@ -212,6 +254,70 @@ final class ProfileMergesTest extends TestCase
         ));
 
         return new ProfileMerges($run, $groups, $linkedPairs)->groups();
+    }
+
+    /**
+     * Groups 1 and 3 share every headline word and merge first; group 2 sits at 0.264 from each of them,
+     * and from their union.
+     */
+    private function bandPairWithATwinRun(): TrendingRun
+    {
+        $oneGroupWords = 'Kalbo Paskel Gimbor';
+        $otherGroupWords = 'Hodrin Lumpo Fradel Quobin Wistel';
+
+        return $this->runOf([
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $oneGroupWords),
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $otherGroupWords),
+            ...array_fill(0, 3, $oneGroupWords . ' ' . $otherGroupWords),
+            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $oneGroupWords),
+        ]);
+    }
+
+    /** @return list<non-empty-list<int>> */
+    private static function bandPairWithATwinGroups(): array
+    {
+        return [[1, 2, 3], [4, 5, 6], [10, 11, 12]];
+    }
+
+    /** @return list<array{int, int}> */
+    private static function crossLinks(int $oneMembers, int $otherMembers): array
+    {
+        $links = [];
+        foreach (range(1, $oneMembers) as $one) {
+            foreach (range($oneMembers + 1, $oneMembers + $otherMembers) as $other) {
+                $links[] = [$one, $other];
+            }
+        }
+
+        return $links;
+    }
+
+    /**
+     * Entries 1.. belong to the first group, the next ones to the second, and ungrouped entries pad every stem
+     * to the same frequency, so the similarity is shared / (shared + oneOwn + otherOwn).
+     */
+    private function runWithWordCounts(
+        int $sharedWords,
+        int $oneOwnWords,
+        int $otherOwnWords,
+        int $oneMembers,
+        int $otherMembers,
+    ): TrendingRun {
+        $words = self::WORD_POOL;
+        $shared = implode(' ', array_splice($words, 0, $sharedWords));
+        $oneOwn = implode(' ', array_splice($words, 0, $oneOwnWords));
+        $otherOwn = implode(' ', array_splice($words, 0, $otherOwnWords));
+        $headlines = [
+            ...array_fill(0, $oneMembers, $shared . ' ' . $oneOwn),
+            ...array_fill(0, $otherMembers, $shared . ' ' . $otherOwn),
+        ];
+        foreach (range(0, max($oneMembers, $otherMembers) - 1) as $index) {
+            $oneOwnHere = $index < $otherMembers ? $oneOwn : '';
+            $otherOwnHere = $index < $oneMembers ? $otherOwn : '';
+            $headlines[] = trim($oneOwnHere . ' ' . $otherOwnHere);
+        }
+
+        return $this->runOf($headlines);
     }
 
     /** Three ungrouped entries carry both groups' own words, so every stem weighs the same and only counts matter. */
