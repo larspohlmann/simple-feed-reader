@@ -10,6 +10,15 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release adds an interactive OPML import.
+
+**Interactive OPML import.** See an OPML file's folders and feeds before
+anything is subscribed. Tick the feeds you want, put them under a parent tag,
+rename folders, and tag single feeds or all ticked ones. Existing tags are
+never moved.
+
 ## [v1.10.4] - 2026-11-24
 
 ### Highlights
