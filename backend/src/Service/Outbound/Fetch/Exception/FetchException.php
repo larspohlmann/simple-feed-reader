@@ -5,9 +5,21 @@ declare(strict_types=1);
 namespace App\Service\Outbound\Fetch\Exception;
 
 use App\Service\Outbound\Fetch\Support\ProxyHandshakeFailure;
+use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 
 abstract class FetchException extends \RuntimeException
 {
+    public function isTimeout(): bool
+    {
+        for ($cause = $this->getPrevious(); null !== $cause; $cause = $cause->getPrevious()) {
+            if ($cause instanceof TimeoutExceptionInterface) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * The HTTP client wraps an exception thrown inside on_progress, so a ResponseTooLargeException raised there comes
      * back buried in $previous. Every catch site goes through here, so none can forget to unwrap it.

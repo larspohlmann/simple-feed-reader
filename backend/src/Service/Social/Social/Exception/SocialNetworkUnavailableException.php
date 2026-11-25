@@ -10,8 +10,8 @@ final class SocialNetworkUnavailableException extends SocialServiceFailureExcept
     {
         return new self(
             $serviceName,
-            $status,
             sprintf("%s isn't responding right now — it's probably overloaded. Try again in a minute.", $serviceName),
+            new \RuntimeException(sprintf('%s answered %d.', $serviceName, $status)),
         );
     }
 }

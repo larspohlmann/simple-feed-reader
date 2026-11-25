@@ -247,6 +247,16 @@ final class LemmyApiClientTest extends TestCase
         return new MockResponse($body, ['http_code' => $status]);
     }
 
+    public function testAPostThatTimesOutMayHaveGoneThrough(): void
+    {
+        $url = 'https://lemmy.example/api/v3/post';
+        $client = $this->clientOver(new RoutedHttpClient(['POST ' . $url => new MockResponse([''])]));
+
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+
+        $client->send(ApiRequestModel::postJson($url, []));
+    }
+
     private function clientAnswering(MockResponse $response): LemmyApiClient
     {
         return $this->clientOver(new RoutedHttpClient(['GET ' . self::SITE => $response]));
