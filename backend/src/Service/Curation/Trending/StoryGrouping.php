@@ -20,11 +20,12 @@ final readonly class StoryGrouping
     public function group(TrendingRun $run, array $links): array
     {
         usort($links, StoryLinkModel::compare(...));
-        $groups = new StoryGroups($run, LinkedPairs::fromLinks($links));
+        $linkedPairs = LinkedPairs::fromLinks($links);
+        $groups = new StoryGroups($run, $linkedPairs);
         foreach ($links as $link) {
             $groups->consider($link);
         }
 
-        return new ProfileMerges($run, $groups->groups())->groups();
+        return new ProfileMerges($run, $groups->groups(), $linkedPairs)->groups();
     }
 }

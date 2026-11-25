@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Trending\Pass;
 
 use App\Enum\TrendingWindow;
+use App\Service\Curation\Trending\Model\StoryLinkModel;
+use App\Service\Curation\Trending\Pass\LinkedPairs;
 use App\Service\Curation\Trending\Pass\ProfileMerges;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Tests\Support\TrendingRuns;
@@ -54,6 +56,64 @@ final class ProfileMergesTest extends TestCase
         $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
 
         self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
+    }
+
+    public function testGroupsInTheBandMergeWhenTheirMembersLinkDensely(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
+
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], [[1, 4]]));
+    }
+
+    public function testGroupsInTheBandWithoutCrossLinksStayApart(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
+
+        self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]]));
+    }
+
+    public function testLinksInsideOneGroupDoNotCountTowardTheDensity(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel');
+
+        self::assertSame(
+            [[1, 2, 3], [4, 5, 6]],
+            $this->merged($run, [[1, 2, 3], [4, 5, 6]], [[1, 2], [4, 5]]),
+        );
+    }
+
+    public function testGroupsExactlyAtTheLinkedMergeSimilarityMerge(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel Trumbel');
+
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], [[1, 4]]));
+    }
+
+    public function testGroupsBelowTheLinkedMergeSimilarityStayApartHoweverDense(): void
+    {
+        $run = $this->runWithEvenRarity(
+            'Kalbo Paskel Gimbor',
+            'Hodrin Lumpo Fradel Quobin Wistel Trumbel Hopsik',
+        );
+        $everyCrossLink = [[1, 4], [1, 5], [1, 6], [2, 4], [2, 5], [2, 6], [3, 4], [3, 5], [3, 6]];
+
+        self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], $everyCrossLink));
+    }
+
+    public function testGroupsAboveTheMergeSimilarityMergeWithoutAnyLink(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin');
+
+        self::assertSame([[1, 2, 3, 4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], []));
+    }
+
+    public function testTheDensityMustReachATenth(): void
+    {
+        $run = $this->runWithEvenRarity('Kalbo Paskel Gimbor', 'Hodrin Lumpo Fradel Quobin Wistel', 4);
+        $groups = [[1, 2, 3, 4], [5, 6, 7, 8]];
+
+        self::assertSame($groups, $this->merged($run, $groups, [[1, 5]]));
+        self::assertSame([range(1, 8)], $this->merged($run, $groups, [[1, 5], [2, 6]]));
     }
 
     public function testGroupsExactlyAtTheMergeSimilarityMerge(): void
@@ -140,20 +200,29 @@ final class ProfileMergesTest extends TestCase
 
     /**
      * @param list<non-empty-list<int>> $groups
+     * @param list<array{int, int}> $links
      *
      * @return list<non-empty-list<int>>
      */
-    private function merged(TrendingRun $run, array $groups): array
+    private function merged(TrendingRun $run, array $groups, array $links = []): array
     {
-        return new ProfileMerges($run, $groups)->groups();
+        $linkedPairs = LinkedPairs::fromLinks(array_map(
+            static fn (array $link): StoryLinkModel => new StoryLinkModel($link[0], $link[1], 1.0),
+            $links,
+        ));
+
+        return new ProfileMerges($run, $groups, $linkedPairs)->groups();
     }
 
     /** Three ungrouped entries carry both groups' own words, so every stem weighs the same and only counts matter. */
-    private function runWithEvenRarity(string $oneGroupWords, string $otherGroupWords): TrendingRun
-    {
+    private function runWithEvenRarity(
+        string $oneGroupWords,
+        string $otherGroupWords,
+        int $membersPerGroup = 3,
+    ): TrendingRun {
         return $this->runOf([
-            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $oneGroupWords),
-            ...array_fill(0, 3, 'Murnel Teskar Vorlip ' . $otherGroupWords),
+            ...array_fill(0, $membersPerGroup, 'Murnel Teskar Vorlip ' . $oneGroupWords),
+            ...array_fill(0, $membersPerGroup, 'Murnel Teskar Vorlip ' . $otherGroupWords),
             ...array_fill(0, 3, $oneGroupWords . ' ' . $otherGroupWords),
         ]);
     }
