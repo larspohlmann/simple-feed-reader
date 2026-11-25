@@ -171,6 +171,94 @@ final class OpmlControllerTest extends ApiTestCase
         self::assertSame(['From Feedly'], $root['destination']);
     }
 
+    public function testPreviewCarriesAFolderRenameIntoTheDestinations(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-rename@example.com')), [
+            'opml' => $this->techFolderOpml(),
+            'folderNames' => ['0' => 'Gadgets'],
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        $folders = $root['folders'];
+        self::assertIsArray($folders);
+        $folder = $folders[0];
+        self::assertIsArray($folder);
+        self::assertSame(['Gadgets'], $folder['destination']);
+        self::assertSame('Tech', $folder['name']);
+    }
+
+    public function testPreviewTrimsAFolderRename(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-rename-trim@example.com')), [
+            'opml' => $this->techFolderOpml(),
+            'folderNames' => ['0' => '  Gadgets  '],
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        $folders = $root['folders'];
+        self::assertIsArray($folders);
+        $folder = $folders[0];
+        self::assertIsArray($folder);
+        self::assertSame(['Gadgets'], $folder['destination']);
+    }
+
+    public function testImportFilesTheFeedUnderTheRenamedFolder(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('opml-import-rename@example.com');
+
+        $this->postImport($client, $headers, [
+            'opml' => $this->techFolderOpml(),
+            'feedUrls' => ['https://tech.example/feed'],
+            'folderNames' => ['0' => 'Gadgets'],
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $tags = $this->entityManager()->getRepository(Tag::class);
+        self::assertNotNull($tags->findOneBy(['user' => $user, 'name' => 'Gadgets']));
+        self::assertNull($tags->findOneBy(['user' => $user, 'name' => 'Tech']));
+    }
+
+    public function testABlankFolderNameIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-rename-blank@example.com')), [
+            'opml' => $this->techFolderOpml(),
+            'folderNames' => ['0' => '  '],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAnOverlongFolderNameIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-rename-long@example.com')), [
+            'opml' => $this->techFolderOpml(),
+            'feedUrls' => ['https://tech.example/feed'],
+            'folderNames' => ['0' => str_repeat('a', 101)],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function techFolderOpml(): string
+    {
+        return '<?xml version="1.0"?><opml version="2.0"><head/><body><outline text="Tech">'
+            . '<outline type="rss" text="Tech Feed" xmlUrl="https://tech.example/feed"/>'
+            . '</outline></body></opml>';
+    }
+
     private function fixture(): string
     {
         return (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');

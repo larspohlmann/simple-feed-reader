@@ -25,9 +25,8 @@ final readonly class OpmlPreviewer
     ) {
     }
 
-    public function preview(User $user, string $opml, ?string $parentTagName): OpmlPreviewModel
+    public function preview(User $user, string $opml, OpmlPlacementChoiceModel $choice): OpmlPreviewModel
     {
-        $choice = new OpmlPlacementChoiceModel($parentTagName);
         $root = $this->placementPlanner->plan($user, $this->documentReader->read($opml), $choice);
         $userId = $user->requireId();
         $subscribedUrls = array_fill_keys(

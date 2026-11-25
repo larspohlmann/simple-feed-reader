@@ -10,7 +10,6 @@ use App\Enum\SourceFormat;
 use App\Repository\TagRepository;
 use App\Service\Library\Opml\Model\OpmlImportResultModel;
 use App\Service\Library\Opml\Model\OpmlImportSelectionModel;
-use App\Service\Library\Opml\Model\OpmlPlacementChoiceModel;
 use App\Service\Library\Opml\Pass\OpmlImportItems;
 use App\Service\Library\Subscription\BulkSubscriber;
 use App\Service\Library\Subscription\Model\BulkSubscribeItemModel;
@@ -28,8 +27,7 @@ final readonly class OpmlImporter
 
     public function import(User $user, OpmlImportSelectionModel $selection): OpmlImportResultModel
     {
-        $choice = new OpmlPlacementChoiceModel($selection->parentTagName);
-        $root = $this->planner->plan($user, $this->reader->read($selection->opml), $choice);
+        $root = $this->planner->plan($user, $this->reader->read($selection->opml), $selection->placement);
         $chosenTags = $this->findChosenTags($user, $selection->tagIdsByFeedUrl);
         $items = new OpmlImportItems($selection->feedUrls, $chosenTags)->collect($root);
         $permitted = $this->withoutScraped($items);
