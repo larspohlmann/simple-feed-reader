@@ -95,7 +95,7 @@
 }
 
 :host(.inset) .row {
-  padding-inline-end: var(--icon-lead-space);
+  padding-inline-end: calc(var(--space-2) + var(--space-0));
   border-radius: calc(var(--radius-lg) - var(--space-0) / 2) var(--radius) var(--radius)
     calc(var(--radius-lg) - var(--space-0) / 2);
   background: var(--surface-0);
