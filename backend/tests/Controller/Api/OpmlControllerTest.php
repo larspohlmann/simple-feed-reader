@@ -239,6 +239,54 @@ final class OpmlControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function testImportTrimsAFolderRename(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('opml-import-trim@example.com');
+
+        $this->postImport($client, $headers, [
+            'opml' => $this->techFolderOpml(),
+            'feedUrls' => ['https://tech.example/feed'],
+            'folderNames' => ['0' => '  Gadgets  '],
+        ]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $tags = $this->entityManager()->getRepository(Tag::class)->findBy(['user' => $user]);
+        self::assertSame(['Gadgets'], array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
+    }
+
+    public function testImportWithABlankFolderNameIsRejected(): void
+    {
+        $client = self::createClient();
+
+        $this->postImport($client, $this->bearerFor($this->factory()->create('opml-import-blank@example.com')), [
+            'opml' => $this->techFolderOpml(),
+            'feedUrls' => ['https://tech.example/feed'],
+            'folderNames' => ['0' => '  '],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testImportWithBothChoicesForOneFeedIsAProblem(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('opml-import-both@example.com');
+        $tag = new Tag($user, 'Mine');
+        $this->entityManager()->persist($tag);
+        $this->entityManager()->flush();
+
+        $this->postImport($client, $headers, [
+            'opml' => $this->techFolderOpml(),
+            'feedUrls' => ['https://tech.example/feed'],
+            'tagIdsByFeedUrl' => ['https://tech.example/feed' => [$tag->requireId()]],
+            'addedTagIdsByFeedUrl' => ['https://tech.example/feed' => [$tag->requireId()]],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('conflicting_tag_choice', $this->payload($client)['type']);
+    }
+
     public function testAnOverlongFolderNameIsRejected(): void
     {
         $client = self::createClient();

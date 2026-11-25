@@ -14,6 +14,7 @@ final readonly class OpmlImportRequest
     /**
      * @param list<string>              $feedUrls
      * @param array<string, list<int>> $tagIdsByFeedUrl
+     * @param array<string, list<int>> $addedTagIdsByFeedUrl
      * @param array<int|string, string> $folderNames
      */
     public function __construct(
@@ -25,6 +26,8 @@ final readonly class OpmlImportRequest
         public array $feedUrls = [],
         #[Assert\All([new Assert\Type('array'), new Assert\All([new Assert\Type('integer'), new Assert\Positive()])])]
         public array $tagIdsByFeedUrl = [],
+        #[Assert\All([new Assert\Type('array'), new Assert\All([new Assert\Type('integer'), new Assert\Positive()])])]
+        public array $addedTagIdsByFeedUrl = [],
         #[Assert\All([
             new Assert\Type('string'),
             new Assert\NotBlank(normalizer: 'trim'),
@@ -41,6 +44,7 @@ final readonly class OpmlImportRequest
             new OpmlPlacementChoiceModel($this->parentTagName, array_map('trim', $this->folderNames)),
             $this->feedUrls,
             $this->tagIdsByFeedUrl,
+            $this->addedTagIdsByFeedUrl,
         );
     }
 }

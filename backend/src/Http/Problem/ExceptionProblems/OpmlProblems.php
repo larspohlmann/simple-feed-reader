@@ -6,6 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
+use App\Service\Library\Opml\Exception\ConflictingTagChoiceException;
 use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -17,6 +18,12 @@ final readonly class OpmlProblems implements ExceptionProblemsInterface
             $exception instanceof InvalidOpmlException => new ResolvedProblem(new ApiProblem(
                 'invalid_opml',
                 'The OPML document could not be parsed',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof ConflictingTagChoiceException => new ResolvedProblem(new ApiProblem(
+                'conflicting_tag_choice',
+                'A feed has two tag choices',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
