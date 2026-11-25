@@ -31,8 +31,16 @@
   flex: none;
 }
 
+/* With a fine pointer the '+' and bell overlap by --space-1 and the bell sits --space-1 from the count:
+   room for the network's name. */
 .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
-  margin-left: calc(var(--space-1) - var(--space-3));
+  margin-left: calc(var(--space-1) * -1 - var(--space-3));
+}
+
+.section-head app-sidebar-notifications-bell {
+  @media (pointer: fine) {
+    margin-right: calc(var(--space-1) - var(--space-3));
+  }
 }
 
 .section-head .section-rest {
@@ -101,8 +109,7 @@
   height: var(--icon-md);
 }
 
-/* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon".
-   With a fine pointer it sits --space-1 from the name, as it sits from the bell. */
+/* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon". */
 :host-context(.sidebar-airy) .section-head app-sidebar-compose-button {
   margin-left: calc(var(--space-1) * -1.5);
 

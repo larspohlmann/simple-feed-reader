@@ -312,3 +312,68 @@ for (const theme of ['graphite', 'classic'] as const) {
     });
   }
 }
+
+/** The widest network head: a four-digit count, the '+', the bell with a badge, ⋯ and the chevron. */
+const BUSY_NETWORK = [
+  aSubscription({
+    id: 4,
+    title: 'Mastodon Home',
+    unreadCount: 2477,
+    entryCount: 2477,
+    social: { network: 'mastodon', kind: 'home', accountId: 7 },
+  }),
+];
+
+async function openBusyNetwork(page: Page, theme: ThemeName, style: SidebarStyle): Promise<void> {
+  await stubOneFeedReader(page, 'Fixture feed');
+  const subscriptions = subscriptionsJson(BUSY_NETWORK, {
+    socialAccounts: SOCIAL_ACCOUNTS,
+    notifications: [{ network: 'mastodon', unseenCount: 3 }],
+    unreadTotals: {
+      ...subscriptionsJson(BUSY_NETWORK).unreadTotals,
+      networks: [{ network: 'mastodon', unreadCount: 2477, profilesUnreadCount: 0 }],
+    },
+  });
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+    route.fulfill({ json: subscriptions }),
+  );
+  await stubAccountTheme(page, theme, style);
+  await presetLocalStorage(page, { 'sfr.theme': 'dark', 'sfr.layout': 'magazine' });
+  await page.goto('/');
+  await expect(page.getByTestId('sidebar-social-mastodon').locator('.section-count')).toHaveText(
+    '2477',
+  );
+  await page.evaluate(() => document.fonts.ready);
+}
+
+for (const theme of ['graphite', 'classic'] as const) {
+  for (const style of ['boxed', 'airy'] as const) {
+    test(`the ${style} ${theme} network head keeps its name whole beside a four-digit count`, async ({
+      page,
+    }) => {
+      await openBusyNetwork(page, theme, style);
+      const head = await page.getByTestId('sidebar-social-mastodon').evaluate((element) => {
+        const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+        const label = element.querySelector<HTMLElement>('.label')!;
+        return {
+          room: label.clientWidth,
+          needed: label.scrollWidth,
+          composeToBell:
+            box('app-sidebar-notifications-bell').left - box('app-sidebar-compose-button').right,
+          bellToCount: box('.section-rest').left - box('app-sidebar-notifications-bell').right,
+        };
+      });
+      expect(head.needed, `"Mastodon" needs ${head.needed}, has ${head.room}`).toBeLessThanOrEqual(
+        head.room,
+      );
+      expect(
+        Math.abs(head.composeToBell + 4),
+        `'+' → bell ${head.composeToBell}`,
+      ).toBeLessThanOrEqual(TOLERANCE);
+      expect(
+        Math.abs(head.bellToCount - 4),
+        `bell → count ${head.bellToCount}`,
+      ).toBeLessThanOrEqual(TOLERANCE);
+    });
+  }
+}
