@@ -654,6 +654,7 @@ describe('OpmlImportDialogComponent', () => {
     expect(request.request.body.folderNames).toEqual({ '0': 'Gadgets' });
     request.flush({});
   });
+
   const plannedAsTechOne = (): OpmlPreview => {
     const preview = previewOf();
     preview.root.folders[0].destination = ['Tech (1)'];
@@ -699,5 +700,32 @@ describe('OpmlImportDialogComponent', () => {
 
     http.expectNone(PREVIEW);
     expect(selectionOf().toRequest(OPML, null).folderNames).toEqual({});
+  });
+  it('re-committing the displayed name keeps the override and typing the files name drops it', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    key(startRename('Tech (1)', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    const renamed = plannedAsTechOne();
+    renamed.root.folders[0].destination = ['Gadgets'];
+    http.expectOne(PREVIEW).flush(renamed);
+    fixture.detectChanges();
+    const row = folderRow('Gadgets');
+    expect(textOf(row.querySelector('.name'))).toBe('Gadgets');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    const input = renameInput(row)!;
+    expect(input.value).toBe('Gadgets');
+    key(input, 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({ '0': 'Gadgets' });
+
+    key(startRename('Gadgets', 'A'), 'Enter');
+    expect(selectionOf().folderNames()).toEqual({});
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(plannedAsTechOne());
   });
 });
