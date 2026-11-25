@@ -2,7 +2,6 @@
 
 .g-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
@@ -19,6 +18,11 @@
   color: var(--accent);
 }
 
+.g-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .g-title {
   margin: 0;
   font-size: var(--fs-lg);
@@ -32,9 +36,7 @@
   font-size: var(--fs-sm);
 }
 
-// The header's action slot. `margin-left: auto` pushes it to the trailing
-// edge; when actions don't fit, `.g-head`'s `flex-wrap` drops them to their
-// own line rather than crushing the title (admin's four status filters).
+// The header's action slot; `margin-left: auto` pushes it to the trailing edge.
 .g-actions {
   display: flex;
   flex-wrap: wrap;
