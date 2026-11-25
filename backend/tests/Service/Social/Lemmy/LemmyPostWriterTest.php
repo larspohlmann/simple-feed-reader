@@ -10,6 +10,7 @@ use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
+use App\Service\Social\Lemmy\LemmyOwnPosts;
 use App\Service\Social\Lemmy\LemmyPostWriter;
 use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
@@ -22,6 +23,7 @@ use App\Service\Social\Publishing\Model\PublicationModel;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
@@ -31,7 +33,9 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class LemmyPostWriterTest extends TestCase
 {
@@ -39,6 +43,8 @@ final class LemmyPostWriterTest extends TestCase
 
     private const string COMMENT = 'POST https://lemmy.example/api/v3/comment';
     private const string POST = 'POST https://lemmy.example/api/v3/post';
+    private const string LISTING = 'GET https://lemmy.example/api/v3/user'
+        . '?username=lars%40lemmy.example&sort=New&limit=10';
     private const string ARTICLE = 'https://example.com/a';
     private const string PUBLISHED_ADDRESS = 'https://lemmy.example/comment/9001';
 
@@ -318,6 +324,86 @@ final class LemmyPostWriterTest extends TestCase
         $this->writer(new RoutedHttpClient([]))->delete($this->account(), '9001');
     }
 
+    public function testATimedOutPostThatLandedIsPosted(): void
+    {
+        $http = new RoutedHttpClient([self::POST => new MockResponse(['']), self::LISTING => self::ownListing()]);
+
+        $published = $this->writer($http)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+
+        self::assertEquals(
+            new PublishedPostModel('https://lemmy.example/post/501', 'https://lemmy.example/post/501'),
+            $published,
+        );
+    }
+
+    public function testATimedOutPostThatDidNotLandMayHaveGoneThrough(): void
+    {
+        $http = new RoutedHttpClient([
+            self::POST => new MockResponse(['']),
+            self::LISTING => new MockResponse('{"posts":[]}'),
+        ]);
+
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+
+        $this->writer($http)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+    }
+
+    public function testAFailedLookupKeepsTheUnknownOutcome(): void
+    {
+        $http = new RoutedHttpClient([
+            self::POST => new MockResponse(['']),
+            self::LISTING => new MockResponse('', ['http_code' => Response::HTTP_UNAUTHORIZED]),
+        ]);
+
+        $this->expectException(SocialWriteOutcomeUnknownException::class);
+
+        $this->writer($http)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+    }
+
+    public function testAPostAnsweredWithAServerErrorIsLookedUpToo(): void
+    {
+        $http = new RoutedHttpClient([
+            self::POST => new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            self::LISTING => self::ownListing(),
+        ]);
+
+        $published = $this->writer($http)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+
+        self::assertSame('https://lemmy.example/post/501', $published->url);
+    }
+
+    public function testATimedOutCommentIsNotLookedUp(): void
+    {
+        $http = new RoutedHttpClient([self::COMMENT => new MockResponse([''])]);
+
+        try {
+            $this->writer($http)->publish($this->account(), $this->replying('42', null, new PostDraftModel('Hello')));
+            self::fail('A timed-out comment may have gone through.');
+        } catch (SocialWriteOutcomeUnknownException) {
+            self::assertCount(1, $http->requests);
+        }
+    }
+
+    private static function ownListing(): MockResponse
+    {
+        return new MockResponse(
+            '{"posts":[{"post":{"id":501,"name":"Title","community_id":7,"deleted":false,'
+            . '"published":"2026-11-25T11:36:09.635002Z","ap_id":"https://lemmy.example/post/501"}}]}',
+        );
+    }
+
     private function account(): SocialAccount
     {
         return SocialAccounts::lemmyOf(SocialAccounts::owner());
@@ -346,7 +432,9 @@ final class LemmyPostWriterTest extends TestCase
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
         $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
-        return new LemmyPostWriter(new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher())));
+        $lemmy = new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
+
+        return new LemmyPostWriter($lemmy, new LemmyOwnPosts($lemmy), new MockClock('2026-11-25 11:36:09'));
     }
 
     private function created(): MockResponse
