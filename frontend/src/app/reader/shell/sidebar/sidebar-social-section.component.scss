@@ -101,9 +101,14 @@
   height: var(--icon-md);
 }
 
-/* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon". */
+/* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon".
+   With a fine pointer it sits --space-1 from the name, as it sits from the bell. */
 :host-context(.sidebar-airy) .section-head app-sidebar-compose-button {
   margin-left: calc(var(--space-1) * -1.5);
+
+  @media (pointer: fine) {
+    margin-left: calc(var(--space-1) - var(--space-3));
+  }
 }
 
 :host-context(.sidebar-airy) .rows {
