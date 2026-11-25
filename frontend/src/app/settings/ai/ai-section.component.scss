@@ -26,7 +26,6 @@ app-searchable-select {
 
 .conn {
   @include icon-lead.first-line('> .conn-dot', '> .conn-who');
-  @include icon-lead.overhang('> .conn-dot', $dot-box);
 
   display: flex;
   gap: var(--space-3);
@@ -34,6 +33,8 @@ app-searchable-select {
 }
 
 .conn-dot {
+  --icon-lead-self: #{$dot-box};
+
   padding: $dot-padding;
   border-radius: var(--radius-pill);
   background: var(--bg-success);

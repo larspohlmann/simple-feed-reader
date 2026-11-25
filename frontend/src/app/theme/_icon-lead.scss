@@ -13,10 +13,23 @@
     // stylelint-disable-next-line length-zero-no-unit
     initial-value: 0px;
   }
+
+  // Not inherited: a slot's box is its own, never its wrapper's.
+  @property --icon-lead-self {
+    syntax: '<length>';
+    inherits: false;
+    // stylelint-disable-next-line length-zero-no-unit
+    initial-value: 0px;
+  }
 }
 
 @function space($height) {
   @return calc((#{$height} - 1cap) / 2);
+}
+
+// The lead space of a row padded $inset around its first line.
+@mixin lead-space($inset) {
+  --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
 }
 
 // The lead's end margin in a row whose items stand $gap apart: lead and text end up a lead space apart.
@@ -47,12 +60,9 @@
     align-items: center;
     justify-content: center;
 
-    // Zero tall, so a glyph taller than the line cannot move the text. A host whose box is its glyph
-    // (a logo) publishes its size as --icon-lead-self: it keeps that box and cancels it with margins.
-    // A host that binds its own height (app-tag-glyph) keeps it, and stays within the line only while
-    // it is no taller than the line.
-    block-size: var(--icon-lead-self, 0);
-    margin-block: calc(var(--icon-lead-self, 0px) / -2);
+    // No height in the line, so a glyph taller than it cannot move the text; --icon-lead-self keeps a box.
+    block-size: var(--icon-lead-self);
+    margin-block: calc(var(--icon-lead-self) / -2);
 
     &::before {
       content: '';
@@ -61,11 +71,17 @@
   }
 }
 
-// A slot that paints its own box (a chip) keeps its height and hangs from the baseline the same way.
-@mixin overhang($slot, $box-size) {
+// A slot with no text beside it takes its own box back, centred in its row, with no lead space after it.
+@mixin alone($slot) {
   #{$slot} {
+    align-self: center;
     block-size: auto;
-    margin-block: calc(#{$box-size} / -2);
+    margin-block: 0;
+    margin-inline-end: 0;
+
+    &::before {
+      content: none;
+    }
   }
 }
 
@@ -76,8 +92,7 @@
 
 // $slot-size: the icon's size, when it can be taller than the line.
 @mixin box($inset, $slot, $text, $slot-size: null) {
-  --icon-lead-band: calc((1lh - 1cap) / 2);
-
+  @include lead-space($inset);
   @include first-line($slot, $text);
 
   $block: $inset;
@@ -86,14 +101,12 @@
     $block: clearance($inset, $slot-size);
   }
 
-  padding: #{$block} calc(#{$inset} + var(--icon-lead-band));
-  gap: calc(#{$inset} + var(--icon-lead-band));
+  padding: #{$block} var(--icon-lead-space);
+  gap: var(--icon-lead-space);
 }
 
 // As box, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
 @mixin box-lead($inset, $slot, $text, $gap, $slot-size: null) {
-  --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
-
   @include box($inset, $slot, $text, $slot-size);
 
   gap: $gap;

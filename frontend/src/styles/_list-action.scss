@@ -50,22 +50,16 @@
     height: var(--tap-target);
   }
 
+  @include icon-lead.alone('#{$action} app-icon, #{$action} app-pending-dots');
+
   #{$action} app-icon,
   #{$action} app-pending-dots {
     display: inline-flex;
-    align-self: auto;
-    block-size: auto;
-    margin-block: 0;
     box-sizing: content-box;
     padding: var(--space-2);
     border-radius: var(--radius-sm);
 
     @include glass-rim.ring(var(--border), control);
-  }
-
-  #{$action} app-icon::before,
-  #{$action} app-pending-dots::before {
-    content: none;
   }
 }
 

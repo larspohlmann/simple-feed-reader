@@ -214,11 +214,11 @@ header {
 }
 
 .menu .who {
-  @include icon-lead.box(var(--space-3), '> app-user-avatar', '> .who-text');
+  @include icon-lead.first-line('> app-user-avatar', '> .who-text');
 
   display: flex;
   min-width: 0;
-  padding-inline: var(--icon-lead-space);
+  padding: var(--space-3) var(--icon-lead-space);
   gap: var(--icon-lead-space);
   font-size: var(--fs-sm);
 }

@@ -1,6 +1,9 @@
 @use '../../theme/glass-rim';
 @use '../../theme/menu-items';
 
+// One line fills the tap target: the padding is what is left of it around the line.
+$item-inset: max(var(--row-pad-y), calc((var(--tap-target) - 1lh) / 2));
+
 :host {
   @include glass-rim.filled(var(--surface-2));
 
@@ -11,7 +14,7 @@
   border-top-right-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-2) var(--space-4);
 
-  @include menu-items.menu-lead-space(max(var(--row-pad-y), calc((var(--tap-target) - 1lh) / 2)));
+  @include menu-items.menu-lead-space($item-inset);
 
   max-height: 90vh;
   max-height: 90dvh;
@@ -48,8 +51,7 @@ nav {
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  // One line fills the tap target: the padding is what is left of it around the line.
-  @include menu-items.menu-items(max(var(--row-pad-y), calc((var(--tap-target) - 1lh) / 2)));
+  @include menu-items.menu-items($item-inset);
 }
 
 nav [role='menuitem']:has(> .labelled) {

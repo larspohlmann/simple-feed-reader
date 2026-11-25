@@ -22,6 +22,7 @@
   color: inherit;
 }
 
+// The arrow is a hit area that sizes the pill, so its box counts in the line (not --icon-lead-self).
 .pill > .arrow {
   block-size: auto;
 }

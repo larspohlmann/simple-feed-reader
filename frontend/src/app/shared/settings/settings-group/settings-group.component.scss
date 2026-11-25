@@ -6,7 +6,6 @@ $chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
 
 .g-head {
   @include icon-lead.first-line('> .g-icon', '> .g-text');
-  @include icon-lead.overhang('> .g-icon', $chip-box);
 
   display: flex;
   flex-wrap: wrap;
@@ -18,6 +17,8 @@ $chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
 }
 
 .g-icon {
+  --icon-lead-self: #{$chip-box};
+
   padding: $chip-padding;
   border-radius: var(--radius);
   background: var(--accent-soft);

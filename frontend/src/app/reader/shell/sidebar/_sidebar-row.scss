@@ -85,7 +85,7 @@
 
   display: flex;
 
-  // One line that never wraps: centred, so the line-tall lead sits on it.
+  // One line that never wraps: the items after the lead and its text centre on it.
   align-items: center;
   height: var(--row-box);
   padding: 0 var(--space-2) 0 var(--row-inset, var(--icon-lead-space));
