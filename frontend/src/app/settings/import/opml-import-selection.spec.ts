@@ -1,6 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { OpmlFeedState, OpmlImportRow, OpmlPreview, OpmlPreviewFeed } from './opml-import.models';
+import {
+  OpmlFeedState,
+  OpmlImportRow,
+  OpmlPlacement,
+  OpmlPreview,
+  OpmlPreviewFeed,
+} from './opml-import.models';
 import { OpmlImportSelection } from './opml-import-selection';
+
+const NO_PLACEMENT: OpmlPlacement = { parentTagName: null, folderNames: {} };
 
 function feed(url: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
   return { url, title: null, siteUrl: null, state };
@@ -210,7 +218,7 @@ describe('OpmlImportSelection', () => {
     selection.toggleTag('b1', 3);
     selection.setMode('r', 'tagsOnly');
     selection.toggleFeed('r');
-    expect(selection.toRequest('<opml/>', null)).toEqual({
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT)).toEqual({
       opml: '<opml/>',
       parentTagName: null,
       feedUrls: ['a1', 'b1'],
@@ -221,7 +229,9 @@ describe('OpmlImportSelection', () => {
   });
 
   it('sends a named parent tag as given', () => {
-    expect(selection.toRequest('<opml/>', 'Imported').parentTagName).toBe('Imported');
+    expect(
+      selection.toRequest('<opml/>', { parentTagName: 'Imported', folderNames: {} }).parentTagName,
+    ).toBe('Imported');
   });
 
   it('a feed starts in folder mode', () => {
@@ -234,13 +244,13 @@ describe('OpmlImportSelection', () => {
     selection.setMode('a1', 'folder');
     expect(selection.modeOf('a1')).toBe('folder');
     expect([...selection.chosenTags('a1')]).toEqual([]);
-    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({});
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({});
   });
 
   it('an empty tags only choice is sent as untagged', () => {
     selection.setMode('a1', 'tagsOnly');
     expect(selection.modeOf('a1')).toBe('tagsOnly');
-    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [] });
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ a1: [] });
   });
 
   it('toggles a tag off again', () => {
@@ -314,7 +324,7 @@ describe('OpmlImportSelection', () => {
     selection.setMode('b1', 'folderPlusTags');
     selection.toggleTag('b1', 6);
     selection.toggleTag('b1', 5);
-    expect(selection.toRequest('<opml/>', null)).toEqual({
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT)).toEqual({
       opml: '<opml/>',
       parentTagName: null,
       feedUrls: ['r', 'a1', 'b1'],
@@ -366,7 +376,7 @@ describe('OpmlImportSelection', () => {
     selection.setMode('a1', 'folderPlusTags');
     selection.toggleTag('a1', 5);
     selection.load(previewOf(10, 'X', 'subscribed'));
-    const request = selection.toRequest('<opml/>', null);
+    const request = selection.toRequest('<opml/>', NO_PLACEMENT);
     expect(request.tagIdsByFeedUrl).toEqual({});
     expect(request.addedTagIdsByFeedUrl).toEqual({ a1: [5] });
   });
@@ -375,11 +385,11 @@ describe('OpmlImportSelection', () => {
     selection.setMode('a1', 'tagsOnly');
     selection.toggleTag('a1', 3);
     selection.toggleFeed('a1');
-    const unticked = selection.toRequest('<opml/>', null);
+    const unticked = selection.toRequest('<opml/>', NO_PLACEMENT);
     expect(unticked.tagIdsByFeedUrl).toEqual({});
     expect(unticked.addedTagIdsByFeedUrl).toEqual({});
     selection.toggleFeed('a1');
-    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [3] });
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ a1: [3] });
   });
 
   it('renaming back to the files name drops the override', () => {
@@ -411,14 +421,17 @@ describe('OpmlImportSelection', () => {
     expect(selection.isRenamed(folder)).toBe(false);
   });
 
-  it('toRequest carries folderNames by position, trimmed', () => {
+  it('folderNames holds the renames by position, trimmed', () => {
     selection.renameFolder(folderRow(selection, 'A'), ' Gadgets ');
     selection.renameFolder(folderRow(selection, 'B'), 'Phones');
 
-    expect(selection.toRequest('<opml/>', null).folderNames).toEqual({
-      '0': 'Gadgets',
-      '0.0': 'Phones',
-    });
+    expect(selection.folderNames()).toEqual({ '0': 'Gadgets', '0.0': 'Phones' });
+  });
+
+  it('toRequest carries the placement it is given', () => {
+    const placement = { parentTagName: 'P', folderNames: { '0': 'Gadgets' } };
+
+    expect(selection.toRequest('<opml/>', placement)).toMatchObject(placement);
   });
 
   it('the folder row shows the planned tag name', () => {

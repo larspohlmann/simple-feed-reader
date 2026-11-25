@@ -49,25 +49,15 @@
         {{ 'settings.opml.selectNone' | transloco }}
       </app-button>
       @if (selection.hasFolders()) {
-        @if (selection.anyExpanded()) {
-          <app-button
-            variant="ghost"
-            size="sm"
-            data-testid="opml-import-collapse-all"
-            (click)="selection.collapseAll()"
-          >
-            {{ 'settings.opml.collapseAll' | transloco }}
-          </app-button>
-        } @else {
-          <app-button
-            variant="ghost"
-            size="sm"
-            data-testid="opml-import-expand-all"
-            (click)="selection.expandAll()"
-          >
-            {{ 'settings.opml.expandAll' | transloco }}
-          </app-button>
-        }
+        @let expanded = selection.anyExpanded();
+        <app-button
+          variant="ghost"
+          size="sm"
+          [attr.data-testid]="expanded ? 'opml-import-collapse-all' : 'opml-import-expand-all'"
+          (click)="selection.toggleAll()"
+        >
+          {{ (expanded ? 'settings.opml.collapseAll' : 'settings.opml.expandAll') | transloco }}
+        </app-button>
       }
       <app-button
         variant="ghost"
@@ -88,7 +78,7 @@
     </app-warning-box>
   }
 
-  @if (bulkOpen()) {
+  @if (bulk(); as bulkChoice) {
     <section class="bulk" data-testid="opml-import-bulk">
       @if (selection.allTicked()) {
         <app-warning-box data-testid="opml-import-bulk-all">
@@ -97,15 +87,15 @@
       }
       <app-segmented-choice
         [options]="tagModes"
-        [selected]="bulkMode()"
+        [selected]="bulkChoice.mode"
         ariaLabelKey="settings.opml.tagTicked"
         labelPrefix="settings.opml.mode."
-        (pick)="bulkMode.set($event)"
+        (pick)="setBulkMode($event)"
       />
-      @if (bulkMode() !== 'folder') {
+      @if (bulkChoice.mode !== 'folder') {
         <app-tag-picker
           [tags]="tags()"
-          [selected]="bulkTagIds()"
+          [selected]="bulkChoice.tagIds"
           (toggled)="toggleBulkTag($event)"
         />
       }
@@ -204,7 +194,8 @@
         @let url = row.feed.url;
         @let host = row.host;
         @let title = row.feed.title ?? host;
-        @let changed = selection.modeOf(url) !== 'folder';
+        @let mode = selection.modeOf(url);
+        @let changed = mode !== 'folder';
         @let tagsOpen = isTagsOpen(url);
         <li
           class="row"
@@ -257,7 +248,7 @@
               <app-segmented-choice
                 class="choice"
                 [options]="tagModes"
-                [selected]="selection.modeOf(url)"
+                [selected]="mode"
                 ariaLabelKey="settings.opml.tagMode"
                 labelPrefix="settings.opml.mode."
                 (pick)="selection.setMode(url, $event)"
@@ -271,7 +262,7 @@
                 (toggled)="selection.toggleTag(url, $event)"
               />
             }
-            @if (selection.modeOf(url) !== 'tagsOnly') {
+            @if (mode !== 'tagsOnly') {
               <p class="destination">
                 {{
                   'settings.opml.destination'
@@ -282,9 +273,7 @@
                             : ('settings.opml.untagged' | transloco),
                         }
                 }}
-                @if (
-                  selection.modeOf(url) === 'folderPlusTags' && selection.chosenTags(url).size > 0
-                ) {
+                @if (mode === 'folderPlusTags' && selection.chosenTags(url).size > 0) {
                   + {{ tagNames(selection.chosenTags(url)) }}
                 }
               </p>

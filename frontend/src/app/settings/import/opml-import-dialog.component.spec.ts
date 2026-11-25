@@ -414,7 +414,7 @@ describe('OpmlImportDialogComponent', () => {
     press('opml-import-bulk-apply', element());
 
     expect(byTestId('opml-import-bulk')).toBeNull();
-    const request = selectionOf().toRequest(OPML, null);
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
     expect(request.tagIdsByFeedUrl).toEqual({
       'https://a1.test/feed': [7],
       'https://b1.test/feed': [7],
@@ -549,7 +549,9 @@ describe('OpmlImportDialogComponent', () => {
     jest.advanceTimersByTime(300);
     http.expectOne(PREVIEW).flush(previewOf(10, 'P'));
     fixture.detectChanges();
-    const expected = fixture.debugElement.injector.get(OpmlImportSelection).toRequest(OPML, 'P');
+    const expected = fixture.debugElement.injector
+      .get(OpmlImportSelection)
+      .toRequest(OPML, { parentTagName: 'P', folderNames: {} });
 
     press('opml-import-apply');
     const request = http.expectOne(IMPORT);
@@ -749,7 +751,9 @@ describe('OpmlImportDialogComponent', () => {
     fixture.detectChanges();
 
     expect(checkbox(feedRow('b1')).checked).toBe(false);
-    expect(selectionOf().toRequest(OPML, null).tagIdsByFeedUrl).toEqual({
+    expect(
+      selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} }).tagIdsByFeedUrl,
+    ).toEqual({
       'https://a1.test/feed': [7],
     });
   });
@@ -813,7 +817,7 @@ describe('OpmlImportDialogComponent', () => {
     jest.advanceTimersByTime(300);
 
     http.expectNone(PREVIEW);
-    expect(selectionOf().toRequest(OPML, null).folderNames).toEqual({});
+    expect(selectionOf().folderNames()).toEqual({});
   });
   it('re-committing the displayed name keeps the override and typing the files name drops it', () => {
     mount(plannedAsTechOne());

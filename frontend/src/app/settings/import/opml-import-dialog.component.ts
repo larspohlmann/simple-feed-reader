@@ -65,6 +65,11 @@ function placementKey(placement: OpmlPlacement): string {
   return JSON.stringify([placement.parentTagName, names]);
 }
 
+interface BulkChoice {
+  mode: OpmlTagMode;
+  tagIds: ReadonlySet<number>;
+}
+
 const TAG_MODES: readonly OpmlTagMode[] = ['folder', 'folderPlusTags', 'tagsOnly'];
 
 const STATE_KEYS: Readonly<Record<Exclude<OpmlFeedState, 'new'>, string>> = {
@@ -112,9 +117,7 @@ export class OpmlImportDialogComponent {
     () => new Map(this.tags().map((tag) => [tag.id, tag.name])),
   );
   private readonly openedFeeds = signal<ReadonlySet<string>>(new Set());
-  protected readonly bulkOpen = signal(false);
-  protected readonly bulkMode = signal<OpmlTagMode>('folder');
-  protected readonly bulkTagIds = signal<ReadonlySet<number>>(new Set());
+  protected readonly bulk = signal<BulkChoice | null>(null);
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
@@ -132,13 +135,14 @@ export class OpmlImportDialogComponent {
     parentTagName: null,
     folderNames: {},
   });
-  protected readonly canImport = computed(() => {
-    return (
+  private readonly currentPlacementKey = computed(() => placementKey(this.currentPlacement()));
+  private readonly previewedPlacementKey = computed(() => placementKey(this.previewedPlacement()));
+  protected readonly canImport = computed(
+    () =>
       this.selection.selectedCount() > 0 &&
       !this.selection.overLimit() &&
-      placementKey(this.previewedPlacement()) === placementKey(this.currentPlacement())
-    );
-  });
+      this.previewedPlacementKey() === this.currentPlacementKey(),
+  );
   protected readonly editingKey = signal<string | null>(null);
   private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('renameInput');
 
@@ -178,12 +182,12 @@ export class OpmlImportDialogComponent {
         filter(([before, after]) => after > before),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.placements.next(this.currentPlacement()));
+      .subscribe(() => this.requestPreview());
   }
 
   protected typeParent(event: Event): void {
     this.parent.set(inputValue(event));
-    this.placements.next(this.currentPlacement());
+    this.requestPreview();
   }
 
   protected startRename(row: FolderRow): void {
@@ -204,15 +208,17 @@ export class OpmlImportDialogComponent {
 
   protected resetFolder(row: FolderRow): void {
     this.selection.resetFolder(row);
-    this.placements.next(this.currentPlacement());
+    this.requestPreview();
   }
 
   private renameTo(row: FolderRow, name: string): void {
-    const before = placementKey(this.currentPlacement());
+    const before = this.currentPlacementKey();
     this.selection.renameFolder(row, name);
-    if (placementKey(this.currentPlacement()) !== before) {
-      this.placements.next(this.currentPlacement());
-    }
+    if (this.currentPlacementKey() !== before) this.requestPreview();
+  }
+
+  private requestPreview(): void {
+    this.placements.next(this.currentPlacement());
   }
 
   protected tagNames(tagIds: ReadonlySet<number>): string {
@@ -229,21 +235,27 @@ export class OpmlImportDialogComponent {
   }
 
   protected openBulk(): void {
-    this.bulkMode.set('folder');
-    this.bulkTagIds.set(new Set());
-    this.bulkOpen.set(true);
+    this.bulk.set({ mode: 'folder', tagIds: new Set() });
   }
 
   protected closeBulk(): void {
-    this.bulkOpen.set(false);
+    this.bulk.set(null);
+  }
+
+  protected setBulkMode(mode: OpmlTagMode): void {
+    this.bulk.update((previous) => previous && { ...previous, mode });
   }
 
   protected toggleBulkTag(tagId: number): void {
-    this.bulkTagIds.update((previous) => toggled(previous, tagId));
+    this.bulk.update(
+      (previous) => previous && { ...previous, tagIds: toggled(previous.tagIds, tagId) },
+    );
   }
 
   protected applyBulk(): void {
-    this.selection.applyToTicked(this.bulkMode(), this.bulkTagIds());
+    const choice = this.bulk();
+    if (choice === null) return;
+    this.selection.applyToTicked(choice.mode, choice.tagIds);
     this.closeBulk();
   }
 
@@ -254,7 +266,7 @@ export class OpmlImportDialogComponent {
     this.dialogRef.disableClose = true;
     this.failure.set(null);
     this.api
-      .importOpml(this.selection.toRequest(this.data.opml, this.previewedPlacement().parentTagName))
+      .importOpml(this.selection.toRequest(this.data.opml, this.previewedPlacement()))
       .subscribe({
         next: (result) => this.dialogRef.close(result),
         error: (error: HttpErrorResponse) => {

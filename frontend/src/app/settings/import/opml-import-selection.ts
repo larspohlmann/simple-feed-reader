@@ -6,6 +6,7 @@ import {
   OpmlImportRow,
   OpmlTagChoice,
   OpmlTagMode,
+  OpmlPlacement,
   OpmlPreview,
   OpmlPreviewFeed,
   OpmlPreviewFolder,
@@ -180,6 +181,11 @@ export class OpmlImportSelection {
     this.collapsedKeys.update((previous) => toggled(previous, folderKey));
   }
 
+  toggleAll(): void {
+    if (this.anyExpanded()) this.collapseAll();
+    else this.expandAll();
+  }
+
   collapseAll(): void {
     this.collapsedKeys.set(new Set(this.folderKeys()));
   }
@@ -235,7 +241,7 @@ export class OpmlImportSelection {
     });
   }
 
-  toRequest(opml: string, parentTagName: string | null): OpmlImportRequest {
+  toRequest(opml: string, placement: OpmlPlacement): OpmlImportRequest {
     const feedUrls = this.rows().flatMap((row) =>
       row.kind === 'feed' && this.selectedUrls().has(row.feed.url) ? [row.feed.url] : [],
     );
@@ -249,11 +255,11 @@ export class OpmlImportSelection {
     }
     return {
       opml,
-      parentTagName,
+      parentTagName: placement.parentTagName,
       feedUrls,
       tagIdsByFeedUrl,
       addedTagIdsByFeedUrl,
-      folderNames: this.folderNames(),
+      folderNames: placement.folderNames,
     };
   }
 }
