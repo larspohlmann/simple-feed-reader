@@ -10,6 +10,8 @@ use App\Service\Curation\Trending\Support\GroupProfiles;
 final class ProfileMerges
 {
     private const float MERGE_SIMILARITY = 0.30;
+    private const float LINKED_MERGE_SIMILARITY = 0.25;
+    private const float MIN_LINK_DENSITY = 0.10;
     private const int MIN_MEMBERS = 3;
 
     /** @var array<int, non-empty-list<int>> lowest member => members ascending */
@@ -19,8 +21,11 @@ final class ProfileMerges
     private array $profiles = [];
 
     /** @param list<non-empty-list<int>> $groups */
-    public function __construct(private readonly TrendingRun $run, array $groups)
-    {
+    public function __construct(
+        private readonly TrendingRun $run,
+        array $groups,
+        private readonly LinkedPairs $linkedPairs,
+    ) {
         foreach ($groups as $members) {
             sort($members);
             $this->groups[$members[0]] = $members;
@@ -73,7 +78,7 @@ final class ProfileMerges
         $pairs = [];
         foreach ($similarities as $lowerKey => $similaritiesByHigherKey) {
             foreach ($similaritiesByHigherKey as $higherKey => $similarity) {
-                if ($similarity >= self::MERGE_SIMILARITY) {
+                if ($this->isMergeable($similarity, $lowerKey, $higherKey)) {
                     $pairs[] = [$similarity, $lowerKey, $higherKey];
                 }
             }
@@ -85,6 +90,25 @@ final class ProfileMerges
         );
 
         return $pairs;
+    }
+
+    private function isMergeable(float $similarity, int $lowerKey, int $higherKey): bool
+    {
+        if ($similarity >= self::MERGE_SIMILARITY) {
+            return true;
+        }
+
+        return $similarity >= self::LINKED_MERGE_SIMILARITY
+            && $this->computeLinkDensity($lowerKey, $higherKey) >= self::MIN_LINK_DENSITY;
+    }
+
+    private function computeLinkDensity(int $lowerKey, int $higherKey): float
+    {
+        $lowerMembers = $this->groups[$lowerKey];
+        $higherMembers = $this->groups[$higherKey];
+
+        return $this->linkedPairs->countBetween($lowerMembers, $higherMembers)
+            / (\count($lowerMembers) * \count($higherMembers));
     }
 
     /** @return array<int, list<int>> stem id => keys of the groups whose profile holds it, ascending */
@@ -113,7 +137,7 @@ final class ProfileMerges
 
     private function merge(int $lowerKey, int $higherKey): void
     {
-        $members = [...$this->groups[$lowerKey], ...$this->groups[$higherKey]];
+        $members = array_merge($this->groups[$lowerKey], $this->groups[$higherKey]);
         sort($members);
         $this->groups[$lowerKey] = $members;
         $this->profiles[$lowerKey] = GroupProfiles::build($this->run, $members);
