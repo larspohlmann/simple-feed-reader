@@ -21,6 +21,7 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { KeepSelectionDirective } from '../../../shared/keep-selection/keep-selection.directive';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
+import { MenuCheckboxComponent } from '../../../shared/menu-checkbox/menu-checkbox.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { openExternal } from '../../../shared/open-external';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
@@ -38,6 +39,7 @@ import {
   clipboardText,
   clippedAtWord,
   linkContent,
+  pageAtQuote,
   quoteContent,
   sharedLink,
   sharedPage,
@@ -73,6 +75,7 @@ const SHEET_SNIPPET_LENGTH = 60;
     ListActionDirective,
     ShareTargetLogoComponent,
     NetworkLogoComponent,
+    MenuCheckboxComponent,
     CdkConnectedOverlay,
     CdkOverlayOrigin,
     CdkTrapFocus,
@@ -110,6 +113,7 @@ export class ShareButtonComponent {
   private readonly overlay = viewChild.required(CdkConnectedOverlay);
   /** Caught when the menu opens: the press that opens it may collapse the selection it shares. */
   protected readonly quote = signal<SelectedQuote | null>(null);
+  protected readonly linksToQuote = signal(false);
   /** A keyboard click has no pointer position, so `detail` is 0; only then is the first item meant to look focused. */
   private opensByKeyboard = false;
   private readonly mode = computed((): ShareMenuMode => {
@@ -131,6 +135,7 @@ export class ShareButtonComponent {
   protected press(event: MouseEvent): void {
     this.opensByKeyboard = event.detail === 0;
     this.quote.set(this.selectedQuote());
+    this.linksToQuote.set(false);
     if (this.screen.isCoarse()) this.openSheetOverReleasedSelection();
     else this.open.update((open) => !open);
   }
@@ -149,7 +154,7 @@ export class ShareButtonComponent {
   protected post(network: SocialNetworkName): void {
     this.open.set(false);
     this.postActions
-      .postLink(network, sharedLink(this.page(), this.quote()))
+      .postLink(network, sharedLink(this.pageFor(this.quote()), this.quote()))
       .subscribe(() => this.recorder?.record());
   }
 
@@ -182,7 +187,11 @@ export class ShareButtonComponent {
     const quote = this.quote();
     return quote === null || item.linkOnly
       ? linkContent(this.page())
-      : quoteContent(this.page(), quote);
+      : quoteContent(this.pageFor(quote), quote);
+  }
+
+  private pageFor(quote: SelectedQuote | null): SharedPage {
+    return quote !== null && this.linksToQuote() ? pageAtQuote(this.page(), quote) : this.page();
   }
 
   private openSheetOverReleasedSelection(): void {
@@ -195,7 +204,10 @@ export class ShareButtonComponent {
     this.sheet
       .open({
         title: this.sheetTitle(),
-        actions: this.items().map((item) => this.sheetItem(item)),
+        actions: [
+          ...this.quoteLinkSheetItems(),
+          ...this.items().map((item) => this.sheetItem(item)),
+        ],
       })
       .subscribe((choice) => this.chooseById(choice));
   }
@@ -205,6 +217,17 @@ export class ShareButtonComponent {
     return quote === null
       ? this.i18n.translate('reader.share.button')
       : `“${clippedAtWord(quote.text, SHEET_SNIPPET_LENGTH)}”`;
+  }
+
+  private quoteLinkSheetItems(): ActionSheetItem[] {
+    if (this.quote()?.anchorable !== true) return [];
+    const check = {
+      id: 'link-to-quote',
+      label: this.i18n.translate('reader.share.linkToQuote'),
+      checked: this.linksToQuote.asReadonly(),
+      toggle: () => this.linksToQuote.update((links) => !links),
+    };
+    return [check, ACTION_SHEET_DIVIDER];
   }
 
   private sheetItem(item: ShareItem): ActionSheetItem {

@@ -23,15 +23,19 @@ export function sharedPage(url: string, title: string): SharedPage {
   return { url: stripTracking(url), title };
 }
 
+/** The page with a text fragment that opens it scrolled to the quote. */
+export function pageAtQuote(page: SharedPage, quote: SelectedQuote): SharedPage {
+  return { ...page, url: quoteShareUrl(page.url, quote) };
+}
+
 export function linkContent(page: SharedPage): ShareContent {
   const text = page.title === '' ? page.url : `${page.title} ${page.url}`;
   return { url: page.url, title: page.title, text, quote: null };
 }
 
 export function quoteContent(page: SharedPage, quote: SelectedQuote): ShareContent {
-  const url = quoteShareUrl(page.url, quote);
   const quoted = `“${quote.text}”`;
-  return { url, title: page.title, text: `${quoted} ${url}`, quote: quoted };
+  return { url: page.url, title: page.title, text: `${quoted} ${page.url}`, quote: quoted };
 }
 
 export function clipboardText(content: ShareContent): string {
@@ -41,7 +45,7 @@ export function clipboardText(content: ShareContent): string {
 export function sharedLink(page: SharedPage, quote: SelectedQuote | null): SharedLinkDto {
   if (quote === null) return { url: page.url, title: page.title, quote: null };
   return {
-    url: quoteShareUrl(page.url, quote),
+    url: page.url,
     title: page.title,
     quote: clippedAtWord(quote.text, QUOTE_MAX),
   };

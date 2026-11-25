@@ -4,6 +4,7 @@ import {
   clipboardText,
   clippedAtWord,
   linkContent,
+  pageAtQuote,
   quoteContent,
   sharedLink,
   sharedPage,
@@ -11,7 +12,6 @@ import {
 
 const PAGE = { url: 'https://a.example/s', title: 'A story' };
 const QUOTE: SelectedQuote = { text: 'one two three', words: 3, anchorable: true };
-const FRAGMENT = 'https://a.example/s#:~:text=one%20two%20three';
 
 describe('share content', () => {
   it('shares a page without its tracking parameters', () => {
@@ -31,26 +31,33 @@ describe('share content', () => {
     expect(linkContent({ ...PAGE, title: '' }).text).toBe(PAGE.url);
   });
 
-  it('shares a quote in typographic quotes with the link that points at it', () => {
+  it('shares a quote in typographic quotes with the plain page link', () => {
     expect(quoteContent(PAGE, QUOTE)).toEqual({
-      url: FRAGMENT,
+      url: PAGE.url,
       title: 'A story',
-      text: `“one two three” ${FRAGMENT}`,
+      text: `“one two three” ${PAGE.url}`,
       quote: '“one two three”',
     });
   });
 
   it('copies the link alone, or the quote above its link', () => {
     expect(clipboardText(linkContent(PAGE))).toBe(PAGE.url);
-    expect(clipboardText(quoteContent(PAGE, QUOTE))).toBe(`“one two three”\n\n${FRAGMENT}`);
+    expect(clipboardText(quoteContent(PAGE, QUOTE))).toBe(`“one two three”\n\n${PAGE.url}`);
   });
 
-  it('hands the composer the link alone, or the quote with the link that points at it', () => {
+  it('hands the composer the link alone, or the quote with its link', () => {
     expect(sharedLink(PAGE, null)).toEqual({ ...PAGE, quote: null });
     expect(sharedLink(PAGE, QUOTE)).toEqual({
-      url: FRAGMENT,
+      url: PAGE.url,
       title: 'A story',
       quote: 'one two three',
+    });
+  });
+
+  it('points the page at the quote on request', () => {
+    expect(pageAtQuote(PAGE, QUOTE)).toEqual({
+      url: 'https://a.example/s#:~:text=one%20two%20three',
+      title: 'A story',
     });
   });
 

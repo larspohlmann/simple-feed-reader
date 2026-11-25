@@ -71,6 +71,13 @@
   >
     @if (quote(); as quote) {
       <p class="snippet" role="presentation">“{{ quote.text }}”</p>
+      @if (quote.anchorable) {
+        <app-menu-checkbox
+          [label]="'reader.share.linkToQuote' | transloco"
+          [checked]="linksToQuote()"
+          (toggled)="linksToQuote.set(!linksToQuote())"
+        />
+      }
       <hr role="separator" />
     }
     @for (item of items(); track item.id) {
