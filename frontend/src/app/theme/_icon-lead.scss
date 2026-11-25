@@ -69,20 +69,32 @@
   }
 }
 
-@mixin box($inset, $slot, $text) {
+// A block inset that keeps a slot taller than the line $inset clear of the edges, as centring did.
+@function clearance($inset, $slot-size) {
+  @return max(#{$inset}, calc(#{$inset} + (#{$slot-size} - 1lh) / 2));
+}
+
+// $slot-size: the icon's size, when it can be taller than the line.
+@mixin box($inset, $slot, $text, $slot-size: null) {
   --icon-lead-band: calc((1lh - 1cap) / 2);
 
   @include first-line($slot, $text);
 
-  padding: #{$inset} calc(#{$inset} + var(--icon-lead-band));
+  $block: $inset;
+
+  @if $slot-size {
+    $block: clearance($inset, $slot-size);
+  }
+
+  padding: #{$block} calc(#{$inset} + var(--icon-lead-band));
   gap: calc(#{$inset} + var(--icon-lead-band));
 }
 
 // As box, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
-@mixin box-lead($inset, $slot, $text, $gap) {
+@mixin box-lead($inset, $slot, $text, $gap, $slot-size: null) {
   --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
 
-  @include box($inset, $slot, $text);
+  @include box($inset, $slot, $text, $slot-size);
 
   gap: $gap;
 

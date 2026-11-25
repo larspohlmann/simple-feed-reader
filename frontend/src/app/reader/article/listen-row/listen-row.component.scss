@@ -7,7 +7,8 @@
     var(--space-2),
     '> app-icon',
     '> .listen-label, > .listen-duration',
-    var(--space-2)
+    var(--space-2),
+    var(--icon-lg)
   );
 
   display: flex;
@@ -17,6 +18,7 @@
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
+  text-align: start;
 }
 
 :host {

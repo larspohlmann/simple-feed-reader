@@ -15,12 +15,13 @@
   display: flex;
   gap: var(--space-1);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: icon-lead.clearance(var(--space-2), var(--icon-md)) var(--space-3);
   background: none;
   border: none;
   color: var(--text-secondary);
   font: inherit;
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
+  text-align: start;
   cursor: pointer;
 }

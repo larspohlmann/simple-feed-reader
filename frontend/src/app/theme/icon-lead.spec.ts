@@ -30,6 +30,10 @@ const PROBE = `
   @include icon-lead.box-lead(var(--space-1), '> .glyph', '> .text', var(--space-1));
 }
 
+.tall {
+  @include icon-lead.box(var(--space-2), '> .glyph', '> .text', var(--icon-lg));
+}
+
 .fixed {
   @include icon-lead.fixed-row(var(--sidebar-row-h), '> .glyph', '> .text');
 }
@@ -87,6 +91,13 @@ describe('icon-lead', () => {
       '--icon-lead-band': 'calc((1lh - 1cap) / 2)',
       padding: 'var(--space-3) calc(var(--space-3) + var(--icon-lead-band))',
       gap: 'calc(var(--space-3) + var(--icon-lead-band))',
+    });
+  });
+
+  it('keeps a glyph taller than the line its inset clear of the edges', () => {
+    expect(rules['.tall']).toMatchObject({
+      padding:
+        'max(var(--space-2), var(--space-2) + (var(--icon-lg) - 1lh) / 2) calc(var(--space-2) + var(--icon-lead-band))',
     });
   });
 

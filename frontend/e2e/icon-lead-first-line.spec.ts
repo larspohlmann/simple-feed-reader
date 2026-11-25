@@ -785,6 +785,16 @@ interface HeaderCase {
   spaced?: boolean;
   /** The text spans two lines or more. */
   wraps?: boolean;
+  /** On one line, the row is its glyph plus this block inset twice, however much shorter the line. */
+  clearance?: string;
+  /** Gives the row a label long enough to wrap. */
+  lengthen?: (row: Locator) => Promise<void>;
+}
+
+const WRAPPING_LABEL = 'A label long enough to wrap onto a second line in the article';
+
+async function openEpisode(page: Page): Promise<void> {
+  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
 }
 
 async function stubEpisode(page: Page): Promise<void> {
@@ -882,12 +892,31 @@ const HEADER_CASES: HeaderCase[] = [
     stub: stubEpisode,
     path: '/?subscription=1',
     row: async (page) => {
-      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      await openEpisode(page);
       return page.locator('app-listen-row .listen:not(.queue)');
     },
     icon: 'app-icon',
     text: '.listen-label',
     spaced: true,
+    clearance: '--space-2',
+  },
+  {
+    name: 'a listen row whose label wraps',
+    viewport: PHONE,
+    stub: stubEpisode,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openEpisode(page);
+      return page.locator('app-listen-row .listen:not(.queue)');
+    },
+    icon: 'app-icon',
+    text: '.listen-label',
+    spaced: true,
+    wraps: true,
+    lengthen: (row) =>
+      row.locator('.listen-label').evaluate((label, text) => {
+        label.textContent = text;
+      }, WRAPPING_LABEL),
   },
   {
     name: 'a reader-panel toggle',
@@ -895,13 +924,56 @@ const HEADER_CASES: HeaderCase[] = [
     stub: stubEpisode,
     path: '/?subscription=1',
     row: async (page) => {
-      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      await openEpisode(page);
       return page.locator('app-reader-panel .reader-panel__toggle').first();
     },
     icon: 'app-icon',
     text: null,
+    clearance: '--space-2',
+  },
+  {
+    name: 'a reader-panel toggle whose label wraps',
+    viewport: PHONE,
+    stub: stubEpisode,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openEpisode(page);
+      return page.locator('app-reader-panel .reader-panel__toggle').first();
+    },
+    icon: 'app-icon',
+    text: null,
+    wraps: true,
+    lengthen: (row) =>
+      row.evaluate((toggle, text) => {
+        toggle.lastChild!.textContent = text;
+      }, WRAPPING_LABEL),
   },
 ];
+
+/** The row's height inside its border, and its glyph's height plus the inset token twice. */
+async function measureClearance(
+  row: Locator,
+  icon: string,
+  inset: string,
+): Promise<[number, number]> {
+  return row.evaluate(
+    (element, [iconSelector, token]) => {
+      const style = getComputedStyle(element);
+      const probe = document.createElement('div');
+      probe.style.cssText = `position: absolute; height: var(${token})`;
+      element.append(probe);
+      const insetSize = probe.getBoundingClientRect().height;
+      probe.remove();
+      const glyph = element.querySelector(`${iconSelector} span`)!.getBoundingClientRect().height;
+      const height =
+        element.getBoundingClientRect().height -
+        parseFloat(style.borderTopWidth) -
+        parseFloat(style.borderBottomWidth);
+      return [height, glyph + 2 * insetSize];
+    },
+    [icon, inset] as const,
+  );
+}
 
 for (const setup of SETUPS) {
   test.describe(`headers, ${setup.theme} at ${setup.step}%`, () => {
@@ -916,6 +988,7 @@ for (const setup of SETUPS) {
           const row = await header.row(page);
           await expect(row).toBeVisible();
           await settle(page, setup.theme);
+          await header.lengthen?.(row);
           const textHolder = header.text === null ? row : row.locator(header.text).first();
 
           const measured = await measureFirstLine({
@@ -932,6 +1005,13 @@ for (const setup of SETUPS) {
             expect(measured.lines, 'the text spans two lines or more').toBeGreaterThanOrEqual(
               MIN_LINES,
             );
+          }
+          if (header.clearance) {
+            const [height, expected] = await measureClearance(row, header.icon, header.clearance);
+            expect(
+              Math.abs(height - expected),
+              `row ${height} against ${expected}`,
+            ).toBeLessThanOrEqual(TOLERANCE);
           }
           if (header.spaced) {
             const { side, gap } = await measureSpacing(row, header.icon, header.text);

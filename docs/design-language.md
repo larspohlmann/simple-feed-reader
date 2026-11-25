@@ -148,6 +148,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 - `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset`; its side padding
   and icon gap follow the font. `box-lead($inset, $slot, $text, $gap)` when items follow the text: only
   the icon gets the lead space, the rest stay `$gap` apart.
+- An icon taller than the line keeps its clearance: `box`/`box-lead` take its size as a last `$slot-size`,
+  and a row outside them pads with `clearance($inset, $size)`; one line is then the icon plus the inset twice.
 - `fixed-row($height, $slot, $text)`: a row or chip whose height is set, not grown by its text (a
   sidebar row, a min-height chip); side padding and gap are `($height - 1cap) / 2`, and the text keeps
   the place centring gave it. `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text.
