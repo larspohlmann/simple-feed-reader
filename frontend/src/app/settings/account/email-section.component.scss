@@ -1,9 +1,12 @@
+@use '../../theme/icon-lead';
+
 // The callout is the one piece of chrome the primitives don't own: an
 // informational block above the rows for a state controls can't fix. Reads
 // the panel's own inset tokens (see docs/design-language.md, app-settings-group).
 .callout {
+  @include icon-lead.first-line('> app-icon');
+
   display: flex;
-  align-items: center;
   gap: var(--space-3);
   padding: var(--panel-inset-y) var(--panel-inset-x);
   background: var(--accent-soft);
@@ -14,8 +17,11 @@
   flex: 1;
 }
 
+.callout app-button {
+  align-self: center;
+}
+
 .callout app-icon {
-  flex: none;
   color: var(--accent);
 }
 
