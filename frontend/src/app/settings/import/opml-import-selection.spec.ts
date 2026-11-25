@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { OpmlFeedState, OpmlImportRow, OpmlPreview, OpmlPreviewFeed } from './opml-import.models';
-import { OpmlImportSelection, toPosition } from './opml-import-selection';
+import { OpmlImportSelection } from './opml-import-selection';
 
 function feed(url: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
   return { url, title: null, siteUrl: null, state };
@@ -68,13 +68,13 @@ describe('OpmlImportSelection', () => {
   it('flattens the tree in document order', () => {
     expect(selection.rows().map((row) => `${row.kind}:${row.key}:${row.depth}`)).toEqual([
       'feed:r:0',
-      'folder:f0:0',
+      'folder:0:0',
       'feed:a1:1',
       'feed:a2:1',
-      'folder:f0.0:1',
+      'folder:0.0:1',
       'feed:b1:2',
       'feed:b2:2',
-      'folder:f1:0',
+      'folder:1:0',
     ]);
   });
 
@@ -331,20 +331,20 @@ describe('OpmlImportSelection', () => {
     expect(selection.modeOf('a1')).toBe('folderPlusTags');
   });
   it('collapsing a folder hides its feeds and subfolders but keeps the folder row', () => {
-    selection.toggleCollapsed('f0');
+    selection.toggleCollapsed('0');
     const keys = selection.visibleRows().map((row) => row.key);
-    expect(keys).toContain('f0');
+    expect(keys).toContain('0');
     expect(keys).not.toContain('a1');
-    expect(keys).not.toContain('f0.0');
+    expect(keys).not.toContain('0.0');
     expect(keys).not.toContain('b1');
     expect(keys).toContain('r');
-    expect(selection.isCollapsed('f0')).toBe(true);
+    expect(selection.isCollapsed('0')).toBe(true);
   });
 
   it('collapse state survives a re-preview', () => {
-    selection.toggleCollapsed('f0');
+    selection.toggleCollapsed('0');
     selection.load(previewOf(10, 'Y'));
-    expect(selection.isCollapsed('f0')).toBe(true);
+    expect(selection.isCollapsed('0')).toBe(true);
     expect(selection.visibleRows().some((row) => row.key === 'a1')).toBe(false);
   });
 
@@ -380,10 +380,6 @@ describe('OpmlImportSelection', () => {
     expect(unticked.addedTagIdsByFeedUrl).toEqual({});
     selection.toggleFeed('a1');
     expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [3] });
-  });
-  it('toPosition maps row keys to positions', () => {
-    expect(toPosition('f0')).toBe('0');
-    expect(toPosition('f0.2.1')).toBe('0.2.1');
   });
 
   it('renaming back to the files name drops the override', () => {

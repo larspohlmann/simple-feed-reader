@@ -30,7 +30,7 @@ function siteHrefOf(feed: OpmlPreviewFeed): string | null {
 }
 
 function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
-  const path = ancestors.length === 0 ? 'f' : `${ancestors[ancestors.length - 1]}.`;
+  const path = ancestors.length === 0 ? '' : `${ancestors[ancestors.length - 1]}.`;
   const feedRows = folder.feeds.map((feed: OpmlPreviewFeed): OpmlImportRow => ({
     kind: 'feed',
     key: feed.url,
@@ -68,10 +68,6 @@ function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]):
   return { rows: [...feedRows, ...folderRows], importableUrls };
 }
 
-export function toPosition(folderKey: string): string {
-  return folderKey.slice(1);
-}
-
 function collectDroppedNames(folder: OpmlPreviewFolder): string[] {
   return folder.folders.flatMap((child) => [
     ...(child.dropped ? [child.name ?? ''] : []),
@@ -85,7 +81,7 @@ export class OpmlImportSelection {
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
   private readonly tagChoices = signal<ReadonlyMap<string, OpmlTagChoice>>(new Map());
   private readonly collapsedKeys = signal<ReadonlySet<string>>(new Set());
-  private readonly renamedFolders = signal<ReadonlyMap<string, string>>(new Map());
+  private readonly renamedFolders = signal<Readonly<Record<string, string>>>({});
 
   private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
@@ -106,9 +102,7 @@ export class OpmlImportSelection {
     return states;
   });
 
-  readonly folderNames = computed<Record<string, string>>(() =>
-    Object.fromEntries(this.renamedFolders()),
-  );
+  readonly folderNames = this.renamedFolders.asReadonly();
 
   readonly rows = computed(() => this.flattened().rows);
   readonly visibleRows = computed(() => {
@@ -162,11 +156,10 @@ export class OpmlImportSelection {
 
   renameFolder(row: FolderRow, name: string): void {
     const trimmed = name.trim();
-    const position = toPosition(row.key);
     this.renamedFolders.update((previous) => {
-      const next = new Map(previous);
-      if (trimmed === '' || trimmed === row.name) next.delete(position);
-      else next.set(position, trimmed);
+      const next = { ...previous };
+      if (trimmed === '' || trimmed === row.name) delete next[row.key];
+      else next[row.key] = trimmed;
       return next;
     });
   }
@@ -176,7 +169,7 @@ export class OpmlImportSelection {
   }
 
   isRenamed(row: FolderRow): boolean {
-    return this.renamedFolders().has(toPosition(row.key));
+    return row.key in this.renamedFolders();
   }
 
   isCollapsed(folderKey: string): boolean {
