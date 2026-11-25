@@ -43,11 +43,13 @@
         (click)="search().create()"
       >
         <app-icon name="add" size="sm" />
-        @if (search().creating()) {
-          {{ 'tagPicker.creating' | transloco }}
-        } @else {
-          {{ 'tagPicker.create' | transloco: { name: entry.name } }}
-        }
+        <span class="name">
+          @if (search().creating()) {
+            {{ 'tagPicker.creating' | transloco }}
+          } @else {
+            {{ 'tagPicker.create' | transloco: { name: entry.name } }}
+          }
+        </span>
       </li>
     }
   } @empty {

@@ -1,5 +1,6 @@
 @use '../theme/breakpoints' as bp;
 @use '../theme/glass-rim';
+@use '../theme/icon-lead';
 
 // The picker is a route, not a CDK dialog, so nothing else supplies the scrim
 // — this host is it. The frame inside is app-overlay-panel's; only the width
@@ -75,12 +76,15 @@ app-category-chips {
 }
 
 .cat-head {
+  @include icon-lead.first-line('> .cat-ico');
+
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
   gap: var(--space-2);
-  align-items: center;
+  font-size: var(--fs-base);
+  line-height: var(--lh-tight);
   margin: 0 calc(var(--space-5) * -1) var(--space-3);
   padding: var(--space-2) var(--space-5);
   border-bottom: 1px solid var(--border);
@@ -91,28 +95,23 @@ app-category-chips {
 
   h2 {
     margin: 0;
-    font-size: var(--fs-base);
+    font-size: inherit;
   }
 }
 
-// A fixed leading slot so category names share one left edge — the reader
-// sidebar's tag treatment, tinted glyph and all.
-.cat-ico {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-}
-
 .cat-count {
+  align-self: center;
   color: var(--text-muted);
   font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
 }
 
 .cat-act {
   display: flex;
+  align-self: center;
   gap: var(--space-1);
   margin-left: auto;
+  line-height: var(--lh-normal);
 
   button {
     @include glass-rim.filled(var(--accent-soft), var(--border), control);

@@ -1,3 +1,5 @@
+@use '../../../theme/icon-lead';
+
 .list {
   margin: 0;
   padding: var(--space-1);
@@ -9,8 +11,11 @@
 }
 
 .option {
+  @include icon-lead.first-line('> app-tag-glyph, > app-icon');
+  @include icon-lead.overhang('> app-tag-glyph', var(--icon-sm));
+  @include icon-lead.centred-line;
+
   display: flex;
-  align-items: center;
   gap: var(--space-2);
   min-height: var(--control-h);
   padding: 0 var(--space-2);
@@ -23,6 +28,11 @@
 .option.active,
 .option:hover {
   background: var(--accent-soft);
+}
+
+.name {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .parent {
