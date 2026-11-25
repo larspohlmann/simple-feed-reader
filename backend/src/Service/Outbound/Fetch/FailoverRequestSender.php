@@ -114,7 +114,9 @@ final readonly class FailoverRequestSender
         } catch (TransportExceptionInterface $transportError) {
             $response->cancel();
             // With fallback off, going direct would leak the real server IP the proxy hides.
-            if (!$proxy->directFallback || !$this->failover->isWarranted($transportError)) {
+            $mayGoDirect = $proxy->directFallback
+                && $this->failover->allowsRetryAfterFailure($method, $response, $transportError);
+            if (!$mayGoDirect) {
                 throw $transportError;
             }
 
@@ -122,7 +124,7 @@ final readonly class FailoverRequestSender
         }
 
         // A CDN/WAF refusal of the proxy's egress IP may still be served directly, but only with fallback on.
-        if ($proxy->directFallback && $this->failover->isRetryableStatus($status)) {
+        if ($proxy->directFallback && $this->failover->allowsRetryAfterStatus($method, $status)) {
             $response->cancel();
 
             throw new ProxiedAttemptFailedException();

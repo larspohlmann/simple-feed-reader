@@ -99,6 +99,71 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertArrayHasKey('resolve', $calls[1]);
     }
 
+    public function testAProxiedWriteAnsweredWithAnErrorStatusIsNotSentDirectly(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return new MockResponse('blocked', ['http_code' => Response::HTTP_FORBIDDEN]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $status = $sender->send('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_FORBIDDEN, $status);
+        self::assertCount(1, $calls);
+    }
+
+    public function testAProxiedWriteThatNeverLeftFallsThroughToDirect(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+            if (isset($options['proxy'])) {
+                return new MockResponse('', ['error' => 'proxy down', 'request_size' => 0]);
+            }
+
+            return new MockResponse('ok');
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $status = $sender->send('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_OK, $status);
+        self::assertCount(2, $calls);
+    }
+
+    public function testAProxiedWriteThatMayHaveLeftIsNotSentDirectly(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return new MockResponse('', ['error' => 'reset', 'request_size' => 122]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        try {
+            $sender->send('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
+            self::fail('The transport error must surface.');
+        } catch (TransportExceptionInterface) {
+            self::assertCount(1, $calls);
+        }
+    }
+
     /**
      * Fallback off keeps a proxied refusal terminal: a direct retry would reveal
      * the real server IP the proxy exists to hide. The refusal status is handed
