@@ -39,8 +39,6 @@
 }
 
 .mini {
-  @include open-in-reader.room;
-
   position: relative;
   display: flex;
   flex-direction: column;
@@ -49,6 +47,8 @@
   padding: var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--surface-sunken);
+
+  @include open-in-reader.room;
 }
 
 .face {

@@ -2,11 +2,11 @@
 @use 'open-in-reader';
 
 :host {
-  @include link-card-layout.frame;
-  @include open-in-reader.room;
-
   display: block;
   position: relative;
+
+  @include link-card-layout.frame;
+  @include open-in-reader.room;
 }
 
 :host(.article) {
