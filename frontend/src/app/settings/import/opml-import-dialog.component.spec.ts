@@ -141,6 +141,7 @@ describe('OpmlImportDialogComponent', () => {
 
   it('the site link opens in a new tab and leaves the tick alone', () => {
     mount();
+    const silenced = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const link = feedRow('a1').querySelector<HTMLAnchorElement>(
       '[data-testid="opml-import-site"]',
     )!;
@@ -148,9 +149,9 @@ describe('OpmlImportDialogComponent', () => {
     expect(link.getAttribute('href')).toBe('https://a1.test/');
     expect(link.target).toBe('_blank');
     expect(link.rel).toContain('noopener');
-    link.addEventListener('click', (event) => event.preventDefault());
     link.click();
     fixture.detectChanges();
+    silenced.mockRestore();
 
     expect(checkbox(feedRow('a1')).checked).toBe(true);
   });

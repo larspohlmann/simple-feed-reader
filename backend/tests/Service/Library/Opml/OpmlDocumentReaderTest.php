@@ -60,6 +60,26 @@ final class OpmlDocumentReaderTest extends TestCase
         self::assertNull($root->feeds[0]->siteUrl);
     }
 
+    public function testASchemelessOrNonWebSiteUrlIsDropped(): void
+    {
+        $root = $this->read(
+            '<outline xmlUrl="https://a.example/1" htmlUrl="//evil.example/"/>'
+            . '<outline xmlUrl="https://a.example/2" htmlUrl="data:text/html,x"/>',
+        );
+
+        self::assertSame(
+            [null, null],
+            array_map(static fn (OpmlFeedModel $feed): ?string => $feed->siteUrl, $root->feeds),
+        );
+    }
+
+    public function testAnUppercaseSchemeSiteUrlIsKept(): void
+    {
+        $root = $this->read('<outline xmlUrl="https://a.example/1" htmlUrl="HTTPS://Example.com/"/>');
+
+        self::assertSame('HTTPS://Example.com/', $root->feeds[0]->siteUrl);
+    }
+
     public function testAMissingSiteUrlIsNull(): void
     {
         $root = $this->read('<outline xmlUrl="https://a.example/feed"/>');
