@@ -42,20 +42,18 @@ describe('TagChipsComponent', () => {
     mount(null);
 
     expect(labels()).toEqual(['Tech']);
-    expect(element().querySelector('.chip.is-lead')).toBeNull();
   });
 
-  it('puts the lead chip first with its own glyph', () => {
+  it('puts the lead chip first', () => {
     mount({ label: 'News', icon: 'folder' });
 
     expect(labels()).toEqual(['News', 'Tech']);
-    expect(element().querySelector('.chip.is-lead app-tag-glyph')).not.toBeNull();
   });
 
   it('removing the lead chip emits leadRemoved, not a tag id', () => {
     mount({ label: 'News', icon: 'folder' });
 
-    const remove = element().querySelector<HTMLButtonElement>('.chip.is-lead .remove')!;
+    const remove = element().querySelector<HTMLButtonElement>('.chip .remove')!;
     expect(remove.getAttribute('aria-label')).toBe('Remove News');
     remove.click();
 

@@ -95,6 +95,7 @@
             'name' in folder ? folder.name : ('settings.opml.theirFolders' | transloco);
           @if (bulkChoice.keepsFolder) {
             <app-tag-chips
+              data-testid="opml-import-folder-pill"
               [chips]="[]"
               [lead]="{ label: folderName, icon: 'folder' }"
               (leadRemoved)="dropBulkFolder()"
@@ -265,6 +266,7 @@
                 @if (selection.folderTagName(url); as folderName) {
                   @if (mode !== 'tagsOnly') {
                     <app-tag-chips
+                      data-testid="opml-import-folder-pill"
                       [chips]="[]"
                       [lead]="{ label: folderName, icon: 'folder' }"
                       (leadRemoved)="dropFeedFolder(url)"

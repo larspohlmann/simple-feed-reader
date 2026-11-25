@@ -333,6 +333,13 @@ describe('OpmlImportSelection', () => {
     expect([...selection.chosenTags('r')]).toEqual([5]);
   });
 
+  it('applyToTicked tags a ticked feed without a folder only', () => {
+    selection.applyToTicked('folderPlusTags', new Set([2]));
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect([...selection.chosenTags('r')]).toEqual([2]);
+  });
+
   it('applyToTicked folder clears the ticked feeds choices', () => {
     selection.setMode('a1', 'tagsOnly');
     selection.setMode('b1', 'folderPlusTags');

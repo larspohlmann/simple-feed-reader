@@ -14,7 +14,6 @@ interface ChipView {
   readonly label: string;
   readonly icon: string | null;
   readonly color: string | null;
-  readonly isLead: boolean;
   readonly remove: () => void;
 }
 
@@ -37,7 +36,6 @@ export class TagChipsComponent {
       label: chip.label,
       icon: chip.icon,
       color: chip.color,
-      isLead: false,
       remove: () => this.removed.emit(chip.id),
     }));
     const lead = this.lead();
@@ -47,7 +45,6 @@ export class TagChipsComponent {
       label: lead.label,
       icon: lead.icon,
       color: null,
-      isLead: true,
       remove: () => this.leadRemoved.emit(),
     };
     return [leadView, ...tagViews];

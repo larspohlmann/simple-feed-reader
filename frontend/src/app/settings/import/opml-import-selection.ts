@@ -267,7 +267,7 @@ export class OpmlImportSelection {
       const next = new Map(previous);
       for (const url of this.selectedUrls()) {
         if (mode === 'folder') next.delete(url);
-        else next.set(url, { mode, tagIds });
+        else next.set(url, { mode: this.folderTagName(url) === null ? 'tagsOnly' : mode, tagIds });
       }
       return next;
     });

@@ -249,7 +249,7 @@ describe('OpmlImportDialogComponent', () => {
   });
 
   const folderPill = (root: ParentNode): HTMLElement | null =>
-    root.querySelector<HTMLElement>('.chip.is-lead');
+    root.querySelector<HTMLElement>('[data-testid="opml-import-folder-pill"] .chip');
   const removeFolder = (root: ParentNode): void => {
     folderPill(root)!.querySelector<HTMLButtonElement>('.remove')!.click();
     fixture.detectChanges();
@@ -508,6 +508,21 @@ describe('OpmlImportDialogComponent', () => {
     fixture.detectChanges();
 
     expect(pillLabel()).toBe('A');
+  });
+
+  it('a bulk apply that keeps the folder tags a feed without a folder only', () => {
+    mount();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    toggleTagIn(byTestId('opml-import-bulk')!, 7);
+    press('opml-import-bulk-apply');
+
+    expect(selectionOf().modeOf('https://a1.test/feed')).toBe('folderPlusTags');
+    expect(selectionOf().modeOf('https://r.test/feed')).toBe('tagsOnly');
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+    expect(feedRow('r').querySelector('.destination')).toBeNull();
   });
 
   it('the bulk panel shows no folder pill when no ticked feed has a folder', () => {

@@ -1,5 +1,5 @@
 @for (chip of views(); track chip.key) {
-  <span class="chip" [class.is-lead]="chip.isLead">
+  <span class="chip">
     <app-tag-glyph [name]="chip.icon" [color]="chip.color" size="sm" />
     <span class="label">{{ chip.label }}</span>
     <button
