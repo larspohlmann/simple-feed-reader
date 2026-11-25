@@ -115,6 +115,7 @@ app-category-chips {
 
 .cat-act {
   display: flex;
+  flex: none;
   align-self: center;
   gap: var(--space-1);
   margin-left: auto;
@@ -128,6 +129,7 @@ app-category-chips {
     border-radius: var(--radius-pill);
     color: var(--accent);
     font-size: var(--fs-sm);
+    white-space: nowrap;
     cursor: pointer;
   }
 }
