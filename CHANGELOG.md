@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.5] - 2026-11-25
+
 ### Highlights
 
 This release adds an interactive OPML import.
@@ -18,6 +20,17 @@ This release adds an interactive OPML import.
 anything is subscribed. Tick the feeds you want, put them under a parent tag,
 rename folders, and tag single feeds or all ticked ones. Existing tags are
 never moved.
+
+## What's Changed
+* OPML import: choose the feeds, set a parent tag, tag single feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2535
+* fix(#2536): swiping back from a story's article no longer flashes Trending by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2537
+* Trending: alike story groups merge when their members link densely (#2540) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2542
+* Share menu links to the quote only when asked by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2544
+* OPML import dialog: collapsible folders, folder renames, folder pill, bulk tagging, site links, shared drop zone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2545
+* docs(#2546): v1.10.5 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2547
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.4...v1.10.5
 
 ## [v1.10.4] - 2026-11-24
 
