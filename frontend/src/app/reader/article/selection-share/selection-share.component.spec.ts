@@ -118,13 +118,13 @@ describe('SelectionShareComponent', () => {
       expect(bubble()!.querySelector('[aria-label="Share"]')).not.toBeNull();
     });
 
-    it('opens the composer on the quote with a link that points at it', () => {
+    it('opens the composer on the quote with the plain page link', () => {
       select();
 
       bubble()!.querySelector<HTMLButtonElement>('[aria-label="Quote on Bluesky"]')!.click();
 
       expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
-        url: 'https://example.com/a#:~:text=One%20two%20three',
+        url: 'https://example.com/a',
         title: 'First',
         quote: 'One two three',
       });
@@ -289,7 +289,7 @@ describe('SelectionShareComponent', () => {
       mastodon.click();
 
       expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
-        url: 'https://example.com/a#:~:text=One%20two%20three',
+        url: 'https://example.com/a',
         title: 'First',
         quote: 'One two three',
       });
@@ -303,7 +303,7 @@ describe('SelectionShareComponent', () => {
 
       expect(selection.releasePageSelection).toHaveBeenCalledTimes(1);
       expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
-        url: 'https://example.com/a#:~:text=One%20two%20three',
+        url: 'https://example.com/a',
         title: 'First',
         quote: 'One two three',
       });

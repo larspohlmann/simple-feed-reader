@@ -1832,6 +1832,7 @@
       "quoteCopy": "Copiar cita con enlace",
       "quoteCopied": "Cita copiada",
       "linkOnly": "(solo el enlace)",
+      "linkToQuote": "Enlace a la cita",
       "quoteHint": "Selecciona texto del artículo para compartirlo como cita",
       "selection": "Compartir la selección",
       "selectedWords": "{{count}} palabras seleccionadas"
