@@ -23,7 +23,18 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--icon-lead-space);
+}
+
+/* The preview is moved to <body>, out of its list: it restates the list's row, so its lead keeps its space. */
+:host-context(.cdk-drag-preview) {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+}
+
+:host-context(.cdk-drag-preview).organising {
+  --row-fs: var(--fs-base);
+  --row-inset: 0px;
 }
 
 :host-context(.cdk-drag-preview) .rowmenu {

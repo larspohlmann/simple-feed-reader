@@ -71,7 +71,11 @@ const PREFERENCES = {
 };
 
 /** `/api/me` answers a full profile whose account theme is `theme`. */
-export async function stubAccountTheme(page: Page, theme: ThemeName): Promise<void> {
+export async function stubAccountTheme(
+  page: Page,
+  theme: ThemeName,
+  sidebarStyle: 'boxed' | 'airy' = 'boxed',
+): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/me',
     (route) =>
@@ -89,7 +93,7 @@ export async function stubAccountTheme(page: Page, theme: ThemeName): Promise<vo
               ai: { ready: false, model: null, capabilities: null },
               mail: { enabled: false },
               emailVerified: true,
-              preferences: { ...PREFERENCES, theme },
+              preferences: { ...PREFERENCES, theme, sidebarStyle },
             },
           }),
   );

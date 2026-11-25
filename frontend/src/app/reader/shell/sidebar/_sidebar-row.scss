@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 // The grouped-card sidebar's anatomy (#1749), shared by the sidebar and its row components. A row
 // takes its height, left inset and type size from the surface it sits on: --row-h, --row-inset, --row-fs.
@@ -51,25 +52,41 @@
   position: absolute;
   top: $top;
   bottom: var(--space-1);
-  left: calc(var(--sidebar-row-inset) + var(--icon-md) / 2);
+  left: var(--sidebar-rail-x);
   border-left: 1px solid var(--airy-rule);
 }
 
+// A row's height: what its surface asks for, a tap target under a coarse pointer.
+@mixin row-box($height) {
+  --row-box: #{$height};
+
+  @media (pointer: coarse) {
+    --row-box: var(--tap-target);
+  }
+}
+
+// Where the label of a row $height tall, led by a $lead-wide icon, starts: lead space, lead, gap.
+// Set on the element whose font is that row's.
+@mixin label-x($height, $lead) {
+  @include row-box($height);
+
+  --sidebar-label-x: calc(2 * #{icon-lead.space(var(--row-box))} + #{$lead});
+}
+
 @mixin row-geometry($color: var(--text-primary)) {
+  @include row-box(var(--row-h, var(--sidebar-row-h)));
+  @include icon-lead.fixed-row(var(--row-box), '> .lead, > app-icon');
+
   display: flex;
+
+  // One line that never wraps: centred, so the line-tall lead sits on it.
   align-items: center;
-  gap: var(--space-3);
-  height: var(--row-h, var(--sidebar-row-h));
-  padding: 0 var(--space-2) 0 var(--row-inset, var(--sidebar-row-inset));
+  height: var(--row-box);
+  padding: 0 var(--space-2) 0 var(--row-inset, var(--icon-lead-space));
   border-radius: var(--radius);
   color: $color;
   font-size: var(--row-fs, var(--fs-base));
   text-decoration: none;
-
-  @media (pointer: coarse) {
-    gap: calc(var(--space-3) + var(--space-0));
-    height: var(--tap-target);
-  }
 }
 
 @mixin row-states($row, $current) {
@@ -159,7 +176,7 @@
 
   // Pulls the chevron column in, so a row without ⋯ keeps its count where a row with ⋯ has it.
   .slot {
-    margin-right: calc(var(--space-3) * -1);
+    margin-right: calc(var(--icon-lead-space) * -1);
   }
 
   @media (pointer: coarse) {
@@ -252,7 +269,7 @@
   :host {
     position: relative;
     flex: none;
-    margin-right: calc(var(--space-3) * -1);
+    margin-right: calc(var(--icon-lead-space) * -1);
   }
 
   @include dots;
@@ -322,13 +339,17 @@
 /* A section head — Saved searches, Tags, Feeds, a network: a title that opens the combined list (#1735). */
 @mixin section-head {
   .section-head {
+    --head-box: var(--sidebar-sub-row-h);
+
+    @include icon-lead.fixed-row(var(--head-box), '.favicon-slot');
+
     display: flex;
     flex: none;
     align-items: center;
-    gap: var(--space-3);
-    height: var(--sidebar-sub-row-h);
-    padding: 0 var(--space-2) 0 var(--sidebar-row-inset);
+    height: var(--head-box);
+    padding: 0 var(--space-2) 0 var(--icon-lead-space);
     border-radius: var(--radius);
+    font-size: var(--fs-sm);
   }
 
   @include row-states('.section-head', '.section-head.current');
@@ -343,7 +364,7 @@
     box-sizing: content-box;
     margin: calc(var(--card-pad-y) * -1) calc(var(--sidebar-card-pad) * -1) 0;
     padding: var(--sidebar-head-pad) calc(var(--space-2) + var(--sidebar-card-pad))
-      var(--sidebar-head-pad) calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
+      var(--sidebar-head-pad) calc(var(--icon-lead-space) + var(--sidebar-card-pad));
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: color-mix(in oklab, var(--text-primary) 5%, var(--surface-1));
@@ -369,13 +390,12 @@
 
   @media (pointer: coarse) {
     .section-head {
-      height: var(--tap-target);
+      --head-box: var(--tap-target);
     }
   }
 
   .organising .section-head {
-    height: var(--control-h);
-    padding-left: var(--space-3);
+    --head-box: var(--control-h);
   }
 
   .section-link {
@@ -383,10 +403,10 @@
     align-self: stretch;
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: inherit;
     min-width: 0;
-    margin-left: calc(var(--sidebar-row-inset) * -1);
-    padding-left: var(--sidebar-row-inset);
+    margin-left: calc(var(--icon-lead-space) * -1);
+    padding-left: var(--icon-lead-space);
     color: inherit;
     text-decoration: none;
   }
@@ -396,7 +416,6 @@
     min-width: 0;
     overflow: hidden;
     color: var(--text-secondary);
-    font-size: var(--fs-sm);
     font-weight: 600;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -414,17 +433,12 @@
     color: var(--accent);
   }
 
-  // The line box reserves descender room, so centred caps read high; nudge them to the optical middle.
-  .section-head .label,
-  .section-head .section-count {
-    position: relative;
-    top: 0.15em;
-  }
-
   // The airy sidebar: a head is a heading at the row size, an open one draws no band.
   :host-context(.sidebar-airy) .section-head {
+    font-size: var(--fs-base);
+
     @media (pointer: fine) {
-      height: var(--sidebar-row-h);
+      --head-box: var(--sidebar-row-h);
     }
 
     &:has(> [aria-expanded='true']) {
@@ -439,9 +453,7 @@
     }
 
     .label {
-      top: 0;
       color: var(--text-primary);
-      font-size: var(--fs-base);
     }
 
     &.current .label {
@@ -458,10 +470,7 @@
   .handle-gap {
     flex: none;
     align-self: stretch;
-
-    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-       tuned handle measure, not a spacing value. */
-    width: 40px;
+    width: var(--sidebar-handle-w);
   }
 
   .handle {

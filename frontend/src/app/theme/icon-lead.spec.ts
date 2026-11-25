@@ -29,15 +29,18 @@ const PROBE = `
 
 describe('icon-lead', () => {
   const css = compileScssSource(PROBE, [__dirname]);
-  const rules = rulesBySelector(css.replace(/@property[^{]*\{[^}]*\}/, ''));
+  const rules = rulesBySelector(css.replace(/@property[^{]*\{[^}]*\}/g, ''));
 
-  it('registers the line as a length that inherits and starts at 0px', () => {
-    const block = /@property --icon-lead-line\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  it.each(['--icon-lead-line', '--icon-lead-space'])(
+    'registers %s as a length that inherits and starts at 0px',
+    (property) => {
+      const block = new RegExp(`@property ${property}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
 
-    expect(block).toMatch(/syntax:\s*"<length>"/);
-    expect(block).toMatch(/inherits:\s*true/);
-    expect(block).toMatch(/initial-value:\s*0px/);
-  });
+      expect(block).toMatch(/syntax:\s*"<length>"/);
+      expect(block).toMatch(/inherits:\s*true/);
+      expect(block).toMatch(/initial-value:\s*0px/);
+    },
+  );
 
   it('measures one line on the row and starts the items at its top', () => {
     expect(rules['.row']).toMatchObject({ '--icon-lead-line': '1lh', 'align-items': 'start' });

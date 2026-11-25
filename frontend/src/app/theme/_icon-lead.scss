@@ -1,4 +1,4 @@
-// The line is a registered <length>: unregistered, the slot's own font would resolve 1lh.
+// Registered <length>s: unregistered, a child's own font would resolve 1lh and 1cap.
 @mixin register {
   @property --icon-lead-line {
     syntax: '<length>';
@@ -6,6 +6,17 @@
     // stylelint-disable-next-line length-zero-no-unit
     initial-value: 0px;
   }
+
+  @property --icon-lead-space {
+    syntax: '<length>';
+    inherits: true;
+    // stylelint-disable-next-line length-zero-no-unit
+    initial-value: 0px;
+  }
+}
+
+@function space($height) {
+  @return calc((#{$height} - 1cap) / 2);
 }
 
 @mixin first-line($slot) {
@@ -44,7 +55,7 @@
 }
 
 @mixin fixed-row($height, $slot) {
-  --icon-lead-space: calc((#{$height} - 1cap) / 2);
+  --icon-lead-space: #{space($height)};
 
   @include first-line($slot);
 

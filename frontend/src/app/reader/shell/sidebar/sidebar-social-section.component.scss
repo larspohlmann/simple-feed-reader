@@ -32,7 +32,7 @@
 }
 
 .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
-  margin-left: calc(var(--space-1) - var(--space-3));
+  margin-left: calc(var(--space-1) - var(--icon-lead-space));
 }
 
 .section-head .section-rest {
@@ -52,7 +52,7 @@
 @media (pointer: coarse) {
   .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
     margin-left: calc(
-      var(--space-2) + var(--space-0) - var(--space-3) - 2 * var(--chevron-disc-inset)
+      var(--space-2) + var(--space-0) - var(--icon-lead-space) - 2 * var(--chevron-disc-inset)
     );
   }
 }
@@ -61,13 +61,16 @@
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
 
+  @include row.label-x(var(--row-h), var(--icon-md));
+
   display: flex;
   flex-direction: column;
   gap: var(--space-0);
+  font-size: var(--row-fs);
 }
 
 .tagfeeds {
-  --row-inset: var(--sidebar-row-deep-inset);
+  --row-inset: var(--sidebar-label-x);
 
   display: flex;
   flex-direction: column;
@@ -75,7 +78,7 @@
 
 .divider {
   flex: none;
-  margin: var(--space-1) var(--space-3) var(--space-1) var(--sidebar-row-deep-inset);
+  margin: var(--space-1) var(--space-3) var(--space-1) var(--sidebar-label-x);
   border-top: 1px solid var(--border);
 }
 
@@ -83,7 +86,8 @@
   /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
      line shrinks to nothing once the sidebar overflows. */
   flex: none;
-  margin: var(--space-2) var(--space-2) var(--space-1) var(--sidebar-row-inset);
+  margin: var(--space-2) var(--space-2) var(--space-1)
+    calc((var(--sidebar-label-x) - var(--icon-md)) / 2);
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--fs-xs);
@@ -113,10 +117,6 @@
 
 :host-context(.sidebar-airy) .divider {
   border-top-color: var(--airy-hrule);
-}
-
-.organising .section-head {
-  gap: calc(var(--space-2) + var(--space-0));
 }
 
 .organising .section-head app-network-logo {
