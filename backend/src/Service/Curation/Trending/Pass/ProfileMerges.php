@@ -137,7 +137,7 @@ final class ProfileMerges
 
     private function merge(int $lowerKey, int $higherKey): void
     {
-        $members = [...$this->groups[$lowerKey], ...$this->groups[$higherKey]];
+        $members = array_merge($this->groups[$lowerKey], $this->groups[$higherKey]);
         sort($members);
         $this->groups[$lowerKey] = $members;
         $this->profiles[$lowerKey] = GroupProfiles::build($this->run, $members);
