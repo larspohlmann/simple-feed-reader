@@ -1,5 +1,8 @@
 @use '../../theme/icon-lead';
 
+$dot-padding: var(--space-2);
+$dot-box: calc(var(--icon-sm) + 2 * #{$dot-padding});
+
 /* Layout glue only. Grouped chrome now lives in `app-settings-group` and
    `app-disclosure` (drill-in). What stays here is the ruled connection-row
    list and the internals of one row, not a primitive's job. */
@@ -23,16 +26,15 @@ app-searchable-select {
 
 .conn {
   @include icon-lead.first-line('> .conn-dot');
+  @include icon-lead.overhang('> .conn-dot', $dot-box);
 
   display: flex;
   gap: var(--space-3);
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
-.conn > .conn-dot {
-  block-size: auto;
-  margin-block: calc((var(--icon-lead-line) - var(--icon-sm) - 2 * var(--space-2)) / 2);
-  padding: var(--space-2);
+.conn-dot {
+  padding: $dot-padding;
   border-radius: var(--radius-pill);
   background: var(--bg-success);
   color: var(--success);

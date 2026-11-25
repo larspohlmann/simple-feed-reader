@@ -13,6 +13,11 @@ const PROBE = `
   @include icon-lead.box(var(--space-3), '> .glyph');
 }
 
+.chip-row {
+  @include icon-lead.first-line('> .chip');
+  @include icon-lead.overhang('> .chip', calc(var(--icon-sm) + 2 * var(--space-2)));
+}
+
 .item {
   @include icon-lead.centred-line;
 }
@@ -51,6 +56,14 @@ describe('icon-lead', () => {
       '--icon-lead-band': 'calc((1lh - 1cap) / 2)',
       padding: 'var(--space-3) calc(var(--space-3) + var(--icon-lead-band))',
       gap: 'calc(var(--space-3) + var(--icon-lead-band))',
+    });
+  });
+
+  it('centres a slot box taller than the line on it, at its own height', () => {
+    expect(rules['.chip-row > .chip']).toMatchObject({
+      'block-size': 'auto',
+      'margin-block':
+        'calc((var(--icon-lead-line) - calc(var(--icon-sm) + 2 * var(--space-2))) / 2)',
     });
   });
 
