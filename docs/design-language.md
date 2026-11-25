@@ -135,6 +135,27 @@ open-in-new was 14px on 13px text on `develop`, i.e. already above `1em`.
 The rule: **an icon inside a run of text uses `text`; a standalone icon — a
 button's glyph, a list row's lead, a rail item — uses a step on the scale.**
 
+#### Icon lead
+
+An icon in front of text that can wrap hangs on the text's first line: its centre sits on the
+first line's centre, one line or five (#2558). `theme/_icon-lead.scss` is the one place:
+
+- `icon-lead.first-line($slot)` on the row: `align-items: start`, and the slot is `1lh` tall with the
+  glyph centred in it. A free-standing boxed note uses `box($inset, $slot)`, whose padding follows the
+  font; a row with a min-height adds `centred-line`; a fixed-height row uses `fixed-row($height, $slot)`;
+  a slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
+- The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
+  any child that sets its own: `1lh` and `1cap` are measured on the row.
+- The line reaches the slot as `--icon-lead-line`, a registered `<length>` (`icon-lead.register` in
+  `styles.scss`); unregistered, the slot's own font would resolve `1lh`. A slot projected from outside
+  needs `::ng-deep`.
+- The formula: `--px: calc(var(--py) + (1lh - 1cap) / 2)`.
+
+`e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's line-box centre.
+
+Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
+error banner and the article byline favicon.
+
 ### Row density
 
 Two named pairs. Every list, rail and picker row derives its padding from one of
@@ -237,9 +258,9 @@ for a cached classic. No request goes to another origin.
   `e2e/classic-theme.spec.ts` checks the room under that title.
 - **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
   against Newsreader, and the alignment below is measured on Apple's only.
-- **Bound.** At 100% text size, the text's x-height centre against its icon's centre stays within 0.25px of
-  graphite's in the tag pill, the vote pill, Reply, "Add comment" and a sidebar row. A change to the face, the
-  line metrics or an icon row is measured against it.
+- **Bound.** An icon in front of wrapping text sits with its centre on the first line's centre (see Icon
+  lead); the same goes for the tag pill, the vote pill, Reply, "Add comment" and a sidebar row. A change to
+  the face, the line metrics or an icon row is measured against it.
 - **Rebuilding.** `frontend/scripts/fonts/README.md` holds the three constants, the build command and the
   measuring script; the files are rebuilt, never edited.
 - **URLs are relative.** `_fonts.scss` and the preload say `fonts/…`, not `/fonts/…`, because the `strato`
@@ -857,6 +878,7 @@ The app's one warning callout: a neutral card on `--surface-1` ringed in amber
 danger banner, a warning is a ring. It projects its content, so each surface
 keeps its own body; it owns only the ring, surface, radius and padding, never
 the layout or wording inside.
+Its padding follows the font (`icon-lead.box`), so a note keeps its proportions at every text size.
 
 ```html
 <app-warning-box class="paywall-note">
