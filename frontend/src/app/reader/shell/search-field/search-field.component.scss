@@ -1,17 +1,21 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 .search-field {
+  --search-row-h: var(--control-h);
+
   margin-bottom: var(--space-1);
+  font-size: var(--fs-sm);
 }
 
 .row {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
+  @include icon-lead.fixed-row(var(--search-row-h), '> app-icon, > app-spinner');
 
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  height: var(--control-h);
-  padding: 0 var(--space-3);
+  height: var(--search-row-h);
+  padding-inline-end: var(--space-3);
   border-radius: var(--radius);
 }
 
@@ -26,10 +30,10 @@
 .input {
   flex: 1;
   min-width: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--text-primary);
-  font-size: var(--fs-sm);
 }
 
 .input::placeholder {
@@ -77,12 +81,17 @@
 
 // The sidebar's search card holds the field as an inset well: the card draws the rim.
 :host(.inset) .search-field {
+  --search-row-h: calc(var(--control-h) - var(--space-0));
+
+  // The hint sits under the row, not in it, so it reads the row's lead space from here.
+  --icon-lead-space: #{icon-lead.space(var(--search-row-h))};
+
   margin-bottom: 0;
+  font-size: var(--fs-base);
 }
 
 :host(.inset) .row {
-  height: calc(var(--control-h) - var(--space-0));
-  padding: 0 var(--sidebar-row-inset);
+  padding-inline-end: var(--icon-lead-space);
   border-radius: calc(var(--radius-lg) - var(--space-0) / 2) var(--radius) var(--radius)
     calc(var(--radius-lg) - var(--space-0) / 2);
   background: var(--surface-0);
@@ -93,12 +102,8 @@
   outline-offset: -2px;
 }
 
-:host(.inset) .input {
-  font-size: var(--fs-base);
-}
-
 :host(.inset) .hint {
-  margin-inline-start: var(--sidebar-row-inset);
+  margin-inline-start: var(--icon-lead-space);
 }
 
 // The airy sidebar's search band is the sheet itself: no well.
