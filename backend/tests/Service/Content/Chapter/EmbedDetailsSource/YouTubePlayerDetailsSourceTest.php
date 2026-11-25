@@ -65,14 +65,11 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
 
     public function testAForbiddenPlayerAnswerIsAskedAgainOverTheNextFamily(): void
     {
-        $http = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
-
-            return str_contains($resolve['www.youtube.com'], ':')
-                ? new MockResponse('{}', ['http_code' => 403])
-                : new MockResponse('{"videoDetails":{"shortDescription":"0:00 Intro"}}');
-        });
+        $http = FetchWiring::buildDualStackClient(
+            'www.youtube.com',
+            new MockResponse('{}', ['http_code' => 403]),
+            new MockResponse('{"videoDetails":{"shortDescription":"0:00 Intro"}}'),
+        );
         $source = $this->source($http, addresses: ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
 
         self::assertSame('0:00 Intro', $source->fetchDescription($this->embed())->description);

@@ -20,6 +20,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\GzipBomb;
 use App\Tests\Support\PinnedRequestOptions;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -72,26 +73,29 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(['ok' => true], $response->json());
     }
 
-    public function testAPostThatChangesNothingKeepsFailover(): void
+    /**
+     * @return iterable<string, array{ApiRequestModel, int, int}>
+     */
+    public static function postsForbiddenOverIpv6(): iterable
     {
-        $http = $this->forbiddenOverIpv6ThenOk();
+        $write = ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1]);
 
-        $response = $this->client($http)->send(
-            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1])->changingNothing(),
-        );
-
-        self::assertSame(Response::HTTP_OK, $response->status);
-        self::assertSame(2, $http->getRequestsCount());
+        yield 'changing nothing keeps failover' => [$write->changingNothing(), Response::HTTP_OK, 2];
+        yield 'a write is not sent twice' => [$write, Response::HTTP_FORBIDDEN, 1];
     }
 
-    public function testAWritePostIsNotSentTwice(): void
-    {
+    #[DataProvider('postsForbiddenOverIpv6')]
+    public function testAPostKeepsFailoverOnlyWhenItChangesNothing(
+        ApiRequestModel $request,
+        int $expectedStatus,
+        int $expectedRequests,
+    ): void {
         $http = $this->forbiddenOverIpv6ThenOk();
 
-        $response = $this->client($http)->send(ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1]));
+        $response = $this->client($http)->send($request);
 
-        self::assertSame(Response::HTTP_FORBIDDEN, $response->status);
-        self::assertSame(1, $http->getRequestsCount());
+        self::assertSame($expectedStatus, $response->status);
+        self::assertSame($expectedRequests, $http->getRequestsCount());
     }
 
     public function testTheCallCarriesItsTimeoutsJsonAcceptHeaderAndNoFreshConnect(): void
@@ -359,43 +363,27 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(1, $http->getRequestsCount());
     }
 
-    public function testADirectRetryOfAPostThatChangesNothingKeepsFailover(): void
-    {
+    #[DataProvider('postsForbiddenOverIpv6')]
+    public function testADirectRetryOfAPostKeepsFailoverOnlyWhenItChangesNothing(
+        ApiRequestModel $request,
+        int $expectedStatus,
+        int $expectedRequests,
+    ): void {
         $http = $this->forbiddenOverIpv6ThenOk();
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
 
-        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
-            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1])->changingNothing(),
-            ApiBudgetModel::standard(),
-        );
+        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal($request, ApiBudgetModel::standard());
 
-        self::assertSame(Response::HTTP_OK, $response->status);
-        self::assertSame(2, $http->getRequestsCount());
-    }
-
-    public function testADirectRetryOfAWritePostIsNotSentTwice(): void
-    {
-        $http = $this->forbiddenOverIpv6ThenOk();
-        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
-
-        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
-            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1]),
-            ApiBudgetModel::standard(),
-        );
-
-        self::assertSame(Response::HTTP_FORBIDDEN, $response->status);
-        self::assertSame(1, $http->getRequestsCount());
+        self::assertSame($expectedStatus, $response->status);
+        self::assertSame($expectedRequests, $http->getRequestsCount());
     }
 
     private function forbiddenOverIpv6ThenOk(): MockHttpClient
     {
-        return new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
-
-            return str_contains($resolve['dual.example.test'], ':')
-                ? new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN])
-                : new MockResponse('{}', ['http_code' => Response::HTTP_OK]);
-        });
+        return FetchWiring::buildDualStackClient(
+            'dual.example.test',
+            new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN]),
+            new MockResponse('{}', ['http_code' => Response::HTTP_OK]),
+        );
     }
 }
