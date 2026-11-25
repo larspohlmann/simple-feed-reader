@@ -40,6 +40,7 @@ use App\Service\Identity\Passkey\Exception\PasskeyNotFoundException;
 use App\Service\Identity\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Identity\Passkey\Exception\UnknownChallengeException;
 use App\Service\Identity\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Library\Opml\Exception\ConflictingTagChoiceException;
 use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use App\Service\Library\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Library\Subscription\Exception\NotAFeedException;
@@ -321,6 +322,15 @@ final class ProblemContractTest extends KernelTestCase
                 'title' => 'The OPML document could not be parsed',
                 'status' => 422,
                 'detail' => 'OPML has no <body>.',
+            ],
+        ];
+        yield 'conflicting tag choice' => [
+            ConflictingTagChoiceException::forFeeds(['https://a.example/feed']),
+            [
+                'type' => 'conflicting_tag_choice',
+                'title' => 'A feed has two tag choices',
+                'status' => 422,
+                'detail' => 'A feed cannot both replace and add tags: https://a.example/feed',
             ],
         ];
         yield 'last admin' => [

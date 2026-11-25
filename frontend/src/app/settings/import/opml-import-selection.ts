@@ -1,9 +1,12 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { toggled } from '../../core/toggled-set';
-import { hostOf, parseUrl } from '../../shared/url-host';
+import { hostOf, parseHttpUrl, parseUrl } from '../../shared/url-host';
 import {
   OpmlImportRequest,
   OpmlImportRow,
+  OpmlTagChoice,
+  OpmlTagMode,
+  OpmlPlacement,
   OpmlPreview,
   OpmlPreviewFeed,
   OpmlPreviewFolder,
@@ -21,13 +24,22 @@ function hostLabel(url: string): string {
   return parsed === null ? url : hostOf(parsed);
 }
 
-function flatten(folder: OpmlPreviewFolder, depth: number, path: string): Flattened {
+function siteHrefOf(feed: OpmlPreviewFeed): string | null {
+  if (feed.siteUrl !== null) return feed.siteUrl;
+  const origin = parseHttpUrl(feed.url)?.origin;
+  return origin === undefined ? null : `${origin}/`;
+}
+
+function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
+  const path = ancestors.length === 0 ? '' : `${ancestors[ancestors.length - 1]}.`;
   const feedRows = folder.feeds.map((feed: OpmlPreviewFeed): OpmlImportRow => ({
     kind: 'feed',
     key: feed.url,
     depth,
+    ancestors,
     feed,
     host: hostLabel(feed.url),
+    siteHref: siteHrefOf(feed),
     destination: folder.destination,
   }));
   const importableUrls = folder.feeds
@@ -36,13 +48,17 @@ function flatten(folder: OpmlPreviewFolder, depth: number, path: string): Flatte
   const folderRows: OpmlImportRow[] = [];
   folder.folders.forEach((child, index) => {
     const key = `${path}${index}`;
-    const below = flatten(child, depth + 1, `${key}.`);
+    const below = flatten(child, depth + 1, [...ancestors, key]);
     folderRows.push(
       {
         kind: 'folder',
         key,
         depth,
+        ancestors,
         name: child.name ?? '',
+        tagName: child.dropped
+          ? (child.name ?? '')
+          : (child.destination.at(-1) ?? child.name ?? ''),
         dropped: child.dropped,
         importableUrls: below.importableUrls,
       },
@@ -64,11 +80,13 @@ function collectDroppedNames(folder: OpmlPreviewFolder): string[] {
 export class OpmlImportSelection {
   private readonly preview = signal<OpmlPreview | null>(null);
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
-  private readonly tagChoices = signal<ReadonlyMap<string, ReadonlySet<number>>>(new Map());
+  private readonly tagChoices = signal<ReadonlyMap<string, OpmlTagChoice>>(new Map());
+  private readonly collapsedKeys = signal<ReadonlySet<string>>(new Set());
+  private readonly renamedFolders = signal<Readonly<Record<string, string>>>({});
 
   private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
-    return current === null ? { rows: [], importableUrls: [] } : flatten(current.root, 0, 'f');
+    return current === null ? { rows: [], importableUrls: [] } : flatten(current.root, 0, []);
   });
   private readonly importable = computed<ReadonlySet<string>>(
     () => new Set(this.flattened().importableUrls),
@@ -85,9 +103,41 @@ export class OpmlImportSelection {
     return states;
   });
 
+  readonly folderNames = this.renamedFolders.asReadonly();
+
   readonly rows = computed(() => this.flattened().rows);
+  readonly visibleRows = computed(() => {
+    const collapsed = this.collapsedKeys();
+    return this.rows().filter((row) => !row.ancestors.some((key) => collapsed.has(key)));
+  });
+  private readonly folderKeys = computed(() =>
+    this.rows().flatMap((row) => (row.kind === 'folder' ? [row.key] : [])),
+  );
+  readonly hasFolders = computed(() => this.folderKeys().length > 0);
+  readonly anyExpanded = computed(() =>
+    this.folderKeys().some((key) => !this.collapsedKeys().has(key)),
+  );
+  private readonly destinations = computed(
+    () =>
+      new Map(
+        this.rows().flatMap((row) =>
+          row.kind === 'feed' ? [[row.feed.url, row.destination] as const] : [],
+        ),
+      ),
+  );
+  readonly tickedDestinations = computed(() => {
+    const byKey = new Map<string, string[]>();
+    for (const url of this.selectedUrls()) {
+      const destination = this.destinations().get(url) ?? [];
+      byKey.set(JSON.stringify(destination), destination);
+    }
+    return [...byKey.values()];
+  });
   readonly selected = this.selectedUrls.asReadonly();
   readonly selectedCount = computed(() => this.selectedUrls().size);
+  readonly allTicked = computed(
+    () => this.selectedCount() > 0 && this.selectedCount() === this.importable().size,
+  );
   readonly freeSlots = computed(() => this.preview()?.freeSlots ?? 0);
   readonly overLimit = computed(() => this.selectedCount() > this.freeSlots());
   readonly droppedFolders = computed(() => {
@@ -121,6 +171,45 @@ export class OpmlImportSelection {
     });
   }
 
+  renameFolder(row: FolderRow, name: string): void {
+    const trimmed = name.trim();
+    this.renamedFolders.update((previous) => {
+      const next = { ...previous };
+      if (trimmed === '' || trimmed === row.name) delete next[row.key];
+      else next[row.key] = trimmed;
+      return next;
+    });
+  }
+
+  resetFolder(row: FolderRow): void {
+    this.renameFolder(row, '');
+  }
+
+  isRenamed(row: FolderRow): boolean {
+    return row.key in this.renamedFolders();
+  }
+
+  isCollapsed(folderKey: string): boolean {
+    return this.collapsedKeys().has(folderKey);
+  }
+
+  toggleCollapsed(folderKey: string): void {
+    this.collapsedKeys.update((previous) => toggled(previous, folderKey));
+  }
+
+  toggleAll(): void {
+    if (this.anyExpanded()) this.collapseAll();
+    else this.expandAll();
+  }
+
+  collapseAll(): void {
+    this.collapsedKeys.set(new Set(this.folderKeys()));
+  }
+
+  expandAll(): void {
+    this.collapsedKeys.set(new Set());
+  }
+
   folderState(row: FolderRow): 'all' | 'some' | 'none' {
     return this.folderStates().get(row.key) ?? 'none';
   }
@@ -133,41 +222,76 @@ export class OpmlImportSelection {
     this.selectedUrls.set(new Set());
   }
 
-  isChanged(url: string): boolean {
-    return this.tagChoices().has(url);
+  modeOf(url: string): OpmlTagMode {
+    return this.tagChoices().get(url)?.mode ?? 'folder';
   }
 
   chosenTags(url: string): ReadonlySet<number> {
-    return this.tagChoices().get(url) ?? new Set();
+    return this.tagChoices().get(url)?.tagIds ?? new Set();
   }
 
-  changeTags(url: string): void {
-    this.tagChoices.update((previous) => new Map(previous).set(url, new Set()));
-  }
-
-  toggleTag(url: string, tagId: number): void {
-    const next = toggled(this.chosenTags(url), tagId);
-    this.tagChoices.update((previous) => new Map(previous).set(url, next));
-  }
-
-  useFolder(url: string): void {
+  setMode(url: string, mode: OpmlTagMode): void {
     this.tagChoices.update((previous) => {
       const next = new Map(previous);
-      next.delete(url);
+      if (mode === 'folder') next.delete(url);
+      else next.set(url, { mode, tagIds: this.chosenTags(url) });
       return next;
     });
   }
 
-  toRequest(opml: string, parentTagName: string | null): OpmlImportRequest {
+  folderTagName(url: string): string | null {
+    return this.destinations().get(url)?.at(-1) ?? null;
+  }
+
+  dropFolder(url: string): void {
+    this.setMode(url, 'tagsOnly');
+  }
+
+  restoreFolder(url: string): void {
+    this.setMode(url, this.chosenTags(url).size === 0 ? 'folder' : 'folderPlusTags');
+  }
+
+  toggleTag(url: string, tagId: number): void {
+    const keepsFolder = this.modeOf(url) !== 'tagsOnly' && this.folderTagName(url) !== null;
+    const tagIds = toggled(this.chosenTags(url), tagId);
+    this.tagChoices.update((previous) => {
+      const next = new Map(previous);
+      if (keepsFolder && tagIds.size === 0) next.delete(url);
+      else next.set(url, { mode: keepsFolder ? 'folderPlusTags' : 'tagsOnly', tagIds });
+      return next;
+    });
+  }
+
+  applyToTicked(mode: OpmlTagMode, tagIds: ReadonlySet<number>): void {
+    this.tagChoices.update((previous) => {
+      const next = new Map(previous);
+      for (const url of this.selectedUrls()) {
+        if (mode === 'folder') next.delete(url);
+        else next.set(url, { mode: this.folderTagName(url) === null ? 'tagsOnly' : mode, tagIds });
+      }
+      return next;
+    });
+  }
+
+  toRequest(opml: string, placement: OpmlPlacement): OpmlImportRequest {
     const feedUrls = this.rows().flatMap((row) =>
       row.kind === 'feed' && this.selectedUrls().has(row.feed.url) ? [row.feed.url] : [],
     );
     const tagIdsByFeedUrl: Record<string, number[]> = {};
+    const addedTagIdsByFeedUrl: Record<string, number[]> = {};
     for (const url of feedUrls) {
-      const chosen = this.tagChoices().get(url);
-      if (chosen !== undefined)
-        tagIdsByFeedUrl[url] = [...chosen].sort((left, right) => left - right);
+      const choice = this.tagChoices().get(url);
+      if (choice === undefined) continue;
+      const target = choice.mode === 'tagsOnly' ? tagIdsByFeedUrl : addedTagIdsByFeedUrl;
+      target[url] = [...choice.tagIds].sort((left, right) => left - right);
     }
-    return { opml, parentTagName, feedUrls, tagIdsByFeedUrl };
+    return {
+      opml,
+      parentTagName: placement.parentTagName,
+      feedUrls,
+      tagIdsByFeedUrl,
+      addedTagIdsByFeedUrl,
+      folderNames: placement.folderNames,
+    };
   }
 }

@@ -15,6 +15,7 @@ import { BackupArchive, isOldFormatBackup, openBackupArchive } from './backup-ar
 import { CLIENT_CHECK_FAILED, clientCheckFailed, restoreErrorProblem } from './backup-problem';
 import { BackupRestoreRun, RestoreRunOutcome } from './backup-restore-run';
 import { ButtonComponent } from '../../shared/button/button.component';
+import { FileDropComponent } from '../../shared/file-drop/file-drop.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { ProgressHairlineComponent } from '../../shared/progress-hairline/progress-hairline.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
@@ -31,6 +32,7 @@ const FALLBACK_BACKUP_FILENAME = 'account-backup.zip';
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
+    FileDropComponent,
     ProgressHairlineComponent,
     SettingsGroupComponent,
     TranslocoPipe,
@@ -133,12 +135,6 @@ export class BackupSectionComponent {
 
   exportSafetyNetOpml(): void {
     downloadOpmlExport(this.api, this.safetyNetExporting, this.safetyNetError);
-  }
-
-  onFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.onFile(file);
   }
 
   onFile(file: File): void {

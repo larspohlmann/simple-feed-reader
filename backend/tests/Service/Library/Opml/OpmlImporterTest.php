@@ -8,7 +8,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Library\Opml\Exception\ConflictingTagChoiceException;
 use App\Service\Library\Opml\Model\OpmlImportSelectionModel;
+use App\Service\Library\Opml\Model\OpmlPlacementChoiceModel;
 use App\Service\Library\Opml\OpmlImporter;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -216,7 +218,7 @@ final class OpmlImporterTest extends DbTestCase
 
         $result = $this->importer()->import(
             $user,
-            new OpmlImportSelectionModel($opml, null, ['https://feed1.example/feed'], []),
+            new OpmlImportSelectionModel($opml, new OpmlPlacementChoiceModel(null), ['https://feed1.example/feed'], []),
         );
 
         self::assertSame(1, $result->imported);
@@ -233,7 +235,12 @@ final class OpmlImporterTest extends DbTestCase
 
         $result = $this->importer()->import(
             $user,
-            new OpmlImportSelectionModel($opml, null, ['https://elsewhere.example/feed'], []),
+            new OpmlImportSelectionModel(
+                $opml,
+                new OpmlPlacementChoiceModel(null),
+                ['https://elsewhere.example/feed'],
+                [],
+            ),
         );
 
         self::assertSame(0, $result->imported);
@@ -295,7 +302,7 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import(
             $user,
-            new OpmlImportSelectionModel($opml, null, ['https://feed2.example/feed'], []),
+            new OpmlImportSelectionModel($opml, new OpmlPlacementChoiceModel(null), ['https://feed2.example/feed'], []),
         );
 
         self::assertSame(['Tech (1)'], $this->tagNamesFor($user, 'https://feed2.example/feed'));
@@ -313,7 +320,7 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import($user, new OpmlImportSelectionModel(
             $opml,
-            'From Feedly',
+            new OpmlPlacementChoiceModel('From Feedly'),
             ['https://feed1.example/feed'],
             ['https://feed1.example/feed' => [$mine->requireId(), $also->requireId()]],
         ));
@@ -330,7 +337,7 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import($user, new OpmlImportSelectionModel(
             $opml,
-            null,
+            new OpmlPlacementChoiceModel(null),
             ['https://feed1.example/feed'],
             ['https://feed1.example/feed' => []],
         ));
@@ -347,12 +354,88 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import($user, new OpmlImportSelectionModel(
             $opml,
-            null,
+            new OpmlPlacementChoiceModel(null),
             ['https://feed1.example/feed'],
             ['https://feed1.example/feed' => [$foreign->requireId()]],
         ));
 
         self::assertSame([], $this->tagNamesFor($user, 'https://feed1.example/feed'));
+        self::assertSame([], $this->subscriptionsTaggedWith($foreign));
+    }
+
+    public function testAddedTagsJoinTheFolderTag(): void
+    {
+        $user = $this->user('opml-added@example.com');
+        $later = $this->storedTag($user, 'Later', null);
+        $opml = $this->opml('<outline text="Tech">' . self::feed('https://feed1.example/feed') . '</outline>');
+
+        $this->importer()->import($user, new OpmlImportSelectionModel(
+            $opml,
+            new OpmlPlacementChoiceModel(null),
+            ['https://feed1.example/feed'],
+            [],
+            ['https://feed1.example/feed' => [$later->requireId()]],
+        ));
+
+        self::assertSame(['Later', 'Tech'], $this->tagNamesFor($user, 'https://feed1.example/feed'));
+    }
+
+    public function testAddedTagsKeepTheParentPath(): void
+    {
+        $user = $this->user('opml-added-parent@example.com');
+        $later = $this->storedTag($user, 'Later', null);
+        $opml = $this->opml('<outline text="Tech">' . self::feed('https://feed1.example/feed') . '</outline>');
+
+        $this->importer()->import($user, new OpmlImportSelectionModel(
+            $opml,
+            new OpmlPlacementChoiceModel('P'),
+            ['https://feed1.example/feed'],
+            [],
+            ['https://feed1.example/feed' => [$later->requireId()]],
+        ));
+
+        self::assertSame(['Later', 'Tech'], $this->tagNamesFor($user, 'https://feed1.example/feed'));
+        self::assertSame('P', $this->tagNamed($user, 'Tech')->getParent()?->getName());
+    }
+
+    public function testAFeedWithBothChoicesIsRefused(): void
+    {
+        $user = $this->user('opml-both@example.com');
+        $mine = $this->storedTag($user, 'Mine', null);
+        $opml = $this->opml('<outline text="Tech">' . self::feed('https://feed1.example/feed') . '</outline>');
+
+        try {
+            $this->importer()->import($user, new OpmlImportSelectionModel(
+                $opml,
+                new OpmlPlacementChoiceModel(null),
+                ['https://feed1.example/feed'],
+                ['https://feed1.example/feed' => [$mine->requireId()]],
+                ['https://feed1.example/feed' => [$mine->requireId()]],
+            ));
+            self::fail('Expected ConflictingTagChoiceException');
+        } catch (ConflictingTagChoiceException $exception) {
+            self::assertStringContainsString('https://feed1.example/feed', $exception->getMessage());
+        }
+
+        self::assertSame([], $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]));
+        self::assertNull($this->findTagNamed($user, 'Tech'));
+    }
+
+    public function testAnAddedTagOfAnotherAccountIsNotJoined(): void
+    {
+        $user = $this->user('opml-added-own@example.com');
+        $foreign = $this->storedTag($this->user('opml-added-foreign@example.com'), 'Theirs', null);
+        $opml = $this->opml('<outline text="Tech">' . self::feed('https://feed1.example/feed') . '</outline>');
+
+        $this->importer()->import($user, new OpmlImportSelectionModel(
+            $opml,
+            new OpmlPlacementChoiceModel(null),
+            ['https://feed1.example/feed'],
+            [],
+            ['https://feed1.example/feed' => [$foreign->requireId()]],
+        ));
+
+        self::assertSame(['Tech'], $this->tagNamesFor($user, 'https://feed1.example/feed'));
         self::assertSame([], $this->subscriptionsTaggedWith($foreign));
     }
 
@@ -399,7 +482,7 @@ final class OpmlImporterTest extends DbTestCase
     {
         preg_match_all('/xmlUrl="([^"]*)"/', $opml, $matches);
 
-        return new OpmlImportSelectionModel($opml, $parent, $matches[1], []);
+        return new OpmlImportSelectionModel($opml, new OpmlPlacementChoiceModel($parent), $matches[1], []);
     }
 
     private static function feed(string $url): string

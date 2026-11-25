@@ -3,6 +3,7 @@ export type OpmlFeedState = 'new' | 'subscribed' | 'scraped' | 'invalid_url';
 export interface OpmlPreviewFeed {
   url: string;
   title: string | null;
+  siteUrl: string | null;
   state: OpmlFeedState;
 }
 
@@ -19,11 +20,25 @@ export interface OpmlPreview {
   root: OpmlPreviewFolder;
 }
 
+export interface OpmlPlacement {
+  parentTagName: string | null;
+  folderNames: Record<string, string>;
+}
+
 export interface OpmlImportRequest {
   opml: string;
   parentTagName: string | null;
   feedUrls: string[];
   tagIdsByFeedUrl: Record<string, number[]>;
+  addedTagIdsByFeedUrl: Record<string, number[]>;
+  folderNames: Record<string, string>;
+}
+
+export type OpmlTagMode = 'folder' | 'folderPlusTags' | 'tagsOnly';
+
+export interface OpmlTagChoice {
+  mode: Exclude<OpmlTagMode, 'folder'>;
+  tagIds: ReadonlySet<number>;
 }
 
 export type OpmlImportRow =
@@ -31,7 +46,9 @@ export type OpmlImportRow =
       kind: 'folder';
       key: string;
       depth: number;
+      ancestors: string[];
       name: string;
+      tagName: string;
       dropped: boolean;
       importableUrls: string[];
     }
@@ -39,7 +56,9 @@ export type OpmlImportRow =
       kind: 'feed';
       key: string;
       depth: number;
+      ancestors: string[];
       feed: OpmlPreviewFeed;
       host: string;
+      siteHref: string | null;
       destination: string[];
     };

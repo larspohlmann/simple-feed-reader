@@ -85,6 +85,7 @@
       "export": "Exportar OPML",
       "preparing": "Preparando…",
       "importLead": "Importa feeds desde un archivo OPML. Tú eliges cuáles.",
+      "dropLabel": "Suelta un archivo OPML aquí",
       "result": "Importados: {{imported}}; ya suscritos: {{already}}; no válidos: {{invalid}}. Los feeds nuevos se llenarán en la próxima actualización.",
       "previewing": "Leyendo el archivo…",
       "dialogTitle": "Importar feeds",
@@ -101,8 +102,17 @@
       "stateInvalidUrl": "Dirección de feed no válida",
       "destination": "→ {{path}}",
       "untagged": "Sin etiqueta",
-      "changeTags": "Cambiar etiquetas",
-      "useFolder": "Usar la carpeta",
+      "toggleFolder": "Mostrar u ocultar {{name}}",
+      "renameFolder": "Renombrar {{name}}",
+      "resetFolder": "Usar el nombre del archivo",
+      "collapseAll": "Contraer todo",
+      "expandAll": "Expandir todo",
+      "tagTicked": "Etiquetar los feeds marcados",
+      "tagsToggle": "Etiquetas",
+      "restoreFolder": "+ Carpeta",
+      "theirFolders": "Sus carpetas",
+      "bulkAll": "Esto etiqueta los {{count}} feeds del archivo.",
+      "bulkApply": "Aplicar a los marcados",
       "dropped": "Demasiados niveles. Los feeds de estas carpetas van a la carpeta superior: {{names}}",
       "applyCount": "Importar {{count}}",
       "selectFolder": "Seleccionar la carpeta {{name}}",
@@ -115,7 +125,7 @@
       "export": "Descargar copia",
       "preparing": "Preparando…",
       "restoreLead": "Restaurar reemplaza los feeds, etiquetas, artículos y configuración de esta cuenta con la copia de seguridad. Tu inicio de sesión, tu contraseña y tus conexiones de IA se mantienen.",
-      "chooseFile": "Elegir un archivo de copia",
+      "dropLabel": "Suelta un archivo de copia aquí",
       "previewing": "Comprobando el archivo…",
       "reportTitle": "Esta restauración:",
       "reportDelete": "Eliminará: {{subscriptions}} suscripciones, {{tags}} etiquetas, {{entryStates}} estados de artículos, {{recommendationRuns}} ejecuciones de recomendaciones.",
@@ -2024,6 +2034,10 @@
   "colorField": {
     "swatch": "Color {{colour}}",
     "custom": "Color personalizado"
+  },
+  "fileDrop": {
+    "choose": "Elegir archivo",
+    "wrongType": "Este tipo de archivo no es compatible aquí."
   },
   "passwordInput": {
     "show": "Mostrar contraseña",

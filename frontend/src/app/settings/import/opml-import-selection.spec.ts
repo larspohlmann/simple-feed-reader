@@ -1,9 +1,17 @@
 import { TestBed } from '@angular/core/testing';
-import { OpmlFeedState, OpmlImportRow, OpmlPreview, OpmlPreviewFeed } from './opml-import.models';
+import {
+  OpmlFeedState,
+  OpmlImportRow,
+  OpmlPlacement,
+  OpmlPreview,
+  OpmlPreviewFeed,
+} from './opml-import.models';
 import { OpmlImportSelection } from './opml-import-selection';
 
+const NO_PLACEMENT: OpmlPlacement = { parentTagName: null, folderNames: {} };
+
 function feed(url: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
-  return { url, title: null, state };
+  return { url, title: null, siteUrl: null, state };
 }
 
 function previewOf(
@@ -34,7 +42,7 @@ function previewOf(
             },
           ],
         },
-        { name: 'Deep', dropped: true, destination: [], feeds: [], folders: [] },
+        { name: 'Deep', dropped: true, destination: ['A', 'B', 'C'], feeds: [], folders: [] },
       ],
     },
   };
@@ -68,14 +76,67 @@ describe('OpmlImportSelection', () => {
   it('flattens the tree in document order', () => {
     expect(selection.rows().map((row) => `${row.kind}:${row.key}:${row.depth}`)).toEqual([
       'feed:r:0',
-      'folder:f0:0',
+      'folder:0:0',
       'feed:a1:1',
       'feed:a2:1',
-      'folder:f0.0:1',
+      'folder:0.0:1',
       'feed:b1:2',
       'feed:b2:2',
-      'folder:f1:0',
+      'folder:1:0',
     ]);
+  });
+
+  it('a feed links to its site from the file', () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [{ ...feed('https://alwaysbeta.de/feed/'), siteUrl: 'https://alwaysbeta.de/' }],
+        folders: [],
+      },
+    });
+    const row = selection.rows()[0];
+    expect(row.kind === 'feed' && row.siteHref).toBe('https://alwaysbeta.de/');
+  });
+
+  it("a feed without a site links to its feed's origin", () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [feed('https://blog.example/feed.xml')],
+        folders: [],
+      },
+    });
+    expect(selection.rows().map((row) => row.kind === 'feed' && row.siteHref)).toEqual([
+      'https://blog.example/',
+    ]);
+  });
+
+  it('a feed whose url is no web address has no link', () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [feed('not a url'), feed('feed://blog.example/rss')],
+        folders: [],
+      },
+    });
+    expect(selection.rows().map((row) => row.kind === 'feed' && row.siteHref)).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it('a dropped folder keeps its own name, not its ancestor path end', () => {
+    const deep = selection.rows().find((row) => row.kind === 'folder' && row.dropped);
+    expect(deep?.kind === 'folder' && deep.tagName).toBe('Deep');
   });
 
   it('a folder row knows the importable feeds below it', () => {
@@ -133,7 +194,7 @@ describe('OpmlImportSelection', () => {
 
   it('keeps the selection and the changed tags across a new preview', () => {
     selection.toggleFeed('r');
-    selection.changeTags('a1');
+    selection.setMode('a1', 'tagsOnly');
     selection.toggleTag('a1', 7);
     selection.load(previewOf(10, 'Y'));
     expect([...selection.selected()].sort()).toEqual(['a1', 'b1']);
@@ -152,40 +213,292 @@ describe('OpmlImportSelection', () => {
   });
 
   it('builds the request from the selection', () => {
-    selection.changeTags('b1');
+    selection.setMode('b1', 'tagsOnly');
     selection.toggleTag('b1', 9);
     selection.toggleTag('b1', 3);
-    selection.changeTags('r');
+    selection.setMode('r', 'tagsOnly');
     selection.toggleFeed('r');
-    expect(selection.toRequest('<opml/>', null)).toEqual({
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT)).toEqual({
       opml: '<opml/>',
       parentTagName: null,
       feedUrls: ['a1', 'b1'],
       tagIdsByFeedUrl: { b1: [3, 9] },
+      addedTagIdsByFeedUrl: {},
+      folderNames: {},
     });
   });
 
   it('sends a named parent tag as given', () => {
-    expect(selection.toRequest('<opml/>', 'Imported').parentTagName).toBe('Imported');
+    expect(
+      selection.toRequest('<opml/>', { parentTagName: 'Imported', folderNames: {} }).parentTagName,
+    ).toBe('Imported');
   });
 
-  it('use folder forgets the changed tags', () => {
-    selection.changeTags('a1');
-    selection.useFolder('a1');
-    expect(selection.isChanged('a1')).toBe(false);
-    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({});
+  it('a feed starts in folder mode', () => {
+    expect(selection.modeOf('a1')).toBe('folder');
   });
 
-  it('an empty choice is sent as untagged', () => {
-    selection.changeTags('a1');
-    expect(selection.isChanged('a1')).toBe(true);
-    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [] });
+  it('setMode folder clears its tags', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 4);
+    selection.setMode('a1', 'folder');
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect([...selection.chosenTags('a1')]).toEqual([]);
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('an empty tags only choice is sent as untagged', () => {
+    selection.setMode('a1', 'tagsOnly');
+    expect(selection.modeOf('a1')).toBe('tagsOnly');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ a1: [] });
   });
 
   it('toggles a tag off again', () => {
-    selection.changeTags('a1');
+    selection.setMode('a1', 'tagsOnly');
     selection.toggleTag('a1', 4);
     selection.toggleTag('a1', 4);
     expect([...selection.chosenTags('a1')]).toEqual([]);
+  });
+
+  it('a tag on a feed in folder mode adds it to the folder', () => {
+    selection.toggleTag('a1', 4);
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('removing the last added tag returns the feed to its folder', () => {
+    selection.toggleTag('a1', 4);
+    selection.toggleTag('a1', 4);
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a tag on a feed without a folder tags it only', () => {
+    selection.toggleTag('r', 4);
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ r: [4] });
+  });
+
+  it('dropping the folder keeps the tags and restoring it adds them to the folder', () => {
+    selection.toggleTag('a1', 4);
+    selection.dropFolder('a1');
+    expect(selection.modeOf('a1')).toBe('tagsOnly');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+    selection.restoreFolder('a1');
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('restoring the folder of a feed without tags returns it to folder mode', () => {
+    selection.dropFolder('a1');
+    selection.restoreFolder('a1');
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('names the folder tag a feed goes to and none for a feed without a folder', () => {
+    expect(selection.folderTagName('b1')).toBe('B');
+    expect(selection.folderTagName('r')).toBeNull();
+  });
+
+  it('lists each destination of the ticked feeds once', () => {
+    expect(selection.tickedDestinations()).toEqual([[], ['X', 'A'], ['X', 'A', 'B']]);
+    selection.toggleFeed('r');
+    selection.toggleFeed('b1');
+    expect(selection.tickedDestinations()).toEqual([['X', 'A']]);
+  });
+
+  it('switching between the tag modes keeps the chosen tags', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 4);
+    selection.setMode('a1', 'folderPlusTags');
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+    selection.setMode('a1', 'tagsOnly');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('applyToTicked writes the mode and tags onto every ticked feed and replaces earlier choices', () => {
+    selection.toggleFeed('r');
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 1);
+    selection.setMode('r', 'tagsOnly');
+    selection.toggleTag('r', 5);
+    selection.applyToTicked('folderPlusTags', new Set([2, 3]));
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([2, 3]);
+    expect(selection.modeOf('b1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('b1')]).toEqual([2, 3]);
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect([...selection.chosenTags('r')]).toEqual([5]);
+  });
+
+  it('applyToTicked tags a ticked feed without a folder only', () => {
+    selection.applyToTicked('folderPlusTags', new Set([2]));
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect([...selection.chosenTags('r')]).toEqual([2]);
+  });
+
+  it('applyToTicked folder clears the ticked feeds choices', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.setMode('b1', 'folderPlusTags');
+    selection.applyToTicked('folder', new Set([1]));
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect(selection.modeOf('b1')).toBe('folder');
+    expect([...selection.chosenTags('a1')]).toEqual([]);
+  });
+
+  it('allTicked is true only when every importable feed is ticked', () => {
+    expect(selection.allTicked()).toBe(true);
+    selection.toggleFeed('a1');
+    expect(selection.allTicked()).toBe(false);
+    selection.selectAll();
+    expect(selection.allTicked()).toBe(true);
+    selection.selectNone();
+    expect(selection.allTicked()).toBe(false);
+  });
+
+  it('allTicked is false when nothing is importable', () => {
+    selection.load(previewOf(10, 'X', 'subscribed'));
+    selection.toggleFeed('a1');
+    selection.toggleFeed('r');
+    expect(selection.allTicked()).toBe(false);
+  });
+
+  it('toRequest splits the two tag modes into their maps', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 8);
+    selection.toggleTag('a1', 2);
+    selection.setMode('b1', 'folderPlusTags');
+    selection.toggleTag('b1', 6);
+    selection.toggleTag('b1', 5);
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT)).toEqual({
+      opml: '<opml/>',
+      parentTagName: null,
+      feedUrls: ['r', 'a1', 'b1'],
+      tagIdsByFeedUrl: { a1: [2, 8] },
+      addedTagIdsByFeedUrl: { b1: [5, 6] },
+      folderNames: {},
+    });
+  });
+
+  it('a choice survives a re-preview of the same file', () => {
+    selection.setMode('a1', 'folderPlusTags');
+    selection.load(previewOf());
+    selection.load(previewOf());
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+  });
+  it('collapsing a folder hides its feeds and subfolders but keeps the folder row', () => {
+    selection.toggleCollapsed('0');
+    const keys = selection.visibleRows().map((row) => row.key);
+    expect(keys).toContain('0');
+    expect(keys).not.toContain('a1');
+    expect(keys).not.toContain('0.0');
+    expect(keys).not.toContain('b1');
+    expect(keys).toContain('r');
+    expect(selection.isCollapsed('0')).toBe(true);
+  });
+
+  it('collapse state survives a re-preview', () => {
+    selection.toggleCollapsed('0');
+    selection.load(previewOf(10, 'Y'));
+    expect(selection.isCollapsed('0')).toBe(true);
+    expect(selection.visibleRows().some((row) => row.key === 'a1')).toBe(false);
+  });
+
+  it('collapseAll then expandAll restores every row', () => {
+    const all = selection.rows().map((row) => row.key);
+    selection.collapseAll();
+    expect(selection.anyExpanded()).toBe(false);
+    expect(selection.visibleRows().every((row) => row.kind === 'folder' || row.depth === 0)).toBe(
+      true,
+    );
+    selection.expandAll();
+    expect(selection.anyExpanded()).toBe(true);
+    expect(selection.visibleRows().map((row) => row.key)).toEqual(all);
+  });
+
+  it('a feed with a tag choice that a re-preview drops is absent from the request maps', () => {
+    selection.setMode('b1', 'tagsOnly');
+    selection.toggleTag('b1', 4);
+    selection.setMode('a1', 'folderPlusTags');
+    selection.toggleTag('a1', 5);
+    selection.load(previewOf(10, 'X', 'subscribed'));
+    const request = selection.toRequest('<opml/>', NO_PLACEMENT);
+    expect(request.tagIdsByFeedUrl).toEqual({});
+    expect(request.addedTagIdsByFeedUrl).toEqual({ a1: [5] });
+  });
+
+  it('an unticked feed with a choice is in neither map and sends its choice once re-ticked', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 3);
+    selection.toggleFeed('a1');
+    const unticked = selection.toRequest('<opml/>', NO_PLACEMENT);
+    expect(unticked.tagIdsByFeedUrl).toEqual({});
+    expect(unticked.addedTagIdsByFeedUrl).toEqual({});
+    selection.toggleFeed('a1');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ a1: [3] });
+  });
+
+  it('renaming back to the files name drops the override', () => {
+    const folder = folderRow(selection, 'A');
+    selection.renameFolder(folder, 'Gadgets');
+    expect(selection.isRenamed(folder)).toBe(true);
+
+    selection.renameFolder(folder, ' A ');
+
+    expect(selection.isRenamed(folder)).toBe(false);
+    expect(selection.folderNames()).toEqual({});
+  });
+
+  it('a blank rename drops the override', () => {
+    const folder = folderRow(selection, 'A');
+    selection.renameFolder(folder, 'Gadgets');
+
+    selection.renameFolder(folder, '   ');
+
+    expect(selection.folderNames()).toEqual({});
+  });
+
+  it('resetFolder drops the override', () => {
+    const folder = folderRow(selection, 'B');
+    selection.renameFolder(folder, 'Gadgets');
+
+    selection.resetFolder(folder);
+
+    expect(selection.isRenamed(folder)).toBe(false);
+  });
+
+  it('folderNames holds the renames by position, trimmed', () => {
+    selection.renameFolder(folderRow(selection, 'A'), ' Gadgets ');
+    selection.renameFolder(folderRow(selection, 'B'), 'Phones');
+
+    expect(selection.folderNames()).toEqual({ '0': 'Gadgets', '0.0': 'Phones' });
+  });
+
+  it('toRequest carries the placement it is given', () => {
+    const placement = { parentTagName: 'P', folderNames: { '0': 'Gadgets' } };
+
+    expect(selection.toRequest('<opml/>', placement)).toMatchObject(placement);
+  });
+
+  it('the folder row shows the planned tag name', () => {
+    expect(folderRow(selection, 'A').tagName).toBe('A');
+    expect(folderRow(selection, 'Deep').tagName).toBe('Deep');
+    selection.load({
+      freeSlots: 10,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [],
+        folders: [
+          { name: 'Tech', dropped: false, destination: ['Tech (1)'], feeds: [], folders: [] },
+        ],
+      },
+    });
+
+    expect(folderRow(selection, 'Tech').tagName).toBe('Tech (1)');
   });
 });

@@ -45,7 +45,7 @@ final readonly class OpmlController
     public function preview(#[CurrentUser] User $user, #[MapRequestPayload] OpmlPreviewRequest $request): JsonResponse
     {
         return new JsonResponse(
-            OpmlJson::preview($this->previewer->preview($user, $request->opml, $request->parentTagName)),
+            OpmlJson::preview($this->previewer->preview($user, $request->opml, $request->toChoice())),
         );
     }
 

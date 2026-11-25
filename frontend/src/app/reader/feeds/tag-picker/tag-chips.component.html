@@ -1,4 +1,4 @@
-@for (chip of chips(); track chip.id) {
+@for (chip of views(); track chip.key) {
   <span class="chip">
     <app-tag-glyph [name]="chip.icon" [color]="chip.color" size="sm" />
     <span class="label">{{ chip.label }}</span>
@@ -6,7 +6,7 @@
       type="button"
       class="remove"
       [attr.aria-label]="'tagPicker.remove' | transloco: { name: chip.label }"
-      (click)="removed.emit(chip.id)"
+      (click)="chip.remove()"
     >
       <app-icon name="close" size="xs" />
     </button>

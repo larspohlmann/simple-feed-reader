@@ -53,7 +53,12 @@ final class OpmlJsonTest extends TestCase
                 'name' => null,
                 'dropped' => false,
                 'destination' => ['P'],
-                'feeds' => [['url' => 'https://a.example/feed.xml', 'title' => 'A', 'state' => 'new']],
+                'feeds' => [[
+                    'url' => 'https://a.example/feed.xml',
+                    'title' => 'A',
+                    'siteUrl' => null,
+                    'state' => 'new',
+                ]],
                 'folders' => [[
                     'name' => 'Tech',
                     'dropped' => false,
@@ -73,7 +78,12 @@ final class OpmlJsonTest extends TestCase
         $json = OpmlJson::preview(new OpmlPreviewModel(0, $root, [$feed->url => OpmlFeedState::InvalidUrl]));
 
         self::assertSame(
-            [['url' => 'https://a.example/feed.xml', 'title' => null, 'state' => 'invalid_url']],
+            [[
+                'url' => 'https://a.example/feed.xml',
+                'title' => null,
+                'siteUrl' => null,
+                'state' => 'invalid_url',
+            ]],
             $json['root']['feeds'],
         );
     }

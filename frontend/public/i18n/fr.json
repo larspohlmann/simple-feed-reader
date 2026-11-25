@@ -85,6 +85,7 @@
       "export": "Exporter en OPML",
       "preparing": "Préparation…",
       "importLead": "Importez des flux depuis un fichier OPML. Vous choisissez lesquels.",
+      "dropLabel": "Déposez un fichier OPML ici",
       "result": "Importés : {{imported}}, déjà abonnés : {{already}}, invalides : {{invalid}}. Les nouveaux flux se rempliront à la prochaine actualisation.",
       "previewing": "Lecture du fichier…",
       "dialogTitle": "Importer des flux",
@@ -101,8 +102,17 @@
       "stateInvalidUrl": "Adresse de flux non valide",
       "destination": "→ {{path}}",
       "untagged": "Aucune étiquette",
-      "changeTags": "Modifier les étiquettes",
-      "useFolder": "Utiliser le dossier",
+      "toggleFolder": "Afficher ou masquer {{name}}",
+      "renameFolder": "Renommer {{name}}",
+      "resetFolder": "Utiliser le nom du fichier",
+      "collapseAll": "Tout réduire",
+      "expandAll": "Tout développer",
+      "tagTicked": "Étiqueter les flux cochés",
+      "tagsToggle": "Étiquettes",
+      "restoreFolder": "+ Dossier",
+      "theirFolders": "Leurs dossiers",
+      "bulkAll": "Cela étiquette les {{count}} flux du fichier.",
+      "bulkApply": "Appliquer aux flux cochés",
       "dropped": "Imbrication trop profonde. Les flux de ces dossiers vont dans le dossier au-dessus : {{names}}",
       "applyCount": "Importer {{count}}",
       "selectFolder": "Sélectionner le dossier {{name}}",
@@ -115,7 +125,7 @@
       "export": "Télécharger la sauvegarde",
       "preparing": "Préparation…",
       "restoreLead": "La restauration remplace les flux, étiquettes, articles et paramètres de ce compte par ceux de la sauvegarde. Votre identifiant, votre mot de passe et vos connexions IA sont conservés.",
-      "chooseFile": "Choisir un fichier de sauvegarde",
+      "dropLabel": "Déposez un fichier de sauvegarde ici",
       "previewing": "Vérification du fichier…",
       "reportTitle": "Cette restauration va :",
       "reportDelete": "Supprimer : {{subscriptions}} abonnements, {{tags}} étiquettes, {{entryStates}} états d'articles, {{recommendationRuns}} cycles de recommandations.",
@@ -2024,6 +2034,10 @@
   "colorField": {
     "swatch": "Couleur {{colour}}",
     "custom": "Couleur personnalisée"
+  },
+  "fileDrop": {
+    "choose": "Choisir un fichier",
+    "wrongType": "Ce type de fichier n'est pas pris en charge ici."
   },
   "passwordInput": {
     "show": "Afficher le mot de passe",

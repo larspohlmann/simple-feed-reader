@@ -10,6 +10,7 @@ use App\Repository\TagRepository;
 use App\Service\Library\Opml\Model\OpmlFeedModel;
 use App\Service\Library\Opml\Model\OpmlFolderModel;
 use App\Service\Library\Opml\Model\OpmlPlacedFolderModel;
+use App\Service\Library\Opml\Model\OpmlPlacementChoiceModel;
 use App\Service\Library\Opml\OpmlPlacementPlanner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -218,6 +219,64 @@ final class OpmlPlacementPlannerTest extends DbTestCase
         self::assertSame($feeds, $root->folders[0]->feeds);
     }
 
+    public function testARenamedFolderTakesTheNewName(): void
+    {
+        $root = $this->planRenamed(null, ['0' => 'Alpha'], self::folder('A', self::folder('B')));
+
+        self::assertSame(['Alpha'], $root->folders[0]->destination);
+        self::assertSame(['Alpha', 'B'], $root->folders[0]->folders[0]->destination);
+        self::assertSame('A', $root->folders[0]->name);
+    }
+
+    public function testANestedFolderIsRenamedByItsPosition(): void
+    {
+        $root = $this->planRenamed(null, ['0.0' => 'Beta'], self::folder('A', self::folder('B')));
+
+        self::assertSame(['A', 'Beta'], $root->folders[0]->folders[0]->destination);
+    }
+
+    public function testARenameOntoATakenTagNameIsNumbered(): void
+    {
+        $this->tag('Tech', $this->tag('Other'));
+
+        $root = $this->planRenamed('P', ['0' => 'Tech'], self::folder('X'));
+
+        self::assertSame(['P', 'Tech (1)'], $root->folders[0]->destination);
+    }
+
+    public function testARenameOntoAStoredTagAtTheSameSpotReusesIt(): void
+    {
+        $this->tag('Tech');
+
+        $root = $this->planRenamed(null, ['0' => 'tech'], self::folder('X'));
+
+        self::assertSame(['Tech'], $root->folders[0]->destination);
+    }
+
+    public function testAThirdLevelFolderIsRenamedByItsPosition(): void
+    {
+        $tree = self::folder('A', self::folder('B', self::folder('C')));
+
+        $root = $this->planRenamed(null, ['0.0.0' => 'Gamma'], $tree);
+
+        self::assertSame(['A', 'B', 'Gamma'], $root->folders[0]->folders[0]->folders[0]->destination);
+    }
+
+    public function testARenameOntoASiblingsNameMergesThem(): void
+    {
+        $root = $this->planRenamed(null, ['1' => 'a'], self::folder('A'), self::folder('B'));
+
+        self::assertSame(['A'], $root->folders[0]->destination);
+        self::assertSame(['A'], $root->folders[1]->destination);
+    }
+
+    public function testAnUnknownPositionIsIgnored(): void
+    {
+        $root = $this->planRenamed(null, ['7' => 'Z', '0.9' => 'Y'], self::folder('A'));
+
+        self::assertSame(['A'], $root->folders[0]->destination);
+    }
+
     public function testPlanningWritesNothing(): void
     {
         $this->plan('P', self::folder('A'));
@@ -228,9 +287,19 @@ final class OpmlPlacementPlannerTest extends DbTestCase
 
     private function plan(?string $parent, OpmlFolderModel ...$folders): OpmlPlacedFolderModel
     {
-        $root = new OpmlFolderModel(null, [], array_values($folders));
+        return $this->planRenamed($parent, [], ...$folders);
+    }
 
-        return new OpmlPlacementPlanner($this->tagRepository())->plan($this->owner, $root, $parent);
+    /** @param array<int|string, string> $folderNames */
+    private function planRenamed(
+        ?string $parent,
+        array $folderNames,
+        OpmlFolderModel ...$folders,
+    ): OpmlPlacedFolderModel {
+        $root = new OpmlFolderModel(null, [], array_values($folders));
+        $choice = new OpmlPlacementChoiceModel($parent, $folderNames);
+
+        return new OpmlPlacementPlanner($this->tagRepository())->plan($this->owner, $root, $choice);
     }
 
     private static function folder(string $name, OpmlFolderModel ...$folders): OpmlFolderModel

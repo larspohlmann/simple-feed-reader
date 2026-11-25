@@ -10,6 +10,7 @@ use App\Repository\SubscriptionRepository;
 use App\Service\Library\Opml\Model\OpmlFeedModel;
 use App\Service\Library\Opml\Model\OpmlFeedState;
 use App\Service\Library\Opml\Model\OpmlPlacedFolderModel;
+use App\Service\Library\Opml\Model\OpmlPlacementChoiceModel;
 use App\Service\Library\Opml\Model\OpmlPreviewModel;
 use App\Service\Library\Subscription\SubscriptionLimitResolver;
 use App\Service\Library\Subscription\Support\SubscribableUrl;
@@ -24,9 +25,9 @@ final readonly class OpmlPreviewer
     ) {
     }
 
-    public function preview(User $user, string $opml, ?string $parentTagName): OpmlPreviewModel
+    public function preview(User $user, string $opml, OpmlPlacementChoiceModel $choice): OpmlPreviewModel
     {
-        $root = $this->placementPlanner->plan($user, $this->documentReader->read($opml), $parentTagName);
+        $root = $this->placementPlanner->plan($user, $this->documentReader->read($opml), $choice);
         $userId = $user->requireId();
         $subscribedUrls = array_fill_keys(
             array_column($this->subscriptions->findFeedSummariesForUser($userId), 'feedUrl'),

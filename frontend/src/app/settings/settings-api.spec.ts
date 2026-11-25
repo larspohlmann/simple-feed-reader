@@ -131,10 +131,14 @@ describe('SettingsApi', () => {
   });
 
   it('POSTs the OPML preview request as JSON', () => {
-    api.previewOpml('<opml/>', 'P').subscribe();
+    api.previewOpml('<opml/>', { parentTagName: 'P', folderNames: { '0': 'Gadgets' } }).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/opml/preview');
     expect(testRequest.request.method).toBe('POST');
-    expect(testRequest.request.body).toEqual({ opml: '<opml/>', parentTagName: 'P' });
+    expect(testRequest.request.body).toEqual({
+      opml: '<opml/>',
+      parentTagName: 'P',
+      folderNames: { '0': 'Gadgets' },
+    });
     testRequest.flush({
       freeSlots: 1,
       root: { name: null, dropped: false, destination: [], feeds: [], folders: [] },
@@ -147,6 +151,8 @@ describe('SettingsApi', () => {
       parentTagName: null,
       feedUrls: ['https://a.test/feed'],
       tagIdsByFeedUrl: { 'https://a.test/feed': [3] },
+      addedTagIdsByFeedUrl: {},
+      folderNames: {},
     };
     api.importOpml(request).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/opml/import');

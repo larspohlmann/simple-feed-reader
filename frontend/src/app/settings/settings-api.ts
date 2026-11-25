@@ -2,7 +2,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { OpmlImportRequest, OpmlPreview } from './import/opml-import.models';
+import { OpmlImportRequest, OpmlPlacement, OpmlPreview } from './import/opml-import.models';
 import {
   DebugLogDetail,
   DebugLogEntry,
@@ -25,8 +25,8 @@ export class SettingsApi {
     return this.http.get(`${this.base}/api/opml/export`, { responseType: 'text' });
   }
 
-  previewOpml(opml: string, parentTagName: string | null): Observable<OpmlPreview> {
-    return this.http.post<OpmlPreview>(`${this.base}/api/opml/preview`, { opml, parentTagName });
+  previewOpml(opml: string, placement: OpmlPlacement): Observable<OpmlPreview> {
+    return this.http.post<OpmlPreview>(`${this.base}/api/opml/preview`, { opml, ...placement });
   }
 
   importOpml(request: OpmlImportRequest): Observable<OpmlImportResult> {

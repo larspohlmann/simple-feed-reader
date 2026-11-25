@@ -43,6 +43,50 @@ final class OpmlDocumentReaderTest extends TestCase
         );
     }
 
+    public function testAnOutlineCarriesItsSiteUrl(): void
+    {
+        $root = $this->read(
+            '<outline type="rss" text="always beta" title="always beta" xmlUrl="https://alwaysbeta.de/feed/"'
+            . ' htmlUrl="https://alwaysbeta.de/" />',
+        );
+
+        self::assertSame('https://alwaysbeta.de/', $root->feeds[0]->siteUrl);
+    }
+
+    public function testANonHttpSiteUrlIsDropped(): void
+    {
+        $root = $this->read('<outline xmlUrl="https://a.example/feed" htmlUrl="javascript:alert(1)"/>');
+
+        self::assertNull($root->feeds[0]->siteUrl);
+    }
+
+    public function testASchemelessOrNonWebSiteUrlIsDropped(): void
+    {
+        $root = $this->read(
+            '<outline xmlUrl="https://a.example/1" htmlUrl="//evil.example/"/>'
+            . '<outline xmlUrl="https://a.example/2" htmlUrl="data:text/html,x"/>',
+        );
+
+        self::assertSame(
+            [null, null],
+            array_map(static fn (OpmlFeedModel $feed): ?string => $feed->siteUrl, $root->feeds),
+        );
+    }
+
+    public function testAnUppercaseSchemeSiteUrlIsKept(): void
+    {
+        $root = $this->read('<outline xmlUrl="https://a.example/1" htmlUrl="HTTPS://Example.com/"/>');
+
+        self::assertSame('HTTPS://Example.com/', $root->feeds[0]->siteUrl);
+    }
+
+    public function testAMissingSiteUrlIsNull(): void
+    {
+        $root = $this->read('<outline xmlUrl="https://a.example/feed"/>');
+
+        self::assertNull($root->feeds[0]->siteUrl);
+    }
+
     public function testABlankTextFallsBackToTheTitleAndNeitherIsNull(): void
     {
         $root = $this->read(

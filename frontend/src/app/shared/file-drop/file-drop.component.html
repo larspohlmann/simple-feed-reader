@@ -1,0 +1,32 @@
+<div
+  class="target"
+  role="presentation"
+  [class.is-over]="over()"
+  [class.is-disabled]="disabled()"
+  (click)="openPicker(picker)"
+  (dragenter)="onDragEnter($event)"
+  (dragover)="$event.preventDefault()"
+  (dragleave)="onDragLeave()"
+  (drop)="onDrop($event)"
+>
+  <app-icon name="upload_file" size="lg" />
+  <span class="label" [id]="labelId">{{ label() }}</span>
+  <app-button size="sm" [ariaDescribedBy]="labelId" [disabled]="disabled()">
+    {{ 'fileDrop.choose' | transloco }}
+  </app-button>
+  @if (rejected()) {
+    <span class="error" role="alert" data-testid="file-drop-error">{{
+      'fileDrop.wrongType' | transloco
+    }}</span>
+  }
+  <input
+    #picker
+    class="picker"
+    type="file"
+    tabindex="-1"
+    [accept]="accept()"
+    [disabled]="disabled()"
+    (change)="onChange(picker)"
+    (click)="$event.stopPropagation()"
+  />
+</div>

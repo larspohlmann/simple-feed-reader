@@ -9,12 +9,14 @@ final readonly class OpmlImportSelectionModel
     /**
      * @param list<string>              $feedUrls
      * @param array<string, list<int>> $tagIdsByFeedUrl
+     * @param array<string, list<int>> $addedTagIdsByFeedUrl
      */
     public function __construct(
         public string $opml,
-        public ?string $parentTagName,
+        public OpmlPlacementChoiceModel $placement,
         public array $feedUrls,
         public array $tagIdsByFeedUrl,
+        public array $addedTagIdsByFeedUrl = [],
     ) {
     }
 }

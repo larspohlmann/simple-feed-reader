@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 :host {
   display: contents;
 
@@ -14,12 +16,13 @@
 
 .list-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
 .counter {
-  flex: 1;
+  flex: 1 0 auto;
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -28,6 +31,23 @@
 
 .counter.is-over {
   color: var(--warning);
+}
+
+.bulk {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+
+  @include glass-rim.ring;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .failure {
@@ -111,11 +131,27 @@
   font-size: var(--fs-sm);
 }
 
+a.host {
+  align-self: flex-start;
+  max-width: 100%;
+  text-decoration: none;
+}
+
+a.host:hover,
+a.host:focus-visible {
+  text-decoration: underline;
+}
+
 .state {
   padding: var(--space-0) var(--space-2);
   color: var(--text-muted);
   font-size: var(--fs-xs);
   text-align: right;
+}
+
+.rename {
+  flex: 1;
+  min-width: 0;
 }
 
 .destination,

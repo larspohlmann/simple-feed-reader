@@ -764,6 +764,9 @@ weights.
 | `disabled` | `boolean` | `false` — renders off in every variant: no fill, a faint outline, muted text; `loading` keeps the variant |
 | `block` | `boolean` (attribute) | `false` — stretch to the container's width |
 | `focusInitial` | `boolean` (attribute) | `false` |
+| `ariaLabel` | `string` | unset — the real `<button>`'s accessible name, for a label hidden on narrow screens |
+| `ariaExpanded` | `boolean \| null` | `null` — set on a button that shows or hides a region |
+| `ariaDescribedBy` | `string \| null` | `null` — ids of the text that says more than the label does |
 
 | Variant | Weight | Use for |
 |---|---|---|
@@ -1019,6 +1022,43 @@ sits on the left, a trailing chevron rotates when the `<details>` opens. It
 reuses the same `startOpen`/`opened`/`label`/`[summary]` API. Use `drill-in`
 for an advanced or Expert section that expands in place inside a settings
 group.
+
+---
+
+### `<app-file-drop>`
+
+A dashed drop target that is also a file picker: drag a file onto it, click
+anywhere on it, or use its "Choose file" button. It fills the width of its
+container, also inside a flex column that aligns its items to the start. It only hands the caller a
+`File`; reading, parsing and uploading stay with the caller.
+
+| Input / output | Type | Default |
+|---|---|---|
+| `accept` | `string` | required — comma-separated `.suffix` and MIME entries, as in `<input accept>`; `''` accepts everything |
+| `label` | `string` | required — an already-translated prompt |
+| `disabled` | `boolean` | `false` |
+| `picked` | `output<File>` | — fires for a picked file, and for the first dropped file that matches `accept` |
+
+```html
+<app-file-drop
+  accept=".opml,.xml,text/xml"
+  [label]="'settings.import.drop' | transloco"
+  (picked)="preview($event)"
+/>
+```
+
+States: resting (`1px dashed --border-strong`, the sidebar dropzone's hint
+treatment), dragged over (`--accent` border on `--accent-soft`), disabled
+(dimmed, ignores drops and clicks), and rejected (a drop with no matching file
+shows `fileDrop.wrongType` in `--danger` and emits nothing; the next accepted
+file clears it). The hidden input's value is reset after every pick, so
+choosing the same file twice emits twice. Matching is by suffix or exact MIME
+type, a convenience filter and not validation: the caller still handles a file
+that parses badly.
+
+**Do** name the accepted formats in `label`. **Don't** wrap it in another click
+handler or style its border from outside; a second drop target nested in it
+would swallow the drag events.
 
 ---
 

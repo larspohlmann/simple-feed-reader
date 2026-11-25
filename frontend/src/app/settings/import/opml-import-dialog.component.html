@@ -48,6 +48,26 @@
       >
         {{ 'settings.opml.selectNone' | transloco }}
       </app-button>
+      @if (selection.hasFolders()) {
+        @let expanded = selection.anyExpanded();
+        <app-button
+          variant="ghost"
+          size="sm"
+          [attr.data-testid]="expanded ? 'opml-import-collapse-all' : 'opml-import-expand-all'"
+          (click)="selection.toggleAll()"
+        >
+          {{ (expanded ? 'settings.opml.collapseAll' : 'settings.opml.expandAll') | transloco }}
+        </app-button>
+      }
+      <app-button
+        variant="ghost"
+        size="sm"
+        data-testid="opml-import-tag-ticked"
+        [disabled]="selection.selectedCount() === 0"
+        (click)="openBulk()"
+      >
+        {{ 'settings.opml.tagTicked' | transloco }}
+      </app-button>
     </div>
   </div>
 
@@ -58,28 +78,137 @@
     </app-warning-box>
   }
 
+  @if (bulk(); as bulkChoice) {
+    <section class="bulk" data-testid="opml-import-bulk">
+      @if (selection.allTicked()) {
+        <app-warning-box data-testid="opml-import-bulk-all">
+          {{ 'settings.opml.bulkAll' | transloco: { count: selection.selectedCount() } }}
+        </app-warning-box>
+      }
+      <app-tag-picker
+        [tags]="tags()"
+        [selected]="bulkChoice.tagIds"
+        (toggled)="toggleBulkTag($event)"
+      >
+        @if (bulkFolder(); as folder) {
+          @let folderName =
+            'name' in folder ? folder.name : ('settings.opml.theirFolders' | transloco);
+          @if (bulkChoice.keepsFolder) {
+            <app-tag-chips
+              data-testid="opml-import-folder-pill"
+              [chips]="[]"
+              [lead]="{ label: folderName, icon: 'folder' }"
+              (leadRemoved)="dropBulkFolder()"
+            />
+          } @else {
+            <app-button
+              variant="ghost"
+              size="sm"
+              data-testid="opml-import-restore-folder"
+              (click)="restoreBulkFolder()"
+            >
+              {{ 'settings.opml.restoreFolder' | transloco }}
+            </app-button>
+          }
+        }
+      </app-tag-picker>
+      <div class="bulk-actions">
+        <app-button
+          variant="ghost"
+          size="sm"
+          data-testid="opml-import-bulk-cancel"
+          (click)="closeBulk()"
+        >
+          {{ 'common.cancel' | transloco }}
+        </app-button>
+        <app-button
+          variant="primary"
+          size="sm"
+          data-testid="opml-import-bulk-apply"
+          [disabled]="selection.selectedCount() === 0"
+          (click)="applyBulk()"
+        >
+          {{ 'settings.opml.bulkApply' | transloco }}
+        </app-button>
+      </div>
+    </section>
+  }
+
   <ul class="rows">
-    @for (row of selection.rows(); track row.key) {
+    @for (row of selection.visibleRows(); track row.key) {
       @if (row.kind === 'folder') {
         @let state = selection.folderStates().get(row.key);
+        @let collapsed = selection.isCollapsed(row.key);
         <li class="row is-folder" data-testid="opml-import-folder" [style.--depth]="row.depth">
-          <label class="pick">
-            <input
-              type="checkbox"
-              [checked]="state === 'all'"
-              [indeterminate]="state === 'some'"
-              [disabled]="row.importableUrls.length === 0"
-              [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
-              (change)="selection.toggleFolder(row)"
-            />
-            <span class="name">{{ row.name }}</span>
-          </label>
+          <div class="line">
+            <button
+              appIconButton
+              type="button"
+              data-testid="opml-import-toggle-folder"
+              [attr.aria-expanded]="!collapsed"
+              [attr.aria-label]="'settings.opml.toggleFolder' | transloco: { name: row.name }"
+              (click)="selection.toggleCollapsed(row.key)"
+            >
+              <app-icon [name]="collapsed ? 'chevron_right' : 'expand_more'" size="md" />
+            </button>
+            <label class="pick">
+              <input
+                type="checkbox"
+                [checked]="state === 'all'"
+                [indeterminate]="state === 'some'"
+                [disabled]="row.importableUrls.length === 0"
+                [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
+                (change)="selection.toggleFolder(row)"
+              />
+              @if (editingKey() !== row.key) {
+                <span class="name">{{ row.tagName }}</span>
+              }
+            </label>
+            @if (editingKey() === row.key) {
+              <input
+                #renameInput
+                type="text"
+                class="rename"
+                maxlength="100"
+                autocomplete="off"
+                data-testid="opml-import-rename-input"
+                [value]="row.tagName"
+                [attr.aria-label]="'settings.opml.renameFolder' | transloco: { name: row.name }"
+                (keydown.enter)="commitRename(row, $event)"
+                (keydown.escape)="cancelRename(); $event.stopPropagation()"
+                (blur)="commitRename(row, $event)"
+              />
+            } @else if (!row.dropped) {
+              <button
+                appIconButton
+                type="button"
+                data-testid="opml-import-rename-folder"
+                [disabled]="importing()"
+                [attr.aria-label]="'settings.opml.renameFolder' | transloco: { name: row.name }"
+                (click)="startRename(row)"
+              >
+                <app-icon name="edit" size="md" />
+              </button>
+              @if (selection.isRenamed(row)) {
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="opml-import-reset-folder"
+                  [disabled]="importing()"
+                  (click)="resetFolder(row)"
+                >
+                  {{ 'settings.opml.resetFolder' | transloco }}
+                </app-button>
+              }
+            }
+          </div>
         </li>
       } @else {
         @let url = row.feed.url;
         @let host = row.host;
         @let title = row.feed.title ?? host;
-        @let changed = selection.isChanged(url);
+        @let mode = selection.modeOf(url);
+        @let tagsOpen = isTagsOpen(url);
         <li
           class="row"
           data-testid="opml-import-feed"
@@ -98,42 +227,64 @@
               />
               <span class="who">
                 <span class="name">{{ title }}</span>
-                <span class="host">{{ host }}</span>
+                @if (row.siteHref; as siteHref) {
+                  <a
+                    class="host"
+                    data-testid="opml-import-site"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [href]="siteHref"
+                    >{{ host }}</a
+                  >
+                } @else {
+                  <span class="host">{{ host }}</span>
+                }
               </span>
             </label>
             @if (row.feed.state === 'new') {
-              @if (changed) {
-                <app-button
-                  variant="ghost"
-                  size="sm"
-                  data-testid="opml-import-use-folder"
-                  (click)="selection.useFolder(url)"
-                >
-                  {{ 'settings.opml.useFolder' | transloco }}
-                </app-button>
-              } @else {
-                <app-button
-                  variant="ghost"
-                  size="sm"
-                  data-testid="opml-import-change-tags"
-                  (click)="selection.changeTags(url)"
-                >
-                  {{ 'settings.opml.changeTags' | transloco }}
-                </app-button>
-              }
+              <app-button
+                variant="ghost"
+                size="sm"
+                data-testid="opml-import-tags-toggle"
+                [ariaExpanded]="tagsOpen"
+                (click)="toggleTags(url)"
+              >
+                {{ 'settings.opml.tagsToggle' | transloco }}
+              </app-button>
             } @else {
               <span class="state">{{ stateKeys[row.feed.state] | transloco }}</span>
             }
           </div>
           @if (row.feed.state === 'new') {
-            @if (changed) {
+            @if (tagsOpen) {
               <app-tag-picker
                 class="tags"
                 [tags]="tags()"
                 [selected]="selection.chosenTags(url)"
-                (toggled)="selection.toggleTag(url, $event)"
-              />
-            } @else {
+                (toggled)="toggleFeedTag(url, $event)"
+              >
+                @if (selection.folderTagName(url); as folderName) {
+                  @if (mode !== 'tagsOnly') {
+                    <app-tag-chips
+                      data-testid="opml-import-folder-pill"
+                      [chips]="[]"
+                      [lead]="{ label: folderName, icon: 'folder' }"
+                      (leadRemoved)="dropFeedFolder(url)"
+                    />
+                  } @else {
+                    <app-button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="opml-import-restore-folder"
+                      (click)="restoreFeedFolder(url)"
+                    >
+                      {{ 'settings.opml.restoreFolder' | transloco }}
+                    </app-button>
+                  }
+                }
+              </app-tag-picker>
+            }
+            @if (mode !== 'tagsOnly') {
               <p class="destination">
                 {{
                   'settings.opml.destination'
@@ -144,6 +295,9 @@
                             : ('settings.opml.untagged' | transloco),
                         }
                 }}
+                @if (mode === 'folderPlusTags' && selection.chosenTags(url).size > 0) {
+                  + {{ tagNames(selection.chosenTags(url)) }}
+                }
               </p>
             }
           }

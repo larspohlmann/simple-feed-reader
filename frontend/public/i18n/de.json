@@ -85,6 +85,7 @@
       "export": "OPML exportieren",
       "preparing": "Wird vorbereitet…",
       "importLead": "Importiere Feeds aus einer OPML-Datei. Du wählst aus, welche übernommen werden.",
+      "dropLabel": "OPML-Datei hierher ziehen",
       "result": "{{imported}} importiert, {{already}} bereits abonniert, {{invalid}} ungültig. Neue Feeds werden bei der nächsten Aktualisierung gefüllt.",
       "previewing": "Datei wird gelesen…",
       "dialogTitle": "Feeds importieren",
@@ -101,8 +102,17 @@
       "stateInvalidUrl": "Keine gültige Feed-Adresse",
       "destination": "→ {{path}}",
       "untagged": "Kein Tag",
-      "changeTags": "Tags ändern",
-      "useFolder": "Ordner verwenden",
+      "toggleFolder": "{{name}} ein- oder ausblenden",
+      "renameFolder": "{{name}} umbenennen",
+      "resetFolder": "Namen aus der Datei verwenden",
+      "collapseAll": "Alle einklappen",
+      "expandAll": "Alle ausklappen",
+      "tagTicked": "Markierte Feeds taggen",
+      "tagsToggle": "Tags",
+      "restoreFolder": "+ Ordner",
+      "theirFolders": "Ihre Ordner",
+      "bulkAll": "Damit werden alle {{count}} Feeds der Datei getaggt.",
+      "bulkApply": "Auf Markierte anwenden",
       "dropped": "Zu tief verschachtelt. Feeds aus diesen Ordnern landen im Ordner darüber: {{names}}",
       "applyCount": "{{count}} importieren",
       "selectFolder": "Ordner {{name}} auswählen",
@@ -115,7 +125,7 @@
       "export": "Backup herunterladen",
       "preparing": "Wird vorbereitet…",
       "restoreLead": "Die Wiederherstellung ersetzt die Feeds, Tags, Artikel und Einstellungen dieses Kontos durch das Backup. Login, Passwort und KI-Verbindungen bleiben erhalten.",
-      "chooseFile": "Backup-Datei auswählen",
+      "dropLabel": "Backup-Datei hierher ziehen",
       "previewing": "Datei wird geprüft…",
       "reportTitle": "Diese Wiederherstellung wird:",
       "reportDelete": "Löschen: {{subscriptions}} Abonnements, {{tags}} Tags, {{entryStates}} Artikelstatus, {{recommendationRuns}} Empfehlungsläufe.",
@@ -2024,6 +2034,10 @@
   "colorField": {
     "swatch": "Farbe {{colour}}",
     "custom": "Eigene Farbe"
+  },
+  "fileDrop": {
+    "choose": "Datei auswählen",
+    "wrongType": "Dieser Dateityp wird hier nicht unterstützt."
   },
   "passwordInput": {
     "show": "Passwort anzeigen",

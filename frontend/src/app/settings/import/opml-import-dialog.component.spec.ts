@@ -6,6 +6,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
 import { LayoutService } from '../../reader/layout.service';
+import { By } from '@angular/platform-browser';
+import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagCreator } from '../../reader/feeds/tag-picker/tag-creator.service';
 import { SubscriptionRows } from '../../reader/state/subscription-rows';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -21,7 +23,7 @@ const IMPORT = `${BASE}/api/opml/import`;
 const OPML = '<opml version="2.0"><body/></opml>';
 
 function feed(name: string, state: OpmlFeedState = 'new'): OpmlPreviewFeed {
-  return { url: `https://${name}.test/feed`, title: null, state };
+  return { url: `https://${name}.test/feed`, title: null, siteUrl: null, state };
 }
 
 function previewOf(freeSlots = 10, destinationPrefix = 'X'): OpmlPreview {
@@ -48,7 +50,7 @@ function previewOf(freeSlots = 10, destinationPrefix = 'X'): OpmlPreview {
             },
           ],
         },
-        { name: 'Deep', dropped: true, destination: [], feeds: [], folders: [] },
+        { name: 'Deep', dropped: true, destination: ['X', 'A', 'B'], feeds: [], folders: [] },
       ],
     },
   };
@@ -137,6 +139,33 @@ describe('OpmlImportDialogComponent', () => {
     }
   });
 
+  it('the site link opens in a new tab and leaves the tick alone', () => {
+    mount();
+    const link = feedRow('a1').querySelector<HTMLAnchorElement>(
+      '[data-testid="opml-import-site"]',
+    )!;
+
+    expect(link.getAttribute('href')).toBe('https://a1.test/');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+
+    const original = console.error.bind(console);
+    const logged = jest
+      .spyOn(console, 'error')
+      .mockImplementation((...loggedArguments: unknown[]) => {
+        if (!String(loggedArguments[0]).includes('Not implemented: navigation'))
+          original(...loggedArguments);
+      });
+    try {
+      link.click();
+      fixture.detectChanges();
+    } finally {
+      logged.mockRestore();
+    }
+
+    expect(checkbox(feedRow('a1')).checked).toBe(true);
+  });
+
   it('shows each new feed its destination', () => {
     mount(previewOf(10, 'P'));
 
@@ -193,7 +222,7 @@ describe('OpmlImportDialogComponent', () => {
     http.expectNone(PREVIEW);
     jest.advanceTimersByTime(1);
     const request = http.expectOne(PREVIEW);
-    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P' });
+    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P', folderNames: {} });
     request.flush(previewOf(10, 'P'));
     fixture.detectChanges();
 
@@ -219,16 +248,321 @@ describe('OpmlImportDialogComponent', () => {
     expect(buttonOf('opml-import-apply').disabled).toBe(true);
   });
 
-  it('swaps the destination for the tag picker and back', () => {
+  const folderPill = (root: ParentNode): HTMLElement | null =>
+    root.querySelector<HTMLElement>('[data-testid="opml-import-folder-pill"] .chip');
+  const removeFolder = (root: ParentNode): void => {
+    folderPill(root)!.querySelector<HTMLButtonElement>('.remove')!.click();
+    fixture.detectChanges();
+  };
+  const openTags = (row: HTMLElement): void => {
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-tags-toggle"] button')!.click();
+    fixture.detectChanges();
+  };
+  const toggleTagIn = (root: HTMLElement, tagId: number): void => {
+    const picker = fixture.debugElement
+      .queryAll(By.directive(TagPickerComponent))
+      .find((candidate) => root.contains(candidate.nativeElement))!;
+    picker.componentInstance.toggled.emit(tagId);
+    fixture.detectChanges();
+  };
+  const selectionOf = (): OpmlImportSelection =>
+    fixture.debugElement.injector.get(OpmlImportSelection);
+  const toggleButton = (folder: string): HTMLButtonElement =>
+    folderRow(folder).querySelector('[data-testid="opml-import-toggle-folder"]')!;
+
+  it('opening a feed for tagging shows its folder as a pill in the tag picker', () => {
+    mount();
+    const toggle = (): HTMLButtonElement =>
+      feedRow('a1').querySelector('[data-testid="opml-import-tags-toggle"] button')!;
+    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(textOf(toggle())).toBe('Tags');
+
+    openTags(feedRow('a1'));
+
+    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+    expect(textOf(folderPill(feedRow('a1'))!.querySelector('.label'))).toBe('A');
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(feedRow('b1').querySelector('app-tag-picker')).toBeNull();
+
+    openTags(feedRow('a1'));
+    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
+  });
+
+  it('removing the folder pill imports the feed with only its tags', () => {
+    mount();
+    openTags(feedRow('a1'));
+
+    removeFolder(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).toBeNull();
+    expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.tagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a tag next to the folder pill is added to the folder', () => {
+    mount();
+    openTags(feedRow('a1'));
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A');
+
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('+ Folder brings a removed folder pill back with the tags added to it', () => {
+    mount();
+    openTags(feedRow('a1'));
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    removeFolder(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+    expect(textOf(buttonOf('opml-import-restore-folder', feedRow('a1')))).toBe('+ Folder');
+
+    press('opml-import-restore-folder', feedRow('a1'));
+
+    expect(textOf(folderPill(feedRow('a1'))!.querySelector('.label'))).toBe('A');
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a feed without a folder has no folder pill and its tags are its only ones', () => {
+    mount();
+    openTags(feedRow('r'));
+
+    expect(feedRow('r').querySelector('app-tag-picker')).not.toBeNull();
+    expect(folderPill(feedRow('r'))).toBeNull();
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    toggleTagIn(feedRow('r'), 7);
+
+    expect(
+      selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} }).tagIdsByFeedUrl,
+    ).toEqual({ 'https://r.test/feed': [7] });
+  });
+
+  it('the tag area stays open when a feed bulk-tagged without its folder gets it back', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    removeFolder(byTestId('opml-import-bulk')!);
+    press('opml-import-bulk-apply');
+
+    press('opml-import-restore-folder', feedRow('a1'));
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+  });
+
+  it('the tag area stays open when the last tag added to a bulk-tagged folder goes', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    toggleTagIn(byTestId('opml-import-bulk')!, 7);
+    press('opml-import-bulk-apply');
+
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+  });
+
+  it('a feed without its folder stays open', () => {
+    mount();
+    openTags(feedRow('a1'));
+    removeFolder(feedRow('a1'));
+
+    openTags(feedRow('a1'));
+
+    expect(byTestId('opml-import-restore-folder')).not.toBeNull();
+  });
+
+  it('a feed that cannot be imported has no tags toggle', () => {
     mount();
 
-    press('opml-import-change-tags', feedRow('a1'));
-    expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
-    expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
+    expect(feedRow('a2').querySelector('[data-testid="opml-import-tags-toggle"]')).toBeNull();
+  });
 
-    press('opml-import-use-folder', feedRow('a1'));
-    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
-    expect(textOf(feedRow('a1'))).toContain('→ X / A');
+  it('a dropped folder shows its own name and offers no rename', () => {
+    mount();
+
+    expect(textOf(folderRow('Deep').querySelector('.name'))).toBe('Deep');
+    expect(folderRow('Deep').querySelector('[data-testid="opml-import-rename-folder"]')).toBeNull();
+    expect(folderRow('Deep').querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+  });
+
+  it('a feed without a web address shows its host as plain text', () => {
+    const odd = previewOf();
+    odd.root.feeds = [{ ...feed('r'), url: 'feed://r.test/rss' }];
+    mount(odd);
+
+    expect(feedRow('r').querySelector('[data-testid="opml-import-site"]')).toBeNull();
+    expect(textOf(feedRow('r').querySelector('span.host'))).toBe('r.test');
+  });
+
+  it('focuses the rename input', () => {
+    mount();
+
+    const input = startRename('A', 'A');
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('names only the known tags of a feed', () => {
+    mount();
+    openTags(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+    toggleTagIn(feedRow('a1'), 99);
+
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+  });
+
+  it('disables Apply to ticked once nothing is ticked', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    expect(buttonOf('opml-import-bulk-apply').disabled).toBe(false);
+
+    press('opml-import-select-none');
+
+    expect(buttonOf('opml-import-bulk-apply').disabled).toBe(true);
+  });
+
+  it('the chevron hides the folder rows', () => {
+    mount();
+    const count = (): number =>
+      element().querySelectorAll('[data-testid="opml-import-feed"]').length;
+    expect(count()).toBe(5);
+    expect(toggleButton('A').getAttribute('aria-expanded')).toBe('true');
+
+    toggleButton('A').click();
+    fixture.detectChanges();
+
+    expect(count()).toBe(1);
+    expect(toggleButton('A').getAttribute('aria-expanded')).toBe('false');
+    expect(toggleButton('A').getAttribute('aria-label')).toBe('Show or hide A');
+  });
+
+  it('the list head swaps Collapse all for Expand all', () => {
+    mount();
+
+    press('opml-import-collapse-all');
+    expect(byTestId('opml-import-collapse-all')).toBeNull();
+    press('opml-import-expand-all');
+    expect(byTestId('opml-import-collapse-all')).not.toBeNull();
+  });
+
+  it('the bulk panel without the folder pill tags the ticked feeds only', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    const panel = byTestId('opml-import-bulk')!;
+    expect(panel.querySelector('app-segmented-choice')).toBeNull();
+    removeFolder(panel);
+    toggleTagIn(panel, 7);
+    press('opml-import-bulk-apply', element());
+
+    expect(byTestId('opml-import-bulk')).toBeNull();
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.tagIdsByFeedUrl).toEqual({
+      'https://a1.test/feed': [7],
+      'https://b1.test/feed': [7],
+    });
+    expect(request.addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('the bulk panel with the folder pill adds its tags to the folders', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    const panel = byTestId('opml-import-bulk')!;
+    removeFolder(panel);
+    press('opml-import-restore-folder', panel);
+    toggleTagIn(panel, 7);
+    press('opml-import-bulk-apply', element());
+
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({
+      'https://a1.test/feed': [7],
+      'https://b1.test/feed': [7],
+    });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('the bulk folder pill names a shared folder and says their folders otherwise', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    const pillLabel = (): string =>
+      textOf(folderPill(byTestId('opml-import-bulk')!)!.querySelector('.label'));
+    expect(pillLabel()).toBe('Their folders');
+
+    checkbox(feedRow('r')).click();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    expect(pillLabel()).toBe('A');
+  });
+
+  it('a bulk apply that keeps the folder tags a feed without a folder only', () => {
+    mount();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    toggleTagIn(byTestId('opml-import-bulk')!, 7);
+    press('opml-import-bulk-apply');
+
+    expect(selectionOf().modeOf('https://a1.test/feed')).toBe('folderPlusTags');
+    expect(selectionOf().modeOf('https://r.test/feed')).toBe('tagsOnly');
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+    expect(feedRow('r').querySelector('.destination')).toBeNull();
+  });
+
+  it('the bulk panel shows no folder pill when no ticked feed has a folder', () => {
+    mount();
+    checkbox(feedRow('a1')).click();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+
+    expect(byTestId('opml-import-bulk')!.querySelector('app-tag-picker')).not.toBeNull();
+    expect(folderPill(byTestId('opml-import-bulk')!)).toBeNull();
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+  });
+
+  it('the bulk panel warns when every feed is ticked', () => {
+    mount();
+
+    press('opml-import-tag-ticked');
+
+    expect(textOf(byTestId('opml-import-bulk-all'))).toBe('This tags all 3 feeds in the file.');
+  });
+
+  it('the bulk panel does not warn when one is unticked', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+
+    expect(byTestId('opml-import-bulk')).not.toBeNull();
+    expect(byTestId('opml-import-bulk-all')).toBeNull();
+  });
+
+  it('disables Tag ticked feeds when nothing is ticked', () => {
+    mount();
+
+    press('opml-import-select-none');
+
+    expect(buttonOf('opml-import-tag-ticked').disabled).toBe(true);
   });
 
   it('disables import over the limit and says why', () => {
@@ -271,7 +605,7 @@ describe('OpmlImportDialogComponent', () => {
     jest.advanceTimersByTime(300);
 
     const request = http.expectOne(PREVIEW);
-    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P' });
+    expect(request.request.body).toEqual({ opml: OPML, parentTagName: 'P', folderNames: {} });
     request.flush(previewOf(10, 'P'));
   });
 
@@ -332,7 +666,9 @@ describe('OpmlImportDialogComponent', () => {
     jest.advanceTimersByTime(300);
     http.expectOne(PREVIEW).flush(previewOf(10, 'P'));
     fixture.detectChanges();
-    const expected = fixture.debugElement.injector.get(OpmlImportSelection).toRequest(OPML, 'P');
+    const expected = fixture.debugElement.injector
+      .get(OpmlImportSelection)
+      .toRequest(OPML, { parentTagName: 'P', folderNames: {} });
 
     press('opml-import-apply');
     const request = http.expectOne(IMPORT);
@@ -410,5 +746,221 @@ describe('OpmlImportDialogComponent', () => {
     mount();
 
     expect(textOf(byTestId('opml-import-dropped'))).toContain('Deep');
+  });
+  const editButton = (folder: string): HTMLButtonElement =>
+    folderRow(folder).querySelector('[data-testid="opml-import-rename-folder"]')!;
+  const renameInput = (row: HTMLElement): HTMLInputElement | null =>
+    row.querySelector('[data-testid="opml-import-rename-input"]');
+  const startRename = (folder: string, value: string): HTMLInputElement => {
+    const row = folderRow(folder);
+    editButton(folder).click();
+    fixture.detectChanges();
+    const input = renameInput(row)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    return input;
+  };
+  const key = (input: HTMLInputElement, name: string): void => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+    fixture.detectChanges();
+  };
+
+  it('committing a rename previews with the new folder names', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    const request = http.expectOne(PREVIEW);
+    expect(request.request.body).toEqual({
+      opml: OPML,
+      parentTagName: null,
+      folderNames: { '0': 'Gadgets' },
+    });
+    request.flush(previewOf());
+  });
+
+  it('shows the planned tag name on the folder row and offers a reset after a rename', () => {
+    mount();
+    jest.useFakeTimers();
+    expect(textOf(folderRow('A'))).toContain('A');
+    expect(folderRow('A').querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+    expect(editButton('A').getAttribute('aria-label')).toBe('Rename A');
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    const preview = previewOf();
+    preview.root.folders[0].destination = ['Gadgets'];
+    http.expectOne(PREVIEW).flush(preview);
+    fixture.detectChanges();
+
+    expect(textOf(folderRow('Gadgets').querySelector('.name'))).toBe('Gadgets');
+    expect(
+      folderRow('Gadgets').querySelector('[data-testid="opml-import-reset-folder"]'),
+    ).not.toBeNull();
+  });
+
+  it('Escape cancels a rename without a preview', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', 'Gadgets'), 'Escape');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(element().querySelector('[data-testid="opml-import-rename-input"]')).toBeNull();
+    expect(selectionOf().folderNames()).toEqual({});
+  });
+
+  it('blur commits a rename', () => {
+    mount();
+    jest.useFakeTimers();
+
+    startRename('A', 'Gadgets').dispatchEvent(new Event('blur'));
+    jest.advanceTimersByTime(300);
+
+    http.expectOne(PREVIEW).flush(previewOf());
+  });
+
+  it('import waits for the preview of the current renames', () => {
+    mount();
+    jest.useFakeTimers();
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    expect(buttonOf('opml-import-apply').disabled).toBe(true);
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    expect(buttonOf('opml-import-apply').disabled).toBe(false);
+  });
+
+  it('a rename and a parent change are previewed together', () => {
+    mount();
+    jest.useFakeTimers();
+
+    typeParent('P');
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    const request = http.expectOne(PREVIEW);
+    expect(request.request.body).toEqual({
+      opml: OPML,
+      parentTagName: 'P',
+      folderNames: { '0': 'Gadgets' },
+    });
+    request.flush(previewOf(10, 'P'));
+  });
+
+  it('ticks and tag choices survive the renames preview', () => {
+    mount();
+    jest.useFakeTimers();
+    checkbox(feedRow('b1')).click();
+    openTags(feedRow('a1'));
+    removeFolder(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    expect(checkbox(feedRow('b1')).checked).toBe(false);
+    expect(
+      selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} }).tagIdsByFeedUrl,
+    ).toEqual({
+      'https://a1.test/feed': [7],
+    });
+  });
+
+  it('imports with the previewed renames', () => {
+    mount();
+    jest.useFakeTimers();
+    key(startRename('A', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(previewOf());
+    fixture.detectChanges();
+
+    press('opml-import-apply');
+
+    const request = http.expectOne(IMPORT);
+    expect(request.request.body.folderNames).toEqual({ '0': 'Gadgets' });
+    request.flush({});
+  });
+
+  const plannedAsTechOne = (): OpmlPreview => {
+    const preview = previewOf();
+    preview.root.folders[0].destination = ['Tech (1)'];
+    return preview;
+  };
+
+  it('blurring an unchanged editor commits nothing', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    const row = folderRow('Tech (1)');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    renameInput(row)!.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({});
+    expect(row.querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+  });
+
+  it('Enter on an unchanged editor commits nothing', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    const row = folderRow('Tech (1)');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    key(renameInput(row)!, 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({});
+  });
+
+  it('a whitespace-only rename sends no folderNames entry', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', '   '), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({});
+  });
+  it('re-committing the displayed name keeps the override and typing the files name drops it', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    key(startRename('Tech (1)', 'Gadgets'), 'Enter');
+    jest.advanceTimersByTime(300);
+    const renamed = plannedAsTechOne();
+    renamed.root.folders[0].destination = ['Gadgets'];
+    http.expectOne(PREVIEW).flush(renamed);
+    fixture.detectChanges();
+    const row = folderRow('Gadgets');
+    expect(textOf(row.querySelector('.name'))).toBe('Gadgets');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    const input = renameInput(row)!;
+    expect(input.value).toBe('Gadgets');
+    key(input, 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({ '0': 'Gadgets' });
+
+    key(startRename('Gadgets', 'A'), 'Enter');
+    expect(selectionOf().folderNames()).toEqual({});
+    jest.advanceTimersByTime(300);
+    http.expectOne(PREVIEW).flush(plannedAsTechOne());
   });
 });

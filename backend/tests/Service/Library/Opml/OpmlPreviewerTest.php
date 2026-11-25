@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Library\Opml\Exception\InvalidOpmlException;
 use App\Service\Library\Opml\Model\OpmlFeedState;
+use App\Service\Library\Opml\Model\OpmlPlacementChoiceModel;
 use App\Service\Library\Opml\Model\OpmlPreviewModel;
 use App\Service\Library\Opml\OpmlPreviewer;
 use App\Tests\DbTestCase;
@@ -121,7 +122,7 @@ final class OpmlPreviewerTest extends DbTestCase
 
     private function preview(string $opml, ?string $parentTagName = null): OpmlPreviewModel
     {
-        return $this->previewer()->preview($this->owner, $opml, $parentTagName);
+        return $this->previewer()->preview($this->owner, $opml, new OpmlPlacementChoiceModel($parentTagName));
     }
 
     private function previewer(): OpmlPreviewer
