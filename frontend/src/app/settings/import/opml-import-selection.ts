@@ -117,6 +117,22 @@ export class OpmlImportSelection {
   readonly anyExpanded = computed(() =>
     this.folderKeys().some((key) => !this.collapsedKeys().has(key)),
   );
+  private readonly destinations = computed(
+    () =>
+      new Map(
+        this.rows().flatMap((row) =>
+          row.kind === 'feed' ? [[row.feed.url, row.destination] as const] : [],
+        ),
+      ),
+  );
+  readonly tickedDestinations = computed(() => {
+    const byKey = new Map<string, string[]>();
+    for (const url of this.selectedUrls()) {
+      const destination = this.destinations().get(url) ?? [];
+      byKey.set(JSON.stringify(destination), destination);
+    }
+    return [...byKey.values()];
+  });
   readonly selected = this.selectedUrls.asReadonly();
   readonly selectedCount = computed(() => this.selectedUrls().size);
   readonly allTicked = computed(
@@ -223,11 +239,27 @@ export class OpmlImportSelection {
     });
   }
 
+  folderTagName(url: string): string | null {
+    return this.destinations().get(url)?.at(-1) ?? null;
+  }
+
+  dropFolder(url: string): void {
+    this.setMode(url, 'tagsOnly');
+  }
+
+  restoreFolder(url: string): void {
+    this.setMode(url, this.chosenTags(url).size === 0 ? 'folder' : 'folderPlusTags');
+  }
+
   toggleTag(url: string, tagId: number): void {
-    const mode = this.modeOf(url);
-    if (mode === 'folder') return;
+    const keepsFolder = this.modeOf(url) !== 'tagsOnly' && this.folderTagName(url) !== null;
     const tagIds = toggled(this.chosenTags(url), tagId);
-    this.tagChoices.update((previous) => new Map(previous).set(url, { mode, tagIds }));
+    this.tagChoices.update((previous) => {
+      const next = new Map(previous);
+      if (keepsFolder && tagIds.size === 0) next.delete(url);
+      else next.set(url, { mode: keepsFolder ? 'folderPlusTags' : 'tagsOnly', tagIds });
+      return next;
+    });
   }
 
   applyToTicked(mode: OpmlTagMode, tagIds: ReadonlySet<number>): void {

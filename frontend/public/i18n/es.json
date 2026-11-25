@@ -108,15 +108,11 @@
       "collapseAll": "Contraer todo",
       "expandAll": "Expandir todo",
       "tagTicked": "Etiquetar los feeds marcados",
-      "tagMode": "Etiquetas de este feed",
       "tagsToggle": "Etiquetas",
+      "restoreFolder": "+ Carpeta",
+      "theirFolders": "Sus carpetas",
       "bulkAll": "Esto etiqueta los {{count}} feeds del archivo.",
       "bulkApply": "Aplicar a los marcados",
-      "mode": {
-        "folder": "Carpeta",
-        "folderPlusTags": "Carpeta + etiquetas",
-        "tagsOnly": "Solo etiquetas"
-      },
       "dropped": "Demasiados niveles. Los feeds de estas carpetas van a la carpeta superior: {{names}}",
       "applyCount": "Importar {{count}}",
       "selectFolder": "Seleccionar la carpeta {{name}}",

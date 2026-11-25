@@ -108,15 +108,11 @@
       "collapseAll": "Alle einklappen",
       "expandAll": "Alle ausklappen",
       "tagTicked": "Markierte Feeds taggen",
-      "tagMode": "Tags für diesen Feed",
       "tagsToggle": "Tags",
+      "restoreFolder": "+ Ordner",
+      "theirFolders": "Ihre Ordner",
       "bulkAll": "Damit werden alle {{count}} Feeds der Datei getaggt.",
       "bulkApply": "Auf Markierte anwenden",
-      "mode": {
-        "folder": "Ordner",
-        "folderPlusTags": "Ordner + Tags",
-        "tagsOnly": "Nur Tags"
-      },
       "dropped": "Zu tief verschachtelt. Feeds aus diesen Ordnern landen im Ordner darüber: {{names}}",
       "applyCount": "{{count}} importieren",
       "selectFolder": "Ordner {{name}} auswählen",

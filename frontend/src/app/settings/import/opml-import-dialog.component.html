@@ -85,20 +85,32 @@
           {{ 'settings.opml.bulkAll' | transloco: { count: selection.selectedCount() } }}
         </app-warning-box>
       }
-      <app-segmented-choice
-        [options]="tagModes"
-        [selected]="bulkChoice.mode"
-        ariaLabelKey="settings.opml.tagTicked"
-        labelPrefix="settings.opml.mode."
-        (pick)="setBulkMode($event)"
-      />
-      @if (bulkChoice.mode !== 'folder') {
-        <app-tag-picker
-          [tags]="tags()"
-          [selected]="bulkChoice.tagIds"
-          (toggled)="toggleBulkTag($event)"
-        />
-      }
+      <app-tag-picker
+        [tags]="tags()"
+        [selected]="bulkChoice.tagIds"
+        (toggled)="toggleBulkTag($event)"
+      >
+        @if (bulkFolder(); as folder) {
+          @let folderName =
+            'name' in folder ? folder.name : ('settings.opml.theirFolders' | transloco);
+          @if (bulkChoice.keepsFolder) {
+            <app-tag-chips
+              [chips]="[]"
+              [lead]="{ label: folderName, icon: 'folder' }"
+              (leadRemoved)="dropBulkFolder()"
+            />
+          } @else {
+            <app-button
+              variant="ghost"
+              size="sm"
+              data-testid="opml-import-restore-folder"
+              (click)="restoreBulkFolder()"
+            >
+              {{ 'settings.opml.restoreFolder' | transloco }}
+            </app-button>
+          }
+        }
+      </app-tag-picker>
       <div class="bulk-actions">
         <app-button
           variant="ghost"
@@ -195,7 +207,6 @@
         @let host = row.host;
         @let title = row.feed.title ?? host;
         @let mode = selection.modeOf(url);
-        @let changed = mode !== 'folder';
         @let tagsOpen = isTagsOpen(url);
         <li
           class="row"
@@ -245,22 +256,31 @@
           </div>
           @if (row.feed.state === 'new') {
             @if (tagsOpen) {
-              <app-segmented-choice
-                class="choice"
-                [options]="tagModes"
-                [selected]="mode"
-                ariaLabelKey="settings.opml.tagMode"
-                labelPrefix="settings.opml.mode."
-                (pick)="selection.setMode(url, $event)"
-              />
-            }
-            @if (changed) {
               <app-tag-picker
                 class="tags"
                 [tags]="tags()"
                 [selected]="selection.chosenTags(url)"
-                (toggled)="selection.toggleTag(url, $event)"
-              />
+                (toggled)="toggleFeedTag(url, $event)"
+              >
+                @if (selection.folderTagName(url); as folderName) {
+                  @if (mode !== 'tagsOnly') {
+                    <app-tag-chips
+                      [chips]="[]"
+                      [lead]="{ label: folderName, icon: 'folder' }"
+                      (leadRemoved)="dropFeedFolder(url)"
+                    />
+                  } @else {
+                    <app-button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="opml-import-restore-folder"
+                      (click)="restoreFeedFolder(url)"
+                    >
+                      {{ 'settings.opml.restoreFolder' | transloco }}
+                    </app-button>
+                  }
+                }
+              </app-tag-picker>
             }
             @if (mode !== 'tagsOnly') {
               <p class="destination">

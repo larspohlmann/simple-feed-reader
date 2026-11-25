@@ -248,11 +248,10 @@ describe('OpmlImportDialogComponent', () => {
     expect(buttonOf('opml-import-apply').disabled).toBe(true);
   });
 
-  const pickMode = (root: ParentNode, label: string): void => {
-    const option = [
-      ...root.querySelectorAll<HTMLButtonElement>('app-segmented-choice button'),
-    ].find((button) => textOf(button) === label)!;
-    option.click();
+  const folderPill = (root: ParentNode): HTMLElement | null =>
+    root.querySelector<HTMLElement>('.chip.is-lead');
+  const removeFolder = (root: ParentNode): void => {
+    folderPill(root)!.querySelector<HTMLButtonElement>('.remove')!.click();
     fixture.detectChanges();
   };
   const openTags = (row: HTMLElement): void => {
@@ -271,58 +270,114 @@ describe('OpmlImportDialogComponent', () => {
   const toggleButton = (folder: string): HTMLButtonElement =>
     folderRow(folder).querySelector('[data-testid="opml-import-toggle-folder"]')!;
 
-  it('swaps the destination for the tag picker and back', () => {
-    mount();
-
-    openTags(feedRow('a1'));
-    pickMode(feedRow('a1'), 'Only tags');
-    expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
-    expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
-
-    pickMode(feedRow('a1'), 'Folder');
-    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
-    expect(textOf(feedRow('a1'))).toContain('→ X / A');
-  });
-
-  it('picking Folder + tags shows the tag picker and the plus line', () => {
-    mount();
-
-    openTags(feedRow('a1'));
-    pickMode(feedRow('a1'), 'Folder + tags');
-    expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
-    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A');
-
-    toggleTagIn(feedRow('a1'), 7);
-
-    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
-  });
-
-  it('shows the mode choice only once a feed is opened for tagging', () => {
+  it('opening a feed for tagging shows its folder as a pill in the tag picker', () => {
     mount();
     const toggle = (): HTMLButtonElement =>
       feedRow('a1').querySelector('[data-testid="opml-import-tags-toggle"] button')!;
-    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
     expect(toggle().getAttribute('aria-expanded')).toBe('false');
     expect(textOf(toggle())).toBe('Tags');
 
     openTags(feedRow('a1'));
 
-    expect(feedRow('a1').querySelector('app-segmented-choice')).not.toBeNull();
+    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+    expect(textOf(folderPill(feedRow('a1'))!.querySelector('.label'))).toBe('A');
     expect(toggle().getAttribute('aria-expanded')).toBe('true');
-    expect(feedRow('b1').querySelector('app-segmented-choice')).toBeNull();
+    expect(feedRow('b1').querySelector('app-tag-picker')).toBeNull();
 
     openTags(feedRow('a1'));
-    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+    expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
   });
 
-  it('a feed with tags renders opened', () => {
+  it('removing the folder pill imports the feed with only its tags', () => {
     mount();
     openTags(feedRow('a1'));
-    pickMode(feedRow('a1'), 'Only tags');
+
+    removeFolder(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).toBeNull();
+    expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.tagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a tag next to the folder pill is added to the folder', () => {
+    mount();
+    openTags(feedRow('a1'));
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A');
+
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('+ Folder brings a removed folder pill back with the tags added to it', () => {
+    mount();
+    openTags(feedRow('a1'));
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    removeFolder(feedRow('a1'));
+    toggleTagIn(feedRow('a1'), 7);
+    expect(textOf(buttonOf('opml-import-restore-folder', feedRow('a1')))).toBe('+ Folder');
+
+    press('opml-import-restore-folder', feedRow('a1'));
+
+    expect(textOf(folderPill(feedRow('a1'))!.querySelector('.label'))).toBe('A');
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({ 'https://a1.test/feed': [7] });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a feed without a folder has no folder pill and its tags are its only ones', () => {
+    mount();
+    openTags(feedRow('r'));
+
+    expect(feedRow('r').querySelector('app-tag-picker')).not.toBeNull();
+    expect(folderPill(feedRow('r'))).toBeNull();
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
+    toggleTagIn(feedRow('r'), 7);
+
+    expect(
+      selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} }).tagIdsByFeedUrl,
+    ).toEqual({ 'https://r.test/feed': [7] });
+  });
+
+  it('the tag area stays open when a feed bulk-tagged without its folder gets it back', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    removeFolder(byTestId('opml-import-bulk')!);
+    press('opml-import-bulk-apply');
+
+    press('opml-import-restore-folder', feedRow('a1'));
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+  });
+
+  it('the tag area stays open when the last tag added to a bulk-tagged folder goes', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    toggleTagIn(byTestId('opml-import-bulk')!, 7);
+    press('opml-import-bulk-apply');
+
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(folderPill(feedRow('a1'))).not.toBeNull();
+  });
+
+  it('a feed without its folder stays open', () => {
+    mount();
+    openTags(feedRow('a1'));
+    removeFolder(feedRow('a1'));
 
     openTags(feedRow('a1'));
 
-    expect(feedRow('a1').querySelector('app-segmented-choice')).not.toBeNull();
+    expect(byTestId('opml-import-restore-folder')).not.toBeNull();
   });
 
   it('a feed that cannot be imported has no tags toggle', () => {
@@ -360,7 +415,6 @@ describe('OpmlImportDialogComponent', () => {
   it('names only the known tags of a feed', () => {
     mount();
     openTags(feedRow('a1'));
-    pickMode(feedRow('a1'), 'Folder + tags');
     toggleTagIn(feedRow('a1'), 7);
     toggleTagIn(feedRow('a1'), 99);
 
@@ -401,15 +455,15 @@ describe('OpmlImportDialogComponent', () => {
     expect(byTestId('opml-import-collapse-all')).not.toBeNull();
   });
 
-  it('the bulk panel applies its tags to the ticked feeds', () => {
+  it('the bulk panel without the folder pill tags the ticked feeds only', () => {
     mount();
     checkbox(feedRow('r')).click();
     fixture.detectChanges();
 
     press('opml-import-tag-ticked');
     const panel = byTestId('opml-import-bulk')!;
-    pickMode(panel, 'Only tags');
-    expect(panel.querySelector('app-tag-picker')).not.toBeNull();
+    expect(panel.querySelector('app-segmented-choice')).toBeNull();
+    removeFolder(panel);
     toggleTagIn(panel, 7);
     press('opml-import-bulk-apply', element());
 
@@ -419,6 +473,54 @@ describe('OpmlImportDialogComponent', () => {
       'https://a1.test/feed': [7],
       'https://b1.test/feed': [7],
     });
+    expect(request.addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('the bulk panel with the folder pill adds its tags to the folders', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    const panel = byTestId('opml-import-bulk')!;
+    removeFolder(panel);
+    press('opml-import-restore-folder', panel);
+    toggleTagIn(panel, 7);
+    press('opml-import-bulk-apply', element());
+
+    const request = selectionOf().toRequest(OPML, { parentTagName: null, folderNames: {} });
+    expect(request.addedTagIdsByFeedUrl).toEqual({
+      'https://a1.test/feed': [7],
+      'https://b1.test/feed': [7],
+    });
+    expect(request.tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('the bulk folder pill names a shared folder and says their folders otherwise', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    const pillLabel = (): string =>
+      textOf(folderPill(byTestId('opml-import-bulk')!)!.querySelector('.label'));
+    expect(pillLabel()).toBe('Their folders');
+
+    checkbox(feedRow('r')).click();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    expect(pillLabel()).toBe('A');
+  });
+
+  it('the bulk panel shows no folder pill when no ticked feed has a folder', () => {
+    mount();
+    checkbox(feedRow('a1')).click();
+    checkbox(feedRow('b1')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+
+    expect(byTestId('opml-import-bulk')!.querySelector('app-tag-picker')).not.toBeNull();
+    expect(folderPill(byTestId('opml-import-bulk')!)).toBeNull();
+    expect(byTestId('opml-import-restore-folder')).toBeNull();
   });
 
   it('the bulk panel warns when every feed is ticked', () => {
@@ -742,7 +844,7 @@ describe('OpmlImportDialogComponent', () => {
     jest.useFakeTimers();
     checkbox(feedRow('b1')).click();
     openTags(feedRow('a1'));
-    pickMode(feedRow('a1'), 'Only tags');
+    removeFolder(feedRow('a1'));
     toggleTagIn(feedRow('a1'), 7);
 
     key(startRename('A', 'Gadgets'), 'Enter');

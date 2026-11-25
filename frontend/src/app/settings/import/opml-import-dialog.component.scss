@@ -152,14 +152,9 @@ a.host:focus-visible {
 }
 
 .destination,
-.choice,
 .tags {
   margin: 0;
   padding-left: calc(var(--space-3) + var(--space-4));
-}
-
-.choice {
-  align-self: flex-start;
 }
 
 .destination {

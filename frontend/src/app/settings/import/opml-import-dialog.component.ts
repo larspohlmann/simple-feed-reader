@@ -27,11 +27,11 @@ import {
 import { toggled } from '../../core/toggled-set';
 import { pluralKey } from '../../core/i18n/plural-key';
 import { parseProblem } from '../../core/problem';
+import { TagChipsComponent } from '../../reader/feeds/tag-picker/tag-chips.component';
 import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagsStore } from '../../reader/state/tags.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../shared/field/field.component';
@@ -40,13 +40,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SettingsApi } from '../settings-api';
 import { OpmlImportResult } from '../settings.models';
-import {
-  OpmlFeedState,
-  OpmlImportRow,
-  OpmlPlacement,
-  OpmlPreview,
-  OpmlTagMode,
-} from './opml-import.models';
+import { OpmlFeedState, OpmlImportRow, OpmlPlacement, OpmlPreview } from './opml-import.models';
 import { OpmlImportSelection } from './opml-import-selection';
 
 export interface OpmlImportDialogData {
@@ -66,11 +60,11 @@ function placementKey(placement: OpmlPlacement): string {
 }
 
 interface BulkChoice {
-  mode: OpmlTagMode;
+  keepsFolder: boolean;
   tagIds: ReadonlySet<number>;
 }
 
-const TAG_MODES: readonly OpmlTagMode[] = ['folder', 'folderPlusTags', 'tagsOnly'];
+type BulkFolder = { name: string } | { theirFolders: true };
 
 const STATE_KEYS: Readonly<Record<Exclude<OpmlFeedState, 'new'>, string>> = {
   subscribed: 'settings.opml.stateSubscribed',
@@ -88,7 +82,7 @@ const STATE_KEYS: Readonly<Record<Exclude<OpmlFeedState, 'new'>, string>> = {
     IconButtonDirective,
     IconComponent,
     OverlayPanelComponent,
-    SegmentedChoiceComponent,
+    TagChipsComponent,
     TagPickerComponent,
     TranslocoPipe,
     WarningBoxComponent,
@@ -106,7 +100,6 @@ export class OpmlImportDialogComponent {
   protected readonly selection = inject(OpmlImportSelection);
 
   protected readonly stateKeys = STATE_KEYS;
-  protected readonly tagModes = TAG_MODES;
   protected readonly tags = this.tagsStore.tags;
   protected readonly topLevelTagNames = computed(() =>
     this.tags()
@@ -118,6 +111,12 @@ export class OpmlImportDialogComponent {
   );
   private readonly openedFeeds = signal<ReadonlySet<string>>(new Set());
   protected readonly bulk = signal<BulkChoice | null>(null);
+  protected readonly bulkFolder = computed<BulkFolder | null>(() => {
+    const destinations = this.selection.tickedDestinations();
+    if (destinations.length > 1) return { theirFolders: true };
+    const name = destinations[0]?.at(-1);
+    return name === undefined ? null : { name };
+  });
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
@@ -234,16 +233,39 @@ export class OpmlImportDialogComponent {
     this.openedFeeds.update((previous) => toggled(previous, url));
   }
 
+  protected toggleFeedTag(url: string, tagId: number): void {
+    this.keepTagsOpen(url);
+    this.selection.toggleTag(url, tagId);
+  }
+
+  protected dropFeedFolder(url: string): void {
+    this.keepTagsOpen(url);
+    this.selection.dropFolder(url);
+  }
+
+  protected restoreFeedFolder(url: string): void {
+    this.keepTagsOpen(url);
+    this.selection.restoreFolder(url);
+  }
+
+  private keepTagsOpen(url: string): void {
+    this.openedFeeds.update((previous) => new Set(previous).add(url));
+  }
+
   protected openBulk(): void {
-    this.bulk.set({ mode: 'folder', tagIds: new Set() });
+    this.bulk.set({ keepsFolder: true, tagIds: new Set() });
   }
 
   protected closeBulk(): void {
     this.bulk.set(null);
   }
 
-  protected setBulkMode(mode: OpmlTagMode): void {
-    this.bulk.update((previous) => previous && { ...previous, mode });
+  protected dropBulkFolder(): void {
+    this.bulk.update((previous) => previous && { ...previous, keepsFolder: false });
+  }
+
+  protected restoreBulkFolder(): void {
+    this.bulk.update((previous) => previous && { ...previous, keepsFolder: true });
   }
 
   protected toggleBulkTag(tagId: number): void {
@@ -255,7 +277,8 @@ export class OpmlImportDialogComponent {
   protected applyBulk(): void {
     const choice = this.bulk();
     if (choice === null) return;
-    this.selection.applyToTicked(choice.mode, choice.tagIds);
+    const keptMode = choice.tagIds.size === 0 ? 'folder' : 'folderPlusTags';
+    this.selection.applyToTicked(choice.keepsFolder ? keptMode : 'tagsOnly', choice.tagIds);
     this.closeBulk();
   }
 

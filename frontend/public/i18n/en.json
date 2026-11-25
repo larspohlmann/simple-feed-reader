@@ -108,15 +108,11 @@
       "collapseAll": "Collapse all",
       "expandAll": "Expand all",
       "tagTicked": "Tag ticked feeds",
-      "tagMode": "Tags for this feed",
       "tagsToggle": "Tags",
+      "restoreFolder": "+ Folder",
+      "theirFolders": "Their folders",
       "bulkAll": "This tags all {{count}} feeds in the file.",
       "bulkApply": "Apply to ticked",
-      "mode": {
-        "folder": "Folder",
-        "folderPlusTags": "Folder + tags",
-        "tagsOnly": "Only tags"
-      },
       "dropped": "Nested too deep. Feeds in these folders go into the folder above: {{names}}",
       "applyCount": "Import {{count}}",
       "selectFolder": "Select folder {{name}}",

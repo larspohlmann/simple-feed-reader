@@ -260,10 +260,52 @@ describe('OpmlImportSelection', () => {
     expect([...selection.chosenTags('a1')]).toEqual([]);
   });
 
-  it('ignores a tag toggle on a feed in folder mode', () => {
+  it('a tag on a feed in folder mode adds it to the folder', () => {
+    selection.toggleTag('a1', 4);
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('removing the last added tag returns the feed to its folder', () => {
+    selection.toggleTag('a1', 4);
     selection.toggleTag('a1', 4);
     expect(selection.modeOf('a1')).toBe('folder');
-    expect([...selection.chosenTags('a1')]).toEqual([]);
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).addedTagIdsByFeedUrl).toEqual({});
+  });
+
+  it('a tag on a feed without a folder tags it only', () => {
+    selection.toggleTag('r', 4);
+    expect(selection.modeOf('r')).toBe('tagsOnly');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({ r: [4] });
+  });
+
+  it('dropping the folder keeps the tags and restoring it adds them to the folder', () => {
+    selection.toggleTag('a1', 4);
+    selection.dropFolder('a1');
+    expect(selection.modeOf('a1')).toBe('tagsOnly');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+    selection.restoreFolder('a1');
+    expect(selection.modeOf('a1')).toBe('folderPlusTags');
+    expect([...selection.chosenTags('a1')]).toEqual([4]);
+  });
+
+  it('restoring the folder of a feed without tags returns it to folder mode', () => {
+    selection.dropFolder('a1');
+    selection.restoreFolder('a1');
+    expect(selection.modeOf('a1')).toBe('folder');
+    expect(selection.toRequest('<opml/>', NO_PLACEMENT).tagIdsByFeedUrl).toEqual({});
+  });
+
+  it('names the folder tag a feed goes to and none for a feed without a folder', () => {
+    expect(selection.folderTagName('b1')).toBe('B');
+    expect(selection.folderTagName('r')).toBeNull();
+  });
+
+  it('lists each destination of the ticked feeds once', () => {
+    expect(selection.tickedDestinations()).toEqual([[], ['X', 'A'], ['X', 'A', 'B']]);
+    selection.toggleFeed('r');
+    selection.toggleFeed('b1');
+    expect(selection.tickedDestinations()).toEqual([['X', 'A']]);
   });
 
   it('switching between the tag modes keeps the chosen tags', () => {

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
@@ -179,5 +179,24 @@ describe('TagPickerComponent', () => {
     source.toggle(4);
     expect(toggled).toEqual([4]);
     expect([...source.selected()]).toEqual([1]);
+  });
+
+  it('shows projected content in the field ahead of the chips', () => {
+    @Component({
+      imports: [TagPickerComponent],
+      template: `<app-tag-picker [tags]="tags" [selected]="selected"
+        ><span class="extra">Folder</span></app-tag-picker
+      >`,
+    })
+    class HostComponent {
+      readonly tags = tags;
+      readonly selected = new Set([1]);
+    }
+    const host = TestBed.createComponent(HostComponent);
+    host.detectChanges();
+
+    const field = (host.nativeElement as HTMLElement).querySelector('.field')!;
+    expect(field.firstElementChild?.classList.contains('extra')).toBe(true);
+    expect(field.querySelector('.chip .label')?.textContent?.trim()).toBe('Tech');
   });
 });

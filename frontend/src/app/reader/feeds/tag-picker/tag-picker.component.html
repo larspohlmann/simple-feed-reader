@@ -1,5 +1,6 @@
 <div class="picker" [appDismissOnOutside]="open()" (dismiss)="close()">
   <div class="field">
+    <ng-content />
     <app-tag-chips [chips]="search.chips()" (removed)="toggled.emit($event)" />
     @if (sheetMode()) {
       <button
