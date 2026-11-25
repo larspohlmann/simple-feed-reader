@@ -73,7 +73,7 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
         return ApiRequestModel::postJson(self::PLAYER, [
             'videoId' => $embed->id,
             'context' => ['client' => ['clientName' => 'WEB', 'clientVersion' => self::CLIENT_VERSION, 'hl' => 'en']],
-        ]);
+        ])->changingNothing();
     }
 
     /**

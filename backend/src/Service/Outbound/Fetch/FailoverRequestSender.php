@@ -8,8 +8,10 @@ use App\Service\Foundation\Crypto\Exception\SecretUnreadableException;
 use App\Service\Outbound\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Outbound\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Outbound\Fetch\Exception\ProxiedAttemptFailedException;
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Service\Outbound\Fetch\Model\ProxyConfigModel;
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
 use App\Service\Outbound\Fetch\Support\EgressOptions;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -36,15 +38,42 @@ final readonly class FailoverRequestSender
      */
     public function send(string $method, string $url, GuardedUrlModel $guarded, array $options): ResponseInterface
     {
+        return $this->sendJudgedAs(RepeatSafety::fromMethod($method), $method, $url, $guarded, $options);
+    }
+
+    /**
+     * A request its caller knows changes nothing keeps the failover a read gets, whatever its method.
+     *
+     * @param array<string, mixed> $options any `resolve` is overridden per family attempt
+     *
+     * @throws TransportExceptionInterface when the proxied attempt fails without fallback, or the last family fails
+     */
+    public function sendRepeatable(
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
+        return $this->sendJudgedAs(RepeatSafety::Repeatable, $method, $url, $guarded, $options);
+    }
+
+    /** @param array<string, mixed> $options */
+    private function sendJudgedAs(
+        RepeatSafety $repeatSafety,
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
         $proxy = $this->egressProxyOrFail();
         if (null === $proxy) {
-            return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+            return $this->sendPinnedFamilies($repeatSafety, $method, $url, $guarded, $options);
         }
 
         try {
-            return $this->attemptProxied($method, $url, $options, $proxy);
+            return $this->attemptProxied($repeatSafety, $method, $url, $options, $proxy);
         } catch (ProxiedAttemptFailedException) {
-            return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+            return $this->sendPinnedFamilies($repeatSafety, $method, $url, $guarded, $options);
         }
     }
 
@@ -62,6 +91,34 @@ final readonly class FailoverRequestSender
         GuardedUrlModel $guarded,
         array $options,
     ): ResponseInterface {
+        return $this->sendDirectJudgedAs(RepeatSafety::fromMethod($method), $method, $url, $guarded, $options);
+    }
+
+    /**
+     * The direct retry of a request its caller knows changes nothing keeps the failover a read gets.
+     *
+     * @param array<string, mixed> $options any `resolve` is overridden per family attempt
+     *
+     * @throws DirectRouteUnavailableException when no proxy is configured or its direct fallback is off
+     * @throws TransportExceptionInterface     when the egress cannot be resolved, or the last family fails
+     */
+    public function sendRepeatableDirectAfterProxyRefusal(
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
+        return $this->sendDirectJudgedAs(RepeatSafety::Repeatable, $method, $url, $guarded, $options);
+    }
+
+    /** @param array<string, mixed> $options */
+    private function sendDirectJudgedAs(
+        RepeatSafety $repeatSafety,
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
         $proxy = $this->egressProxyOrFail();
         if (null === $proxy) {
             throw DirectRouteUnavailableException::withoutAProxy($url);
@@ -70,7 +127,7 @@ final readonly class FailoverRequestSender
             throw DirectRouteUnavailableException::withoutFallback($url);
         }
 
-        return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+        return $this->sendPinnedFamilies($repeatSafety, $method, $url, $guarded, $options);
     }
 
     /**
@@ -98,6 +155,7 @@ final readonly class FailoverRequestSender
      * @throws TransportExceptionInterface   when direct fallback is unavailable
      */
     private function attemptProxied(
+        RepeatSafety $repeatSafety,
         string $method,
         string $url,
         array $options,
@@ -114,15 +172,17 @@ final readonly class FailoverRequestSender
         } catch (TransportExceptionInterface $transportError) {
             $response->cancel();
             // With fallback off, going direct would leak the real server IP the proxy hides.
-            if (!$proxy->directFallback || !$this->failover->isWarranted($transportError)) {
-                throw $transportError;
+            $mayGoDirect = $proxy->directFallback
+                && $this->failover->allowsRetryAfterFailure($repeatSafety, $response, $transportError);
+            if (!$mayGoDirect) {
+                throw $this->buildSurfacedError($repeatSafety, $response, $transportError);
             }
 
             throw new ProxiedAttemptFailedException(previous: $transportError);
         }
 
         // A CDN/WAF refusal of the proxy's egress IP may still be served directly, but only with fallback on.
-        if ($proxy->directFallback && $this->failover->isRetryableStatus($status)) {
+        if ($proxy->directFallback && $this->failover->allowsRetryAfterStatus($repeatSafety, $status)) {
             $response->cancel();
 
             throw new ProxiedAttemptFailedException();
@@ -137,6 +197,7 @@ final readonly class FailoverRequestSender
      * @throws TransportExceptionInterface when the final family's connection fails
      */
     private function sendPinnedFamilies(
+        RepeatSafety $repeatSafety,
         string $method,
         string $url,
         GuardedUrlModel $guarded,
@@ -159,14 +220,17 @@ final readonly class FailoverRequestSender
                 $status = $response->getStatusCode();
             } catch (TransportExceptionInterface $transportError) {
                 $response->cancel();
-                if ($canFailOver && $this->failover->isWarranted($transportError)) {
+                if (
+                    $canFailOver
+                    && $this->failover->allowsRetryAfterFailure($repeatSafety, $response, $transportError)
+                ) {
                     continue;
                 }
 
-                throw $transportError;
+                throw $this->buildSurfacedError($repeatSafety, $response, $transportError);
             }
 
-            if ($canFailOver && $this->failover->isRetryableStatus($status)) {
+            if ($canFailOver && $this->failover->allowsRetryAfterStatus($repeatSafety, $status)) {
                 $response->cancel();
 
                 continue;
@@ -176,5 +240,15 @@ final readonly class FailoverRequestSender
         }
 
         throw new \LogicException('A non-empty attempt list always returns or throws on its final family.');
+    }
+
+    private function buildSurfacedError(
+        RepeatSafety $repeatSafety,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): TransportExceptionInterface {
+        return $this->failover->isPossiblyDelivered($repeatSafety, $failed, $transportError)
+            ? new RequestMayHaveLeftException($transportError->getMessage(), previous: $transportError)
+            : $transportError;
     }
 }

@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Outbound\Fetch;
 
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\FailoverRequestSender;
 use App\Service\Outbound\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\PinnedRequestOptions;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class FailoverRequestSenderTest extends TestCase
 {
@@ -21,7 +25,7 @@ final class FailoverRequestSenderTest extends TestCase
 
     private const array DUAL_STACK = ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34'];
 
-    private function sender(MockHttpClient $client): FailoverRequestSender
+    private function sender(HttpClientInterface $client): FailoverRequestSender
     {
         return FetchWiring::failoverSender($client, $this->noEgressProxy());
     }
@@ -30,15 +34,11 @@ final class FailoverRequestSenderTest extends TestCase
     {
         // The both-families pin leads with IPv6; a route that resets at the TLS handshake is a transport error the
         // client cannot recover from on its own.
-        $client = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
-            $pin = $resolve['dual.example.com'];
-
-            return str_contains($pin, ':')
-                ? new MockResponse('', ['error' => 'Connection reset by peer'])
-                : new MockResponse('served over IPv4', ['http_code' => 200]);
-        });
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.com',
+            new MockResponse('', ['error' => 'Connection reset by peer']),
+            new MockResponse('served over IPv4', ['http_code' => 200]),
+        );
 
         $response = $this->sender($client)
             ->send(
@@ -208,5 +208,121 @@ final class FailoverRequestSenderTest extends TestCase
 
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
         self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testAWriteThatResetBeforeItLeftIsSentOverTheNextFamily(): void
+    {
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.com',
+            new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 0]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sendDualStack($client, 'POST');
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function writesThatMayHaveLeft(): iterable
+    {
+        yield 'bytes sent' => [['request_size' => 122]];
+        yield 'size unknown' => [[]];
+    }
+
+    /** @param array<string, mixed> $responseInfo */
+    #[DataProvider('writesThatMayHaveLeft')]
+    public function testAWriteThatResetAfterItMayHaveLeftIsNotSentAgain(array $responseInfo): void
+    {
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.com',
+            new MockResponse('', ['error' => 'Connection reset by peer'] + $responseInfo),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        try {
+            $this->sendDualStack($client, 'POST');
+            self::fail('The reset should surface.');
+        } catch (RequestMayHaveLeftException $exception) {
+            self::assertSame(1, $client->getRequestsCount());
+            self::assertInstanceOf(TransportExceptionInterface::class, $exception->getPrevious());
+            self::assertSame('Connection reset by peer', $exception->getMessage());
+        }
+    }
+
+    public function testAWriteThatNeverLeftOnTheFinalFamilyKeepsItsTransportError(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'Connection refused', 'request_size' => 0]),
+        ]);
+
+        try {
+            $this->sender($client)
+                ->send('POST', 'https://example.com/post', new GuardedUrlModel('example.com', ['93.184.216.34']), []);
+            self::fail('The refusal should surface.');
+        } catch (TransportExceptionInterface $exception) {
+            self::assertNotInstanceOf(RequestMayHaveLeftException::class, $exception);
+        }
+    }
+
+    public function testAReadThatResetOnTheFinalFamilyKeepsItsTransportError(): void
+    {
+        $client = new MockHttpClient([
+            new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 122]),
+        ]);
+
+        try {
+            $this->sender($client)
+                ->send('GET', 'https://example.com/post', new GuardedUrlModel('example.com', ['93.184.216.34']), []);
+            self::fail('The reset should surface.');
+        } catch (TransportExceptionInterface $exception) {
+            self::assertNotInstanceOf(RequestMayHaveLeftException::class, $exception);
+        }
+    }
+
+    public function testAWriteAnsweredWithAnErrorStatusKeepsThatAnswer(): void
+    {
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.com',
+            new MockResponse('', ['http_code' => Response::HTTP_BAD_GATEWAY]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sendDualStack($client, 'POST');
+
+        self::assertSame(Response::HTTP_BAD_GATEWAY, $response->getStatusCode());
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testARepeatablePostIsAskedAgainOverTheNextFamilyOnAnErrorStatus(): void
+    {
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.com',
+            new MockResponse('', ['http_code' => Response::HTTP_FORBIDDEN]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sender($client)->sendRepeatable(
+            'POST',
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
+    private function sendDualStack(MockHttpClient $client, string $method): ResponseInterface
+    {
+        return $this->sender($client)->send(
+            $method,
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
     }
 }

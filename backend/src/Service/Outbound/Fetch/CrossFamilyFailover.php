@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Fetch;
 
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Whether a failed request is worth re-driving over the next address family; both fetch paths ask it. A route failure
@@ -19,6 +21,30 @@ final readonly class CrossFamilyFailover
         Response::HTTP_GONE,
         Response::HTTP_TOO_MANY_REQUESTS,
     ];
+
+    public function allowsRetryAfterFailure(
+        RepeatSafety $repeatSafety,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): bool {
+        return $this->isWarranted($transportError)
+            && (RepeatSafety::Repeatable === $repeatSafety || $this->hasSentNothing($failed));
+    }
+
+    public function isPossiblyDelivered(
+        RepeatSafety $repeatSafety,
+        ResponseInterface $failed,
+        TransportExceptionInterface $transportError,
+    ): bool {
+        return $this->isWarranted($transportError)
+            && RepeatSafety::Write === $repeatSafety
+            && !$this->hasSentNothing($failed);
+    }
+
+    public function allowsRetryAfterStatus(RepeatSafety $repeatSafety, int $statusCode): bool
+    {
+        return RepeatSafety::Repeatable === $repeatSafety && $this->isRetryableStatus($statusCode);
+    }
 
     public function isWarranted(?\Throwable $transportError): bool
     {
@@ -34,5 +60,10 @@ final readonly class CrossFamilyFailover
     {
         return $statusCode >= Response::HTTP_BAD_REQUEST
             && !\in_array($statusCode, self::ROUTE_INDEPENDENT_STATUSES, true);
+    }
+
+    private function hasSentNothing(ResponseInterface $failed): bool
+    {
+        return 0 === $failed->getInfo('request_size');
     }
 }

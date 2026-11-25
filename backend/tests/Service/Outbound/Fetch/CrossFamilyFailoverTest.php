@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Outbound\Fetch;
 
 use App\Service\Outbound\Fetch\CrossFamilyFailover;
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class CrossFamilyFailoverTest extends TestCase
 {
@@ -63,5 +69,81 @@ final class CrossFamilyFailoverTest extends TestCase
     public function testTooManyRequestsWarrantsNoOtherRoute(): void
     {
         self::assertFalse($this->failover->isRetryableStatus(Response::HTTP_TOO_MANY_REQUESTS));
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function errorStatuses(): iterable
+    {
+        yield 'bad gateway' => [Response::HTTP_BAD_GATEWAY];
+        yield 'forbidden' => [Response::HTTP_FORBIDDEN];
+    }
+
+    #[DataProvider('errorStatuses')]
+    public function testARepeatableRequestMayBeAskedAgainAfterAnErrorStatus(int $statusCode): void
+    {
+        self::assertTrue($this->failover->allowsRetryAfterStatus(RepeatSafety::Repeatable, $statusCode));
+    }
+
+    #[DataProvider('errorStatuses')]
+    public function testAWriteIsNeverAskedAgainAfterAnAnswer(int $statusCode): void
+    {
+        self::assertFalse($this->failover->allowsRetryAfterStatus(RepeatSafety::Write, $statusCode));
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, bool}>
+     */
+    public static function writeRequestSizes(): iterable
+    {
+        yield 'never left' => [['request_size' => 0], true];
+        yield 'may have left' => [['request_size' => 122], false];
+        yield 'without request size' => [[], false];
+    }
+
+    /** @param array<string, mixed> $responseInfo */
+    #[DataProvider('writeRequestSizes')]
+    public function testAWriteIsSentAgainOnlyWhenNothingLeft(array $responseInfo, bool $sentAgain): void
+    {
+        [$failed, $error] = $this->failedResponse($responseInfo);
+
+        self::assertSame($sentAgain, $this->failover->allowsRetryAfterFailure(RepeatSafety::Write, $failed, $error));
+    }
+
+    public function testATimedOutWriteIsNotSentAgain(): void
+    {
+        $failed = new MockResponse('', ['request_size' => 0]);
+
+        $timeout = new TimeoutException('Idle timeout reached');
+
+        self::assertFalse($this->failover->allowsRetryAfterFailure(RepeatSafety::Write, $failed, $timeout));
+    }
+
+    public function testARepeatableRequestIsSentAgainAfterAResetWhateverWasSent(): void
+    {
+        [$failed, $error] = $this->failedResponse(['request_size' => 122]);
+
+        self::assertTrue($this->failover->allowsRetryAfterFailure(RepeatSafety::Repeatable, $failed, $error));
+    }
+
+    /**
+     * @param array<string, mixed> $responseInfo
+     *
+     * @return array{ResponseInterface, TransportExceptionInterface}
+     */
+    private function failedResponse(array $responseInfo): array
+    {
+        $response = (new MockHttpClient(
+            new MockResponse('', ['error' => 'Connection reset by peer'] + $responseInfo),
+        ))->request('POST', 'https://example.com/');
+
+        try {
+            $response->getStatusCode();
+        } catch (TransportExceptionInterface $transportError) {
+            return [$response, $transportError];
+        }
+
+        self::fail('The mock response should have failed.');
     }
 }

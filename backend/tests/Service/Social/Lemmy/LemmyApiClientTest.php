@@ -237,6 +237,38 @@ final class LemmyApiClientTest extends TestCase
         }
     }
 
+    public function testAPostResetAfterItLeftMayHaveGoneThrough(): void
+    {
+        $http = RoutedHttpClient::answering(
+            static fn (): MockResponse => new MockResponse('', [
+                'error' => 'Connection reset by peer',
+                'request_size' => 122,
+            ]),
+        );
+
+        try {
+            $this->clientOver($http)->send(ApiRequestModel::postJson('https://lemmy.example/api/v3/post', []));
+            self::fail('A post that may have left must not read as unreachable.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame('lemmy.example', $exception->serviceName);
+            self::assertCount(1, $http->requests);
+        }
+    }
+
+    public function testAPostRefusedBeforeItLeftIsUnreachable(): void
+    {
+        $http = RoutedHttpClient::answering(
+            static fn (): MockResponse => new MockResponse('', [
+                'error' => 'Connection refused',
+                'request_size' => 0,
+            ]),
+        );
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->clientOver($http)->send(ApiRequestModel::postJson('https://lemmy.example/api/v3/post', []));
+    }
+
     public function testA429StillThrottles(): void
     {
         $client = $this->clientAnswering(new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]));

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Social\Support;
 
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
@@ -63,6 +64,24 @@ final class NetworkAnswerTest extends TestCase
         }
     }
 
+    public function testAWriteThatMayHaveLeftMayHaveGoneThrough(): void
+    {
+        $cause = FetchException::from(self::URL, new RequestMayHaveLeftException('Connection reset by peer'));
+
+        try {
+            NetworkAnswer::fetchAnswer(
+                ApiRequestModel::postJson(self::URL, []),
+                static fn (ApiRequestModel $request): ApiResponseModel => throw $cause,
+                'The Lemmy instance',
+                'lemmy.example',
+            );
+            self::fail('A write that may have left must not pass as unreachable.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame('lemmy.example', $exception->serviceName);
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
     public function testAReadThatTimedOutIsUnreachable(): void
     {
         $this->assertUnreachable(
@@ -76,6 +95,14 @@ final class NetworkAnswerTest extends TestCase
         $this->assertUnreachable(
             ApiRequestModel::postJson(self::URL, []),
             new TransportException('Could not resolve host'),
+        );
+    }
+
+    public function testAReadThatMayHaveLeftIsUnreachable(): void
+    {
+        $this->assertUnreachable(
+            ApiRequestModel::get(self::URL),
+            new RequestMayHaveLeftException('Connection reset by peer'),
         );
     }
 

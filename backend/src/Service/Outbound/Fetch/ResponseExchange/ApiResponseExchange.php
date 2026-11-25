@@ -28,7 +28,8 @@ final readonly class ApiResponseExchange implements ResponseExchangeInterface
 
     public function onHeaders(ResponseInterface $response, FetchAttemptModel $attempt): ExchangeStepModel
     {
-        if (!$this->failover->isRetryableStatus($response->getStatusCode())) {
+        $repeatSafety = $attempt->ticket->request->repeatSafety();
+        if (!$this->failover->allowsRetryAfterStatus($repeatSafety, $response->getStatusCode())) {
             return ExchangeStepModel::awaitBody();
         }
         $nextRoute = $this->retryPolicy->nextRouteAfterErrorStatus($attempt);

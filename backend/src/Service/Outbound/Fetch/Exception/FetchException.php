@@ -11,13 +11,16 @@ abstract class FetchException extends \RuntimeException
 {
     public function isTimeout(): bool
     {
-        for ($cause = $this->getPrevious(); null !== $cause; $cause = $cause->getPrevious()) {
-            if ($cause instanceof TimeoutExceptionInterface) {
-                return true;
-            }
-        }
+        return $this->hasCauseMatching(
+            static fn (\Throwable $cause): bool => $cause instanceof TimeoutExceptionInterface,
+        );
+    }
 
-        return false;
+    public function isPossiblyDelivered(): bool
+    {
+        return $this->hasCauseMatching(
+            static fn (\Throwable $cause): bool => $cause instanceof RequestMayHaveLeftException,
+        );
     }
 
     /**
@@ -39,5 +42,17 @@ abstract class FetchException extends \RuntimeException
             sprintf('%s: %s', $url, ProxyHandshakeFailure::explain($previous->getMessage())),
             previous: $previous,
         );
+    }
+
+    /** @param \Closure(\Throwable): bool $matches */
+    private function hasCauseMatching(\Closure $matches): bool
+    {
+        for ($cause = $this->getPrevious(); null !== $cause; $cause = $cause->getPrevious()) {
+            if ($matches($cause)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

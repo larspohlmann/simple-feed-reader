@@ -23,6 +23,8 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\ClockInterface as SleepingClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /** The fetch stack over the real cross-family failover, wired as the container wires it. */
@@ -104,6 +106,18 @@ final class FetchWiring
             ]),
             $concurrency,
             'TestAgent/1.0',
+        );
+    }
+
+    /** Any pin that carries an IPv6 address, the combined one included, gets the IPv6 answer. */
+    public static function buildDualStackClient(
+        string $host,
+        MockResponse $overIpv6,
+        MockResponse $overIpv4,
+    ): MockHttpClient {
+        return new MockHttpClient(
+            static fn (string $method, string $url, array $options): MockResponse
+                => str_contains(PinnedRequestOptions::addressesOf($options, $host), ':') ? $overIpv6 : $overIpv4,
         );
     }
 

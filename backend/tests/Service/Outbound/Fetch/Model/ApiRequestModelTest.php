@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Outbound\Fetch\Model;
 
 use App\Service\Outbound\Fetch\Model\ApiRequestModel;
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
 use PHPUnit\Framework\TestCase;
 
 final class ApiRequestModelTest extends TestCase
@@ -80,6 +81,18 @@ final class ApiRequestModelTest extends TestCase
         $request = ApiRequestModel::post('https://api.example.test/x')->changingNothing();
 
         self::assertTrue($request->withHeaders(['Authorization' => 'Bearer jwt'])->isRead());
+    }
+
+    public function testTheRepeatSafetyFollowsTheMethodUnlessTheRequestChangesNothing(): void
+    {
+        self::assertSame(
+            [RepeatSafety::Repeatable, RepeatSafety::Write, RepeatSafety::Repeatable],
+            [
+                ApiRequestModel::get('https://api.example.test/x')->repeatSafety(),
+                ApiRequestModel::post('https://api.example.test/x')->repeatSafety(),
+                ApiRequestModel::post('https://api.example.test/x')->changingNothing()->repeatSafety(),
+            ],
+        );
     }
 
     public function testTheHostIsTheUrlsHostName(): void

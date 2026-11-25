@@ -6,6 +6,7 @@ namespace App\Tests\Service\Outbound\Fetch\Exception;
 
 use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
+use App\Service\Outbound\Fetch\Exception\RequestMayHaveLeftException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
@@ -60,5 +61,22 @@ final class FetchExceptionTest extends TestCase
         $cause = new TransportException('Could not resolve host');
 
         self::assertFalse(FetchException::from('https://feeds.example/rss', $cause)->isTimeout());
+    }
+
+    public function testAWriteThatMayHaveLeftDeepInTheChainIsPossiblyDelivered(): void
+    {
+        $wrapped = new \RuntimeException('wrapped', 0, new RequestMayHaveLeftException('Connection reset by peer'));
+
+        $exception = FetchException::from('https://lemmy.example/api/v3/post', $wrapped);
+
+        self::assertTrue($exception->isPossiblyDelivered());
+        self::assertFalse($exception->isTimeout());
+    }
+
+    public function testATransportFailureIsNotPossiblyDelivered(): void
+    {
+        $cause = new TransportException('Connection reset by peer');
+
+        self::assertFalse(FetchException::from('https://lemmy.example/api/v3/post', $cause)->isPossiblyDelivered());
     }
 }

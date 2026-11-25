@@ -28,6 +28,7 @@ use App\Tests\Support\ScriptedSettler;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\StreamTimeoutRecordingClient;
 use App\Tests\Support\TaggedItemOf;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -181,16 +182,13 @@ final class ConcurrentRequestEngineTest extends TestCase
 
     public function testAnErrorStatusIsAskedAgainOverTheNextFamily(): void
     {
-        $respond = static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.test',
+            new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
+            new MockResponse('{"feed":[]}'),
+        );
 
-            return self::IPV4 === $resolve['dual.example.test']
-                ? new MockResponse('{"feed":[]}')
-                : new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
-        };
-
-        $answer = $this->onlyAnswer(new MockHttpClient($respond), self::DUAL)->answerOrThrow();
+        $answer = $this->onlyAnswer($client, self::DUAL)->answerOrThrow();
 
         self::assertSame(Response::HTTP_OK, $answer->status);
     }
@@ -432,17 +430,14 @@ final class ConcurrentRequestEngineTest extends TestCase
     public function testATicketAlreadyOnTheWireIsAskedAgainWithoutTheSettler(): void
     {
         $settler = new ScriptedSettler();
-        $respond = static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
-
-            return self::IPV4 === $resolve['dual.example.test']
-                ? new MockResponse('{"feed":[]}')
-                : new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
-        };
+        $client = FetchWiring::buildDualStackClient(
+            'dual.example.test',
+            new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
+            new MockResponse('{"feed":[]}'),
+        );
 
         $outcomes = iterator_to_array(
-            $this->engine(new MockHttpClient($respond))->sendAll([1 => self::ticket(self::DUAL)], $settler),
+            $this->engine($client)->sendAll([1 => self::ticket(self::DUAL)], $settler),
         );
 
         self::assertSame(Response::HTTP_OK, $outcomes[1]->answerOrThrow()->status);
@@ -613,6 +608,36 @@ final class ConcurrentRequestEngineTest extends TestCase
 
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $answer->status);
         self::assertSame(1, $requests);
+    }
+
+    /**
+     * @return iterable<string, array{ApiRequestModel, int}>
+     */
+    public static function postsAnsweredWithAnErrorStatus(): iterable
+    {
+        $write = ApiRequestModel::postJson(self::DUAL, ['a' => 1]);
+
+        yield 'a write is not asked again' => [$write, 1];
+        yield 'changing nothing is asked over every family' => [$write->changingNothing(), 3];
+    }
+
+    #[DataProvider('postsAnsweredWithAnErrorStatus')]
+    public function testAPostIsAskedAgainOverTheNextFamilyOnlyWhenItChangesNothing(
+        ApiRequestModel $request,
+        int $expectedRequests,
+    ): void {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
+        });
+        $ticket = RequestTicketModel::api($request, [new FixedKeySlot('account-1', 3)]);
+
+        $answer = self::outcomeOf($this->engine($client), $ticket)->answerOrThrow();
+
+        self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $answer->status);
+        self::assertSame($expectedRequests, $requests);
     }
 
     public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
