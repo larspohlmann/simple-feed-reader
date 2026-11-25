@@ -41,7 +41,7 @@ final readonly class OpmlImportRequest
     {
         return new OpmlImportSelectionModel(
             $this->opml,
-            new OpmlPlacementChoiceModel($this->parentTagName, array_map('trim', $this->folderNames)),
+            OpmlPlacementChoiceModel::fromTyped($this->parentTagName, $this->folderNames),
             $this->feedUrls,
             $this->tagIdsByFeedUrl,
             $this->addedTagIdsByFeedUrl,

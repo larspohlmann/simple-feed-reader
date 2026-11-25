@@ -25,6 +25,6 @@ final readonly class OpmlPreviewRequest
 
     public function toChoice(): OpmlPlacementChoiceModel
     {
-        return new OpmlPlacementChoiceModel($this->parentTagName, array_map('trim', $this->folderNames));
+        return OpmlPlacementChoiceModel::fromTyped($this->parentTagName, $this->folderNames);
     }
 }

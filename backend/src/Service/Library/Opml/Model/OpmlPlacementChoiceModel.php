@@ -12,4 +12,10 @@ final readonly class OpmlPlacementChoiceModel
         public array $folderNames = [],
     ) {
     }
+
+    /** @param array<int|string, string> $folderNames */
+    public static function fromTyped(?string $parentTagName, array $folderNames): self
+    {
+        return new self($parentTagName, array_map('trim', $folderNames));
+    }
 }
