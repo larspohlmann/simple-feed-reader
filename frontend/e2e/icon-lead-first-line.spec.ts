@@ -216,6 +216,9 @@ for (const setup of SETUPS) {
 
 const TAGS = [makeTag(7, 'Politics', { icon: 'home' }), makeTag(8, 'Science', { icon: 'science' })];
 const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
+const BLUESKY_FEED = {
+  social: { network: 'bluesky' as const, kind: 'home' as const, accountId: 1 },
+};
 const SCORED_POST = { ...POST, score: 22, myVote: null };
 
 /** A pill or a button: its row, its icon and the element holding its text (null: bare text). */
@@ -248,6 +251,18 @@ const PILL_CASES: PillCase[] = [
       return page.locator('app-reader-view app-entry-pills a.pill:not(.feed)').first();
     },
     icon: 'app-tag-glyph',
+    text: '.name',
+  },
+  {
+    name: 'an entry network pill',
+    viewport: DESKTOP,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: BLUESKY_FEED }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator('app-reader-view app-entry-pills a.pill.feed').first();
+    },
+    icon: 'app-network-logo',
     text: '.name',
   },
   {
@@ -375,6 +390,31 @@ for (const setup of SETUPS) {
         }
       });
     }
+
+    test('a network logo in a lead slot keeps its token size and stays visible', async ({
+      browser,
+    }) => {
+      const pill = PILL_CASES.find(({ name }) => name === 'an entry network pill')!;
+      const page = await preparePill(browser, setup, pill);
+      try {
+        const logo = (await pill.row(page)).locator('app-network-logo');
+        await expect(logo).toBeVisible();
+        await settle(page, setup.theme);
+
+        const [width, height, token] = await logo.evaluate((element) => {
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position: absolute; width: var(--icon-xs)';
+          element.parentElement!.append(probe);
+          const size = probe.getBoundingClientRect().width;
+          probe.remove();
+          const box = element.getBoundingClientRect();
+          return [box.width, box.height, size];
+        });
+        expect([width, height], 'the logo box against --icon-xs').toEqual([token, token]);
+      } finally {
+        await page.context().close();
+      }
+    });
 
     test('a phone Reply with neither label nor count sits midway between its edges', async ({
       browser,

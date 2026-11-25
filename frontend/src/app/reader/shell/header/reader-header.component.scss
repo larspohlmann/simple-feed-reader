@@ -246,7 +246,6 @@ header {
     '> .label',
     var(--space-3)
   );
-  @include icon-lead.overhang('> app-network-logo', var(--icon-md));
 
   display: flex;
   box-sizing: border-box;
@@ -285,8 +284,7 @@ header {
 }
 
 .menu .item app-network-logo {
-  width: var(--icon-md);
-  height: var(--icon-md);
+  --icon-lead-self: var(--icon-md);
 }
 
 .menu .item .label {

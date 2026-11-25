@@ -1,8 +1,11 @@
 :host {
   display: inline-block;
   flex: 0 0 auto;
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+
+  --icon-lead-self: var(--icon-sm);
+
+  width: var(--icon-lead-self);
+  height: var(--icon-lead-self);
   background-color: var(--text-primary);
   mask-repeat: no-repeat;
   mask-position: center;

@@ -3,8 +3,11 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: var(--icon-xs);
-  height: var(--icon-xs);
+
+  --icon-lead-self: var(--icon-xs);
+
+  width: var(--icon-lead-self);
+  height: var(--icon-lead-self);
   vertical-align: middle;
 }
 

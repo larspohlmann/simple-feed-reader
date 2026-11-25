@@ -68,11 +68,17 @@ describe('icon-lead', () => {
     expect(rules['.row > .glyph']).toMatchObject({
       'align-items': 'center',
       flex: 'none',
-      'block-size': '0',
+      'block-size': 'var(--icon-lead-self, 0)',
     });
     expect(rules['.row > .glyph::before']).toMatchObject({
       content: '""',
       'block-size': 'var(--icon-lead-cap)',
+    });
+  });
+
+  it('lets a host whose box is its glyph publish its size, keep that box and cancel it with margins', () => {
+    expect(rules['.row > .glyph']).toMatchObject({
+      'margin-block': 'calc(var(--icon-lead-self, 0px) / -2)',
     });
   });
 

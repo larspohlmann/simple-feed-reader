@@ -22,8 +22,7 @@
 }
 
 .menu app-network-logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+  --icon-lead-self: var(--icon-sm);
 }
 
 /* Sized by the menu, never sizing it: a long quote ellipsises inside the items' width. */

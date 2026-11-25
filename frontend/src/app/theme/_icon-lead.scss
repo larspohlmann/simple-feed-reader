@@ -47,9 +47,12 @@
     align-items: center;
     justify-content: center;
 
-    // Zero tall, so a glyph taller than the line cannot move the text; a host that binds its own height
-    // (app-tag-glyph) keeps it, and stays within the line only while it is no taller than the line.
-    block-size: 0;
+    // Zero tall, so a glyph taller than the line cannot move the text. A host whose box is its glyph
+    // (a logo) publishes its size as --icon-lead-self: it keeps that box and cancels it with margins.
+    // A host that binds its own height (app-tag-glyph) keeps it, and stays within the line only while
+    // it is no taller than the line.
+    block-size: var(--icon-lead-self, 0);
+    margin-block: calc(var(--icon-lead-self, 0px) / -2);
 
     &::before {
       content: '';

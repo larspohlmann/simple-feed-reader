@@ -154,6 +154,10 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 - `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
 - `overhang($slot, $box-size)`: a slot that paints its own box taller than the line (the settings chip)
   hangs from the baseline without moving the text.
+- A slot whose host is its own glyph (`app-network-logo`, `app-masked-logo`) publishes its size as
+  `--icon-lead-self` and sizes itself from it: the slot keeps that box and cancels it with a negative block
+  margin, so it neither collapses nor moves the text. A consumer that resizes such a host sets the property,
+  not `width`/`height`.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
   `<app-button>` it carries `class="trailing"`.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on

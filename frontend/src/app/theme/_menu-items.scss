@@ -10,7 +10,6 @@
       null,
       var(--space-3)
     );
-    @include icon-lead.overhang('> app-network-logo, > app-masked-logo', var(--icon-sm));
 
     display: flex;
     width: 100%;
