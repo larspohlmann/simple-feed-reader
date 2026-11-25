@@ -36,18 +36,23 @@ final class NetworkAnswer
 
     /**
      * @param \Closure(ApiRequestModel): ApiResponseModel $send
-     * @param string                                      $network as the message names it: "Bluesky"
+     * @param string                                      $network     as the message names it: "Bluesky"
+     * @param string                                      $serviceName as a failure reports it: the host, or "Bluesky"
      *
      * @throws SocialWriteOutcomeUnknownException when a write timed out, so the network may have acted on it
      * @throws SocialNetworkUnreachableException  when no answer arrived for any other reason
      */
-    public static function fetchAnswer(ApiRequestModel $request, \Closure $send, string $network): ApiResponseModel
-    {
+    public static function fetchAnswer(
+        ApiRequestModel $request,
+        \Closure $send,
+        string $network,
+        string $serviceName,
+    ): ApiResponseModel {
         try {
             return $send($request);
         } catch (FetchException $exception) {
             throw $exception->isTimeout() && !$request->isRead()
-                ? SocialWriteOutcomeUnknownException::unanswered($network, $exception)
+                ? SocialWriteOutcomeUnknownException::unanswered($serviceName, $exception)
                 : new SocialNetworkUnreachableException(
                     sprintf('%s could not be reached.', $network),
                     previous: $exception,

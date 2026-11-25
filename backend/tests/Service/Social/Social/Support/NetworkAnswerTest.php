@@ -49,12 +49,13 @@ final class NetworkAnswerTest extends TestCase
                 ApiRequestModel::postJson(self::URL, []),
                 static fn (ApiRequestModel $request): ApiResponseModel => throw $cause,
                 'The Lemmy instance',
+                'lemmy.example',
             );
             self::fail('A timed-out write must not pass as an answer.');
         } catch (SocialWriteOutcomeUnknownException $exception) {
-            self::assertSame('The Lemmy instance', $exception->serviceName);
+            self::assertSame('lemmy.example', $exception->serviceName);
             self::assertSame(
-                'The Lemmy instance had trouble with this request, so it may or may not have gone through. '
+                'lemmy.example had trouble with this request, so it may or may not have gone through. '
                 . 'Check before trying again.',
                 $exception->getMessage(),
             );
@@ -93,6 +94,7 @@ final class NetworkAnswerTest extends TestCase
                 $request,
                 static fn (ApiRequestModel $sent): ApiResponseModel => throw FetchException::from(self::URL, $cause),
                 'The Lemmy instance',
+                'lemmy.example',
             );
             self::fail('No answer must not pass as one.');
         } catch (SocialNetworkUnreachableException $exception) {

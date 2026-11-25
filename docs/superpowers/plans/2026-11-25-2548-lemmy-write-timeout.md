@@ -15,6 +15,7 @@
 - CLAUDE.md applies in full: naming verb table, `final readonly`, no comments unless a reader would get it wrong, guard clauses, `Response::HTTP_*` never a literal, PHPMD-clean touched files.
 - Only a **timeout** on a **write** (`!ApiRequestModel::isRead()`) becomes an unknown outcome. A read timeout and any non-timeout transport failure stay `SocialNetworkUnreachableException` with today's message.
 - Lemmy post creation budget: `30.0` seconds. Comments keep the standard 10 s.
+- Task 4 superseded the 30.0 s post budget: post creation waits 8 s, then `LemmyPostWriter` polls for the post until 30 s after sending.
 - Recovery matches the account's own post by exact title **and** community id **and** `published` no earlier than 120 seconds before the request was sent. URL is not compared (Lemmy rewrites URLs, e.g. `#:~:text=` fragments are re-encoded).
 - Recovery never throws its own failure: if the lookup fails or finds nothing, the original `SocialWriteOutcomeUnknownException` propagates.
 - Gate cadence (#2525): per task, the touched tests plus `composer cs`/`composer stan` on changed files only.

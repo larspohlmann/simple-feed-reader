@@ -112,16 +112,16 @@ final class LemmyOwnPostsTest extends TestCase
 
     private static function listing(string $title, int $communityId, string $published): MockResponse
     {
-        return self::listingOf(self::post($title, $communityId, $published));
+        return self::buildListing(self::post($title, $communityId, $published));
     }
 
     private static function deletedListing(): MockResponse
     {
-        return self::listingOf(self::post('Title', 7, '2026-11-25T11:36:09Z') + ['deleted' => true]);
+        return self::buildListing(self::post('Title', 7, '2026-11-25T11:36:09Z') + ['deleted' => true]);
     }
 
     /** @param array<string, mixed> $post */
-    private static function listingOf(array $post): MockResponse
+    private static function buildListing(array $post): MockResponse
     {
         return new MockResponse(json_encode(['posts' => [['post' => $post]]], JSON_THROW_ON_ERROR));
     }

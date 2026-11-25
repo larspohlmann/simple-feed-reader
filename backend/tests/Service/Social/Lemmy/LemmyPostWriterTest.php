@@ -345,41 +345,7 @@ final class LemmyPostWriterTest extends TestCase
     public function testATimedOutPostThatDidNotLandMayHaveGoneThrough(): void
     {
         $clock = new MockClock(self::SENT_AT);
-        $http = self::instanceHoldingThePost($clock, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
-
-        try {
-            $this->writer($http, $clock)->publish(
-                $this->account(),
-                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-            );
-            self::fail('A post that never shows up may have gone through.');
-        } catch (SocialWriteOutcomeUnknownException) {
-            self::assertCount(6, self::listingRequests($http));
-        }
-    }
-
-    public function testAPostThatShowsUpOnALaterLookupIsPosted(): void
-    {
-        $clock = new MockClock(self::SENT_AT);
-        $answers = [new MockResponse('{"posts":[]}'), new MockResponse('{"posts":[]}'), self::ownListing()];
-        $http = self::instanceHoldingThePost($clock, static function () use (&$answers): MockResponse {
-            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
-        });
-
-        $published = $this->writer($http, $clock)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
-        );
-
-        self::assertSame('https://lemmy.example/post/501', $published->url);
-        self::assertCount(3, self::listingRequests($http));
-        self::assertEquals(new \DateTimeImmutable(self::SENT_AT . ' +16 seconds'), $clock->now());
-    }
-
-    public function testPollingStopsAtThirtySecondsAfterSending(): void
-    {
-        $clock = new MockClock(self::SENT_AT);
-        $http = self::instanceHoldingThePost($clock, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
+        $http = self::instanceHoldingThePost($clock, 8, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
 
         try {
             $this->writer($http, $clock)->publish(
@@ -393,11 +359,39 @@ final class LemmyPostWriterTest extends TestCase
         }
     }
 
+    public function testAPostThatShowsUpOnALaterLookupIsPosted(): void
+    {
+        $clock = new MockClock(self::SENT_AT);
+        $answers = [new MockResponse('{"posts":[]}'), new MockResponse('{"posts":[]}'), self::ownListing()];
+        $http = self::instanceHoldingThePost($clock, 8, static function () use (&$answers): MockResponse {
+            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
+        });
+
+        $published = $this->writer($http, $clock)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+
+        self::assertSame('https://lemmy.example/post/501', $published->url);
+        self::assertCount(3, self::listingRequests($http));
+        self::assertEquals(new \DateTimeImmutable(self::SENT_AT . ' +16 seconds'), $clock->now());
+    }
+
+    public function testAPostHeldSixSecondsIsLookedUpOnceMoreAtExactlyThirtySeconds(): void
+    {
+        $this->assertLookups(6, 7, 30);
+    }
+
+    public function testAPostHeldSevenSecondsIsNotLookedUpPastThirtySeconds(): void
+    {
+        $this->assertLookups(7, 6, 27);
+    }
+
     public function testALookupThatFailsIsRetried(): void
     {
         $clock = new MockClock(self::SENT_AT);
         $answers = [new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]), self::ownListing()];
-        $http = self::instanceHoldingThePost($clock, static function () use (&$answers): MockResponse {
+        $http = self::instanceHoldingThePost($clock, 8, static function () use (&$answers): MockResponse {
             return array_shift($answers) ?? new MockResponse('{"posts":[]}');
         });
 
@@ -415,6 +409,7 @@ final class LemmyPostWriterTest extends TestCase
         $clock = new MockClock(self::SENT_AT);
         $http = self::instanceHoldingThePost(
             $clock,
+            8,
             static fn (): MockResponse => new MockResponse('', ['http_code' => Response::HTTP_UNAUTHORIZED]),
         );
 
@@ -456,13 +451,43 @@ final class LemmyPostWriterTest extends TestCase
         }
     }
 
-    /** @param \Closure(): MockResponse $listing the instance took the post but held its reply for eight seconds */
-    private static function instanceHoldingThePost(MockClock $clock, \Closure $listing): RoutedHttpClient
+    private function assertLookups(int $holdSeconds, int $expectedLookups, int $lastLookupSecond): void
     {
+        $clock = new MockClock(self::SENT_AT);
+        $sentAt = $clock->now();
+        $lookedUpAt = [];
+        $http = self::instanceHoldingThePost(
+            $clock,
+            $holdSeconds,
+            static function () use ($clock, $sentAt, &$lookedUpAt): MockResponse {
+                $lookedUpAt[] = $clock->now()->getTimestamp() - $sentAt->getTimestamp();
+
+                return new MockResponse('{"posts":[]}');
+            },
+        );
+
+        try {
+            $this->writer($http, $clock)->publish(
+                $this->account(),
+                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+            );
+            self::fail('A post that never shows up may have gone through.');
+        } catch (SocialWriteOutcomeUnknownException) {
+            self::assertCount($expectedLookups, $lookedUpAt);
+            self::assertSame($lastLookupSecond, end($lookedUpAt));
+        }
+    }
+
+    /** @param \Closure(): MockResponse $listing the instance took the post but held its reply */
+    private static function instanceHoldingThePost(
+        MockClock $clock,
+        int $holdSeconds,
+        \Closure $listing,
+    ): RoutedHttpClient {
         return RoutedHttpClient::answering(
-            static function (string $method, string $url) use ($clock, $listing): MockResponse {
+            static function (string $method, string $url) use ($clock, $holdSeconds, $listing): MockResponse {
                 if ('POST ' . self::POST_PATH === $method . ' ' . $url) {
-                    $clock->sleep(8);
+                    $clock->sleep($holdSeconds);
 
                     return new MockResponse(['']);
                 }
