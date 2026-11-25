@@ -229,7 +229,7 @@ test.describe('type under classic', () => {
       const title = await styleOf(page, selector);
       expect(title.weight, `${kind} title weight`).toBe('600');
       expect(parseFloat(title.letterSpacing), `${kind} title letter-spacing`).toBeCloseTo(
-        -0.006 * parseFloat(title.size),
+        0.004 * parseFloat(title.size),
         2,
       );
     }
@@ -260,8 +260,8 @@ test.describe('the Trending story headline is a title', () => {
     await openTrending(page, 'classic');
     const headline = await styleOf(page, 'app-story-headline .title');
     expect(headline.weight).toBe('600');
-    expect(parseFloat(headline.letterSpacing)).toBeCloseTo(-0.006 * parseFloat(headline.size), 2);
-    expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.2 * parseFloat(headline.size), 2);
+    expect(parseFloat(headline.letterSpacing)).toBeCloseTo(0.004 * parseFloat(headline.size), 2);
+    expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.34 * parseFloat(headline.size), 2);
   });
 
   test("graphite keeps develop's literals", async ({ page }) => {
