@@ -96,7 +96,7 @@ The grouped-card sidebar's own measures. The fixed ones sit on `:root`, not in t
 | `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
 | `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
 
-Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row-lead`, #2558), so a 36px row's lead sits a little further in than a 32px row's. Every gap after the name (count, ⋯, '+', bell) keeps the row's own gap, `--space-3` (`--space-3` + `--space-0` on a coarse pointer), so the right-hand columns do not move. In a network head with a fine pointer, the '+' and bell overlap by `--space-1` and the bell sits `--space-1` from the count, which leaves the name room beside a four-digit count.
+Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row` with `$gap`, #2558), and a section head takes its height through the same `row-box()` as a row, so a 36px row's lead sits a little further in than a 32px row's. Every gap after the name (count, ⋯, '+', bell) keeps the row's own gap, `--space-3` (`--space-3` + `--space-0` on a coarse pointer), so the right-hand columns do not move. In a network head with a fine pointer, the '+' and bell overlap by `--space-1` and the bell sits `--space-1` from the count, which leaves the name room beside a four-digit count.
 
 ### Icon sizes
 
@@ -142,24 +142,27 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 
 - `first-line($slot, $text)` on the row: the slot and the named text share a baseline, and the slot's
   baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on the cap
-  middle whatever the engine rounds. Nothing else in the row moves. The slot must share a flex line with
-  its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected text) has no
-  selector: `$text: null` lines the whole row up on the baseline instead.
-- `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset`; its side padding
-  and icon gap are one lead space, `lead-space($inset)` = `$inset + (1lh - 1cap) / 2`, declared on the
-  row as `--icon-lead-space`. `box-lead($inset, $slot, $text, $gap)` when items follow the text: only
-  the icon gets the lead space (`lead-gap($gap)` is its end margin), the rest stay `$gap` apart.
-- An icon taller than the line keeps its clearance: `box`/`box-lead` take its size as a last `$slot-size`,
-  and a row outside them pads with `clearance($inset, $size)`; one line is then the icon plus the inset twice.
+  middle whatever the engine rounds. The row's other items centre on it; one that should not (a column that
+  stays at the top) says `align-self: start`. The slot gives up its own end margin. The slot must share a
+  flex line with its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected
+  text) has no selector: `$text: null` lines the whole row up on the baseline instead.
+- `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset` (a bare `0` is
+  fine); its side padding and icon gap are one lead space, `lead-space($inset)` = `$inset + (1lh - 1cap) / 2`,
+  declared on the row as `--icon-lead-space`. With `$gap:` when items follow the text: only the icon gets
+  the lead space (`lead-gap($gap)` is its end margin), the rest stay `$gap` apart.
+- An icon taller than the line keeps its clearance: `box` takes its size as `$slot-size:`, and a row outside
+  it pads with `clearance($inset, $size)`; one line is then the icon plus the inset twice.
 - `fixed-row($height, $slot, $text)`: a row or chip whose height is set, not grown by its text (a
-  sidebar row, a min-height chip); side padding and gap are `space($height)` = `($height - 1cap) / 2`,
-  and the text keeps the place centring gave it. `fixed-row-lead($height, $slot, $text, $gap)` when items
-  follow the text. The sidebar's `label-x` derives where a row's label starts from the same `space()`.
+  sidebar row, a min-height chip); side padding and gap are `space($height)` = `($height - 1cap) / 2`
+  (`fixed-lead-space($height)` declares it alone), and the text sits `line-offset($height)` =
+  `($height - 1lh) / 2` from the top, where centring put it. `$gap:` as for `box`. The sidebar's `label-x`
+  derives where a row's label starts from the same `space()`.
 - `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
 - `alone($slot)`: a glyph with no text beside it (an icon-only button) takes its own box back, centred,
   with no lead space after it. In an `<app-button>` it carries `class="alone"`.
 - A slot has no height in the line. One that paints a box of its own (a logo, a chip, a wrapper holding a
-  glyph and its badge) publishes that box's height as `--icon-lead-self` on itself: the slot keeps the box
+  glyph and its badge) publishes that box's height as `--icon-lead-self` on itself (`self-sized($size)` for a
+  host sized by it, `padded-slot($size, $padding)` for a chip round a glyph): the slot keeps the box
   and cancels it with a negative block margin. The property is registered and not inherited, so a wrapper
   sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
   The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
@@ -169,11 +172,11 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
   `<app-button>` it carries `class="trailing"`.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
-  any child that sets its own: `1lh` and `1cap` are measured on the row.
+  any child that sets its own: `1lh` and `1cap` are measured on the row. That is the known cost: the row's
+  other children inherit the first line's font and restate their own `line-height`.
 - The cap reaches the slot as `--icon-lead-cap`, a registered `<length>` (`icon-lead.register` in
-  `styles.scss`); unregistered, the slot's own font would resolve `1cap`. A slot projected from outside
-  needs `::ng-deep`.
-- The padding formula: `--px: calc(var(--py) + (1lh - 1cap) / 2)`.
+  `styles.scss`, each through `register-length($name, $inherits)`); unregistered, the slot's own font would
+  resolve `1cap`. A slot projected from outside needs `::ng-deep`.
 
 `e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle, and
 a painted glyph inside its control. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
