@@ -56,7 +56,6 @@
   border-left: 1px solid var(--airy-rule);
 }
 
-// A row's height: what its surface asks for, a tap target under a coarse pointer.
 @mixin row-box($height) {
   --row-box: #{$height};
 

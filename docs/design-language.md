@@ -78,7 +78,7 @@ a `var()` fallback at each use site, so the `calc()` above reads as arithmetic.
 
 ### Sidebar geometry (#1749)
 
-The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar's stylesheet, because the CDK drag preview leaves the sidebar for `<body>` and still reads them.
+The grouped-card sidebar's own measures. The fixed ones sit on `:root`, not in the sidebar's stylesheet, because the CDK drag preview leaves the sidebar for `<body>` and still reads them; `--sidebar-label-x` is set inside the sidebar, where a row's font applies.
 
 | Token | Value | For |
 |---|---|---|
@@ -96,7 +96,7 @@ The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar
 | `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
 | `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
 
-Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row-lead`, #2558), so a 36px row's lead sits a little further in than a 32px row's. Every gap after the name (count, ⋯, '+', bell) keeps the row's `--space-3`, so the right-hand columns do not move.
+Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row-lead`, #2558), so a 36px row's lead sits a little further in than a 32px row's. Every gap after the name (count, ⋯, '+', bell) keeps the row's own gap, `--space-3` (`--space-3` + `--space-0` on a coarse pointer), so the right-hand columns do not move. In a network head with a fine pointer, the '+' and bell overlap by `--space-1` and the bell sits `--space-1` from the count, which leaves the name room beside a four-digit count.
 
 ### Icon sizes
 
@@ -142,9 +142,10 @@ first line's centre, one line or five (#2558). `theme/_icon-lead.scss` is the on
 
 - `icon-lead.first-line($slot)` on the row: `align-items: start`, and the slot is `1lh` tall with the
   glyph centred in it. A free-standing boxed note uses `box($inset, $slot)`, whose padding follows the
-  font; a row with a min-height adds `centred-line`; a fixed-height row uses `fixed-row($height, $slot)`,
-  or `fixed-row-lead($height, $slot, $gap)` when items follow the text: the lead space goes only
-  between the lead and the text, and the rest stay `$gap` apart; a slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
+  font; a row with a min-height adds `centred-line`; a fixed-height row uses
+  `fixed-row($height, $slot)`, or `fixed-row-lead($height, $slot, $gap)` when items follow the
+  text: the lead space goes only between the lead and the text, and the rest stay `$gap` apart; a
+  slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
   any child that sets its own: `1lh` and `1cap` are measured on the row.
 - The line reaches the slot as `--icon-lead-line`, a registered `<length>` (`icon-lead.register` in

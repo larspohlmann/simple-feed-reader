@@ -1,3 +1,4 @@
+@use '../../../theme/icon-lead';
 @use 'sidebar-row' as row;
 @include row.row-parts;
 @include row.row-link('.nav');
@@ -12,7 +13,7 @@
 
 /* The favicon's 2px either side make its column the 20px of a lead; the row's lead space follows it. */
 .favicon-slot {
-  margin-inline: var(--space-0) calc(var(--space-0) + var(--icon-lead-space) - var(--row-gap));
+  margin-inline: var(--space-0) calc(var(--space-0) + #{icon-lead.lead-gap(var(--row-gap))});
 }
 
 .favicon-slot app-favicon {
