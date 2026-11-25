@@ -36,10 +36,15 @@ button {
 // set the row height instead of the content. Height comes from the padding so
 // the label and any leading icon still decide it.
 button.sm {
-  @include icon-lead.box(var(--space-1), '::ng-deep > app-icon', null);
+  @include icon-lead.box-lead(var(--space-1), '::ng-deep > app-icon', null, var(--space-1));
 
   height: auto;
   font-size: var(--fs-sm);
+}
+
+// The label is bare text, so a trailing chevron is found by its glyph and keeps the token gap.
+button.sm ::ng-deep > app-icon:is([name='expand_more'], [name='expand_less']) {
+  margin-inline-end: 0;
 }
 
 button.primary {
