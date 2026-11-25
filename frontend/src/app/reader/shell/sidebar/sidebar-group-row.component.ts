@@ -35,6 +35,5 @@ export class SidebarGroupRowComponent {
     return inclusion === null ? [] : ownExcludedSurfaces(inclusion);
   });
   protected readonly excluded = computed(() => this.excludedSurfaces().length > 0);
-  /** The lead slot wraps the glyph and its marker, so it publishes the glyph's box for its own. */
   protected readonly glyphBox = computed(() => ICON_SIZE_TOKEN[this.glyphSize()]);
 }

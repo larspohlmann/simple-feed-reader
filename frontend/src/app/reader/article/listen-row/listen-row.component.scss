@@ -3,12 +3,12 @@
 
 .listen {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
-  @include icon-lead.box-lead(
+  @include icon-lead.box(
     var(--space-2),
     '> app-icon',
     '> .listen-label, > .listen-duration',
-    var(--space-2),
-    var(--icon-lg)
+    $slot-size: var(--icon-lg),
+    $gap: var(--space-2)
   );
 
   display: flex;

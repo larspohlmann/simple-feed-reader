@@ -105,12 +105,11 @@ app-category-chips {
   }
 
   h2 {
-    margin-block-start: max(0px, calc((var(--cat-action-height) - 1lh) / 2));
+    margin-block-start: max(0px, #{icon-lead.line-offset(var(--cat-action-height))});
   }
 }
 
 .cat-count {
-  align-self: center;
   color: var(--text-muted);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
@@ -119,7 +118,6 @@ app-category-chips {
 .cat-act {
   display: flex;
   flex: none;
-  align-self: center;
   gap: var(--space-1);
   margin-left: auto;
   line-height: var(--lh-normal);

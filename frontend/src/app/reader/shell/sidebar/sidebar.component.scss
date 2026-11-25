@@ -393,7 +393,7 @@
 }
 
 .organising .tag {
-  --icon-lead-space: #{icon-lead.space(var(--tap-target))};
+  @include icon-lead.fixed-lead-space(var(--tap-target));
 
   display: flex;
   align-items: center;

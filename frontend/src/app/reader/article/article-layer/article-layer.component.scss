@@ -150,10 +150,6 @@
   background: var(--surface-1);
 }
 
-.mini ::ng-deep > app-favicon {
-  margin-inline-end: 0;
-}
-
 /* A zero basis keeps the title on the strip's one flex line, however long it runs. */
 .mini ::ng-deep > .mini-title {
   flex: 1 1 0;

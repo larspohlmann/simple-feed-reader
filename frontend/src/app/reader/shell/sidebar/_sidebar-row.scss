@@ -76,17 +76,14 @@
   --row-gap: var(--space-3);
 
   @include row-box(var(--row-h, var(--sidebar-row-h)));
-  @include icon-lead.fixed-row-lead(
+  @include icon-lead.fixed-row(
     var(--row-box),
     '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
     '> .name, > .label, > .nav > .name, > .nav > .label',
-    var(--row-gap)
+    $gap: var(--row-gap)
   );
 
   display: flex;
-
-  // One line that never wraps: the items after the lead and its text centre on it.
-  align-items: center;
   height: var(--row-box);
   padding: 0 var(--space-2) 0 var(--row-inset, var(--icon-lead-space));
   border-radius: var(--radius);
@@ -349,14 +346,12 @@
 /* A section head — Saved searches, Tags, Feeds, a network: a title that opens the combined list (#1735). */
 @mixin section-head {
   .section-head {
-    --head-box: var(--sidebar-sub-row-h);
-
-    @include icon-lead.fixed-row-lead(var(--head-box), '.favicon-slot', '.label', var(--space-3));
+    @include row-box(var(--head-h, var(--sidebar-sub-row-h)));
+    @include icon-lead.fixed-row(var(--row-box), '.favicon-slot', '.label', $gap: var(--space-3));
 
     display: flex;
     flex: none;
-    align-items: center;
-    height: var(--head-box);
+    height: var(--row-box);
     padding: 0 var(--space-2) 0 var(--icon-lead-space);
     border-radius: var(--radius);
     font-size: var(--fs-sm);
@@ -398,14 +393,8 @@
     }
   }
 
-  @media (pointer: coarse) {
-    .section-head {
-      --head-box: var(--tap-target);
-    }
-  }
-
   .organising .section-head {
-    --head-box: var(--control-h);
+    --row-box: var(--control-h);
   }
 
   .section-link {
@@ -447,9 +436,7 @@
   :host-context(.sidebar-airy) .section-head {
     font-size: var(--fs-base);
 
-    @media (pointer: fine) {
-      --head-box: var(--sidebar-row-h);
-    }
+    --head-h: var(--sidebar-row-h);
 
     &:has(> [aria-expanded='true']) {
       margin-top: 0;

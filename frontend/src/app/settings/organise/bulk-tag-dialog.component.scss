@@ -17,7 +17,7 @@
 
 .pill {
   @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
-  @include icon-lead.box-lead(var(--space-1), '> app-tag-glyph', '> span:not(.n)', var(--space-1));
+  @include icon-lead.box(var(--space-1), '> app-tag-glyph', '> span:not(.n)', $gap: var(--space-1));
 
   display: inline-flex;
   border-radius: var(--radius-pill);
@@ -35,7 +35,6 @@
 }
 
 .pill .n {
-  align-self: center;
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-xs);
   opacity: 0.75;

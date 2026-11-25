@@ -1,8 +1,5 @@
 @use '../../theme/icon-lead';
 
-$dot-padding: var(--space-2);
-$dot-box: calc(var(--icon-sm) + 2 * #{$dot-padding});
-
 /* Layout glue only. Grouped chrome now lives in `app-settings-group` and
    `app-disclosure` (drill-in). What stays here is the ruled connection-row
    list and the internals of one row, not a primitive's job. */
@@ -33,9 +30,8 @@ app-searchable-select {
 }
 
 .conn-dot {
-  --icon-lead-self: #{$dot-box};
+  @include icon-lead.padded-slot(var(--icon-sm), var(--space-2));
 
-  padding: $dot-padding;
   border-radius: var(--radius-pill);
   background: var(--bg-success);
   color: var(--success);
@@ -55,7 +51,6 @@ app-searchable-select {
 
 .manage {
   flex: none;
-  align-self: center;
 }
 
 .configs {

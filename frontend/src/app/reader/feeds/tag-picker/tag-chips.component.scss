@@ -7,10 +7,9 @@
 .chip {
   --chip-h: calc(var(--control-h) - var(--space-3));
 
-  @include icon-lead.fixed-row-lead(var(--chip-h), '> app-tag-glyph', '> .label', var(--space-2));
+  @include icon-lead.fixed-row(var(--chip-h), '> app-tag-glyph', '> .label', $gap: var(--space-2));
 
   display: inline-flex;
-  align-items: center;
   min-height: var(--chip-h);
   padding-inline-end: var(--space-1);
   border-radius: var(--radius-pill);

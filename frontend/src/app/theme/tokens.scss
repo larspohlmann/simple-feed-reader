@@ -1,6 +1,7 @@
 @use './breakpoints' as bp;
 @use './brightness';
 @use './glass-rim';
+@use './icon-lead';
 @use './icon-scale';
 @use './type-scale';
 @use './themes/classic';
@@ -100,12 +101,7 @@
 
 // Where a row's label starts, set by the sidebar (`_sidebar-row.scss` label-x). Registered, so it
 // computes in the font of the row it describes, not in the font of the row that reads it.
-@property --sidebar-label-x {
-  syntax: '<length>';
-  inherits: true;
-  // stylelint-disable-next-line length-zero-no-unit
-  initial-value: 0px;
-}
+@include icon-lead.register-length(--sidebar-label-x, true);
 
 // Mode-invariant tokens (same in every theme).
 :root {

@@ -1,35 +1,52 @@
+@use 'sass:math';
+@use 'sass:meta';
+
+@mixin register-length($name, $inherits) {
+  @property #{$name} {
+    syntax: '<length>';
+    inherits: $inherits;
+    // stylelint-disable-next-line length-zero-no-unit
+    initial-value: 0px;
+  }
+}
+
 // Registered <length>s: unregistered, a child's own font would resolve 1lh and 1cap.
 @mixin register {
-  @property --icon-lead-cap {
-    syntax: '<length>';
-    inherits: true;
-    // stylelint-disable-next-line length-zero-no-unit
-    initial-value: 0px;
-  }
-
-  @property --icon-lead-space {
-    syntax: '<length>';
-    inherits: true;
-    // stylelint-disable-next-line length-zero-no-unit
-    initial-value: 0px;
-  }
+  @include register-length(--icon-lead-cap, true);
+  @include register-length(--icon-lead-space, true);
 
   // Not inherited: a slot's box is its own, never its wrapper's.
-  @property --icon-lead-self {
-    syntax: '<length>';
-    inherits: false;
-    // stylelint-disable-next-line length-zero-no-unit
-    initial-value: 0px;
+  @include register-length(--icon-lead-self, false);
+}
+
+// calc() cannot add a bare 0 to a length.
+@function -to-length($value) {
+  @if meta.type-of($value) == 'number' {
+    @if math.is-unitless($value) {
+      @return $value * 1px;
+    }
   }
+
+  @return $value;
 }
 
 @function space($height) {
   @return calc((#{$height} - 1cap) / 2);
 }
 
+// Where a one-line text sits in a row $height tall, from the row's top.
+@function line-offset($height) {
+  @return calc((#{$height} - 1lh) / 2);
+}
+
 // The lead space of a row padded $inset around its first line.
 @mixin lead-space($inset) {
-  --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
+  --icon-lead-space: calc(#{-to-length($inset)} + (1lh - 1cap) / 2);
+}
+
+// The lead space of a row $height tall.
+@mixin fixed-lead-space($height) {
+  --icon-lead-space: #{space($height)};
 }
 
 // The lead's end margin in a row whose items stand $gap apart: lead and text end up a lead space apart.
@@ -39,12 +56,11 @@
 
 // The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
 // the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
-// A null $text is bare text, an anonymous item no selector reaches: the whole row aligns on the baseline.
 @mixin first-line($slot, $text) {
   --icon-lead-cap: 1cap;
 
   @if $text {
-    align-items: start;
+    align-items: center;
 
     #{$slot},
     #{$text} {
@@ -63,6 +79,7 @@
     // No height in the line, so a glyph taller than it cannot move the text; --icon-lead-self keeps a box.
     block-size: var(--icon-lead-self);
     margin-block: calc(var(--icon-lead-self) / -2);
+    margin-inline-end: 0;
 
     &::before {
       content: '';
@@ -85,13 +102,43 @@
   }
 }
 
+// A host whose box is its glyph, sized from the box it publishes to a lead slot.
+@mixin self-sized($size) {
+  --icon-lead-self: #{$size};
+
+  width: var(--icon-lead-self);
+  height: var(--icon-lead-self);
+}
+
+// A chip of $padding round a $size glyph, publishing its whole box to a lead slot.
+@mixin padded-slot($size, $padding) {
+  --icon-lead-self: calc(#{$size} + 2 * #{$padding});
+
+  padding: $padding;
+}
+
 // A block inset that keeps a slot taller than the line $inset clear of the edges, as centring did.
 @function clearance($inset, $slot-size) {
   @return max(#{$inset}, calc(#{$inset} + (#{$slot-size} - 1lh) / 2));
 }
 
+// Without $gap, the lead space parts every item; with it, only the lead keeps it to the text.
+@mixin -gaps($slot, $gap) {
+  @if $gap {
+    gap: $gap;
+
+    #{$slot} {
+      margin-inline-end: lead-gap($gap);
+    }
+  } @else {
+    gap: var(--icon-lead-space);
+  }
+}
+
 // $slot-size: the icon's size, when it can be taller than the line.
-@mixin box($inset, $slot, $text, $slot-size: null) {
+@mixin box($inset, $slot, $text, $slot-size: null, $gap: null) {
+  $inset: -to-length($inset);
+
   @include lead-space($inset);
   @include first-line($slot, $text);
 
@@ -102,18 +149,8 @@
   }
 
   padding: #{$block} var(--icon-lead-space);
-  gap: var(--icon-lead-space);
-}
 
-// As box, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
-@mixin box-lead($inset, $slot, $text, $gap, $slot-size: null) {
-  @include box($inset, $slot, $text, $slot-size);
-
-  gap: $gap;
-
-  #{$slot} {
-    margin-inline-end: lead-gap($gap);
-  }
+  @include -gaps($slot, $gap);
 }
 
 @mixin centred-line {
@@ -122,26 +159,15 @@
 }
 
 // The baseline group starts at the row's top; the margins put a one-line text where centring did.
-@mixin fixed-row($height, $slot, $text) {
-  --icon-lead-space: #{space($height)};
-
+@mixin fixed-row($height, $slot, $text, $gap: null) {
+  @include fixed-lead-space($height);
   @include first-line($slot, $text);
 
   padding-inline-start: var(--icon-lead-space);
-  gap: var(--icon-lead-space);
+
+  @include -gaps($slot, $gap);
 
   #{$text} {
-    margin-block: calc((#{$height} - 1lh) / 2);
-  }
-}
-
-// As fixed-row, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
-@mixin fixed-row-lead($height, $slot, $text, $gap) {
-  @include fixed-row($height, $slot, $text);
-
-  gap: $gap;
-
-  #{$slot} {
-    margin-inline-end: lead-gap($gap);
+    margin-block: line-offset($height);
   }
 }

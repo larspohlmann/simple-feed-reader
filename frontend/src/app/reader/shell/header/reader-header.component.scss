@@ -200,12 +200,12 @@ header {
   border-radius: var(--radius-lg);
   font-size: var(--fs-sm);
 
-  --icon-lead-space: #{icon-lead.space(var(--control-h))};
+  @include icon-lead.fixed-lead-space(var(--control-h));
 
   @media (pointer: coarse) {
     font-size: var(--fs-base);
 
-    --icon-lead-space: #{icon-lead.space(var(--tap-target))};
+    @include icon-lead.fixed-lead-space(var(--tap-target));
   }
 
   box-shadow:
@@ -259,11 +259,11 @@ header {
 }
 
 .menu .item {
-  @include icon-lead.fixed-row-lead(
+  @include icon-lead.fixed-row(
     var(--control-h),
     '> app-icon, > app-network-logo',
     '> .label',
-    var(--space-3)
+    $gap: var(--space-3)
   );
 
   display: flex;
@@ -282,11 +282,11 @@ header {
   cursor: pointer;
 
   @media (pointer: coarse) {
-    @include icon-lead.fixed-row-lead(
+    @include icon-lead.fixed-row(
       var(--tap-target),
       '> app-icon, > app-network-logo',
       '> .label',
-      var(--space-3)
+      $gap: var(--space-3)
     );
 
     min-height: var(--tap-target);
@@ -310,10 +310,6 @@ header {
   flex: 1 1 0;
   min-width: 0;
   text-align: left;
-}
-
-.menu .item app-count-pill {
-  align-self: center;
 }
 
 .menu .signout {

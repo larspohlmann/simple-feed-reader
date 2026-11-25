@@ -1,9 +1,6 @@
 @use '../../../theme/glass-rim';
 @use '../../../theme/icon-lead';
 
-$chip-padding: var(--space-2);
-$chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
-
 .g-head {
   @include icon-lead.first-line('> .g-icon', '> .g-text');
 
@@ -17,9 +14,8 @@ $chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
 }
 
 .g-icon {
-  --icon-lead-self: #{$chip-box};
+  @include icon-lead.padded-slot(var(--icon-sm), var(--space-2));
 
-  padding: $chip-padding;
   border-radius: var(--radius);
   background: var(--accent-soft);
   color: var(--accent);
@@ -47,6 +43,8 @@ $chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
 
 // The header's action slot; `margin-left: auto` pushes it to the trailing edge.
 .g-actions {
+  // At the head's top, beside the title's first line, not centred on a wrapped caption.
+  align-self: start;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

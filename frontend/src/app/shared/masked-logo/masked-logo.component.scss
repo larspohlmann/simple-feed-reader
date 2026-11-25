@@ -1,11 +1,11 @@
+@use '../../theme/icon-lead';
+
 :host {
   display: inline-block;
   flex: 0 0 auto;
 
-  --icon-lead-self: var(--icon-sm);
+  @include icon-lead.self-sized(var(--icon-sm));
 
-  width: var(--icon-lead-self);
-  height: var(--icon-lead-self);
   background-color: var(--text-primary);
   mask-repeat: no-repeat;
   mask-position: center;

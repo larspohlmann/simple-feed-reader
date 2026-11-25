@@ -40,7 +40,7 @@
 
 button {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
-  @include icon-lead.box-lead(var(--row-pad-y), '> app-tag-glyph', null, var(--space-1));
+  @include icon-lead.box(var(--row-pad-y), '> app-tag-glyph', null, $gap: var(--space-1));
 
   display: inline-flex;
   flex: none;

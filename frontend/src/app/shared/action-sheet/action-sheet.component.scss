@@ -1,8 +1,9 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 @use '../../theme/menu-items';
 
 // One line fills the tap target: the padding is what is left of it around the line.
-$item-inset: max(var(--row-pad-y), calc((var(--tap-target) - 1lh) / 2));
+$item-inset: max(var(--row-pad-y), #{icon-lead.line-offset(var(--tap-target))});
 
 :host {
   @include glass-rim.filled(var(--surface-2));

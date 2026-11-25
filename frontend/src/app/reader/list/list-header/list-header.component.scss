@@ -67,10 +67,6 @@ h2 > span:not(.sr-only) {
   white-space: nowrap;
 }
 
-h2 > app-favicon {
-  margin-inline-end: 0;
-}
-
 /* A network's logo at the tag glyph's size; it steps down with the heading on collapse. */
 h2 > app-network-logo {
   --icon-lead-self: var(--icon-md);

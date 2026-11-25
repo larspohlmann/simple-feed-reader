@@ -25,7 +25,6 @@
       display: none;
     }
 
-    // With the label hidden and no count, the icon stands alone.
     @include icon-lead.alone('> :has(+ .label:last-child)');
   }
 }

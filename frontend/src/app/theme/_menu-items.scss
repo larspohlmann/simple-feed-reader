@@ -14,11 +14,11 @@
   @include menu-lead-space($inset);
 
   [role='menuitem'] {
-    @include icon-lead.box-lead(
+    @include icon-lead.box(
       $inset,
       '> app-icon, > app-network-logo, > app-masked-logo, > app-share-target-logo',
       null,
-      var(--space-3)
+      $gap: var(--space-3)
     );
 
     display: flex;

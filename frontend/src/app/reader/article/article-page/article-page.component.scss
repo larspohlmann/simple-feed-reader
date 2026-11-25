@@ -120,10 +120,6 @@ article {
   font-size: var(--fs-base);
 }
 
-.bar-name > app-favicon {
-  margin-inline-end: 0;
-}
-
 /* One line, cut with an ellipsis. `min-width: 0` because a flex item's floor is
    its content width, and without it a long title pushes its row wide and
    scrolls the pane sideways instead of truncating. */

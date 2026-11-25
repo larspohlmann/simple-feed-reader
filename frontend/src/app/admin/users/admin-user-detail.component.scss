@@ -171,8 +171,7 @@ dd {
 }
 
 .chip {
-  // stylelint-disable-next-line length-zero-no-unit -- the inset is added to a length in calc()
-  @include icon-lead.box(0px, '> app-tag-glyph', null);
+  @include icon-lead.box(0, '> app-tag-glyph', null);
 
   display: inline-flex;
   font-size: var(--fs-xs);

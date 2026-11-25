@@ -36,15 +36,13 @@ button {
 // set the row height instead of the content. Height comes from the padding so
 // the label and any leading icon still decide it.
 button.sm {
-  @include icon-lead.box-lead(var(--space-1), '::ng-deep > app-icon', null, var(--space-1));
+  @include icon-lead.box(var(--space-1), '::ng-deep > app-icon', null, $gap: var(--space-1));
   @include icon-lead.alone('::ng-deep > app-icon.alone');
 
   height: auto;
   font-size: var(--fs-sm);
 }
 
-// A label is bare text, so an icon marks itself: `trailing` keeps the token gap after the label, and
-// `alone` (no label) centres in the button.
 button.sm ::ng-deep > app-icon.trailing {
   margin-inline-end: 0;
 }
