@@ -1,5 +1,7 @@
 @use '../../../theme/icon-lead';
 
+$avatar-size: calc(var(--space-6) * var(--icon-text-scale, 1));
+
 :host {
   display: block;
 }
@@ -22,6 +24,10 @@
       background: var(--surface-sunken);
     }
   }
+}
+
+.row:has(.avatars) > .kind {
+  block-size: $avatar-size;
 }
 
 .kind {
