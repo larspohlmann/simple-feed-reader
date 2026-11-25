@@ -2024,6 +2024,10 @@
     "swatch": "Colour {{colour}}",
     "custom": "Custom colour"
   },
+  "fileDrop": {
+    "choose": "Choose file",
+    "wrongType": "That file type isn't supported here."
+  },
   "passwordInput": {
     "show": "Show password",
     "hide": "Hide password"

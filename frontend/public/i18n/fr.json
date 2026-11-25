@@ -2024,6 +2024,10 @@
     "swatch": "Couleur {{colour}}",
     "custom": "Couleur personnalisée"
   },
+  "fileDrop": {
+    "choose": "Choisir un fichier",
+    "wrongType": "Ce type de fichier n'est pas pris en charge ici."
+  },
   "passwordInput": {
     "show": "Afficher le mot de passe",
     "hide": "Masquer le mot de passe"
