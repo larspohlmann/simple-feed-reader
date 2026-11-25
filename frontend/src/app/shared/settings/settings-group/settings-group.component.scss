@@ -5,6 +5,7 @@
   @include icon-lead.first-line('> .g-icon');
 
   display: flex;
+  flex-wrap: wrap;
   font-size: var(--fs-lg);
   line-height: var(--lh-tight);
   gap: var(--space-3);
@@ -22,7 +23,7 @@
 }
 
 .g-text {
-  flex: 1;
+  flex: 1 1 40%;
   min-width: 0;
 }
 
