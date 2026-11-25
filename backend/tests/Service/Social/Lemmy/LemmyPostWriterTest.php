@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Lemmy;
 
 use App\Entity\SocialAccount;
 use App\Service\Outbound\Fetch\IpValidator;
+use App\Service\Outbound\Fetch\Model\ApiBudgetModel;
 use App\Service\Outbound\Fetch\UrlGuard;
 use App\Service\Social\Lemmy\LemmyAccountApi;
 use App\Service\Social\Lemmy\LemmyApiClient;
@@ -134,6 +135,32 @@ final class LemmyPostWriterTest extends TestCase
             new PublishedPostModel('https://lemmy.example/post/501', 'https://lemmy.example/post/501'),
             $published,
         );
+    }
+
+    public function testAPostWaitsThirtySecondsForTheInstance(): void
+    {
+        $response = self::postCreated();
+        $http = new RoutedHttpClient([self::POST => $response]);
+
+        $this->writer($http)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Worth a read.'), 'Title', 7),
+        );
+
+        self::assertSame(30.0, $response->getRequestOptions()['timeout']);
+    }
+
+    public function testACommentKeepsTheStandardWait(): void
+    {
+        $response = $this->created();
+        $http = new RoutedHttpClient([self::COMMENT => $response]);
+
+        $this->writer($http)->publish(
+            $this->account(),
+            $this->replying('42', null, new PostDraftModel('Hello')),
+        );
+
+        self::assertSame(ApiBudgetModel::STANDARD_TIMEOUT_SECONDS, $response->getRequestOptions()['timeout']);
     }
 
     public function testATopLevelPostWithoutALinkSendsNoUrl(): void

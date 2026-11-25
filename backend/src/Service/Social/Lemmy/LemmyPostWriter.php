@@ -46,7 +46,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
             return $this->publishComment($account, $publication->inReplyTo, $publication->draft);
         }
 
-        $answer = $this->lemmy->post($account, '/api/v3/post', self::buildPostPayload($publication));
+        $answer = $this->lemmy->publishPost($account, self::buildPostPayload($publication));
 
         return self::requirePublishedPost($answer, 'post_view', 'post');
     }
