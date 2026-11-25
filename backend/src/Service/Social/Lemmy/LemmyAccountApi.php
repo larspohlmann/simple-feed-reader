@@ -19,6 +19,7 @@ use App\Service\Social\Social\StoredCredential;
 final readonly class LemmyAccountApi
 {
     private const float SEARCH_TIMEOUT_SECONDS = 25.0;
+    private const float POST_CREATION_TIMEOUT_SECONDS = 8.0;
 
     public function __construct(
         private LemmyApiClient $lemmy,
@@ -62,6 +63,22 @@ final readonly class LemmyAccountApi
     public function post(SocialAccount $account, string $path, array $json): ApiResponseModel
     {
         return $this->lemmy->send($this->session($account)->postJson($path, $json));
+    }
+
+    /**
+     * @param array<string, mixed> $json
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialPostRefusedException
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function publishPost(SocialAccount $account, array $json): ApiResponseModel
+    {
+        return $this->lemmy->send(
+            $this->session($account)->postJson('/api/v3/post', $json)
+                ->waitingUpTo(self::POST_CREATION_TIMEOUT_SECONDS),
+        );
     }
 
     private function session(SocialAccount $account): LemmySessionModel

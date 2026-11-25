@@ -8,6 +8,7 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\Exception\FetchException;
 use App\Service\Outbound\Fetch\Exception\ResponseTooLargeException;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 
 final class FetchExceptionTest extends TestCase
@@ -45,5 +46,19 @@ final class FetchExceptionTest extends TestCase
         );
 
         self::assertStringContainsString('does not resolve host names', $exception->getMessage());
+    }
+
+    public function testATimeoutDeepInTheChainIsATimeout(): void
+    {
+        $wrapped = new \RuntimeException('wrapped', 0, new TimeoutException('Idle timeout reached'));
+
+        self::assertTrue(FetchException::from('https://feeds.example/rss', $wrapped)->isTimeout());
+    }
+
+    public function testATransportFailureIsNoTimeout(): void
+    {
+        $cause = new TransportException('Could not resolve host');
+
+        self::assertFalse(FetchException::from('https://feeds.example/rss', $cause)->isTimeout());
     }
 }

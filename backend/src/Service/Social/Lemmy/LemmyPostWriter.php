@@ -9,7 +9,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Foundation\Json\Model\JsonNodeModel;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
-use App\Service\Social\Lemmy\LemmyAccountApi;
+use App\Service\Social\Lemmy\Model\LemmyPostAttemptModel;
 use App\Service\Social\Lemmy\Support\LemmyPostLimits;
 use App\Service\Social\Publishing\Exception\SocialPostCommunityMissingException;
 use App\Service\Social\Publishing\Exception\SocialPostTitleTooShortException;
@@ -23,18 +23,25 @@ use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Publishing\PostWriter\PostWriterInterface;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Social\Exception\SocialWriteOutcomeUnknownException;
 use App\Service\Social\Social\Model\PostDeletion;
 use App\Service\Social\Social\Model\SocialPostModel;
 use App\Service\Social\Social\PostDeleter\PostDeleterInterface;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 #[AsTaggedItem(index: SocialNetwork::Lemmy->value)]
 final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     private const string NO_QUOTES = 'Lemmy takes no quotes.';
+    private const int LANDING_WAIT_SECONDS = 30;
+    private const int LANDING_POLL_SECONDS = 4;
 
-    public function __construct(private LemmyAccountApi $lemmy)
-    {
+    public function __construct(
+        private LemmyAccountApi $lemmy,
+        private LemmyOwnPosts $ownPosts,
+        private ClockInterface $clock,
+    ) {
     }
 
     public function publish(SocialAccount $account, PublicationModel $publication): PublishedPostModel
@@ -46,9 +53,32 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
             return $this->publishComment($account, $publication->inReplyTo, $publication->draft);
         }
 
-        $answer = $this->lemmy->post($account, '/api/v3/post', self::buildPostPayload($publication));
+        $payload = self::buildPostPayload($publication);
+        $attempt = new LemmyPostAttemptModel($payload['name'], $payload['community_id'], $this->clock->now());
+
+        try {
+            $answer = $this->lemmy->publishPost($account, $payload);
+        } catch (SocialWriteOutcomeUnknownException $unknown) {
+            return $this->awaitLanded($account, $attempt) ?? throw $unknown;
+        }
 
         return self::requirePublishedPost($answer, 'post_view', 'post');
+    }
+
+    private function awaitLanded(SocialAccount $account, LemmyPostAttemptModel $attempt): ?PublishedPostModel
+    {
+        $deadline = $attempt->sentAt->modify(sprintf('+%d seconds', self::LANDING_WAIT_SECONDS));
+
+        while (true) {
+            $landed = $this->ownPosts->findJustPublished($account, $attempt);
+            if (null !== $landed) {
+                return $landed;
+            }
+            if ($this->clock->now()->modify(sprintf('+%d seconds', self::LANDING_POLL_SECONDS)) > $deadline) {
+                return null;
+            }
+            $this->clock->sleep(self::LANDING_POLL_SECONDS);
+        }
     }
 
     public function delete(SocialAccount $account, string $postId): PostDeletion
@@ -67,7 +97,7 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         return self::requirePublishedPost($answer, 'comment_view', 'comment');
     }
 
-    /** @return array<string, string|int> */
+    /** @return array{name: string, community_id: int, url?: string, body?: string} */
     private static function buildPostPayload(PublicationModel $publication): array
     {
         $text = $publication->draft->text;

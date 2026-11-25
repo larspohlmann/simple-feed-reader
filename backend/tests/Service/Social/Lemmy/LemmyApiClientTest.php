@@ -224,6 +224,19 @@ final class LemmyApiClientTest extends TestCase
         }
     }
 
+    public function testAPostThatTimesOutMayHaveGoneThrough(): void
+    {
+        $url = 'https://lemmy.example/api/v3/post';
+        $client = $this->clientOver(new RoutedHttpClient(['POST ' . $url => new MockResponse([''])]));
+
+        try {
+            $client->send(ApiRequestModel::postJson($url, []));
+            self::fail('A timed-out post must not read as an answer.');
+        } catch (SocialWriteOutcomeUnknownException $exception) {
+            self::assertSame('lemmy.example', $exception->serviceName);
+        }
+    }
+
     public function testA429StillThrottles(): void
     {
         $client = $this->clientAnswering(new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]));
