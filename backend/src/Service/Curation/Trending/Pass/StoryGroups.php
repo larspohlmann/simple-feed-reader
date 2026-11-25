@@ -14,9 +14,6 @@ final class StoryGroups
 {
     private const int SAMPLE_SIZE = 8;
 
-    /** @var array<int, array<int, true>> */
-    private array $linked = [];
-
     /** @var array<int, int> entry id => group id */
     private array $groupOf = [];
 
@@ -25,13 +22,8 @@ final class StoryGroups
 
     private int $nextGroupId = 0;
 
-    /** @param list<StoryLinkModel> $links every link of the run: the weaker ones count toward breadth */
-    public function __construct(private readonly TrendingRun $run, array $links)
+    public function __construct(private readonly TrendingRun $run, private readonly LinkedPairs $linkedPairs)
     {
-        foreach ($links as $link) {
-            $this->linked[$link->firstEntryId][$link->secondEntryId] = true;
-            $this->linked[$link->secondEntryId][$link->firstEntryId] = true;
-        }
     }
 
     public function consider(StoryLinkModel $link): void
@@ -80,7 +72,7 @@ final class StoryGroups
     private function joinIfBroad(int $entryId, int $groupId): void
     {
         $sample = $this->pickSample($groupId);
-        if ($this->linkCount([$entryId], $sample) < self::half(\count($sample))) {
+        if ($this->linkedPairs->countBetween([$entryId], $sample) < self::half(\count($sample))) {
             return;
         }
         $this->members[$groupId][] = $entryId;
@@ -95,7 +87,7 @@ final class StoryGroups
         $firstSample = $this->pickSample($firstGroupId);
         $secondSample = $this->pickSample($secondGroupId);
         $possiblePairs = \count($firstSample) * \count($secondSample);
-        if ($this->linkCount($firstSample, $secondSample) < self::half($possiblePairs)) {
+        if ($this->linkedPairs->countBetween($firstSample, $secondSample) < self::half($possiblePairs)) {
             return;
         }
         foreach ($this->members[$secondGroupId] as $entryId) {
@@ -116,21 +108,6 @@ final class StoryGroups
         );
 
         return \array_slice($members, 0, self::SAMPLE_SIZE);
-    }
-
-    /**
-     * @param list<int> $entryIds
-     * @param list<int> $otherEntryIds
-     */
-    private function linkCount(array $entryIds, array $otherEntryIds): int
-    {
-        $others = array_flip($otherEntryIds);
-        $count = 0;
-        foreach ($entryIds as $entryId) {
-            $count += \count(array_intersect_key($this->linked[$entryId] ?? [], $others));
-        }
-
-        return $count;
     }
 
     private static function half(int $count): int
