@@ -17,6 +17,7 @@
 - A write is never sent again after any answer (any status line), on the pinned path or proxied→direct.
 - A write is sent again after a transport failure only when the failed response's `request_size` info is exactly int `0` (no request byte left: refused connect, TLS reset — #356's heise/telepolis shape). Missing or non-int `request_size` counts as possibly sent: no resend. (Ruling 2026-11-25: `pretransfer_time` is nonzero even for a refused connect, measured.)
 - Timeouts stay non-retryable for everyone (unchanged).
+- A write that may have left (transport failure with `request_size` not int `0`) surfaces as an unknown outcome (`RequestMayHaveLeftException` → `SocialWriteOutcomeUnknownException`), never as "could not be reached".
 - GET behaviour is byte-for-byte unchanged: every existing test in `FailoverRequestSenderTest`, `FailoverRequestSenderProxyTest`, `CrossFamilyFailoverTest` passes unmodified.
 - Gate cadence (#2525): per task, the touched tests plus `composer cs`/`composer stan` on changed files only.
 
@@ -26,7 +27,7 @@
 - A POST answered 5xx/403 on the first family returns that answer (no second request), so `ServerFailure` reports "may or may not have gone through". Task 1 pins it.
 - A proxied POST answered with a retryable status, fallback on, is not resent directly; a proxied POST whose proxy connect failed before transfer is. Task 2 pins both.
 - Lowercase `post`/`get` method strings follow the same rule. Task 1 pins it.
-- `sendDirectAfterProxyRefusal` stays caller-driven and unchanged: the caller has read the answer and decides (its only callers send GETs).
+- A read's caller-driven direct retry goes through `sendRepeatableDirectAfterProxyRefusal`, so it keeps the failover a read gets; a write's direct retry is judged as a write.
 
 ---
 
