@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../theme/icon-lead';
 
 $title-floor: 6rem;
 
@@ -36,88 +37,72 @@ $title-floor: 6rem;
   flex-wrap: nowrap;
 }
 
-/* Tag glyph, inline before its name, matching the sidebar row. It sits inside
-   the ellipsised h2 on purpose — the clip runs from the end, so the glyph
-   stays put. Margin not flex gap: the h2 must stay plain text for ellipsis. */
-h2 app-tag-glyph {
-  /* A step wider than it was: the glyph used to be a small marker in front of
-     the name, and at the title's own size it needs room to read as a companion
-     to the word rather than as something stuck to it. */
-  margin-right: var(--space-2);
-
-  /* `vertical-align: middle` sits the glyph low against this heading's larger
-     type (measured 1.73px off at 18px); -0.1em corrects it at any size. A
-     transform not a margin: a margin would grow the line box the scroller reserves. */
-  transform: translateY(-0.1em);
-}
-
-/* Feed favicon, spaced to match the tag glyph above. Keeps its own
-   `vertical-align: middle`; an image box centres cleanly there, so it
-   needs none of the glyph's baseline nudge. */
-h2 app-favicon {
-  margin-right: var(--space-2);
-}
-
-/* A network's logo, at the tag glyph's size and nudge; it steps down with the heading on collapse. */
-h2 app-network-logo {
-  width: var(--icon-md);
-  height: var(--icon-md);
-  margin-right: var(--space-2);
-  transform: translateY(-0.1em);
-}
-
-:host(.collapsed) h2 app-network-logo {
-  width: var(--icon-xs);
-  height: var(--icon-xs);
-}
-
-/* Fixed-view lead icon (All items, Favorites, …), nudged to match the tag
-   glyph above. `> app-icon` (direct child) so it never also reaches the
-   app-icon the tag glyph nests, already nudged once (#411). */
-h2 > app-icon {
-  margin-right: var(--space-2);
-  transform: translateY(-0.1em);
-}
-
+/* The lead is a slot beside the title span, so the title's clip never reaches it. */
 h2 {
+  @include icon-lead.first-line(
+    '> app-tag-glyph, > app-favicon, > app-network-logo, > app-icon',
+    '> span:not(.sr-only)'
+  );
+
+  --title-size: var(--fs-lg);
+
+  display: flex;
+  gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-lg);
+  font-size: var(--title-size);
 
   /* A long feed title must truncate rather than shove the Unread/All
            toggle off-screen (notably on mobile). */
   min-width: 0;
-  overflow: clip visible;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 
   /* Not animated either, and for the same reason as the bar's padding above:
      the type size drives the line box, which drives the bar's height, which is
      the number the scroller reserves. */
 }
 
+h2 > span:not(.sr-only) {
+  min-width: 0;
+  overflow: clip visible;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+h2 > app-favicon {
+  margin-inline-end: 0;
+}
+
+/* A network's logo at the tag glyph's size; it steps down with the heading on collapse. */
+h2 > app-network-logo {
+  --icon-lead-self: var(--icon-md);
+}
+
+:host(.collapsed) h2 > app-network-logo {
+  --icon-lead-self: var(--icon-xs);
+}
+
+/* Prefix and term share one size, a step down from `--fs-lg`, so the split reads as one sentence;
+   the line keeps the heading's height, which the bar reserves. */
+h2.search-title {
+  font-size: var(--fs-sm);
+  line-height: calc(var(--title-size) * var(--lh-tight));
+}
+
 /* The search title alone wraps (#581 follow-up): its "Results for" lead plus
    term and count run long enough on mobile that ellipsis lost information.
    Every other title keeps the single-line ellipsis above. */
-h2.search-title {
+h2.search-title > span:not(.sr-only) {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
 }
 
-/* Prefix and term share one size, a step down from the h2's `--fs-lg`, so
-   the split reads as one sentence. The prefix's quiet half comes from its
-   muted COLOR, not from being smaller than the term. */
+/* The prefix's quiet half comes from its muted COLOR, not from being smaller than the term. */
 .results-prefix {
-  font-size: var(--fs-sm);
   color: var(--text-muted);
 
   /* The prefix is two words ("Results for"); left to wrap freely it breaks
      between them on mobile before the row is full. Only the term should wrap. */
   white-space: nowrap;
-}
-
-.results-term {
-  font-size: var(--fs-sm);
 }
 
 .compact-search-title-break {
@@ -187,7 +172,7 @@ h2.search-title {
          on scroll up. Wide screens always show the full header. */
 @media (width < bp.$bp-lg) {
   :host(.collapsed) h2 {
-    font-size: var(--fs-sm);
+    --title-size: var(--fs-sm);
   }
 
   :host(.collapsed) .tools {
@@ -195,10 +180,13 @@ h2.search-title {
   }
 
   :host(.collapsed.is-story) h2 {
+    line-height: var(--lh-tight);
+  }
+
+  :host(.collapsed.is-story) h2 > span:not(.sr-only) {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
-    line-height: var(--lh-tight);
   }
 
   /* The leading buttons are projected from other components, hence `::ng-deep`. */

@@ -40,12 +40,14 @@
         <!-- Split so "Results for" stays small/muted while the term stays
              prominent (#581). The `{{ ' ' }}` between them is load-bearing, not
              decoration: Angular drops a whitespace-only text node between elements. -->
-        <span class="results-prefix">{{ searchTitlePrefix() }}</span
-        ><br class="compact-search-title-break" />{{ ' '
-        }}<span class="results-term">{{ searchTitleTerm() }}</span>
-        @if (searchCountLabel(); as count) {
-          <span class="results-count count-pill">{{ count }}</span>
-        }
+        <span
+          ><span class="results-prefix">{{ searchTitlePrefix() }}</span
+          ><br class="compact-search-title-break" />{{ ' '
+          }}<span class="results-term">{{ searchTitleTerm() }}</span>
+          @if (searchCountLabel(); as count) {
+            <span class="results-count count-pill">{{ count }}</span>
+          }
+        </span>
       } @else {
         <span>{{ title() }}</span>
         @if (headingCount(); as count) {

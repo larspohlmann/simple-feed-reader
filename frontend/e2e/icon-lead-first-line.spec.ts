@@ -19,7 +19,7 @@ import {
   openShareSheet,
   stubMenus,
 } from './support/menu-rows';
-import { entryWire } from './support/reader';
+import { entryDetailJson, entryWire } from './support/reader';
 
 /**
  * #2558: an icon in front of text that can wrap hangs its centre on the cap middle of the text's
@@ -758,5 +758,191 @@ for (const setup of SETUPS) {
         await page.context().close();
       }
     });
+  });
+}
+
+const EPISODE_POST = {
+  ...POST,
+  attachments: [{ url: 'https://icons.invalid/episode.mp3', mimeType: 'audio/mpeg' }],
+};
+const CHAPTERS = [
+  { startSeconds: 0, title: 'Opening' },
+  { startSeconds: 20, title: 'Ending' },
+];
+const LONG_SEARCH = 'a search term long enough to wrap';
+
+/** A header's lead: its row, its icon, the text it leads (null: bare text), and what else to pin. */
+interface HeaderCase {
+  name: string;
+  viewport: { width: number; height: number };
+  storage?: Record<string, string>;
+  stub: (page: Page) => Promise<void>;
+  path: string;
+  row: (page: Page) => Promise<Locator>;
+  icon: string;
+  text: string | null;
+  /** A box or a fixed row: the glyph sits as far from the edge as from the text. */
+  spaced?: boolean;
+  /** The text spans two lines or more. */
+  wraps?: boolean;
+}
+
+async function stubEpisode(page: Page): Promise<void> {
+  await stubArticle(page, { post: EPISODE_POST, feed: { tags: TAGS } });
+  await page.route(
+    (url) => url.pathname === '/api/entries/1',
+    (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: entryDetailJson(EPISODE_POST, '<p>Show notes.</p>', CHAPTERS) })
+        : route.fallback(),
+  );
+}
+
+const HEADER_CASES: HeaderCase[] = [
+  {
+    name: 'the app-bar brand',
+    viewport: DESKTOP,
+    stub: (page) => stubMagazine(page, ONE_ENTRY),
+    path: '/?subscription=1',
+    row: async (page) => page.locator('app-reader-header .brand'),
+    icon: 'app-spinner',
+    text: '.name',
+  },
+  {
+    name: 'the list-header lead of a feed title',
+    viewport: PHONE,
+    stub: (page) => stubMagazine(page, ONE_ENTRY),
+    path: '/?subscription=1',
+    row: async (page) => page.locator('.list-header h2'),
+    icon: 'app-favicon',
+    text: ':scope > span:not(.sr-only)',
+  },
+  {
+    name: 'the list-header lead of a tag title',
+    viewport: PHONE,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    path: `/?tag=${TAGS[0].id}`,
+    row: async (page) => page.locator('.list-header h2'),
+    icon: 'app-tag-glyph',
+    text: ':scope > span:not(.sr-only)',
+  },
+  {
+    name: 'the list-header lead of a search title',
+    viewport: PHONE,
+    stub: async (page) => {
+      await stubMagazine(page, ONE_ENTRY);
+      await page.route(
+        (url) => url.pathname === '/api/entries/search',
+        (route) => route.fulfill({ json: { entries: ONE_ENTRY, nextCursor: null } }),
+      );
+    },
+    path: `/?q=${encodeURIComponent(LONG_SEARCH)}`,
+    row: async (page) => page.locator('.list-header h2'),
+    icon: 'app-icon',
+    text: ':scope > span:not(.sr-only)',
+    wraps: true,
+  },
+  {
+    name: 'a labelled list action',
+    viewport: DESKTOP,
+    storage: { 'sfr.layout': 'list' },
+    stub: (page) => stubMagazine(page, ONE_ENTRY),
+    path: '/?subscription=1',
+    row: async (page) => page.locator('.list-header .list-action.refresh'),
+    icon: 'app-icon',
+    text: '.txt',
+  },
+  {
+    name: 'the article bar nameplate',
+    viewport: DESKTOP,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator('app-article-layer .bar-name');
+    },
+    icon: 'app-favicon',
+    text: '.bar-title',
+  },
+  {
+    name: 'the full-screen mini nameplate',
+    viewport: PHONE,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator('app-article-layer .mini');
+    },
+    icon: 'app-favicon',
+    text: '.mini-title',
+  },
+  {
+    name: 'the listen row',
+    viewport: DESKTOP,
+    stub: stubEpisode,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      return page.locator('app-listen-row .listen:not(.queue)');
+    },
+    icon: 'app-icon',
+    text: '.listen-label',
+    spaced: true,
+  },
+  {
+    name: 'a reader-panel toggle',
+    viewport: DESKTOP,
+    stub: stubEpisode,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+      return page.locator('app-reader-panel .reader-panel__toggle').first();
+    },
+    icon: 'app-icon',
+    text: null,
+  },
+];
+
+for (const setup of SETUPS) {
+  test.describe(`headers, ${setup.theme} at ${setup.step}%`, () => {
+    for (const header of HEADER_CASES) {
+      test(`${header.name} centres its icon on the cap middle`, async ({ browser }) => {
+        const page = await openPage(browser, setup, header.viewport);
+        try {
+          if (header.storage) await presetLocalStorage(page, header.storage);
+          await header.stub(page);
+          await stubAccountTheme(page, setup.theme);
+          await page.goto(header.path);
+          const row = await header.row(page);
+          await expect(row).toBeVisible();
+          await settle(page, setup.theme);
+          const textHolder = header.text === null ? row : row.locator(header.text).first();
+
+          const measured = await measureFirstLine({
+            icon: row.locator(header.icon).first(),
+            firstLine: textHolder,
+            block: textHolder,
+          });
+
+          expect(
+            Math.abs(measured.offset),
+            `icon centre ${measured.iconCentre} against cap middle ${measured.capMiddle}`,
+          ).toBeLessThanOrEqual(TOLERANCE);
+          if (header.wraps) {
+            expect(measured.lines, 'the text spans two lines or more').toBeGreaterThanOrEqual(
+              MIN_LINES,
+            );
+          }
+          if (header.spaced) {
+            const { side, gap } = await measureSpacing(row, header.icon, header.text);
+            expect(Math.abs(side - gap), `side ${side} against gap ${gap}`).toBeLessThanOrEqual(
+              TOLERANCE,
+            );
+          }
+        } finally {
+          await page.context().close();
+        }
+      });
+    }
   });
 }

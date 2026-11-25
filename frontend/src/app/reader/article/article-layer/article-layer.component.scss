@@ -1,5 +1,6 @@
 @use '../../../theme/corner-circle-button' as circle;
 @use '../../../theme/list-chrome';
+@use '../../../theme/icon-lead';
 
 /* `clip`, not `hidden`: the return swipe's overflow is cut without the host
    becoming a scroller the chrome would sit in (#1332). Isolated so the back-to-top
@@ -129,14 +130,17 @@
 /* Standing nameplate: the toolbar retracts, leaving nothing naming a
    scrolled-down article (#270). Above the toolbar, which slides up beneath it. */
 .mini {
+  @include icon-lead.first-line('::ng-deep > app-favicon', '::ng-deep > .mini-title');
+  @include icon-lead.centred-line;
+
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   z-index: 2;
   display: flex;
-  align-items: center;
   gap: var(--space-2);
+  font-size: var(--fs-sm);
 
   /* The token, not `min-height`: the toolbar hangs at exactly this offset, so
      the strip's box may not grow away from it. */
@@ -144,6 +148,15 @@
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
   background: var(--surface-1);
+}
+
+.mini ::ng-deep > app-favicon {
+  margin-inline-end: 0;
+}
+
+/* A zero basis keeps the title on the strip's one flex line, however long it runs. */
+.mini ::ng-deep > .mini-title {
+  flex: 1 1 0;
 }
 
 .bar {

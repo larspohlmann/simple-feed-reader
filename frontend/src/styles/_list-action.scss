@@ -3,10 +3,12 @@
 // are projected through the list header's outlets (view encapsulation).
 @use '../app/theme/breakpoints' as bp;
 @use '../app/theme/glass-rim';
+@use '../app/theme/icon-lead';
 
 .list-action {
+  @include icon-lead.first-line('> app-icon, > app-pending-dots', '> .txt');
+
   display: inline-flex;
-  align-items: center;
   gap: var(--space-1);
   padding: 0;
   border: none;
@@ -42,6 +44,7 @@
 // a smaller bordered glyph box, kept while pending dots stand in for the icon.
 @mixin icon-only-box($action) {
   #{$action} {
+    align-items: center;
     justify-content: center;
     width: var(--tap-target);
     height: var(--tap-target);
@@ -50,11 +53,19 @@
   #{$action} app-icon,
   #{$action} app-pending-dots {
     display: inline-flex;
+    align-self: auto;
+    block-size: auto;
+    margin-block: 0;
     box-sizing: content-box;
     padding: var(--space-2);
     border-radius: var(--radius-sm);
 
     @include glass-rim.ring(var(--border), control);
+  }
+
+  #{$action} app-icon::before,
+  #{$action} app-pending-dots::before {
+    content: none;
   }
 }
 

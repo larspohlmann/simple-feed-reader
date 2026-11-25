@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 :host {
   @include glass-rim.filled(var(--surface-1));
@@ -9,8 +10,9 @@
 }
 
 .reader-panel__toggle {
+  @include icon-lead.first-line('> app-icon', null);
+
   display: flex;
-  align-items: center;
   gap: var(--space-1);
   width: 100%;
   padding: var(--space-2) var(--space-3);
