@@ -610,6 +610,15 @@ const MENU_CASES: MenuCase[] = [
   },
 ];
 
+/** A menu item that is no row: the text of `item` starts where the lead icons of its menu do. */
+const EDGE_CASES = [
+  { name: 'the account menu heading', menu: MENU_CASES[0], item: '.head' },
+  { name: 'the account menu who avatar', menu: MENU_CASES[0], item: '.who > app-user-avatar' },
+  { name: 'the share popover quote hint', menu: MENU_CASES[5], item: '.quote-hint' },
+  { name: 'the action-sheet note', menu: MENU_CASES[8], item: '.note' },
+  { name: 'the action-sheet title', menu: MENU_CASES[8], item: '.title' },
+];
+
 async function prepareMenu(browser: Browser, setup: Setup, menu: MenuCase): Promise<Page> {
   const context = await browser.newContext({
     baseURL: test.info().project.use.baseURL,
@@ -678,6 +687,41 @@ for (const setup of SETUPS) {
               LINE_TOLERANCE,
             );
           }
+        } finally {
+          await page.context().close();
+        }
+      });
+    }
+
+    for (const edge of EDGE_CASES) {
+      test(`${edge.name} starts on the edge its row icons start at`, async ({ browser }) => {
+        const page = await prepareMenu(browser, setup, edge.menu);
+        try {
+          const row = await edge.menu.row(page);
+          await expect(row).toBeVisible();
+          await settle(page, setup.theme);
+
+          const [iconLeft, textLeft] = await row.evaluate(
+            (element, [iconSelector, itemSelector]) => {
+              const menu = element.closest('[role=menu]')!;
+              const scope = element.closest('app-action-sheet') ?? menu;
+              const item = scope.querySelector(itemSelector!)!;
+              const iconLeft = menu.querySelector(iconSelector!)!.getBoundingClientRect().left;
+              if (item.matches('app-user-avatar'))
+                return [iconLeft, item.getBoundingClientRect().left];
+              const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
+              let node: Node | null = walker.nextNode();
+              while (node && !node.textContent?.trim()) node = walker.nextNode();
+              const range = document.createRange();
+              range.selectNodeContents(node!);
+              return [iconLeft, range.getClientRects()[0].left];
+            },
+            [edge.menu.icon, edge.item] as const,
+          );
+          expect(
+            Math.abs(iconLeft - textLeft),
+            `icons ${iconLeft}, item ${textLeft}`,
+          ).toBeLessThanOrEqual(TOLERANCE);
         } finally {
           await page.context().close();
         }

@@ -1,8 +1,18 @@
 @use 'glass-rim';
 @use 'icon-lead';
 
+// The edge the rows' icons start at, for the menu's own items (a title, a note, a rule) to line up
+// with. Declared where the row font applies: the registered length reaches an item in another font as px.
+@mixin menu-lead-space($inset: var(--row-pad-y)) {
+  font-size: var(--fs-base);
+
+  --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
+}
+
 // The rows of a role=menu, drawn alike by the share popover and the action sheet.
 @mixin menu-items($inset: var(--row-pad-y)) {
+  @include menu-lead-space($inset);
+
   [role='menuitem'] {
     @include icon-lead.box-lead(
       $inset,
@@ -45,7 +55,7 @@
   [role='separator'] {
     border: none;
     border-block-start: 1px solid var(--border);
-    margin: var(--space-1) var(--row-pad-x);
+    margin: var(--space-1) var(--icon-lead-space);
   }
 }
 
