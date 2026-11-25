@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -195,60 +196,44 @@ final class OpmlControllerTest extends ApiTestCase
         self::assertSame(['From Feedly'], $root['destination']);
     }
 
-    public function testPreviewCarriesAFolderRenameIntoTheDestinations(): void
+    #[DataProvider('folderRenames')]
+    public function testPreviewCarriesAFolderRenameIntoTheDestinations(string $email, string $submitted): void
     {
         $client = self::createClient();
 
-        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-rename@example.com')), [
+        $this->postPreview($client, $this->bearerFor($this->factory()->create('preview-' . $email)), [
             'opml' => $this->techFolderOpml(),
-            'folderNames' => ['0' => 'Gadgets'],
+            'folderNames' => ['0' => $submitted],
         ]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        $root = $this->payload($client)['root'];
-        self::assertIsArray($root);
-        $folders = $root['folders'];
-        self::assertIsArray($folders);
-        $folder = $folders[0];
-        self::assertIsArray($folder);
+        $folder = $this->firstFolder($client);
         self::assertSame(['Gadgets'], $folder['destination']);
         self::assertSame('Tech', $folder['name']);
     }
 
-    public function testPreviewTrimsAFolderRename(): void
+    #[DataProvider('folderRenames')]
+    public function testImportFilesTheFeedUnderTheRenamedFolder(string $email, string $submitted): void
     {
         $client = self::createClient();
-
-        $this->postPreview($client, $this->bearerFor($this->factory()->create('opml-rename-trim@example.com')), [
-            'opml' => $this->techFolderOpml(),
-            'folderNames' => ['0' => '  Gadgets  '],
-        ]);
-
-        self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        $root = $this->payload($client)['root'];
-        self::assertIsArray($root);
-        $folders = $root['folders'];
-        self::assertIsArray($folders);
-        $folder = $folders[0];
-        self::assertIsArray($folder);
-        self::assertSame(['Gadgets'], $folder['destination']);
-    }
-
-    public function testImportFilesTheFeedUnderTheRenamedFolder(): void
-    {
-        $client = self::createClient();
-        [$headers, $user] = $this->bearerAndUser('opml-import-rename@example.com');
+        [$headers, $user] = $this->bearerAndUser('import-' . $email);
 
         $this->postImport($client, $headers, [
             'opml' => $this->techFolderOpml(),
             'feedUrls' => ['https://tech.example/feed'],
-            'folderNames' => ['0' => 'Gadgets'],
+            'folderNames' => ['0' => $submitted],
         ]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        $tags = $this->entityManager()->getRepository(Tag::class);
-        self::assertNotNull($tags->findOneBy(['user' => $user, 'name' => 'Gadgets']));
-        self::assertNull($tags->findOneBy(['user' => $user, 'name' => 'Tech']));
+        $tags = $this->entityManager()->getRepository(Tag::class)->findBy(['user' => $user]);
+        self::assertSame(['Gadgets'], array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function folderRenames(): iterable
+    {
+        yield 'as typed' => ['opml-rename@example.com', 'Gadgets'];
+        yield 'padded with spaces' => ['opml-rename-trim@example.com', '  Gadgets  '];
     }
 
     public function testABlankFolderNameIsRejected(): void
@@ -261,22 +246,6 @@ final class OpmlControllerTest extends ApiTestCase
         ]);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
-    }
-
-    public function testImportTrimsAFolderRename(): void
-    {
-        $client = self::createClient();
-        [$headers, $user] = $this->bearerAndUser('opml-import-trim@example.com');
-
-        $this->postImport($client, $headers, [
-            'opml' => $this->techFolderOpml(),
-            'feedUrls' => ['https://tech.example/feed'],
-            'folderNames' => ['0' => '  Gadgets  '],
-        ]);
-
-        self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        $tags = $this->entityManager()->getRepository(Tag::class)->findBy(['user' => $user]);
-        self::assertSame(['Gadgets'], array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
     }
 
     public function testImportWithABlankFolderNameIsRejected(): void
@@ -322,6 +291,19 @@ final class OpmlControllerTest extends ApiTestCase
         ]);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /** @return array<mixed> */
+    private function firstFolder(KernelBrowser $client): array
+    {
+        $root = $this->payload($client)['root'];
+        self::assertIsArray($root);
+        $folders = $root['folders'];
+        self::assertIsArray($folders);
+        $folder = $folders[0];
+        self::assertIsArray($folder);
+
+        return $folder;
     }
 
     private function techFolderOpml(): string
