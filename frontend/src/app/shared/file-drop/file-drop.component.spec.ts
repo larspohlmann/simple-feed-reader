@@ -40,25 +40,34 @@ describe('FileDropComponent', () => {
     fixture.detectChanges();
   }
 
+  const valueWrites: string[] = [];
+
   function pick(fixture: ReturnType<typeof create>, file: File): HTMLInputElement {
     const input = fixture.nativeElement.querySelector('input[type=file]') as HTMLInputElement;
     Object.defineProperty(input, 'files', {
       configurable: true,
       value: { length: 1, item: () => file },
     });
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get: () => '',
+      set: (written: string) => valueWrites.push(written),
+    });
     input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
     return input;
   }
+
+  beforeEach(() => (valueWrites.length = 0));
 
   const opml = () => new File(['<opml/>'], 'a.opml');
 
   it('emits the file picked through the input', () => {
     const fixture = create();
     const file = opml();
-    const input = pick(fixture, file);
+    pick(fixture, file);
     expect(fixture.componentInstance.received).toEqual([file]);
-    expect(input.value).toBe('');
+    expect(valueWrites).toEqual(['']);
   });
 
   it('emits the same file picked twice', () => {
@@ -67,6 +76,7 @@ describe('FileDropComponent', () => {
     pick(fixture, file);
     pick(fixture, file);
     expect(fixture.componentInstance.received).toEqual([file, file]);
+    expect(valueWrites).toEqual(['', '']);
   });
 
   it('emits the first dropped file that matches', () => {
