@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'icon-lead';
 @use 'pill-toggle';
 
 // A button of a post's action row (#2309): icon, label and count, the label dropped on phones.
@@ -24,9 +25,7 @@
       display: none;
     }
 
-    // With the label hidden and no count, the icon stands alone: no lead space after it.
-    > :has(+ .label:last-child) {
-      margin-inline-end: 0;
-    }
+    // With the label hidden and no count, the icon stands alone.
+    @include icon-lead.alone('> :has(+ .label:last-child)');
   }
 }

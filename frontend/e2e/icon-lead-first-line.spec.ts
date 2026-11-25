@@ -321,6 +321,66 @@ const PILL_CASES: PillCase[] = [
   },
 ];
 
+/** A control and the glyph it paints; `alone` when no text stands beside the glyph. */
+interface ControlCase {
+  name: string;
+  viewport: { width: number; height: number };
+  stub: (page: Page) => Promise<void>;
+  path: string;
+  control: (page: Page) => Promise<Locator>;
+  alone: boolean;
+}
+
+const CONTROL_CASES: ControlCase[] = [
+  {
+    name: 'the health Unsubscribe button, a small app-button with only its glyph,',
+    viewport: DESKTOP,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { status: 'gone' }),
+    path: '/settings/organise',
+    control: async (page) => {
+      await page.locator('.health-card .health-head').click();
+      return page.locator('[data-test=unsubscribe] button');
+    },
+    alone: true,
+  },
+  {
+    name: 'a small app-button with a leading icon',
+    viewport: DESKTOP,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    path: '/settings/organise',
+    control: async (page) => page.getByRole('button', { name: 'New tag' }),
+    alone: false,
+  },
+  {
+    name: 'a phone Reply with neither label nor count',
+    viewport: PHONE,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    control: async (page) => {
+      await openArticle(page);
+      return page.locator(`${LEMMY_COMMENT} button.reply`);
+    },
+    alone: true,
+  },
+];
+
+/** The room between the painted glyph (not its slot, which may have no height) and each inner edge. */
+async function measureGlyphInset(
+  control: Locator,
+): Promise<{ top: number; bottom: number; start: number; end: number }> {
+  return control.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const box = element.getBoundingClientRect();
+    const glyph = element.querySelector('.material-symbols-outlined')!.getBoundingClientRect();
+    return {
+      top: glyph.top - box.top - parseFloat(style.borderTopWidth),
+      bottom: box.bottom - parseFloat(style.borderBottomWidth) - glyph.bottom,
+      start: glyph.left - box.left - parseFloat(style.borderLeftWidth),
+      end: box.right - parseFloat(style.borderRightWidth) - glyph.right,
+    };
+  });
+}
+
 /** The glyph's start from the row's padding edge, and the gap from the glyph to the text. */
 async function measureSpacing(
   row: Locator,
@@ -416,29 +476,36 @@ for (const setup of SETUPS) {
       }
     });
 
-    test('a phone Reply with neither label nor count sits midway between its edges', async ({
-      browser,
-    }) => {
-      const page = await openPage(browser, setup, PHONE);
-      try {
-        await stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } });
-        await stubAccountTheme(page, setup.theme);
-        await page.goto('/?subscription=1');
-        await openArticle(page);
-        const reply = page.locator(`${LEMMY_COMMENT} button.reply`);
-        await settle(page, setup.theme);
+    for (const control of CONTROL_CASES) {
+      test(`${control.name} paints its glyph inside its edges`, async ({ browser }) => {
+        const page = await openPage(browser, setup, control.viewport);
+        try {
+          await control.stub(page);
+          await stubAccountTheme(page, setup.theme);
+          await page.goto(control.path);
+          const element = await control.control(page);
+          await expect(element).toBeVisible();
+          await settle(page, setup.theme);
 
-        const [start, end] = await reply.evaluate((button) => {
-          const box = button.getBoundingClientRect();
-          const border = parseFloat(getComputedStyle(button).borderLeftWidth);
-          const glyph = button.querySelector('app-icon')!.getBoundingClientRect();
-          return [glyph.left - box.left - border, box.right - border - glyph.right];
-        });
-        expect(Math.abs(start - end), `${start} | ${end}`).toBeLessThanOrEqual(TOLERANCE);
-      } finally {
-        await page.context().close();
-      }
-    });
+          const inset = await measureGlyphInset(element);
+          for (const [edge, room] of Object.entries(inset)) {
+            expect(room, `${edge} room ${room}`).toBeGreaterThanOrEqual(-TOLERANCE);
+          }
+          if (control.alone) {
+            expect(
+              Math.abs(inset.top - inset.bottom),
+              `top ${inset.top} | bottom ${inset.bottom}`,
+            ).toBeLessThanOrEqual(TOLERANCE);
+            expect(
+              Math.abs(inset.start - inset.end),
+              `start ${inset.start} | end ${inset.end}`,
+            ).toBeLessThanOrEqual(TOLERANCE);
+          }
+        } finally {
+          await page.context().close();
+        }
+      });
+    }
 
     test('a trailing chevron in an app-button keeps the gap token after its label and no lead space after it', async ({
       browser,
