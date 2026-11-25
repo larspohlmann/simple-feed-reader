@@ -50,7 +50,7 @@ function previewOf(freeSlots = 10, destinationPrefix = 'X'): OpmlPreview {
             },
           ],
         },
-        { name: 'Deep', dropped: true, destination: [], feeds: [], folders: [] },
+        { name: 'Deep', dropped: true, destination: ['X', 'A', 'B'], feeds: [], folders: [] },
       ],
     },
   };
@@ -255,6 +255,10 @@ describe('OpmlImportDialogComponent', () => {
     option.click();
     fixture.detectChanges();
   };
+  const openTags = (row: HTMLElement): void => {
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-tags-toggle"] button')!.click();
+    fixture.detectChanges();
+  };
   const toggleTagIn = (root: HTMLElement, tagId: number): void => {
     const picker = fixture.debugElement
       .queryAll(By.directive(TagPickerComponent))
@@ -270,6 +274,7 @@ describe('OpmlImportDialogComponent', () => {
   it('swaps the destination for the tag picker and back', () => {
     mount();
 
+    openTags(feedRow('a1'));
     pickMode(feedRow('a1'), 'Only tags');
     expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
     expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
@@ -282,6 +287,7 @@ describe('OpmlImportDialogComponent', () => {
   it('picking Folder + tags shows the tag picker and the plus line', () => {
     mount();
 
+    openTags(feedRow('a1'));
     pickMode(feedRow('a1'), 'Folder + tags');
     expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
     expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A');
@@ -289,6 +295,86 @@ describe('OpmlImportDialogComponent', () => {
     toggleTagIn(feedRow('a1'), 7);
 
     expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+  });
+
+  it('shows the mode choice only once a feed is opened for tagging', () => {
+    mount();
+    const toggle = (): HTMLButtonElement =>
+      feedRow('a1').querySelector('[data-testid="opml-import-tags-toggle"] button')!;
+    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(textOf(toggle())).toBe('Tags');
+
+    openTags(feedRow('a1'));
+
+    expect(feedRow('a1').querySelector('app-segmented-choice')).not.toBeNull();
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(feedRow('b1').querySelector('app-segmented-choice')).toBeNull();
+
+    openTags(feedRow('a1'));
+    expect(feedRow('a1').querySelector('app-segmented-choice')).toBeNull();
+  });
+
+  it('a feed with tags renders opened', () => {
+    mount();
+    openTags(feedRow('a1'));
+    pickMode(feedRow('a1'), 'Only tags');
+
+    openTags(feedRow('a1'));
+
+    expect(feedRow('a1').querySelector('app-segmented-choice')).not.toBeNull();
+  });
+
+  it('a feed that cannot be imported has no tags toggle', () => {
+    mount();
+
+    expect(feedRow('a2').querySelector('[data-testid="opml-import-tags-toggle"]')).toBeNull();
+  });
+
+  it('a dropped folder shows its own name and offers no rename', () => {
+    mount();
+
+    expect(textOf(folderRow('Deep').querySelector('.name'))).toBe('Deep');
+    expect(folderRow('Deep').querySelector('[data-testid="opml-import-rename-folder"]')).toBeNull();
+    expect(folderRow('Deep').querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+  });
+
+  it('a feed without a web address shows its host as plain text', () => {
+    const odd = previewOf();
+    odd.root.feeds = [{ ...feed('r'), url: 'feed://r.test/rss' }];
+    mount(odd);
+
+    expect(feedRow('r').querySelector('[data-testid="opml-import-site"]')).toBeNull();
+    expect(textOf(feedRow('r').querySelector('span.host'))).toBe('r.test');
+  });
+
+  it('focuses the rename input', () => {
+    mount();
+
+    const input = startRename('A', 'A');
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('names only the known tags of a feed', () => {
+    mount();
+    openTags(feedRow('a1'));
+    pickMode(feedRow('a1'), 'Folder + tags');
+    toggleTagIn(feedRow('a1'), 7);
+    toggleTagIn(feedRow('a1'), 99);
+
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+  });
+
+  it('disables Apply to ticked once nothing is ticked', () => {
+    mount();
+    press('opml-import-tag-ticked');
+    expect(buttonOf('opml-import-bulk-apply').disabled).toBe(false);
+
+    press('opml-import-select-none');
+
+    expect(buttonOf('opml-import-bulk-apply').disabled).toBe(true);
   });
 
   it('the chevron hides the folder rows', () => {
@@ -653,6 +739,7 @@ describe('OpmlImportDialogComponent', () => {
     mount();
     jest.useFakeTimers();
     checkbox(feedRow('b1')).click();
+    openTags(feedRow('a1'));
     pickMode(feedRow('a1'), 'Only tags');
     toggleTagIn(feedRow('a1'), 7);
 

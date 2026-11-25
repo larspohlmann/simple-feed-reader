@@ -109,6 +109,7 @@
       "expandAll": "Expand all",
       "tagTicked": "Tag ticked feeds",
       "tagMode": "Tags for this feed",
+      "tagsToggle": "Tags",
       "bulkAll": "This tags all {{count}} feeds in the file.",
       "bulkApply": "Apply to ticked",
       "mode": {

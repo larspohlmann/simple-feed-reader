@@ -109,6 +109,7 @@
       "expandAll": "Expandir todo",
       "tagTicked": "Etiquetar los feeds marcados",
       "tagMode": "Etiquetas de este feed",
+      "tagsToggle": "Etiquetas",
       "bulkAll": "Esto etiqueta los {{count}} feeds del archivo.",
       "bulkApply": "Aplicar a los marcados",
       "mode": {

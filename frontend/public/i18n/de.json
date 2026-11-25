@@ -109,6 +109,7 @@
       "expandAll": "Alle ausklappen",
       "tagTicked": "Markierte Feeds taggen",
       "tagMode": "Tags für diesen Feed",
+      "tagsToggle": "Tags",
       "bulkAll": "Damit werden alle {{count}} Feeds der Datei getaggt.",
       "bulkApply": "Auf Markierte anwenden",
       "mode": {

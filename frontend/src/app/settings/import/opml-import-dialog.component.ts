@@ -111,6 +111,7 @@ export class OpmlImportDialogComponent {
   private readonly tagNamesById = computed(
     () => new Map(this.tags().map((tag) => [tag.id, tag.name])),
   );
+  private readonly openedFeeds = signal<ReadonlySet<string>>(new Set());
   protected readonly bulkOpen = signal(false);
   protected readonly bulkMode = signal<OpmlTagMode>('folder');
   protected readonly bulkTagIds = signal<ReadonlySet<number>>(new Set());
@@ -127,17 +128,15 @@ export class OpmlImportDialogComponent {
     parentTagName: this.parent().trim() || null,
     folderNames: this.selection.folderNames(),
   }));
-  private readonly previewedPlacement = signal<OpmlPlacement | null>({
+  private readonly previewedPlacement = signal<OpmlPlacement>({
     parentTagName: null,
     folderNames: {},
   });
   protected readonly canImport = computed(() => {
-    const previewed = this.previewedPlacement();
     return (
       this.selection.selectedCount() > 0 &&
       !this.selection.overLimit() &&
-      previewed !== null &&
-      placementKey(previewed) === placementKey(this.currentPlacement())
+      placementKey(this.previewedPlacement()) === placementKey(this.currentPlacement())
     );
   });
   protected readonly editingKey = signal<string | null>(null);
@@ -168,7 +167,9 @@ export class OpmlImportDialogComponent {
         this.previewedPlacement.set(placement);
       });
     effect(() => {
-      this.renameInput()?.nativeElement.select();
+      const input = this.renameInput()?.nativeElement;
+      input?.focus();
+      input?.select();
     });
     toObservable(this.tags)
       .pipe(
@@ -216,7 +217,15 @@ export class OpmlImportDialogComponent {
 
   protected tagNames(tagIds: ReadonlySet<number>): string {
     const names = this.tagNamesById();
-    return [...tagIds].map((tagId) => names.get(tagId) ?? '').join(', ');
+    return [...tagIds].flatMap((tagId) => names.get(tagId) ?? []).join(', ');
+  }
+
+  protected isTagsOpen(url: string): boolean {
+    return this.openedFeeds().has(url) || this.selection.modeOf(url) !== 'folder';
+  }
+
+  protected toggleTags(url: string): void {
+    this.openedFeeds.update((previous) => toggled(previous, url));
   }
 
   protected openBulk(): void {
@@ -245,9 +254,7 @@ export class OpmlImportDialogComponent {
     this.dialogRef.disableClose = true;
     this.failure.set(null);
     this.api
-      .importOpml(
-        this.selection.toRequest(this.data.opml, this.previewedPlacement()?.parentTagName ?? null),
-      )
+      .importOpml(this.selection.toRequest(this.data.opml, this.previewedPlacement().parentTagName))
       .subscribe({
         next: (result) => this.dialogRef.close(result),
         error: (error: HttpErrorResponse) => {

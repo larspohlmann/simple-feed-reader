@@ -57,6 +57,9 @@ export class ButtonComponent {
    */
   readonly ariaLabel = input<string>();
 
+  /** Set on a button that shows or hides a region, so it announces which. */
+  readonly ariaExpanded = input<boolean | null>(null);
+
   /** Stretch to the container's width instead of hugging the label. */
   readonly block = input(false, { transform: booleanAttribute });
 

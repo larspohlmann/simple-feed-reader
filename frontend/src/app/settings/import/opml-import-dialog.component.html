@@ -122,6 +122,7 @@
           variant="primary"
           size="sm"
           data-testid="opml-import-bulk-apply"
+          [disabled]="selection.selectedCount() === 0"
           (click)="applyBulk()"
         >
           {{ 'settings.opml.bulkApply' | transloco }}
@@ -174,7 +175,7 @@
                 (keydown.escape)="cancelRename(); $event.stopPropagation()"
                 (blur)="commitRename(row, $event)"
               />
-            } @else {
+            } @else if (!row.dropped) {
               <button
                 appIconButton
                 type="button"
@@ -204,6 +205,7 @@
         @let host = row.host;
         @let title = row.feed.title ?? host;
         @let changed = selection.modeOf(url) !== 'folder';
+        @let tagsOpen = isTagsOpen(url);
         <li
           class="row"
           data-testid="opml-import-feed"
@@ -222,29 +224,45 @@
               />
               <span class="who">
                 <span class="name">{{ title }}</span>
-                <a
-                  class="host"
-                  data-testid="opml-import-site"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  [href]="row.siteHref"
-                  >{{ host }}</a
-                >
+                @if (row.siteHref; as siteHref) {
+                  <a
+                    class="host"
+                    data-testid="opml-import-site"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [href]="siteHref"
+                    >{{ host }}</a
+                  >
+                } @else {
+                  <span class="host">{{ host }}</span>
+                }
               </span>
             </label>
             @if (row.feed.state === 'new') {
+              <app-button
+                variant="ghost"
+                size="sm"
+                data-testid="opml-import-tags-toggle"
+                [ariaExpanded]="tagsOpen"
+                (click)="toggleTags(url)"
+              >
+                {{ 'settings.opml.tagsToggle' | transloco }}
+              </app-button>
+            } @else {
+              <span class="state">{{ stateKeys[row.feed.state] | transloco }}</span>
+            }
+          </div>
+          @if (row.feed.state === 'new') {
+            @if (tagsOpen) {
               <app-segmented-choice
+                class="choice"
                 [options]="tagModes"
                 [selected]="selection.modeOf(url)"
                 ariaLabelKey="settings.opml.tagMode"
                 labelPrefix="settings.opml.mode."
                 (pick)="selection.setMode(url, $event)"
               />
-            } @else {
-              <span class="state">{{ stateKeys[row.feed.state] | transloco }}</span>
             }
-          </div>
-          @if (row.feed.state === 'new') {
             @if (changed) {
               <app-tag-picker
                 class="tags"

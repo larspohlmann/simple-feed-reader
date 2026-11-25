@@ -109,6 +109,7 @@
       "expandAll": "Tout développer",
       "tagTicked": "Étiqueter les flux cochés",
       "tagMode": "Étiquettes de ce flux",
+      "tagsToggle": "Étiquettes",
       "bulkAll": "Cela étiquette les {{count}} flux du fichier.",
       "bulkApply": "Appliquer aux flux cochés",
       "mode": {
