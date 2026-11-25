@@ -10,7 +10,11 @@
 
 .row {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
-  @include icon-lead.fixed-row(var(--search-row-h), '> app-icon, > app-spinner');
+  @include icon-lead.fixed-row-lead(
+    var(--search-row-h),
+    '> app-icon, > app-spinner',
+    var(--space-2)
+  );
 
   display: flex;
   align-items: center;

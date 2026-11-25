@@ -259,6 +259,16 @@
   box-shadow: 0 6px 20px rgb(0 0 0 / 28%);
 }
 
+/* Out of its list, a feed's preview restates the list's row, so its lead keeps its space. */
+.feedrow.cdk-drag-preview {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+}
+
+.feedrow.cdk-drag-preview.leaf-preview {
+  --row-h: var(--sidebar-leaf-row-h);
+}
+
 .cdk-drag-preview .handle {
   color: var(--accent);
 }
@@ -400,9 +410,13 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: #{icon-lead.space(var(--tap-target))};
+  gap: var(--space-3);
   padding-right: var(--space-1);
   color: var(--text-primary);
+}
+
+.rowbody > .lead {
+  margin-inline-end: calc(#{icon-lead.space(var(--tap-target))} - var(--space-3));
 }
 
 /* Starts where the feed rows' names start: past the handle, the favicon column and the gap. */

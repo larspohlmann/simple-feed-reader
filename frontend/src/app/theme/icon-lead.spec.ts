@@ -25,6 +25,10 @@ const PROBE = `
 .fixed {
   @include icon-lead.fixed-row(var(--sidebar-row-h), '> .glyph');
 }
+
+.fixed-lead {
+  @include icon-lead.fixed-row-lead(var(--sidebar-row-h), '> .glyph', var(--space-3));
+}
 `;
 
 describe('icon-lead', () => {
@@ -79,6 +83,16 @@ describe('icon-lead', () => {
       '--icon-lead-space': 'calc((var(--sidebar-row-h) - 1cap) / 2)',
       'padding-inline-start': 'var(--icon-lead-space)',
       gap: 'var(--icon-lead-space)',
+    });
+  });
+
+  it('keeps the lead space before the text only, and the row token between the items after it', () => {
+    expect(rules['.fixed-lead']).toMatchObject({
+      'padding-inline-start': 'var(--icon-lead-space)',
+      gap: 'var(--space-3)',
+    });
+    expect(rules['.fixed-lead > .glyph']).toMatchObject({
+      'margin-inline-end': 'calc(var(--icon-lead-space) - var(--space-3))',
     });
   });
 });

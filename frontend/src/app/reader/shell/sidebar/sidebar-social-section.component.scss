@@ -32,7 +32,7 @@
 }
 
 .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
-  margin-left: calc(var(--space-1) - var(--icon-lead-space));
+  margin-left: calc(var(--space-1) - var(--space-3));
 }
 
 .section-head .section-rest {
@@ -52,7 +52,7 @@
 @media (pointer: coarse) {
   .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
     margin-left: calc(
-      var(--space-2) + var(--space-0) - var(--icon-lead-space) - 2 * var(--chevron-disc-inset)
+      var(--space-2) + var(--space-0) - var(--space-3) - 2 * var(--chevron-disc-inset)
     );
   }
 }

@@ -129,8 +129,9 @@ async function measure(page: Page, { row, lead, label }: Lead): Promise<LeadMeas
         const leadElement = find(leadSelector);
         const leadStyle = getComputedStyle(leadElement);
         const leadBox = leadElement.getBoundingClientRect();
+        // A lead's column is its box padded by its start margin on both sides (a favicon's 2px).
         leadLeft = leadBox.left - px(leadStyle.marginLeft);
-        leadRight = leadBox.right + px(leadStyle.marginRight);
+        leadRight = leadBox.right + px(leadStyle.marginLeft);
       }
       return {
         expected: (height - cap) / 2,
@@ -268,6 +269,16 @@ for (const theme of ['graphite', 'classic'] as const) {
             `${name}: gap ${childRow.gap} vs ${childRow.expected}`,
           ).toBeLessThanOrEqual(TOLERANCE);
         }
+      });
+
+      test('the items after the name keep the row’s own gap', async ({ page }) => {
+        const gap = await page.evaluate(() => {
+          const row = document.querySelector('.feeds-card app-sidebar-feed-row')!;
+          const count = row.querySelector('.count')!.getBoundingClientRect();
+          const menu = row.querySelector('app-sidebar-row-menu')!.getBoundingClientRect();
+          return menu.left - count.right;
+        });
+        expect(Math.abs(gap - 12), `count → ⋯ ${gap} vs --space-3`).toBeLessThanOrEqual(TOLERANCE);
       });
 
       test('a child tag’s glyph starts at its parent tag’s label', async ({ page }) => {

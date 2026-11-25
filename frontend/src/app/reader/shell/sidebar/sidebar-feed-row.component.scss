@@ -10,8 +10,9 @@
   @include row.row-geometry;
 }
 
+/* The favicon's 2px either side make its column the 20px of a lead; the row's lead space follows it. */
 .favicon-slot {
-  margin-inline: var(--space-0);
+  margin-inline: var(--space-0) calc(var(--space-0) + var(--icon-lead-space) - var(--row-gap));
 }
 
 .favicon-slot app-favicon {
@@ -23,13 +24,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--icon-lead-space);
-}
-
-/* The preview is moved to <body>, out of its list: it restates the list's row, so its lead keeps its space. */
-:host-context(.cdk-drag-preview) {
-  --row-h: var(--sidebar-sub-row-h);
-  --row-fs: var(--fs-dense);
+  gap: var(--row-gap);
 }
 
 :host-context(.cdk-drag-preview).organising {

@@ -74,8 +74,14 @@
 }
 
 @mixin row-geometry($color: var(--text-primary)) {
+  --row-gap: var(--space-3);
+
   @include row-box(var(--row-h, var(--sidebar-row-h)));
-  @include icon-lead.fixed-row(var(--row-box), '> .lead, > app-icon');
+  @include icon-lead.fixed-row-lead(
+    var(--row-box),
+    '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
+    var(--row-gap)
+  );
 
   display: flex;
 
@@ -87,6 +93,10 @@
   color: $color;
   font-size: var(--row-fs, var(--fs-base));
   text-decoration: none;
+
+  @media (pointer: coarse) {
+    --row-gap: calc(var(--space-3) + var(--space-0));
+  }
 }
 
 @mixin row-states($row, $current) {
@@ -176,7 +186,7 @@
 
   // Pulls the chevron column in, so a row without ⋯ keeps its count where a row with ⋯ has it.
   .slot {
-    margin-right: calc(var(--icon-lead-space) * -1);
+    margin-right: calc(var(--space-3) * -1);
   }
 
   @media (pointer: coarse) {
@@ -269,7 +279,7 @@
   :host {
     position: relative;
     flex: none;
-    margin-right: calc(var(--icon-lead-space) * -1);
+    margin-right: calc(var(--space-3) * -1);
   }
 
   @include dots;
@@ -341,7 +351,7 @@
   .section-head {
     --head-box: var(--sidebar-sub-row-h);
 
-    @include icon-lead.fixed-row(var(--head-box), '.favicon-slot');
+    @include icon-lead.fixed-row-lead(var(--head-box), '.favicon-slot', var(--space-3));
 
     display: flex;
     flex: none;
@@ -403,7 +413,7 @@
     align-self: stretch;
     display: flex;
     align-items: center;
-    gap: inherit;
+    gap: var(--space-3);
     min-width: 0;
     margin-left: calc(var(--icon-lead-space) * -1);
     padding-left: var(--icon-lead-space);

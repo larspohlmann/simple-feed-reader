@@ -96,7 +96,7 @@ The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar
 | `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
 | `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
 
-Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row`, #2558), so a 36px row's lead sits a little further in than a 32px row's.
+Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row-lead`, #2558), so a 36px row's lead sits a little further in than a 32px row's. Every gap after the name (count, ⋯, '+', bell) keeps the row's `--space-3`, so the right-hand columns do not move.
 
 ### Icon sizes
 
@@ -142,8 +142,9 @@ first line's centre, one line or five (#2558). `theme/_icon-lead.scss` is the on
 
 - `icon-lead.first-line($slot)` on the row: `align-items: start`, and the slot is `1lh` tall with the
   glyph centred in it. A free-standing boxed note uses `box($inset, $slot)`, whose padding follows the
-  font; a row with a min-height adds `centred-line`; a fixed-height row uses `fixed-row($height, $slot)`;
-  a slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
+  font; a row with a min-height adds `centred-line`; a fixed-height row uses `fixed-row($height, $slot)`,
+  or `fixed-row-lead($height, $slot, $gap)` when items follow the text: the lead space goes only
+  between the lead and the text, and the rest stay `$gap` apart; a slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
   any child that sets its own: `1lh` and `1cap` are measured on the row.
 - The line reaches the slot as `--icon-lead-line`, a registered `<length>` (`icon-lead.register` in
@@ -1901,7 +1902,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset, <its lead space>)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
-**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--icon-lead-space) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
 
 **The Notifications row** (#2240) leads each network card's rows, only while the network has a connected account and not while organising. It is a feed-row look: a bell lead, the name, and the unseen count as a `<app-count-pill>` instead of a plain count. It has no ⋯ and no chevron, so it ends in an empty `.slot` and `.trail` like any row without them; the pill is pulled right by `calc(var(--space-2) * -1)` so its digit lines up with the other rows' count digits. At 0 there is no pill, and the count is never added to the head's.
 

@@ -62,3 +62,14 @@
   padding-inline-start: var(--icon-lead-space);
   gap: var(--icon-lead-space);
 }
+
+// As fixed-row, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
+@mixin fixed-row-lead($height, $slot, $gap) {
+  @include fixed-row($height, $slot);
+
+  gap: $gap;
+
+  #{$slot} {
+    margin-inline-end: calc(var(--icon-lead-space) - #{$gap});
+  }
+}
