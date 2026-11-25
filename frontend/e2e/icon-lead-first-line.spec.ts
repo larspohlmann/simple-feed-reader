@@ -1,4 +1,5 @@
-import { Browser, expect, Page, test } from '@playwright/test';
+import { Browser, expect, Locator, Page, test } from '@playwright/test';
+import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aStory } from '../src/testing/entry-testing';
 import { settleAnimations } from './support/animations';
 import { presetLocalStorage } from './support/auth';
@@ -19,6 +20,7 @@ import { entryWire } from './support/reader';
  * measures. A case is real only when its text spans two lines or more.
  */
 const PHONE = { width: 375, height: 812 };
+const DESKTOP = { width: 1280, height: 900 };
 const TOLERANCE = 0.5;
 const MIN_LINES = 1.9;
 
@@ -45,10 +47,10 @@ const PAYWALLED_BODY = {
   extractedAt: '2026-11-24T10:00:00+00:00',
 };
 
-async function openPhone(browser: Browser, { step }: Setup): Promise<Page> {
+async function openPage(browser: Browser, { step }: Setup, viewport = PHONE): Promise<Page> {
   const context = await browser.newContext({
     baseURL: test.info().project.use.baseURL,
-    viewport: PHONE,
+    viewport,
   });
   const page = await context.newPage();
   await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
@@ -178,7 +180,7 @@ for (const setup of SETUPS) {
   test.describe(`${setup.theme} at ${setup.step}%`, () => {
     for (const { name, stub, path, parts: locate } of CASES) {
       test(`${name} hangs its icon on the first line`, async ({ browser }) => {
-        const page = await openPhone(browser, setup);
+        const page = await openPage(browser, setup);
         try {
           await stub(page);
           // After the surface stubs: a later route wins, and they answer /api/me too.
@@ -201,5 +203,182 @@ for (const setup of SETUPS) {
         }
       });
     }
+  });
+}
+
+const TAGS = [makeTag(7, 'Politics', { icon: 'home' }), makeTag(8, 'Science', { icon: 'science' })];
+const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
+const SCORED_POST = { ...POST, score: 22, myVote: null };
+
+/** A pill or a button: its row, its icon and the element holding its text (null: bare text). */
+interface PillCase {
+  name: string;
+  viewport: { width: number; height: number };
+  stub: (page: Page) => Promise<void>;
+  path: string;
+  row: (page: Page) => Promise<Locator>;
+  icon: string;
+  text: string | null;
+}
+
+async function openArticle(page: Page): Promise<void> {
+  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+  await expect(page.locator('app-entry-comments li.comment')).toHaveCount(3);
+}
+
+const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
+
+const PILL_CASES: PillCase[] = [
+  {
+    name: 'an entry tag pill',
+    viewport: DESKTOP,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator('app-reader-view app-entry-pills a.pill:not(.feed)').first();
+    },
+    icon: 'app-tag-glyph',
+    text: '.name',
+  },
+  {
+    name: 'a header tag chip',
+    viewport: PHONE,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    path: '/',
+    row: async (page) => page.locator('.tagrow .chip:not(.all)').first(),
+    icon: 'app-tag-glyph',
+    text: null,
+  },
+  {
+    name: 'a tag-picker chip',
+    viewport: PHONE,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await page.getByRole('button', { name: 'Edit feed' }).first().click();
+      return page.locator('app-tag-chips .chip').first();
+    },
+    icon: 'app-tag-glyph',
+    text: '.label',
+  },
+  {
+    name: 'Reply',
+    viewport: DESKTOP,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator(`${LEMMY_COMMENT} button.reply`);
+    },
+    icon: 'app-icon',
+    text: '.label',
+  },
+  {
+    name: 'an app-button with a leading icon',
+    viewport: DESKTOP,
+    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    path: '/settings/organise',
+    row: async (page) => page.getByRole('button', { name: 'New tag' }),
+    icon: 'app-icon',
+    text: null,
+  },
+];
+
+/** The glyph's start from the row's padding edge, and the gap from the glyph to the text. */
+async function measureSpacing(row: Locator, icon: string): Promise<{ side: number; gap: number }> {
+  return row.evaluate((element, iconSelector) => {
+    const glyph = element.querySelector(iconSelector)!;
+    const glyphBox = glyph.getBoundingClientRect();
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let text: Node | null = walker.nextNode();
+    while (text && (!text.textContent?.trim() || glyph.contains(text))) text = walker.nextNode();
+    const range = document.createRange();
+    range.selectNodeContents(text!);
+    const edge =
+      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).borderLeftWidth);
+    return {
+      side: glyphBox.left - edge,
+      gap: range.getClientRects()[0].left - glyphBox.right,
+    };
+  }, icon);
+}
+
+async function preparePill(browser: Browser, setup: Setup, pill: PillCase): Promise<Page> {
+  const page = await openPage(browser, setup, pill.viewport);
+  await pill.stub(page);
+  // After the surface stubs: a later route wins, and they answer /api/me too.
+  await stubAccountTheme(page, setup.theme);
+  await page.goto(pill.path);
+  return page;
+}
+
+for (const setup of SETUPS) {
+  test.describe(`pills and buttons, ${setup.theme} at ${setup.step}%`, () => {
+    for (const pill of PILL_CASES) {
+      test(`${pill.name} centres its icon on the cap middle, as far from the edge as from the text`, async ({
+        browser,
+      }) => {
+        const page = await preparePill(browser, setup, pill);
+        try {
+          const row = await pill.row(page);
+          await expect(row).toBeVisible();
+          await settle(page, setup.theme);
+          const textHolder = pill.text === null ? row : row.locator(pill.text);
+
+          const measured = await measureFirstLine({
+            icon: row.locator(pill.icon),
+            firstLine: textHolder,
+            block: textHolder,
+          });
+          const { side, gap } = await measureSpacing(row, pill.icon);
+
+          expect(
+            Math.abs(measured.offset),
+            `icon centre ${measured.iconCentre} against cap middle ${measured.capMiddle}`,
+          ).toBeLessThanOrEqual(TOLERANCE);
+          expect(Math.abs(side - gap), `side ${side} against gap ${gap}`).toBeLessThanOrEqual(
+            TOLERANCE,
+          );
+        } finally {
+          await page.context().close();
+        }
+      });
+    }
+
+    test('the vote pill centres both arrows on the cap middle and its count between them', async ({
+      browser,
+    }) => {
+      const page = await openPage(browser, setup, DESKTOP);
+      try {
+        await stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } });
+        await stubAccountTheme(page, setup.theme);
+        await page.goto('/?subscription=1');
+        await openArticle(page);
+        const pill = page.locator(`${LEMMY_COMMENT} app-vote-pill .pill`);
+        await settle(page, setup.theme);
+
+        for (const arrow of [0, 1]) {
+          const measured = await measureFirstLine({
+            icon: pill.locator('.arrow app-icon').nth(arrow),
+            firstLine: pill.locator('.number'),
+            block: pill.locator('.number'),
+          });
+          expect(Math.abs(measured.offset), `arrow ${arrow}`).toBeLessThanOrEqual(TOLERANCE);
+        }
+        const [before, after] = await pill.evaluate((element) => {
+          const [up, down] = [...element.querySelectorAll('.arrow app-icon')].map((arrow) =>
+            arrow.getBoundingClientRect(),
+          );
+          const range = document.createRange();
+          range.selectNodeContents(element.querySelector('.number')!);
+          const count = range.getBoundingClientRect();
+          return [count.left - up.right, down.left - count.right];
+        });
+        expect(Math.abs(before - after), `${before} | ${after}`).toBeLessThanOrEqual(TOLERANCE);
+      } finally {
+        await page.context().close();
+      }
+    });
   });
 }

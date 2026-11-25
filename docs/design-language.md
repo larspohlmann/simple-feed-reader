@@ -142,8 +142,11 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 
 - `icon-lead.first-line($slot, $text)` on the row: the slot and the named text share a baseline, and
   the slot's baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on
-  the cap middle whatever the engine rounds. Nothing else in the row moves. A free-standing boxed note
-  uses `box($inset, $slot, $text)`, whose padding follows the font; a row with a min-height adds
+  the cap middle whatever the engine rounds. Nothing else in the row moves. Bare text (a chip's label,
+  an `<app-button>`'s projected text) has no selector: `$text: null` lines the whole row up on the
+  baseline instead. A free-standing boxed note or a pill uses `box($inset, $slot, $text)`, whose padding
+  and icon gap follow the font, or `box-lead($inset, $slot, $text, $gap)` when a count follows the text
+  and keeps `$gap`; a chip whose height is a min-height uses `fixed-row`; a row with a min-height adds
   `centred-line`; a fixed-height row uses `fixed-row($height, $slot, $text)`, which starts the text where
   centring put it, or `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text: the lead
   space goes only between the lead and the text, and the rest stay `$gap` apart; a slot box taller than

@@ -1,4 +1,5 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 
 .hint,
 .effect {
@@ -16,11 +17,9 @@
 
 .pill {
   @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+  @include icon-lead.box-lead(var(--space-1), '> app-tag-glyph', '> span:not(.n)', var(--space-1));
 
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -36,6 +35,7 @@
 }
 
 .pill .n {
+  align-self: center;
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-xs);
   opacity: 0.75;

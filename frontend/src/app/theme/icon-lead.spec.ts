@@ -22,6 +22,14 @@ const PROBE = `
   @include icon-lead.centred-line;
 }
 
+.bare {
+  @include icon-lead.first-line('> .glyph', null);
+}
+
+.pill {
+  @include icon-lead.box-lead(var(--space-1), '> .glyph', '> .text', var(--space-1));
+}
+
 .fixed {
   @include icon-lead.fixed-row(var(--sidebar-row-h), '> .glyph', '> .text');
 }
@@ -80,6 +88,22 @@ describe('icon-lead', () => {
     expect(rules['.chip-row > .chip']).toMatchObject({
       'block-size': 'auto',
       'margin-block': 'calc(calc(var(--icon-sm) + 2 * var(--space-2)) / -2)',
+    });
+  });
+
+  it('lines a whole row up on the baseline when its text is bare', () => {
+    expect(rules['.bare']).toMatchObject({ 'align-items': 'baseline' });
+    expect(rules['.bare > .glyph::before']).toMatchObject({ 'block-size': 'var(--icon-lead-cap)' });
+  });
+
+  it('keeps the lead space before a pill text only, and the token between the items after it', () => {
+    expect(rules['.pill']).toMatchObject({
+      '--icon-lead-space': 'calc(var(--space-1) + (1lh - 1cap) / 2)',
+      padding: 'var(--space-1) calc(var(--space-1) + var(--icon-lead-band))',
+      gap: 'var(--space-1)',
+    });
+    expect(rules['.pill > .glyph']).toMatchObject({
+      'margin-inline-end': 'calc(var(--icon-lead-space) - var(--space-1))',
     });
   });
 

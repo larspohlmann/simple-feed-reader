@@ -26,15 +26,20 @@
 
 // The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
 // the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
-// The slot is zero tall, so a glyph taller than the line never moves the text.
+// The slot is zero tall, so a glyph taller than the line never moves the text. A null $text is bare
+// text, an anonymous item no selector reaches: the whole row then aligns on the baseline.
 @mixin first-line($slot, $text) {
   --icon-lead-cap: 1cap;
 
-  align-items: start;
+  @if $text {
+    align-items: start;
 
-  #{$slot},
-  #{$text} {
-    align-self: baseline;
+    #{$slot},
+    #{$text} {
+      align-self: baseline;
+    }
+  } @else {
+    align-items: baseline;
   }
 
   #{$slot} {
@@ -66,6 +71,19 @@
 
   padding: #{$inset} calc(#{$inset} + var(--icon-lead-band));
   gap: calc(#{$inset} + var(--icon-lead-band));
+}
+
+// As box, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
+@mixin box-lead($inset, $slot, $text, $gap) {
+  --icon-lead-space: calc(#{$inset} + (1lh - 1cap) / 2);
+
+  @include box($inset, $slot, $text);
+
+  gap: $gap;
+
+  #{$slot} {
+    margin-inline-end: lead-gap($gap);
+  }
 }
 
 @mixin centred-line {

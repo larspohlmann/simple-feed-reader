@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/icon-lead';
 
 .back {
   display: inline-flex;
@@ -170,13 +171,13 @@ dd {
 }
 
 .chip {
+  // stylelint-disable-next-line length-zero-no-unit -- the inset is added to a length in calc()
+  @include icon-lead.box(0px, '> app-tag-glyph', null);
+
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
   font-size: var(--fs-xs);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  padding: 0 var(--space-2);
 }
 
 .count {

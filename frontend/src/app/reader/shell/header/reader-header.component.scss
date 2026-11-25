@@ -1,6 +1,7 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
 @use '../../../theme/count-badge';
+@use '../../../theme/icon-lead';
 
 /* Opaque backing shared by the transparent header row and tag row, spanning
    their seam: each is its own compositing layer, and their bounds can round
@@ -50,12 +51,10 @@ header {
 
 .chip {
   @include glass-rim.filled(var(--surface-2), var(--border), control);
+  @include icon-lead.box(var(--space-1), '> app-tag-glyph', null);
 
   flex: none;
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--fs-sm);

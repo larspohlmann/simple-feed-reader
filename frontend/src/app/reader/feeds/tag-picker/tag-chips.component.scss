@@ -1,13 +1,18 @@
+@use '../../../theme/icon-lead';
+
 :host {
   display: contents;
 }
 
 .chip {
+  --chip-h: calc(var(--control-h) - var(--space-3));
+
+  @include icon-lead.fixed-row-lead(var(--chip-h), '> app-tag-glyph', '> .label', var(--space-2));
+
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: calc(var(--control-h) - var(--space-3));
-  padding-inline: var(--space-3) var(--space-1);
+  min-height: var(--chip-h);
+  padding-inline-end: var(--space-1);
   border-radius: var(--radius-pill);
   background: var(--border);
   color: var(--text-primary);
@@ -35,7 +40,8 @@
 
 @media (pointer: coarse) {
   .chip {
-    min-height: calc(var(--tap-target) - var(--space-3));
+    --chip-h: calc(var(--tap-target) - var(--space-3));
+
     font-size: var(--fs-base);
   }
 
