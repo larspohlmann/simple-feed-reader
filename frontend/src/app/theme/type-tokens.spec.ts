@@ -8,9 +8,10 @@ const CLASSIC = ':root[data-theme-name=classic]';
 const CLASSIC_TYPE = {
   '--font-text': '"Newsreader Classic", georgia, serif',
   '--title-weight': '600',
-  '--title-tracking': '-0.006em',
-  '--title-lh': '1.2',
-  '--summary-lh': '1.45',
+  '--text-tracking': '0.014em',
+  '--title-tracking': '0.004em',
+  '--title-lh': '1.34',
+  '--summary-lh': '1.55',
   '--read-lh': '1.62',
   '--read-heading-weight': '650',
   '--app-name-weight': '700',
