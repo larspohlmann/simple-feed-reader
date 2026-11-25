@@ -19,7 +19,7 @@ use App\Service\Social\Social\StoredCredential;
 final readonly class LemmyAccountApi
 {
     private const float SEARCH_TIMEOUT_SECONDS = 25.0;
-    private const float POST_CREATION_TIMEOUT_SECONDS = 30.0;
+    private const float POST_CREATION_TIMEOUT_SECONDS = 8.0;
 
     public function __construct(
         private LemmyApiClient $lemmy,

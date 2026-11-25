@@ -38,6 +38,8 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleterInterface
 {
     private const string NO_QUOTES = 'Lemmy takes no quotes.';
+    private const int LANDING_WAIT_SECONDS = 30;
+    private const int LANDING_POLL_SECONDS = 4;
 
     public function __construct(
         private LemmyAccountApi $lemmy,
@@ -61,10 +63,26 @@ final readonly class LemmyPostWriter implements PostWriterInterface, PostDeleter
         try {
             $answer = $this->lemmy->publishPost($account, $payload);
         } catch (SocialWriteOutcomeUnknownException $unknown) {
-            return $this->findLanded($account, $attempt) ?? throw $unknown;
+            return $this->awaitLanded($account, $attempt) ?? throw $unknown;
         }
 
         return self::requirePublishedPost($answer, 'post_view', 'post');
+    }
+
+    private function awaitLanded(SocialAccount $account, LemmyPostAttemptModel $attempt): ?PublishedPostModel
+    {
+        $deadline = $attempt->sentAt->modify(sprintf('+%d seconds', self::LANDING_WAIT_SECONDS));
+
+        while (true) {
+            $landed = $this->findLanded($account, $attempt);
+            if (null !== $landed) {
+                return $landed;
+            }
+            if ($this->clock->now()->modify(sprintf('+%d seconds', self::LANDING_POLL_SECONDS)) > $deadline) {
+                return null;
+            }
+            $this->clock->sleep(self::LANDING_POLL_SECONDS);
+        }
     }
 
     private function findLanded(SocialAccount $account, LemmyPostAttemptModel $attempt): ?PublishedPostModel

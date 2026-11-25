@@ -31,6 +31,7 @@ use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -43,6 +44,8 @@ final class LemmyPostWriterTest extends TestCase
 
     private const string COMMENT = 'POST https://lemmy.example/api/v3/comment';
     private const string POST = 'POST https://lemmy.example/api/v3/post';
+    private const string POST_PATH = 'https://lemmy.example/api/v3/post';
+    private const string SENT_AT = '2026-11-25 11:36:09';
     private const string LISTING = 'GET https://lemmy.example/api/v3/user'
         . '?username=lars%40lemmy.example&sort=New&limit=10';
     private const string ARTICLE = 'https://example.com/a';
@@ -143,7 +146,7 @@ final class LemmyPostWriterTest extends TestCase
         );
     }
 
-    public function testAPostWaitsThirtySecondsForTheInstance(): void
+    public function testAPostWaitsEightSecondsForTheInstance(): void
     {
         $response = self::postCreated();
         $http = new RoutedHttpClient([self::POST => $response]);
@@ -153,7 +156,7 @@ final class LemmyPostWriterTest extends TestCase
             self::linkPost(new PostDraftModel('Worth a read.'), 'Title', 7),
         );
 
-        self::assertSame(30.0, $response->getRequestOptions()['timeout']);
+        self::assertSame(8.0, $response->getRequestOptions()['timeout']);
     }
 
     public function testACommentKeepsTheStandardWait(): void
@@ -341,32 +344,89 @@ final class LemmyPostWriterTest extends TestCase
 
     public function testATimedOutPostThatDidNotLandMayHaveGoneThrough(): void
     {
-        $http = new RoutedHttpClient([
-            self::POST => new MockResponse(['']),
-            self::LISTING => new MockResponse('{"posts":[]}'),
-        ]);
+        $clock = new MockClock(self::SENT_AT);
+        $http = self::instanceHoldingThePost($clock, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
 
-        $this->expectException(SocialWriteOutcomeUnknownException::class);
+        try {
+            $this->writer($http, $clock)->publish(
+                $this->account(),
+                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+            );
+            self::fail('A post that never shows up may have gone through.');
+        } catch (SocialWriteOutcomeUnknownException) {
+            self::assertCount(6, self::listingRequests($http));
+        }
+    }
 
-        $this->writer($http)->publish(
+    public function testAPostThatShowsUpOnALaterLookupIsPosted(): void
+    {
+        $clock = new MockClock(self::SENT_AT);
+        $answers = [new MockResponse('{"posts":[]}'), new MockResponse('{"posts":[]}'), self::ownListing()];
+        $http = self::instanceHoldingThePost($clock, static function () use (&$answers): MockResponse {
+            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
+        });
+
+        $published = $this->writer($http, $clock)->publish(
             $this->account(),
             self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
         );
+
+        self::assertSame('https://lemmy.example/post/501', $published->url);
+        self::assertCount(3, self::listingRequests($http));
+        self::assertEquals(new \DateTimeImmutable(self::SENT_AT . ' +16 seconds'), $clock->now());
+    }
+
+    public function testPollingStopsAtThirtySecondsAfterSending(): void
+    {
+        $clock = new MockClock(self::SENT_AT);
+        $http = self::instanceHoldingThePost($clock, static fn (): MockResponse => new MockResponse('{"posts":[]}'));
+
+        try {
+            $this->writer($http, $clock)->publish(
+                $this->account(),
+                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+            );
+            self::fail('A post that never shows up may have gone through.');
+        } catch (SocialWriteOutcomeUnknownException) {
+            self::assertCount(6, self::listingRequests($http));
+            self::assertEquals(new \DateTimeImmutable(self::SENT_AT . ' +28 seconds'), $clock->now());
+        }
+    }
+
+    public function testALookupThatFailsIsRetried(): void
+    {
+        $clock = new MockClock(self::SENT_AT);
+        $answers = [new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]), self::ownListing()];
+        $http = self::instanceHoldingThePost($clock, static function () use (&$answers): MockResponse {
+            return array_shift($answers) ?? new MockResponse('{"posts":[]}');
+        });
+
+        $published = $this->writer($http, $clock)->publish(
+            $this->account(),
+            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        );
+
+        self::assertSame('https://lemmy.example/post/501', $published->url);
+        self::assertCount(2, self::listingRequests($http));
     }
 
     public function testAFailedLookupKeepsTheUnknownOutcome(): void
     {
-        $http = new RoutedHttpClient([
-            self::POST => new MockResponse(['']),
-            self::LISTING => new MockResponse('', ['http_code' => Response::HTTP_UNAUTHORIZED]),
-        ]);
-
-        $this->expectException(SocialWriteOutcomeUnknownException::class);
-
-        $this->writer($http)->publish(
-            $this->account(),
-            self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+        $clock = new MockClock(self::SENT_AT);
+        $http = self::instanceHoldingThePost(
+            $clock,
+            static fn (): MockResponse => new MockResponse('', ['http_code' => Response::HTTP_UNAUTHORIZED]),
         );
+
+        try {
+            $this->writer($http, $clock)->publish(
+                $this->account(),
+                self::linkPost(new PostDraftModel('Hi'), 'Title', 7),
+            );
+            self::fail('A lookup that fails may not hide a lost post.');
+        } catch (SocialWriteOutcomeUnknownException) {
+            self::assertCount(6, self::listingRequests($http));
+        }
     }
 
     public function testAPostAnsweredWithAServerErrorIsLookedUpToo(): void
@@ -394,6 +454,30 @@ final class LemmyPostWriterTest extends TestCase
         } catch (SocialWriteOutcomeUnknownException) {
             self::assertCount(1, $http->requests);
         }
+    }
+
+    /** @param \Closure(): MockResponse $listing the instance took the post but held its reply for eight seconds */
+    private static function instanceHoldingThePost(MockClock $clock, \Closure $listing): RoutedHttpClient
+    {
+        return RoutedHttpClient::answering(
+            static function (string $method, string $url) use ($clock, $listing): MockResponse {
+                if ('POST ' . self::POST_PATH === $method . ' ' . $url) {
+                    $clock->sleep(8);
+
+                    return new MockResponse(['']);
+                }
+
+                return self::LISTING === $method . ' ' . $url ? $listing() : Assert::fail('Unrouted request: ' . $url);
+            },
+        );
+    }
+
+    /** @return list<string> */
+    private static function listingRequests(RoutedHttpClient $http): array
+    {
+        return array_values(
+            array_filter($http->requestLines(), static fn (string $line): bool => self::LISTING === $line),
+        );
     }
 
     private static function ownListing(): MockResponse
@@ -427,14 +511,14 @@ final class LemmyPostWriterTest extends TestCase
             ->withLemmy(new LemmyCommunityPostModel($communityId, $title));
     }
 
-    private function writer(RoutedHttpClient $http): LemmyPostWriter
+    private function writer(RoutedHttpClient $http, ?MockClock $clock = null): LemmyPostWriter
     {
         $guard = new UrlGuard(new StaticDnsResolver(['lemmy.example' => ['93.184.216.34']]), new IpValidator());
         $client = new LemmyApiClient(FetchWiring::patientApiClient($http->client(), $guard));
 
         $lemmy = new LemmyAccountApi($client, new StoredCredential(SocialAccounts::cipher()));
 
-        return new LemmyPostWriter($lemmy, new LemmyOwnPosts($lemmy), new MockClock('2026-11-25 11:36:09'));
+        return new LemmyPostWriter($lemmy, new LemmyOwnPosts($lemmy), $clock ?? new MockClock(self::SENT_AT));
     }
 
     private function created(): MockResponse
