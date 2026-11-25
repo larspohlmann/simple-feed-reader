@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { FileDropComponent } from '../../shared/file-drop/file-drop.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -72,7 +74,8 @@ describe('BackupSectionComponent', () => {
   ): Promise<{ file: File; archive: BackupArchive }> {
     (openBackupArchive as jest.Mock).mockResolvedValue(archive);
     const file = new File(['zip contents'], name, { type: 'application/zip' });
-    fixture.componentInstance.onFile(file);
+    const drop = fixture.debugElement.query(By.directive(FileDropComponent));
+    (drop.componentInstance as FileDropComponent).picked.emit(file);
     await flushPromises();
     return { file, archive };
   }
@@ -107,6 +110,17 @@ describe('BackupSectionComponent', () => {
     expect(text).toContain('them@x.test');
     expect(text).toContain('https://old.example');
     expect(text).toContain('5');
+  });
+
+  it('backup section restores from a dropped file', async () => {
+    const fixture = mount();
+    const { archive } = await chooseFile(fixture);
+    const testRequest = ctrl.expectOne('https://api.test/api/account/restore/preview');
+    expect(testRequest.request.body).toBe(await archive.foundation());
+    testRequest.flush(previewResponse);
+    await flushPromises();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('them@x.test');
   });
 
   it('closes the previous archive when another file is chosen', async () => {

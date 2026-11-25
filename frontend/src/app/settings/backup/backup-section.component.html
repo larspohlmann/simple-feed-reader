@@ -11,12 +11,11 @@
 
   <div class="group">
     <p class="lead">{{ 'settings.backup.restoreLead' | transloco }}</p>
-    <input
-      type="file"
+    <app-file-drop
       accept=".zip,.gz"
+      [label]="'settings.backup.dropLabel' | transloco"
       [disabled]="restoring()"
-      [attr.aria-label]="'settings.backup.chooseFile' | transloco"
-      (change)="onFileSelected($event)"
+      (picked)="onFile($event)"
     />
 
     @if (previewing()) {

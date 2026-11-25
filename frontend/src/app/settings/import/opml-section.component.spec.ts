@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { FileDropComponent } from '../../shared/file-drop/file-drop.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -19,7 +21,6 @@ describe('OpmlSectionComponent', () => {
   const loadTags = jest.fn();
   const refreshRun = jest.fn();
   const open = jest.fn();
-  let cleared: string[];
   let closed: Subject<OpmlImportResult | undefined>;
   const preview = { parentTagName: null, feeds: [], remainingSlots: 5 };
 
@@ -51,28 +52,16 @@ describe('OpmlSectionComponent', () => {
     return fixture.nativeElement;
   }
 
-  function pick(fixture: ReturnType<typeof mount>, contents: string): Promise<HTMLInputElement> {
-    return pickFile(fixture, { text: () => Promise.resolve(contents) } as File);
+  async function pick(fixture: ReturnType<typeof mount>, contents: string): Promise<void> {
+    await pickFile(fixture, { text: () => Promise.resolve(contents) } as File);
   }
 
-  async function pickFile(
-    fixture: ReturnType<typeof mount>,
-    file: File,
-  ): Promise<HTMLInputElement> {
-    const input = (fixture.nativeElement as HTMLElement).querySelector(
-      'input[type=file]',
-    ) as HTMLInputElement;
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    Object.defineProperty(input, 'value', {
-      get: () => 'C:\\fakepath\\feeds.opml',
-      set: (next: string) => cleared.push(next),
-      configurable: true,
-    });
-    input.dispatchEvent(new Event('change'));
+  async function pickFile(fixture: ReturnType<typeof mount>, file: File): Promise<void> {
+    const drop = fixture.debugElement.query(By.directive(FileDropComponent));
+    (drop.componentInstance as FileDropComponent).picked.emit(file);
     await Promise.resolve();
     await Promise.resolve();
     fixture.detectChanges();
-    return input;
   }
 
   function flushPreview(): void {
@@ -84,7 +73,6 @@ describe('OpmlSectionComponent', () => {
     loadTags.mockReset();
     refreshRun.mockReset();
     open.mockReset();
-    cleared = [];
     closed = new Subject();
     open.mockReturnValue({ closed });
     // jsdom lacks these:
@@ -243,10 +231,13 @@ describe('OpmlSectionComponent', () => {
     expect(loadTags).not.toHaveBeenCalled();
   });
 
-  it('lets the same file be chosen twice', async () => {
+  it('opml section previews a dropped file', async () => {
     const fixture = mount();
     await pick(fixture, '<opml/>');
-    expect(cleared).toEqual(['']);
-    flushPreview();
+    const request = ctrl.expectOne('https://api.test/api/opml/preview');
+    expect(request.request.body).toEqual({ opml: '<opml/>', parentTagName: null });
+    request.flush(preview);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][1].data).toEqual({ opml: '<opml/>', preview });
   });
 });

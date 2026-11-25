@@ -11,12 +11,11 @@
 
   <div class="group">
     <p class="lead">{{ 'settings.opml.importLead' | transloco }}</p>
-    <input
-      type="file"
+    <app-file-drop
       accept=".opml,.xml,text/xml,application/xml,text/x-opml"
-      [attr.aria-label]="'settings.opml.importLead' | transloco"
+      [label]="'settings.opml.dropLabel' | transloco"
       [disabled]="previewing()"
-      (change)="onFile($event)"
+      (picked)="onFile($event)"
     />
     @if (previewing()) {
       <p class="result">{{ 'settings.opml.previewing' | transloco }}</p>

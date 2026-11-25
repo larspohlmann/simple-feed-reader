@@ -10,13 +10,20 @@ import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { OpmlImportResult } from '../settings.models';
 import { ButtonComponent } from '../../shared/button/button.component';
+import { FileDropComponent } from '../../shared/file-drop/file-drop.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { OpmlImportDialogComponent, OpmlImportDialogData } from './opml-import-dialog.component';
 
 @Component({
   selector: 'app-opml-section',
-  imports: [ButtonComponent, ErrorBannerComponent, SettingsGroupComponent, TranslocoPipe],
+  imports: [
+    ButtonComponent,
+    ErrorBannerComponent,
+    FileDropComponent,
+    SettingsGroupComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './opml-section.component.html',
   styleUrl: './opml-section.component.scss',
 })
@@ -38,11 +45,8 @@ export class OpmlSectionComponent {
     downloadOpmlExport(this.api, this.exporting, this.exportError);
   }
 
-  onFile(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || this.previewing()) return;
+  onFile(file: File): void {
+    if (this.previewing()) return;
     this.previewing.set(true);
     this.importError.set(null);
     this.result.set(null);
