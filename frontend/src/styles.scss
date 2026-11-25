@@ -6,6 +6,7 @@
 @use './app/theme/tokens';
 @use './app/theme/breakpoints' as bp;
 @use './app/theme/utilities';
+@use './app/theme/icon-lead';
 @use './styles/reset';
 @use './styles/base';
 @use './styles/controls';
@@ -14,6 +15,8 @@
 @use './styles/icon-button';
 @use './styles/text-size';
 @use './styles/hidden-playback';
+@include icon-lead.register;
+
 
 // Every dialog.open() lands on the CDK's .cdk-overlay-pane; the frame is
 // app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres

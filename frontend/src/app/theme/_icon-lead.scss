@@ -1,0 +1,46 @@
+// The line is a registered <length>: unregistered, the slot's own font would resolve 1lh.
+@mixin register {
+  @property --icon-lead-line {
+    syntax: '<length>';
+    inherits: true;
+    // stylelint-disable-next-line length-zero-no-unit
+    initial-value: 0px;
+  }
+}
+
+@mixin first-line($slot) {
+  --icon-lead-line: 1lh;
+
+  align-items: start;
+
+  #{$slot} {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    block-size: var(--icon-lead-line);
+  }
+}
+
+@mixin box($inset, $slot) {
+  --icon-lead-band: calc((1lh - 1cap) / 2);
+
+  @include first-line($slot);
+
+  padding: #{$inset} calc(#{$inset} + var(--icon-lead-band));
+  gap: calc(#{$inset} + var(--icon-lead-band));
+}
+
+@mixin centred-line {
+  flex-wrap: wrap;
+  align-content: center;
+}
+
+@mixin fixed-row($height, $slot) {
+  --icon-lead-space: calc((#{$height} - 1cap) / 2);
+
+  @include first-line($slot);
+
+  padding-inline-start: var(--icon-lead-space);
+  gap: var(--icon-lead-space);
+}
