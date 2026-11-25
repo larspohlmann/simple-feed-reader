@@ -1,5 +1,5 @@
 import { SocialNetworkName } from '../../core/social-network';
-import { parseUrl } from '../../shared/url-host';
+import { parseHttpUrl } from '../../shared/url-host';
 
 export interface OwnInstances {
   mastodon: string | null;
@@ -18,11 +18,6 @@ const MENTION_PATH = /^\/(?:@[^/]+|users\/[^/]+)$/;
 const HASHTAG_PATH = /^\/tags\/[^/]+$/;
 const LEMMY_THREAD_PATH = /^\/(?:post|comment)\/\d+$/;
 const LEMMY_ACTOR_PATH = /^\/([cu])\/([^/@]+)(?:@([^/]+))?$/;
-
-function parseHttpUrl(value: string): URL | null {
-  const parsed = parseUrl(value);
-  return parsed !== null && /^https?:$/.test(parsed.protocol) ? parsed : null;
-}
 
 export function instanceOrigin(serviceUrl: string): string | null {
   return parseHttpUrl(serviceUrl)?.origin ?? null;

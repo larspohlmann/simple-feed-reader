@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { toggled } from '../../core/toggled-set';
-import { hostOf, parseUrl } from '../../shared/url-host';
+import { hostOf, parseHttpUrl, parseUrl } from '../../shared/url-host';
 import {
   OpmlImportRequest,
   OpmlImportRow,
@@ -25,9 +25,8 @@ function hostLabel(url: string): string {
 
 function siteHrefOf(feed: OpmlPreviewFeed): string | null {
   if (feed.siteUrl !== null) return feed.siteUrl;
-  const parsed = parseUrl(feed.url);
-  const isWeb = parsed?.protocol === 'http:' || parsed?.protocol === 'https:';
-  return parsed !== null && isWeb ? `${parsed.protocol}//${parsed.host}/` : null;
+  const origin = parseHttpUrl(feed.url)?.origin;
+  return origin === undefined ? null : `${origin}/`;
 }
 
 function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
