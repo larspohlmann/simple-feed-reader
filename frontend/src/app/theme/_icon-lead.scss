@@ -26,8 +26,7 @@
 
 // The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
 // the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
-// The slot is zero tall, so a glyph taller than the line never moves the text. A null $text is bare
-// text, an anonymous item no selector reaches: the whole row then aligns on the baseline.
+// A null $text is bare text, an anonymous item no selector reaches: the whole row aligns on the baseline.
 @mixin first-line($slot, $text) {
   --icon-lead-cap: 1cap;
 
@@ -47,6 +46,9 @@
     flex: none;
     align-items: center;
     justify-content: center;
+
+    // Zero tall, so a glyph taller than the line cannot move the text; a host that binds its own height
+    // (app-tag-glyph) keeps it, and stays within the line only while it is no taller than the line.
     block-size: 0;
 
     &::before {
@@ -91,7 +93,7 @@
   align-content: center;
 }
 
-// The text keeps the place centring gave it: the baseline group starts at the row's top.
+// The baseline group starts at the row's top; the margins put a one-line text where centring did.
 @mixin fixed-row($height, $slot, $text) {
   --icon-lead-space: #{space($height)};
 
@@ -101,7 +103,7 @@
   gap: var(--icon-lead-space);
 
   #{$text} {
-    margin-block-start: calc((#{$height} - 1lh) / 2);
+    margin-block: calc((#{$height} - 1lh) / 2);
   }
 }
 

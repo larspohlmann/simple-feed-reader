@@ -118,7 +118,7 @@ describe('icon-lead', () => {
       gap: 'var(--icon-lead-space)',
     });
     expect(rules['.fixed > .text']).toMatchObject({
-      'margin-block-start': 'calc((var(--sidebar-row-h) - 1lh) / 2)',
+      'margin-block': 'calc((var(--sidebar-row-h) - 1lh) / 2)',
     });
   });
 

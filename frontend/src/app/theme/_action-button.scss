@@ -23,5 +23,10 @@
     .label {
       display: none;
     }
+
+    // With the label hidden and no count, the icon stands alone: no lead space after it.
+    > :has(+ .label:last-child) {
+      margin-inline-end: 0;
+    }
   }
 }

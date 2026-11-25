@@ -227,6 +227,7 @@ async function openArticle(page: Page): Promise<void> {
 }
 
 const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
+const BLUESKY_COMMENT = 'app-entry-comments li.comment:nth-child(1) app-social-counts-row';
 
 const PILL_CASES: PillCase[] = [
   {
@@ -275,6 +276,18 @@ const PILL_CASES: PillCase[] = [
     text: '.label',
   },
   {
+    name: 'a phone Like whose count stands in for its hidden label',
+    viewport: PHONE,
+    stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openArticle(page);
+      return page.locator(`${BLUESKY_COMMENT} button.like`);
+    },
+    icon: 'app-icon',
+    text: '.number',
+  },
+  {
     name: 'an app-button with a leading icon',
     viewport: DESKTOP,
     stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
@@ -286,22 +299,31 @@ const PILL_CASES: PillCase[] = [
 ];
 
 /** The glyph's start from the row's padding edge, and the gap from the glyph to the text. */
-async function measureSpacing(row: Locator, icon: string): Promise<{ side: number; gap: number }> {
-  return row.evaluate((element, iconSelector) => {
-    const glyph = element.querySelector(iconSelector)!;
-    const glyphBox = glyph.getBoundingClientRect();
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-    let text: Node | null = walker.nextNode();
-    while (text && (!text.textContent?.trim() || glyph.contains(text))) text = walker.nextNode();
-    const range = document.createRange();
-    range.selectNodeContents(text!);
-    const edge =
-      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).borderLeftWidth);
-    return {
-      side: glyphBox.left - edge,
-      gap: range.getClientRects()[0].left - glyphBox.right,
-    };
-  }, icon);
+async function measureSpacing(
+  row: Locator,
+  icon: string,
+  text: string | null,
+): Promise<{ side: number; gap: number }> {
+  return row.evaluate(
+    (element, [iconSelector, textSelector]) => {
+      const glyph = element.querySelector(iconSelector!)!;
+      const glyphBox = glyph.getBoundingClientRect();
+      const holder = textSelector ? element.querySelector(textSelector)! : element;
+      const walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+      let node: Node | null = walker.nextNode();
+      while (node && (!node.textContent?.trim() || glyph.contains(node))) node = walker.nextNode();
+      const range = document.createRange();
+      range.selectNodeContents(node!);
+      const edge =
+        element.getBoundingClientRect().left +
+        parseFloat(getComputedStyle(element).borderLeftWidth);
+      return {
+        side: glyphBox.left - edge,
+        gap: range.getClientRects()[0].left - glyphBox.right,
+      };
+    },
+    [icon, text] as const,
+  );
 }
 
 async function preparePill(browser: Browser, setup: Setup, pill: PillCase): Promise<Page> {
@@ -331,7 +353,7 @@ for (const setup of SETUPS) {
             firstLine: textHolder,
             block: textHolder,
           });
-          const { side, gap } = await measureSpacing(row, pill.icon);
+          const { side, gap } = await measureSpacing(row, pill.icon, pill.text);
 
           expect(
             Math.abs(measured.offset),
@@ -345,6 +367,70 @@ for (const setup of SETUPS) {
         }
       });
     }
+
+    test('a phone Reply with neither label nor count sits midway between its edges', async ({
+      browser,
+    }) => {
+      const page = await openPage(browser, setup, PHONE);
+      try {
+        await stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } });
+        await stubAccountTheme(page, setup.theme);
+        await page.goto('/?subscription=1');
+        await openArticle(page);
+        const reply = page.locator(`${LEMMY_COMMENT} button.reply`);
+        await settle(page, setup.theme);
+
+        const [start, end] = await reply.evaluate((button) => {
+          const box = button.getBoundingClientRect();
+          const border = parseFloat(getComputedStyle(button).borderLeftWidth);
+          const glyph = button.querySelector('app-icon')!.getBoundingClientRect();
+          return [glyph.left - box.left - border, box.right - border - glyph.right];
+        });
+        expect(Math.abs(start - end), `${start} | ${end}`).toBeLessThanOrEqual(TOLERANCE);
+      } finally {
+        await page.context().close();
+      }
+    });
+
+    test('a trailing chevron in an app-button keeps the gap token after its label and no lead space after it', async ({
+      browser,
+    }) => {
+      const page = await openPage(browser, setup, DESKTOP);
+      try {
+        await stubMagazine(page, ONE_ENTRY, { tags: TAGS });
+        await stubAccountTheme(page, setup.theme);
+        await page.goto('/settings/organise');
+        await page.getByRole('checkbox', { name: 'Select all' }).check();
+        const button = page.locator('[data-test=visibility] button');
+        await expect(button).toBeVisible();
+        await settle(page, setup.theme);
+
+        const [gap, token, start, end] = await button.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const border = parseFloat(getComputedStyle(element).borderLeftWidth);
+          const glyph = element.querySelector('app-icon')!.getBoundingClientRect();
+          const range = document.createRange();
+          range.setStartBefore(element.firstChild!);
+          range.setEndBefore(element.querySelector('app-icon')!);
+          const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+          return [
+            glyph.left - rects.at(-1)!.right,
+            parseFloat(getComputedStyle(element).columnGap),
+            rects[0].left - box.left - border,
+            box.right - border - glyph.right,
+          ];
+        });
+        expect(Math.abs(gap - token), `gap ${gap} against token ${token}`).toBeLessThanOrEqual(
+          TOLERANCE,
+        );
+        expect(
+          Math.abs(start - end),
+          `label side ${start}, chevron side ${end}`,
+        ).toBeLessThanOrEqual(TOLERANCE);
+      } finally {
+        await page.context().close();
+      }
+    });
 
     test('the vote pill centres both arrows on the cap middle and its count between them', async ({
       browser,
