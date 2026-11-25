@@ -54,6 +54,19 @@ final class LemmyOwnPostsTest extends TestCase
         self::assertNull($this->lookUp(self::listing('Title', 7, '2026-11-25T11:36:09+02:00')));
     }
 
+    public function testAZoneLessTimeIsReadAsUtcWhateverTheDefaultTimezone(): void
+    {
+        $previous = date_default_timezone_get();
+        date_default_timezone_set('Europe/Berlin');
+        try {
+            $found = $this->lookUp(self::listing('Title', 7, '2026-11-25T11:36:09'));
+        } finally {
+            date_default_timezone_set($previous);
+        }
+
+        self::assertNotNull($found);
+    }
+
     public function testAPostInAnotherCommunityIsNoMatch(): void
     {
         self::assertNull($this->lookUp(self::listing('Title', 8, '2026-11-25T11:36:09Z')));
@@ -66,7 +79,7 @@ final class LemmyOwnPostsTest extends TestCase
 
     public function testADeletedPostIsNoMatch(): void
     {
-        self::assertNull($this->lookUp(self::listing('Title', 7, '2026-11-25T11:36:09Z', true)));
+        self::assertNull($this->lookUp(self::deletedListing()));
     }
 
     public function testAMatchWithoutAnHttpsAddressIsNoMatch(): void
@@ -97,19 +110,31 @@ final class LemmyOwnPostsTest extends TestCase
         return SocialAccounts::lemmyOf(SocialAccounts::owner());
     }
 
-    private static function listing(
-        string $title,
-        int $communityId,
-        string $published,
-        bool $deleted = false,
-    ): MockResponse {
-        return new MockResponse(json_encode(['posts' => [['post' => [
+    private static function listing(string $title, int $communityId, string $published): MockResponse
+    {
+        return self::listingOf(self::post($title, $communityId, $published));
+    }
+
+    private static function deletedListing(): MockResponse
+    {
+        return self::listingOf(self::post('Title', 7, '2026-11-25T11:36:09Z') + ['deleted' => true]);
+    }
+
+    /** @param array<string, mixed> $post */
+    private static function listingOf(array $post): MockResponse
+    {
+        return new MockResponse(json_encode(['posts' => [['post' => $post]]], JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array<string, mixed> */
+    private static function post(string $title, int $communityId, string $published): array
+    {
+        return [
             'id' => 501,
             'name' => $title,
             'community_id' => $communityId,
             'published' => $published,
-            'deleted' => $deleted,
             'ap_id' => self::ADDRESS,
-        ]]]], JSON_THROW_ON_ERROR));
+        ];
     }
 }
