@@ -615,6 +615,43 @@ final class ConcurrentRequestEngineTest extends TestCase
         self::assertSame(1, $requests);
     }
 
+    public function testAPostIsNotAskedAgainOverTheNextFamilyOnAnErrorStatus(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
+        });
+        $ticket = RequestTicketModel::api(
+            ApiRequestModel::postJson(self::DUAL, ['a' => 1]),
+            [new FixedKeySlot('account-1', 3)],
+        );
+
+        $answer = self::outcomeOf($this->engine($client), $ticket)->answerOrThrow();
+
+        self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $answer->status);
+        self::assertSame(1, $requests);
+    }
+
+    public function testAPostThatChangesNothingIsAskedAgainOverTheNextFamilyOnAnErrorStatus(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]);
+        });
+        $ticket = RequestTicketModel::api(
+            ApiRequestModel::postJson(self::DUAL, ['a' => 1])->changingNothing(),
+            [new FixedKeySlot('account-1', 3)],
+        );
+
+        self::outcomeOf($this->engine($client), $ticket)->answerOrThrow();
+
+        self::assertSame(3, $requests);
+    }
+
     public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
     {
         $requests = 0;

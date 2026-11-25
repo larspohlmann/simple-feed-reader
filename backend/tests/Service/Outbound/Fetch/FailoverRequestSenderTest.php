@@ -272,6 +272,24 @@ final class FailoverRequestSenderTest extends TestCase
         self::assertSame(1, $client->getRequestsCount());
     }
 
+    public function testARepeatablePostIsAskedAgainOverTheNextFamilyOnAnErrorStatus(): void
+    {
+        $client = $this->dualStackClient(
+            new MockResponse('', ['http_code' => Response::HTTP_FORBIDDEN]),
+            new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
+        );
+
+        $response = $this->sender($client)->sendRepeatable(
+            'POST',
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
     private function uppercasingClient(HttpClientInterface $inner): HttpClientInterface
     {
         return new class ($inner) implements HttpClientInterface {

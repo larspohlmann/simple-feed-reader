@@ -6,6 +6,7 @@ namespace App\Service\Outbound\Fetch\ResponseExchange;
 
 use App\Service\Outbound\Fetch\CrossFamilyFailover;
 use App\Service\Outbound\Fetch\FetchRetryPolicy;
+use App\Service\Outbound\Fetch\Model\ApiRequestModel;
 use App\Service\Outbound\Fetch\Model\ApiResponseModel;
 use App\Service\Outbound\Fetch\Model\ExchangeStepModel;
 use App\Service\Outbound\Fetch\Model\FetchAttemptModel;
@@ -28,7 +29,7 @@ final readonly class ApiResponseExchange implements ResponseExchangeInterface
 
     public function onHeaders(ResponseInterface $response, FetchAttemptModel $attempt): ExchangeStepModel
     {
-        if (!$this->failover->isRetryableStatus($response->getStatusCode())) {
+        if (!$this->allowsAnotherRoute($attempt->ticket->request, $response->getStatusCode())) {
             return ExchangeStepModel::awaitBody();
         }
         $nextRoute = $this->retryPolicy->nextRouteAfterErrorStatus($attempt);
@@ -43,5 +44,12 @@ final readonly class ApiResponseExchange implements ResponseExchangeInterface
             ResponseBody::decoded($response, $attempt->ticket->exchange->sizeLimit()),
             $response->getHeaders(false),
         ));
+    }
+
+    private function allowsAnotherRoute(ApiRequestModel $request, int $status): bool
+    {
+        return $request->isRead()
+            ? $this->failover->isRetryableStatus($status)
+            : $this->failover->allowsRetryAfterStatus($request->method, $status);
     }
 }

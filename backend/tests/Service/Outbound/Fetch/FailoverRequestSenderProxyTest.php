@@ -119,6 +119,44 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertCount(1, $calls);
     }
 
+    public function testARepeatableProxiedPostFallsThroughToDirectOnAnErrorStatus(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return 1 === \count($calls)
+                ? new MockResponse('blocked', ['http_code' => Response::HTTP_FORBIDDEN])
+                : new MockResponse('ok', ['http_code' => Response::HTTP_OK]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $status = $sender->sendRepeatable('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_OK, $status);
+        self::assertCount(2, $calls);
+    }
+
+    public function testARepeatableProxiedPostNeverGoesDirectWhenFallbackIsOff(): void
+    {
+        $calls = 0;
+        $client = new MockHttpClient(function () use (&$calls): MockResponse {
+            ++$calls;
+
+            return new MockResponse('blocked', ['http_code' => Response::HTTP_FORBIDDEN]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy(directFallback: false)));
+
+        $status = $sender->sendRepeatable('POST', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_FORBIDDEN, $status);
+        self::assertSame(1, $calls);
+    }
+
     public function testAProxiedWriteThatNeverLeftFallsThroughToDirect(): void
     {
         $calls = [];

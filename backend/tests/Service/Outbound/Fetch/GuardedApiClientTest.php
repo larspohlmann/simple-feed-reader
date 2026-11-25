@@ -72,6 +72,28 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(['ok' => true], $response->json());
     }
 
+    public function testAPostThatChangesNothingKeepsFailover(): void
+    {
+        $http = $this->forbiddenOverIpv6ThenOk();
+
+        $response = $this->client($http)->send(
+            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1])->changingNothing(),
+        );
+
+        self::assertSame(Response::HTTP_OK, $response->status);
+        self::assertSame(2, $http->getRequestsCount());
+    }
+
+    public function testAWritePostIsNotSentTwice(): void
+    {
+        $http = $this->forbiddenOverIpv6ThenOk();
+
+        $response = $this->client($http)->send(ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1]));
+
+        self::assertSame(Response::HTTP_FORBIDDEN, $response->status);
+        self::assertSame(1, $http->getRequestsCount());
+    }
+
     public function testTheCallCarriesItsTimeoutsJsonAcceptHeaderAndNoFreshConnect(): void
     {
         $seenOptions = [];
@@ -335,5 +357,17 @@ final class GuardedApiClientTest extends TestCase
 
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->status);
         self::assertSame(1, $http->getRequestsCount());
+    }
+
+    private function forbiddenOverIpv6ThenOk(): MockHttpClient
+    {
+        return new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
+            /** @var array<string, string> $resolve */
+            $resolve = $options['resolve'];
+
+            return str_contains($resolve['dual.example.test'], ':')
+                ? new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN])
+                : new MockResponse('{}', ['http_code' => Response::HTTP_OK]);
+        });
     }
 }
