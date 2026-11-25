@@ -47,7 +47,7 @@ final readonly class OpmlImportItems
             feedTitle: $feed->title,
             tagPath: null === $replacing ? $destination : [],
             sourceFormat: $feed->sourceFormat,
-            chosenTags: $replacing ?? $this->chosen->findAdding($feed->url),
+            chosenTags: $replacing ?? $this->chosen->collectAdding($feed->url),
         );
     }
 }

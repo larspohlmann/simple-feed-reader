@@ -23,7 +23,7 @@ final readonly class OpmlChosenTags
     }
 
     /** @return list<Tag> */
-    public function findAdding(string $feedUrl): array
+    public function collectAdding(string $feedUrl): array
     {
         return $this->adding[$feedUrl] ?? [];
     }

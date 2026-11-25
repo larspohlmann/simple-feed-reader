@@ -244,6 +244,24 @@ final class OpmlPlacementPlannerTest extends DbTestCase
         self::assertSame(['P', 'Tech (1)'], $root->folders[0]->destination);
     }
 
+    public function testARenameOntoAStoredTagAtTheSameSpotReusesIt(): void
+    {
+        $this->tag('Tech');
+
+        $root = $this->planRenamed(null, ['0' => 'tech'], self::folder('X'));
+
+        self::assertSame(['Tech'], $root->folders[0]->destination);
+    }
+
+    public function testAThirdLevelFolderIsRenamedByItsPosition(): void
+    {
+        $tree = self::folder('A', self::folder('B', self::folder('C')));
+
+        $root = $this->planRenamed(null, ['0.0.0' => 'Gamma'], $tree);
+
+        self::assertSame(['A', 'B', 'Gamma'], $root->folders[0]->folders[0]->folders[0]->destination);
+    }
+
     public function testARenameOntoASiblingsNameMergesThem(): void
     {
         $root = $this->planRenamed(null, ['1' => 'a'], self::folder('A'), self::folder('B'));
