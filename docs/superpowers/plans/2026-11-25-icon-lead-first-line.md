@@ -171,7 +171,7 @@ Every sidebar row's left inset and icon gap become `(row height − 1cap) / 2`, 
 8. A drag preview (moved to `<body>`) renders with the same lead space as the row it left.
 9. The sidebar search field takes `fixed-row` on its own height (`calc(var(--control-h) - var(--space-0))`); its hint's margin follows its lead space.
 
-- [ ] **Step 1: Write the e2e** `frontend/e2e/sidebar-lead-space.spec.ts` (stubbed reads like `e2e/sidebar-airy-style.spec.ts`: a root tag with a child tag, feeds under each, a social section, saved searches) asserting invariants 1–5 at 1280×900 fine pointer, default and airy. Cap height in the page: render a hidden `H` in the row's font and read `getBoundingClientRect` of a `Range` around it is not cap height — use the `1cap` unit directly: `getComputedStyle(probe).width` of a probe element with `width: 1cap` placed in the row.
+- [ ] **Step 1: Write the e2e** `frontend/e2e/sidebar-lead-space.spec.ts` (stubbed reads like `e2e/sidebar-airy-style.spec.ts`: a root tag with a child tag, feeds under each, a social section, saved searches) asserting invariants 1–5 at 1280×900 fine pointer, default and airy. Read the cap height with the unit itself: append a probe with `position: absolute; width: 1cap` inside the row, take `getComputedStyle(probe).width`, remove it.
 - [ ] **Step 2: Run it on the branch before the change, expect FAIL** with the measured values quoted (today: inset 10, gap 12).
 - [ ] **Step 3: Implement** the token, the mixin wiring and every reader listed above, rebuilding each dependency from the invariants.
 - [ ] **Step 4: Run it, expect PASS**; also run `e2e/sidebar-airy-style.spec.ts` and every `frontend/e2e/*sidebar*.spec.ts` → PASS.
