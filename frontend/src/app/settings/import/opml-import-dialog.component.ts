@@ -192,7 +192,9 @@ export class OpmlImportDialogComponent {
   protected commitRename(row: FolderRow, event: Event): void {
     if (this.editingKey() !== row.key) return;
     this.editingKey.set(null);
-    this.renameTo(row, inputValue(event));
+    const name = inputValue(event);
+    if (name.trim() === row.tagName) return;
+    this.renameTo(row, name);
   }
 
   protected cancelRename(): void {

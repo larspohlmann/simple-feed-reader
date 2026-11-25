@@ -654,4 +654,50 @@ describe('OpmlImportDialogComponent', () => {
     expect(request.request.body.folderNames).toEqual({ '0': 'Gadgets' });
     request.flush({});
   });
+  const plannedAsTechOne = (): OpmlPreview => {
+    const preview = previewOf();
+    preview.root.folders[0].destination = ['Tech (1)'];
+    return preview;
+  };
+
+  it('blurring an unchanged editor commits nothing', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    const row = folderRow('Tech (1)');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    renameInput(row)!.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({});
+    expect(row.querySelector('[data-testid="opml-import-reset-folder"]')).toBeNull();
+  });
+
+  it('Enter on an unchanged editor commits nothing', () => {
+    mount(plannedAsTechOne());
+    jest.useFakeTimers();
+    const row = folderRow('Tech (1)');
+
+    row.querySelector<HTMLButtonElement>('[data-testid="opml-import-rename-folder"]')!.click();
+    fixture.detectChanges();
+    key(renameInput(row)!, 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().folderNames()).toEqual({});
+  });
+
+  it('a whitespace-only rename sends no folderNames entry', () => {
+    mount();
+    jest.useFakeTimers();
+
+    key(startRename('A', '   '), 'Enter');
+    jest.advanceTimersByTime(300);
+
+    http.expectNone(PREVIEW);
+    expect(selectionOf().toRequest(OPML, null).folderNames).toEqual({});
+  });
 });
