@@ -1,10 +1,10 @@
 :host {
   --dots-box: var(--icon-sm);
+  --icon-lead-self: var(--dots-box);
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--dots-box) / 8);
   width: var(--dots-box);
   height: var(--dots-box);
   color: var(--accent);
@@ -12,6 +12,11 @@
 
 :host(.md) {
   --dots-box: var(--icon-md);
+}
+
+// Margins, not the host's gap: in an icon-lead slot the strut is a flex item too.
+i + i {
+  margin-inline-start: calc(var(--dots-box) / 8);
 }
 
 i {
