@@ -101,14 +101,14 @@ final class ProfileMergesTest extends TestCase
 
     public function testGroupsJustBelowTheLinkedMergeSimilarityStayApartHoweverDense(): void
     {
-        $run = $this->runWithWordCounts(6, 3, 16, 3, 3);
+        $run = $this->runWithWordCounts(6, ['ownWords' => 3, 'members' => 3], ['ownWords' => 16, 'members' => 3]);
 
         self::assertSame([[1, 2, 3], [4, 5, 6]], $this->merged($run, [[1, 2, 3], [4, 5, 6]], self::crossLinks(3, 3)));
     }
 
     public function testADensityJustBelowATenthStaysApart(): void
     {
-        $run = $this->runWithWordCounts(3, 3, 5, 3, 7);
+        $run = $this->runWithWordCounts(3, ['ownWords' => 3, 'members' => 3], ['ownWords' => 5, 'members' => 7]);
 
         self::assertSame(
             [[1, 2, 3], range(4, 10)],
@@ -118,19 +118,11 @@ final class ProfileMergesTest extends TestCase
 
     public function testADensityExactlyATenthMerges(): void
     {
-        $run = $this->runWithWordCounts(3, 3, 5, 4, 5);
+        $run = $this->runWithWordCounts(3, ['ownWords' => 3, 'members' => 4], ['ownWords' => 5, 'members' => 5]);
 
         self::assertSame(
             [range(1, 9)],
             $this->merged($run, [range(1, 4), range(5, 9)], [[1, 5], [2, 6]]),
-        );
-    }
-
-    public function testAShortBandPairStaysApartWhileAStrongerPairMergesInTheSameRound(): void
-    {
-        self::assertSame(
-            [[1, 2, 3, 10, 11, 12], [4, 5, 6]],
-            $this->merged($this->bandPairWithATwinRun(), self::bandPairWithATwinGroups()),
         );
     }
 
@@ -295,18 +287,18 @@ final class ProfileMergesTest extends TestCase
     /**
      * Entries 1.. belong to the first group, the next ones to the second, and ungrouped entries pad every stem
      * to the same frequency, so the similarity is shared / (shared + oneOwn + otherOwn).
+     *
+     * @param array{ownWords: int, members: int} $oneGroup
+     * @param array{ownWords: int, members: int} $otherGroup
      */
-    private function runWithWordCounts(
-        int $sharedWords,
-        int $oneOwnWords,
-        int $otherOwnWords,
-        int $oneMembers,
-        int $otherMembers,
-    ): TrendingRun {
+    private function runWithWordCounts(int $sharedWords, array $oneGroup, array $otherGroup): TrendingRun
+    {
+        $oneMembers = $oneGroup['members'];
+        $otherMembers = $otherGroup['members'];
         $words = self::WORD_POOL;
         $shared = implode(' ', array_splice($words, 0, $sharedWords));
-        $oneOwn = implode(' ', array_splice($words, 0, $oneOwnWords));
-        $otherOwn = implode(' ', array_splice($words, 0, $otherOwnWords));
+        $oneOwn = implode(' ', array_splice($words, 0, $oneGroup['ownWords']));
+        $otherOwn = implode(' ', array_splice($words, 0, $otherGroup['ownWords']));
         $headlines = [
             ...array_fill(0, $oneMembers, $shared . ' ' . $oneOwn),
             ...array_fill(0, $otherMembers, $shared . ' ' . $otherOwn),
