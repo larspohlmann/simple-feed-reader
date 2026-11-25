@@ -1,3 +1,4 @@
+@use '../../theme/avatar-size';
 @use '../../theme/avatar-tone';
 
 :host {
@@ -8,8 +9,8 @@
 }
 
 :host(.md) {
-  width: calc(var(--space-6) * var(--icon-text-scale, 1));
-  height: calc(var(--space-6) * var(--icon-text-scale, 1));
+  width: avatar-size.$md;
+  height: avatar-size.$md;
 }
 
 .avatar {

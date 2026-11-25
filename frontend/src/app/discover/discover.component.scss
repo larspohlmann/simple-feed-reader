@@ -2,8 +2,6 @@
 @use '../theme/glass-rim';
 @use '../theme/icon-lead';
 
-$action-height: calc(var(--fs-sm) * var(--lh-normal) + var(--space-2) + var(--space-0));
-
 // The picker is a route, not a CDK dialog, so nothing else supplies the scrim
 // — this host is it. The frame inside is app-overlay-panel's; only the width
 // is discover's to choose. On phones the panel fills the screen, so no scrim shows.
@@ -80,6 +78,8 @@ app-category-chips {
 .cat-head {
   @include icon-lead.first-line('> .cat-ico');
 
+  --cat-action-height: calc(var(--fs-sm) * var(--lh-normal) + var(--space-2) + var(--space-0));
+
   position: sticky;
   top: 0;
   z-index: 1;
@@ -102,7 +102,7 @@ app-category-chips {
 
   .cat-ico,
   h2 {
-    margin-block-start: max(0px, calc(($action-height - var(--icon-lead-line)) / 2));
+    margin-block-start: max(0px, calc((var(--cat-action-height) - var(--icon-lead-line)) / 2));
   }
 }
 
@@ -123,7 +123,7 @@ app-category-chips {
   button {
     @include glass-rim.filled(var(--accent-soft), var(--border), control);
 
-    min-block-size: $action-height;
+    block-size: var(--cat-action-height);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
     color: var(--accent);

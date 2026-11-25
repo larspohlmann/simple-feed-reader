@@ -1,6 +1,5 @@
+@use '../../../theme/avatar-size';
 @use '../../../theme/icon-lead';
-
-$avatar-size: calc(var(--space-6) * var(--icon-text-scale, 1));
 
 :host {
   display: block;
@@ -27,7 +26,7 @@ $avatar-size: calc(var(--space-6) * var(--icon-text-scale, 1));
 }
 
 .row:has(.avatars) > .kind {
-  block-size: $avatar-size;
+  block-size: avatar-size.$md;
 }
 
 .kind {
