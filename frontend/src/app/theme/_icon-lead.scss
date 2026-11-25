@@ -117,6 +117,7 @@
 
   width: var(--icon-lead-self);
   height: var(--icon-lead-self);
+  min-block-size: var(--icon-lead-self);
 }
 
 // A chip of $padding round a $size glyph, publishing its whole box to a lead slot.

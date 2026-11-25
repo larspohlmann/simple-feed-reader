@@ -947,3 +947,37 @@ for (const setup of SETUPS) {
     }
   });
 }
+
+test.describe('an icon-only list action', () => {
+  test('keeps its glyph box while pending dots stand in for the icon', async ({ openSurface }) => {
+    const page = await openSurface(
+      { theme: 'graphite', step: 100 },
+      {
+        touch: true,
+        stub: async (stubbed) => {
+          await stubNotifications(stubbed);
+          await stubbed.route('**/api/me/notifications/seen', () => new Promise(() => undefined));
+        },
+        path: '/?view=notifications&network=bluesky',
+      },
+    );
+    const action = page.locator('button.mark-seen');
+    const box = (glyph: string) =>
+      action.locator(glyph).evaluate((element) => {
+        const { width, height, top } = element.getBoundingClientRect();
+        return { width, height, centre: top + height / 2 };
+      });
+    await expect(action.locator('app-icon')).toBeVisible();
+    await settle(page, 'graphite');
+    const icon = await box('app-icon');
+
+    await action.dispatchEvent('click');
+    await expect(action.locator('app-pending-dots')).toBeVisible();
+    const dots = await box('app-pending-dots');
+    const dot = await action.locator('app-pending-dots i').first().boundingBox();
+
+    expectNear(dots.width, icon.width, 'the pending box width against the icon box');
+    expectNear(dots.height, icon.height, 'the pending box height against the icon box');
+    expectNear(dot!.y + dot!.height / 2, dots.centre, 'the dots against the middle of their box');
+  });
+});
