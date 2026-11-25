@@ -139,3 +139,31 @@ try {
 
 - [ ] **Step 4: Run** both test files plus `tests/Service/Social` → PASS; cs/stan/`composer md` on changed `src` files.
 - [ ] **Step 5: Commit** — `fix(#2548): a timed-out lemmy post that landed counts as posted`
+
+---
+
+### Task 4: Poll for the post during the 30 seconds (Lars, 2026-11-25)
+
+Lars: "Maybe check during the 30 seconds if the post is already there. Then stop." Ruling (Lars chose it): short POST wait, then poll — no parallel request path in `Outbound/Fetch`.
+
+**Files:**
+- Modify: `backend/src/Service/Social/Lemmy/LemmyAccountApi.php` (`POST_CREATION_TIMEOUT_SECONDS` 30.0 → 8.0)
+- Modify: `backend/src/Service/Social/Lemmy/LemmyPostWriter.php` (`findLanded()` polls)
+- Test: `backend/tests/Service/Social/Lemmy/LemmyPostWriterTest.php`
+
+**Interfaces:**
+- Consumes: `LemmyOwnPosts::findJustPublished`, `LemmyPostAttemptModel`, `ClockInterface` (Task 3).
+- `LemmyPostWriter` constants: `LANDING_WAIT_SECONDS = 30` (from `sentAt`), `LANDING_POLL_SECONDS = 4`.
+- Behaviour: after an unknown outcome on a top-level post, look up at once; while not found and `now + LANDING_POLL_SECONDS <= sentAt + LANDING_WAIT_SECONDS`, `$this->clock->sleep(LANDING_POLL_SECONDS)` and look up again. Found → posted, stop. Deadline passed → rethrow the original `SocialWriteOutcomeUnknownException`. A lookup that fails counts as "not found yet" for that round.
+
+- [ ] **Step 1: Write the failing tests** (use `MockClock`; its `sleep()` advances time, so no real waiting)
+- `testAPostWaitsEightSecondsForTheInstance` replaces Task 2's thirty-second test: `8.0 === getRequestOptions()['timeout']`.
+- `testAPostThatShowsUpOnALaterLookupIsPosted`: POST times out; the user listing answers no match twice, then the match → posted; exactly 3 listing requests; MockClock advanced 8 s.
+- `testPollingStopsAtThirtySecondsAfterSending`: POST times out with the clock advanced to `sentAt + 8 s` (advance `MockClock` inside the routed POST response callback or before the call so the timeline is deterministic); listing never matches → `SocialWriteOutcomeUnknownException`, and the listing was asked exactly 6 times (at 8, 12, 16, 20, 24, 28 s).
+- `testALookupThatFailsIsRetried`: first listing answers `HTTP_SERVICE_UNAVAILABLE`, second matches → posted.
+- Task 3's no-match and failed-lookup tests keep their outcome (`SocialWriteOutcomeUnknownException`); adjust their expected request counts.
+
+- [ ] **Step 2: Run to verify they fail** — `php bin/phpunit tests/Service/Social/Lemmy/LemmyPostWriterTest.php` → FAIL.
+- [ ] **Step 3: Implement** the behaviour above in `LemmyPostWriter` (guard clauses, PHPMD-clean).
+- [ ] **Step 4: Run** `php bin/phpunit tests/Service/Social/Lemmy` → PASS; cs/stan/PHPMD on changed `src` files.
+- [ ] **Step 5: Commit** — `fix(#2548): watch for the lemmy post while the instance is busy`
