@@ -105,19 +105,19 @@ final class CrossFamilyFailoverTest extends TestCase
 
     public function testAWriteThatNeverLeftMayBeSentAgain(): void
     {
-        [$failed, $error] = $this->failedResponse(['pretransfer_time' => 0.0]);
+        [$failed, $error] = $this->failedResponse(['request_size' => 0]);
 
         self::assertTrue($this->failover->allowsRetryAfterFailure('POST', $failed, $error));
     }
 
     public function testAWriteThatMayHaveLeftIsNotSentAgain(): void
     {
-        [$failed, $error] = $this->failedResponse(['pretransfer_time' => 0.042]);
+        [$failed, $error] = $this->failedResponse(['request_size' => 122]);
 
         self::assertFalse($this->failover->allowsRetryAfterFailure('POST', $failed, $error));
     }
 
-    public function testAWriteWithoutPretransferTimeIsNotSentAgain(): void
+    public function testAWriteWithoutRequestSizeIsNotSentAgain(): void
     {
         [$failed, $error] = $this->failedResponse([]);
 
@@ -126,7 +126,7 @@ final class CrossFamilyFailoverTest extends TestCase
 
     public function testATimedOutWriteIsNotSentAgain(): void
     {
-        $failed = new MockResponse('', ['pretransfer_time' => 0.0]);
+        $failed = new MockResponse('', ['request_size' => 0]);
 
         self::assertFalse(
             $this->failover->allowsRetryAfterFailure('POST', $failed, new TimeoutException('Idle timeout reached')),
@@ -135,7 +135,7 @@ final class CrossFamilyFailoverTest extends TestCase
 
     public function testARepeatableMethodIsSentAgainAfterAResetWhateverWasSent(): void
     {
-        [$failed, $error] = $this->failedResponse(['pretransfer_time' => 0.042]);
+        [$failed, $error] = $this->failedResponse(['request_size' => 122]);
 
         self::assertTrue($this->failover->allowsRetryAfterFailure('get', $failed, $error));
     }

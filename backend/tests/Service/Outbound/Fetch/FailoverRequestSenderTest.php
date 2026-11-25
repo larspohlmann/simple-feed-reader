@@ -216,7 +216,7 @@ final class FailoverRequestSenderTest extends TestCase
     public function testAWriteThatResetBeforeItLeftIsSentOverTheNextFamily(): void
     {
         $client = $this->dualStackClient(
-            new MockResponse('', ['error' => 'Connection reset by peer', 'pretransfer_time' => 0.0]),
+            new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 0]),
             new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
         );
 
@@ -229,7 +229,7 @@ final class FailoverRequestSenderTest extends TestCase
     public function testAWriteThatResetAfterItLeftIsNotSentAgain(): void
     {
         $client = $this->dualStackClient(
-            new MockResponse('', ['error' => 'Connection reset by peer', 'pretransfer_time' => 0.05]),
+            new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 122]),
             new MockResponse('served over IPv4', ['http_code' => Response::HTTP_OK]),
         );
 

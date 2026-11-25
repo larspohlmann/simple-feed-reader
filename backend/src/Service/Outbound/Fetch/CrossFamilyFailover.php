@@ -29,7 +29,7 @@ final readonly class CrossFamilyFailover
         TransportExceptionInterface $transportError,
     ): bool {
         return $this->isWarranted($transportError)
-            && ($this->isRepeatable($method) || 0.0 === $failed->getInfo('pretransfer_time'));
+            && ($this->isRepeatable($method) || 0 === $failed->getInfo('request_size'));
     }
 
     public function allowsRetryAfterStatus(string $method, int $statusCode): bool
