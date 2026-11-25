@@ -90,13 +90,13 @@ The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar
 | `--sidebar-slot` | `28px` | the ⋯ and chevron columns |
 | `--sidebar-frame-h` | `36px` | the foot's stepper and segmented frames |
 | `--sidebar-card-pad` | `calc(var(--space-1) + var(--space-0))` | a card's padding, a group's bottom padding, the inner box's right and bottom margin |
-| `--sidebar-row-inset` | `calc(var(--space-2) + var(--space-0))` | a row's left padding on its own surface |
-| `--sidebar-row-deep-inset` | inset + `--icon-md` + `--space-3` | a row stepped in under a lead: it starts where its parent's label starts |
+| `--sidebar-label-x` | `row.label-x($height, $lead)`: `height − 1cap + lead`, lead space + lead + gap | where a parent row's label starts, so a run stepped in under it starts there; registered, so it computes in that row's font. Set on the sidebar (a top-level row), a child tag's box and a network's rows |
+| `--sidebar-handle-w` | `40px` | organise mode's drag handle column |
 | `--drawer-shadow` | `6px 0 24px rgb(0 0 0 / 18%)` | the phone sheet's cast |
 | `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
 | `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
 
-Every row height is `--tap-target` on a coarse pointer.
+Every row height is `--tap-target` on a coarse pointer. A row's left inset and its icon-to-name gap are both its lead space, `(row height − 1cap) / 2` on that row (`icon-lead.fixed-row`, #2558), so a 36px row's lead sits a little further in than a 32px row's.
 
 ### Icon sizes
 
@@ -1899,13 +1899,13 @@ locally: key on `pointer: coarse` (capability), never on viewport width
 
 The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then smart views, Saved searches, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
 
-**A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
+**A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset, <its lead space>)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
-**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--icon-lead-space) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
 
 **The Notifications row** (#2240) leads each network card's rows, only while the network has a connected account and not while organising. It is a feed-row look: a bell lead, the name, and the unseen count as a `<app-count-pill>` instead of a plain count. It has no ⋯ and no chevron, so it ends in an empty `.slot` and `.trail` like any row without them; the pill is pulled right by `calc(var(--space-2) * -1)` so its digit lines up with the other rows' count digits. At 0 there is no pill, and the count is never added to the head's.
 
-**Heads** (`section-head`) are 13px/600 `--text-secondary`, sentence case, and their title still opens the combined list (#1735). When that list is showing, the whole head row is `.current`: the full-row `--accent-soft` fill with accent title and count. While organising the heads stay neutral.
+**Heads** (`section-head`) are 13px/600 `--text-secondary`, sentence case; the size sits on the head, so its lead space follows the title's font, and the title centres on the head's line with no optical nudge. Their title still opens the combined list (#1735). When that list is showing, the whole head row is `.current`: the full-row `--accent-soft` fill with accent title and count. While organising the heads stay neutral.
 
 **Nesting** (two levels below the top, #1736, #1790). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box, and a grandchild's box is a `.tag-child` inside that one, on the same background and marked only by the compounded margin; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
 
