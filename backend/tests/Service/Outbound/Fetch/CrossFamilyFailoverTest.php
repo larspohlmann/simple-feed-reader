@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Outbound\Fetch;
 
 use App\Service\Outbound\Fetch\CrossFamilyFailover;
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
@@ -71,73 +72,59 @@ final class CrossFamilyFailoverTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{int}>
      */
-    public static function repeatableMethods(): iterable
+    public static function errorStatuses(): iterable
     {
-        yield 'GET' => ['GET'];
-        yield 'lowercase head' => ['head'];
-        yield 'OPTIONS' => ['OPTIONS'];
+        yield 'bad gateway' => [Response::HTTP_BAD_GATEWAY];
+        yield 'forbidden' => [Response::HTTP_FORBIDDEN];
+    }
+
+    #[DataProvider('errorStatuses')]
+    public function testARepeatableRequestMayBeAskedAgainAfterAnErrorStatus(int $statusCode): void
+    {
+        self::assertTrue($this->failover->allowsRetryAfterStatus(RepeatSafety::Repeatable, $statusCode));
+    }
+
+    #[DataProvider('errorStatuses')]
+    public function testAWriteIsNeverAskedAgainAfterAnAnswer(int $statusCode): void
+    {
+        self::assertFalse($this->failover->allowsRetryAfterStatus(RepeatSafety::Write, $statusCode));
     }
 
     /**
-     * @return iterable<string, array{string, int}>
+     * @return iterable<string, array{array<string, mixed>, bool}>
      */
-    public static function writesWithAnswers(): iterable
+    public static function writeRequestSizes(): iterable
     {
-        foreach (['POST', 'put', 'DELETE', 'PATCH'] as $method) {
-            yield $method . ' bad gateway' => [$method, Response::HTTP_BAD_GATEWAY];
-            yield $method . ' forbidden' => [$method, Response::HTTP_FORBIDDEN];
-        }
+        yield 'never left' => [['request_size' => 0], true];
+        yield 'may have left' => [['request_size' => 122], false];
+        yield 'without request size' => [[], false];
     }
 
-    #[DataProvider('repeatableMethods')]
-    public function testARepeatableMethodMayBeAskedAgainAfterAnErrorStatus(string $method): void
+    /** @param array<string, mixed> $responseInfo */
+    #[DataProvider('writeRequestSizes')]
+    public function testAWriteIsSentAgainOnlyWhenNothingLeft(array $responseInfo, bool $sentAgain): void
     {
-        self::assertTrue($this->failover->allowsRetryAfterStatus($method, Response::HTTP_BAD_GATEWAY));
-    }
+        [$failed, $error] = $this->failedResponse($responseInfo);
 
-    #[DataProvider('writesWithAnswers')]
-    public function testAWriteIsNeverAskedAgainAfterAnAnswer(string $method, int $statusCode): void
-    {
-        self::assertFalse($this->failover->allowsRetryAfterStatus($method, $statusCode));
-    }
-
-    public function testAWriteThatNeverLeftMayBeSentAgain(): void
-    {
-        [$failed, $error] = $this->failedResponse(['request_size' => 0]);
-
-        self::assertTrue($this->failover->allowsRetryAfterFailure('POST', $failed, $error));
-    }
-
-    public function testAWriteThatMayHaveLeftIsNotSentAgain(): void
-    {
-        [$failed, $error] = $this->failedResponse(['request_size' => 122]);
-
-        self::assertFalse($this->failover->allowsRetryAfterFailure('POST', $failed, $error));
-    }
-
-    public function testAWriteWithoutRequestSizeIsNotSentAgain(): void
-    {
-        [$failed, $error] = $this->failedResponse([]);
-
-        self::assertFalse($this->failover->allowsRetryAfterFailure('POST', $failed, $error));
+        self::assertSame($sentAgain, $this->failover->allowsRetryAfterFailure(RepeatSafety::Write, $failed, $error));
     }
 
     public function testATimedOutWriteIsNotSentAgain(): void
     {
         $failed = new MockResponse('', ['request_size' => 0]);
 
-        self::assertFalse(
-            $this->failover->allowsRetryAfterFailure('POST', $failed, new TimeoutException('Idle timeout reached')),
-        );
+        $timeout = new TimeoutException('Idle timeout reached');
+
+        self::assertFalse($this->failover->allowsRetryAfterFailure(RepeatSafety::Write, $failed, $timeout));
     }
 
-    public function testARepeatableMethodIsSentAgainAfterAResetWhateverWasSent(): void
+    public function testARepeatableRequestIsSentAgainAfterAResetWhateverWasSent(): void
     {
         [$failed, $error] = $this->failedResponse(['request_size' => 122]);
 
-        self::assertTrue($this->failover->allowsRetryAfterFailure('get', $failed, $error));
+        self::assertTrue($this->failover->allowsRetryAfterFailure(RepeatSafety::Repeatable, $failed, $error));
     }
 
     /**

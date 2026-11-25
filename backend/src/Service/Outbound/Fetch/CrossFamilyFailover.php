@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Fetch;
 
+use App\Service\Outbound\Fetch\Model\RepeatSafety;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -21,30 +22,28 @@ final readonly class CrossFamilyFailover
         Response::HTTP_TOO_MANY_REQUESTS,
     ];
 
-    private const array REPEATABLE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
-
     public function allowsRetryAfterFailure(
-        string $method,
+        RepeatSafety $repeatSafety,
         ResponseInterface $failed,
         TransportExceptionInterface $transportError,
     ): bool {
         return $this->isWarranted($transportError)
-            && ($this->isRepeatable($method) || 0 === $failed->getInfo('request_size'));
+            && (RepeatSafety::Repeatable === $repeatSafety || $this->hasSentNothing($failed));
     }
 
     public function isPossiblyDelivered(
-        string $method,
+        RepeatSafety $repeatSafety,
         ResponseInterface $failed,
         TransportExceptionInterface $transportError,
     ): bool {
         return $this->isWarranted($transportError)
-            && !$this->isRepeatable($method)
-            && 0 !== $failed->getInfo('request_size');
+            && RepeatSafety::Write === $repeatSafety
+            && !$this->hasSentNothing($failed);
     }
 
-    public function allowsRetryAfterStatus(string $method, int $statusCode): bool
+    public function allowsRetryAfterStatus(RepeatSafety $repeatSafety, int $statusCode): bool
     {
-        return $this->isRepeatable($method) && $this->isRetryableStatus($statusCode);
+        return RepeatSafety::Repeatable === $repeatSafety && $this->isRetryableStatus($statusCode);
     }
 
     public function isWarranted(?\Throwable $transportError): bool
@@ -63,8 +62,8 @@ final readonly class CrossFamilyFailover
             && !\in_array($statusCode, self::ROUTE_INDEPENDENT_STATUSES, true);
     }
 
-    private function isRepeatable(string $method): bool
+    private function hasSentNothing(ResponseInterface $failed): bool
     {
-        return \in_array(strtoupper($method), self::REPEATABLE_METHODS, true);
+        return 0 === $failed->getInfo('request_size');
     }
 }

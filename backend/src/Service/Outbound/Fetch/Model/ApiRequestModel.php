@@ -75,7 +75,12 @@ final readonly class ApiRequestModel
 
     public function isRead(): bool
     {
-        return 'GET' === $this->method || $this->changesNothing;
+        return RepeatSafety::Repeatable === $this->repeatSafety();
+    }
+
+    public function repeatSafety(): RepeatSafety
+    {
+        return $this->changesNothing ? RepeatSafety::Repeatable : RepeatSafety::fromMethod($this->method);
     }
 
     public function host(): string
