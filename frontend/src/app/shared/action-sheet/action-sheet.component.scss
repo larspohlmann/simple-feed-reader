@@ -45,7 +45,12 @@ nav {
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  @include menu-items.menu-items;
+  // One line fills the tap target: the padding is what is left of it around the line.
+  @include menu-items.menu-items(max(var(--row-pad-y), calc((var(--tap-target) - 1lh) / 2)));
+}
+
+nav [role='menuitem']:has(> .labelled) {
+  padding-block: var(--row-pad-y);
 }
 
 nav button {
@@ -61,7 +66,9 @@ nav app-menu-checkbox {
 
 .labelled {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
+  min-width: 0;
 }
 
 .hint {

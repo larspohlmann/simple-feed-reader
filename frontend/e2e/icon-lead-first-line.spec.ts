@@ -12,6 +12,13 @@ import {
   stubNotifications,
   stubTrending,
 } from './support/icon-rows';
+import {
+  openAccountMenu,
+  openRepostMenu,
+  openShareMenu,
+  openShareSheet,
+  stubMenus,
+} from './support/menu-rows';
 import { entryWire } from './support/reader';
 
 /**
@@ -22,6 +29,7 @@ import { entryWire } from './support/reader';
 const PHONE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 900 };
 const TOLERANCE = 0.5;
+const LINE_TOLERANCE = 1;
 const MIN_LINES = 1.9;
 
 interface Setup {
@@ -462,6 +470,206 @@ for (const setup of SETUPS) {
           return [count.left - up.right, down.left - count.right];
         });
         expect(Math.abs(before - after), `${before} | ${after}`).toBeLessThanOrEqual(TOLERANCE);
+      } finally {
+        await page.context().close();
+      }
+    });
+  });
+}
+
+/** A row of a menu: how to open the menu and find the row, its lead icon and the text it leads. */
+interface MenuCase {
+  name: string;
+  touch: boolean;
+  row: (page: Page) => Promise<Locator>;
+  icon: string;
+  text: string | null;
+  /** The text is a single line, so its line stays centred in the row. */
+  centred: boolean;
+}
+
+const accountRow = (select: (menu: Locator) => Locator) => async (page: Page) =>
+  select(await openAccountMenu(page));
+const shareRow = (index: number) => async (page: Page) =>
+  (await openShareMenu(page)).getByRole('menuitem').nth(index);
+const sheetRow = (index: number) => async (page: Page) =>
+  (await openShareSheet(page)).getByRole('menuitem').nth(index);
+
+const MENU_CASES: MenuCase[] = [
+  {
+    name: 'the account menu Settings item',
+    touch: false,
+    row: accountRow((menu) => menu.locator('a[href="/settings"]')),
+    icon: 'app-icon',
+    text: '.label',
+    centred: true,
+  },
+  {
+    name: 'the account menu notification item',
+    touch: false,
+    row: accountRow((menu) => menu.locator('a.item').first()),
+    icon: 'app-network-logo',
+    text: '.label',
+    centred: true,
+  },
+  {
+    name: 'the account menu Settings item on a coarse pointer',
+    touch: true,
+    row: accountRow((menu) => menu.locator('a[href="/settings"]')),
+    icon: 'app-icon',
+    text: '.label',
+    centred: true,
+  },
+  {
+    name: 'the account menu who block',
+    touch: false,
+    row: accountRow((menu) => menu.locator('.who')),
+    icon: 'app-user-avatar',
+    text: '.who-email',
+    centred: false,
+  },
+  {
+    name: 'a share menu post item',
+    touch: false,
+    row: shareRow(0),
+    icon: 'app-network-logo',
+    text: '.label',
+    centred: true,
+  },
+  {
+    name: 'a share menu target item',
+    touch: false,
+    row: shareRow(1),
+    icon: 'app-share-target-logo',
+    text: '.label',
+    centred: true,
+  },
+  {
+    name: 'a repost menu item',
+    touch: false,
+    row: async (page) => (await openRepostMenu(page)).getByRole('menuitem').first(),
+    icon: 'app-icon',
+    text: null,
+    centred: true,
+  },
+  {
+    name: 'an action-sheet item with one line',
+    touch: true,
+    row: sheetRow(1),
+    icon: 'app-icon',
+    text: null,
+    centred: true,
+  },
+  {
+    name: 'an action-sheet item with a hint',
+    touch: true,
+    row: sheetRow(0),
+    icon: 'app-masked-logo',
+    text: '.labelled',
+    centred: false,
+  },
+];
+
+async function prepareMenu(browser: Browser, setup: Setup, menu: MenuCase): Promise<Page> {
+  const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
+    viewport: menu.touch ? PHONE : DESKTOP,
+    hasTouch: menu.touch,
+    isMobile: menu.touch,
+  });
+  const page = await context.newPage();
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
+  await presetLocalStorage(page, {
+    'sfr.textSize': String(setup.step),
+    'sfr.layout': 'pane',
+    'sfr.theme': 'light',
+  });
+  await stubMenus(page);
+  await stubAccountTheme(page, setup.theme);
+  await page.goto('/?subscription=1');
+  return page;
+}
+
+/** The first text's line box: its middle against the row's, in px. */
+async function measureLineInRow(row: Locator, text: string | null): Promise<number> {
+  return row.evaluate((element, selector) => {
+    const holder = selector ? element.querySelector(selector)! : element;
+    const walker = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+    let node: Node | null = walker.nextNode();
+    while (node && !node.textContent?.trim()) node = walker.nextNode();
+    const range = document.createRange();
+    range.selectNodeContents(node!);
+    const line = range.getClientRects()[0];
+    const box = element.getBoundingClientRect();
+    return line.top + line.height / 2 - (box.top + box.height / 2);
+  }, text);
+}
+
+for (const setup of SETUPS) {
+  test.describe(`menus, ${setup.theme} at ${setup.step}%`, () => {
+    for (const menu of MENU_CASES) {
+      test(`${menu.name} centres its icon on the cap middle, as far from the edge as from the text`, async ({
+        browser,
+      }) => {
+        const page = await prepareMenu(browser, setup, menu);
+        try {
+          const row = await menu.row(page);
+          await expect(row).toBeVisible();
+          await settle(page, setup.theme);
+          const textHolder = menu.text === null ? row : row.locator(menu.text);
+
+          const measured = await measureFirstLine({
+            icon: row.locator(menu.icon),
+            firstLine: textHolder,
+            block: textHolder,
+          });
+          const { side, gap } = await measureSpacing(row, menu.icon, menu.text);
+
+          expect(
+            Math.abs(measured.offset),
+            `icon centre ${measured.iconCentre} against cap middle ${measured.capMiddle}`,
+          ).toBeLessThanOrEqual(TOLERANCE);
+          expect(Math.abs(side - gap), `side ${side} against gap ${gap}`).toBeLessThanOrEqual(
+            TOLERANCE,
+          );
+          if (menu.centred) {
+            const off = await measureLineInRow(row, menu.text);
+            expect(Math.abs(off), `the line sits ${off}px off the row middle`).toBeLessThanOrEqual(
+              LINE_TOLERANCE,
+            );
+          }
+        } finally {
+          await page.context().close();
+        }
+      });
+    }
+
+    test('a count pill in the account menu keeps the gap token after its label, centred in the row', async ({
+      browser,
+    }) => {
+      const menu = MENU_CASES[1];
+      const page = await prepareMenu(browser, setup, menu);
+      try {
+        const row = await menu.row(page);
+        await expect(row.locator('app-count-pill')).toBeVisible();
+        await settle(page, setup.theme);
+
+        const [gap, token, off] = await row.evaluate((element) => {
+          const pill = element.querySelector('app-count-pill')!.getBoundingClientRect();
+          const label = element.querySelector('.label')!.getBoundingClientRect();
+          const box = element.getBoundingClientRect();
+          return [
+            pill.left - label.right,
+            parseFloat(getComputedStyle(element).columnGap),
+            pill.top + pill.height / 2 - (box.top + box.height / 2),
+          ];
+        });
+        expect(Math.abs(gap - token), `gap ${gap} against token ${token}`).toBeLessThanOrEqual(
+          TOLERANCE,
+        );
+        expect(Math.abs(off), `the pill sits ${off}px off the row middle`).toBeLessThanOrEqual(
+          TOLERANCE,
+        );
       } finally {
         await page.context().close();
       }

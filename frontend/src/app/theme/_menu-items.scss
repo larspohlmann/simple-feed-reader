@@ -1,13 +1,19 @@
 @use 'glass-rim';
+@use 'icon-lead';
 
 // The rows of a role=menu, drawn alike by the share popover and the action sheet.
-@mixin menu-items {
+@mixin menu-items($inset: var(--row-pad-y)) {
   [role='menuitem'] {
+    @include icon-lead.box-lead(
+      $inset,
+      '> app-icon, > app-network-logo, > app-masked-logo, > app-share-target-logo',
+      null,
+      var(--space-3)
+    );
+    @include icon-lead.overhang('> app-network-logo, > app-masked-logo', var(--icon-sm));
+
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
     width: 100%;
-    padding: var(--row-pad-y) var(--row-pad-x);
     background: none;
     border: none;
     color: var(--text-primary);

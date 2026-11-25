@@ -197,11 +197,11 @@ header {
 }
 
 .menu .who {
+  @include icon-lead.box(var(--space-3), '> app-user-avatar', '> .who-text');
+
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
   min-width: 0;
+  font-size: var(--fs-sm);
 }
 
 .menu .who-text {
@@ -240,13 +240,20 @@ header {
 }
 
 .menu .item {
+  @include icon-lead.fixed-row-lead(
+    var(--control-h),
+    '> app-icon, > app-network-logo',
+    '> .label',
+    var(--space-3)
+  );
+  @include icon-lead.overhang('> app-network-logo', var(--icon-md));
+
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
   box-sizing: border-box;
   width: 100%;
   min-height: var(--control-h);
-  padding: 0 var(--space-3);
+  padding-block: 0;
+  padding-inline-end: var(--space-3);
   border: none;
   border-radius: var(--radius);
   background: none;
@@ -257,6 +264,13 @@ header {
   cursor: pointer;
 
   @media (pointer: coarse) {
+    @include icon-lead.fixed-row-lead(
+      var(--tap-target),
+      '> app-icon, > app-network-logo',
+      '> .label',
+      var(--space-3)
+    );
+
     min-height: var(--tap-target);
     font-size: var(--fs-base);
   }
@@ -271,14 +285,18 @@ header {
 }
 
 .menu .item app-network-logo {
-  flex: none;
   width: var(--icon-md);
   height: var(--icon-md);
 }
 
 .menu .item .label {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: left;
+}
+
+.menu .item app-count-pill {
+  align-self: center;
 }
 
 .menu .signout {
