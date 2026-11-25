@@ -1,13 +1,15 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 
-// A row so a leading marker (the paywall glyph) sits in a gutter and the body
-// hangs indented beside it; a lone child (the mono error) just fills the box.
+// A leading marker sits on the first line and the body hangs beside it (projected, hence ::ng-deep).
 :host {
   @include glass-rim.filled(var(--surface-1), var(--border-warning));
+  @include icon-lead.box(
+    var(--space-3),
+    '::ng-deep > .warning-glyph, ::ng-deep > app-icon',
+    '::ng-deep > .warning-text, ::ng-deep > .hint-text'
+  );
 
   display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-  padding: var(--space-3);
   border-radius: var(--radius);
 }

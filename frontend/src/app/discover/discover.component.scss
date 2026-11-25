@@ -1,5 +1,6 @@
 @use '../theme/breakpoints' as bp;
 @use '../theme/glass-rim';
+@use '../theme/icon-lead';
 
 // The picker is a route, not a CDK dialog, so nothing else supplies the scrim
 // — this host is it. The frame inside is app-overlay-panel's; only the width
@@ -75,12 +76,18 @@ app-category-chips {
 }
 
 .cat-head {
+  @include icon-lead.first-line('> .cat-ico', '> h2');
+
+  --cat-action-height: calc(var(--fs-sm) * var(--lh-normal) + var(--space-2) + var(--space-0));
+
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  align-items: center;
+  font-size: var(--fs-base);
+  line-height: var(--lh-tight);
   margin: 0 calc(var(--space-5) * -1) var(--space-3);
   padding: var(--space-2) var(--space-5);
   border-bottom: 1px solid var(--border);
@@ -90,37 +97,40 @@ app-category-chips {
   background: var(--surface-2);
 
   h2 {
+    flex: 1 1 0;
+    min-width: min-content;
     margin: 0;
-    font-size: var(--fs-base);
+    font-size: inherit;
+    overflow-wrap: normal;
   }
-}
 
-// A fixed leading slot so category names share one left edge — the reader
-// sidebar's tag treatment, tinted glyph and all.
-.cat-ico {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
+  h2 {
+    margin-block-start: max(0px, #{icon-lead.line-offset(var(--cat-action-height))});
+  }
 }
 
 .cat-count {
   color: var(--text-muted);
   font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
 }
 
 .cat-act {
   display: flex;
+  flex: none;
   gap: var(--space-1);
   margin-left: auto;
+  line-height: var(--lh-normal);
 
   button {
     @include glass-rim.filled(var(--accent-soft), var(--border), control);
 
+    block-size: var(--cat-action-height);
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
     color: var(--accent);
     font-size: var(--fs-sm);
+    white-space: nowrap;
     cursor: pointer;
   }
 }

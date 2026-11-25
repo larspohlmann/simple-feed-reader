@@ -1,6 +1,7 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
 @use '../../../theme/count-badge';
+@use '../../../theme/icon-lead';
 
 /* Opaque backing shared by the transparent header row and tag row, spanning
    their seam: each is its own compositing layer, and their bounds can round
@@ -50,12 +51,10 @@ header {
 
 .chip {
   @include glass-rim.filled(var(--surface-2), var(--border), control);
+  @include icon-lead.box(var(--space-1), '> app-tag-glyph', null);
 
   flex: none;
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -81,13 +80,20 @@ header {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  font-size: var(--app-name-size, 1em);
   font-weight: var(--app-name-weight, 700);
   color: var(--text-primary);
   text-decoration: none;
 }
 
+/* Only beside the name: alone, the spinner keeps the link its own height. */
+@media (width > bp.$bp-md) {
+  .brand {
+    @include icon-lead.first-line('> app-spinner', '> .name');
+  }
+}
+
 .brand .name {
-  font-size: var(--app-name-size, 1em);
   white-space: nowrap;
 }
 
@@ -192,17 +198,28 @@ header {
   max-width: calc(100vw - var(--space-6));
   padding: var(--space-1);
   border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
   box-shadow:
     0 12px 32px rgb(0 0 0 / 16%),
     0 2px 6px rgb(0 0 0 / 8%);
+
+  @include icon-lead.fixed-lead-space(var(--control-h));
+
+  @media (pointer: coarse) {
+    font-size: var(--fs-base);
+
+    @include icon-lead.fixed-lead-space(var(--tap-target));
+  }
 }
 
 .menu .who {
+  @include icon-lead.first-line('> app-user-avatar', '> .who-text');
+
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
   min-width: 0;
+  padding: var(--space-3) var(--icon-lead-space);
+  gap: var(--icon-lead-space);
+  font-size: var(--fs-sm);
 }
 
 .menu .who-text {
@@ -234,20 +251,26 @@ header {
 
 .menu .head {
   margin: 0;
-  padding: var(--space-2) var(--space-3) var(--space-1);
+  padding: var(--space-2) var(--icon-lead-space) var(--space-1);
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .menu .item {
+  @include icon-lead.fixed-row(
+    var(--control-h),
+    '> app-icon, > app-network-logo',
+    '> .label',
+    $gap: var(--space-3)
+  );
+
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
   box-sizing: border-box;
   width: 100%;
   min-height: var(--control-h);
-  padding: 0 var(--space-3);
+  padding-block: 0;
+  padding-inline-end: var(--space-3);
   border: none;
   border-radius: var(--radius);
   background: none;
@@ -258,6 +281,13 @@ header {
   cursor: pointer;
 
   @media (pointer: coarse) {
+    @include icon-lead.fixed-row(
+      var(--tap-target),
+      '> app-icon, > app-network-logo',
+      '> .label',
+      $gap: var(--space-3)
+    );
+
     min-height: var(--tap-target);
     font-size: var(--fs-base);
   }
@@ -272,13 +302,12 @@ header {
 }
 
 .menu .item app-network-logo {
-  flex: none;
-  width: var(--icon-md);
-  height: var(--icon-md);
+  --icon-lead-self: var(--icon-md);
 }
 
 .menu .item .label {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: left;
 }
 

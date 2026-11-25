@@ -9,8 +9,7 @@
 }
 
 app-network-logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+  --icon-lead-self: var(--icon-sm);
 }
 
 /* The phone bar: each button a full tap target, a glyph size up, clear of its neighbour. */
@@ -22,7 +21,6 @@ app-network-logo {
   }
 
   app-network-logo {
-    width: var(--icon-md);
-    height: var(--icon-md);
+    --icon-lead-self: var(--icon-md);
   }
 }

@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 @use 'sidebar-row' as row;
 @include row.card;
 @include row.row-parts;
@@ -9,10 +10,15 @@
 @include row.group;
 
 .sidebar {
+  // The top-level lead's centre: half its label x, for the rails that hang under it.
+  --sidebar-rail-x: calc(var(--sidebar-label-x) / 2);
+
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   height: 100%;
+
+  @include row.label-x(var(--sidebar-row-h), var(--icon-md));
 }
 
 /* Positioned so its overflow clips the footer's absolute `.sr-only` outputs: unclipped, they
@@ -140,30 +146,38 @@
 .tag-group > .tagfeeds {
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
-  --row-inset: var(--sidebar-row-deep-inset);
+  --row-inset: var(--sidebar-label-x);
 
   gap: 0;
 }
 
-/* The child's own surface: its rows start at the box's edge again, so each chevron keeps its gap to it. */
+/* The child's own surface: its rows start at the box's edge again, so each chevron keeps its gap to it.
+   The box steps in so the child's glyph starts at its parent's label. */
 .tag-child {
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
-  --row-inset: var(--sidebar-row-inset);
 
   display: flex;
   flex-direction: column;
   gap: var(--space-0);
   margin: var(--space-0) var(--sidebar-card-pad) var(--sidebar-card-pad)
-    calc(var(--sidebar-row-inset) + var(--icon-md));
+    calc(var(--sidebar-label-x) - var(--space-0) - #{icon-lead.space(var(--row-box))});
   padding: var(--space-0);
   border-radius: var(--radius);
   background: var(--surface-1);
+  font-size: var(--row-fs);
+
+  @include row.row-box(var(--row-h));
+}
+
+.tag-child > .tagfeeds,
+.tag-child > .tag-child {
+  @include row.label-x(var(--sidebar-sub-row-h), var(--icon-dense));
 }
 
 .tag-child .tagfeeds {
   --row-h: var(--sidebar-leaf-row-h);
-  --row-inset: var(--sidebar-row-deep-inset);
+  --row-inset: var(--sidebar-label-x);
 }
 
 :host-context(.sidebar-airy) .tag-child {
@@ -245,6 +259,16 @@
   box-shadow: 0 6px 20px rgb(0 0 0 / 28%);
 }
 
+/* Out of its list, a feed's preview restates the list's row, so its lead keeps its space. */
+.feedrow.cdk-drag-preview {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+}
+
+.feedrow.cdk-drag-preview.leaf-preview {
+  --row-h: var(--sidebar-leaf-row-h);
+}
+
 .cdk-drag-preview .handle {
   color: var(--accent);
 }
@@ -289,7 +313,7 @@
 }
 
 .sidebar.organising {
-  --row-inset: 0;
+  --row-inset: 0px;
   --row-fs: var(--fs-base);
 
   gap: var(--space-2);
@@ -351,7 +375,7 @@
 .organising .tagfeeds,
 .organising .tag-child {
   --row-fs: var(--fs-base);
-  --row-inset: 0;
+  --row-inset: 0px;
 }
 
 .organising .tag-group > .tagfeeds,
@@ -369,6 +393,8 @@
 }
 
 .organising .tag {
+  @include icon-lead.fixed-lead-space(var(--tap-target));
+
   display: flex;
   align-items: center;
   height: var(--tap-target);
@@ -391,7 +417,13 @@
   color: var(--text-primary);
 }
 
+.rowbody > .lead {
+  margin-inline-end: icon-lead.lead-gap(var(--space-3));
+}
+
 .organising .feedrow.cdk-drag-placeholder {
+  --name-x: calc(var(--row-inset) + var(--sidebar-handle-w) + var(--icon-md));
+
   margin: calc(var(--space-0) / 2) var(--space-3) calc(var(--space-0) / 2)
-    calc(var(--space-7) + var(--space-4));
+    calc(var(--name-x) + #{icon-lead.space(var(--tap-target))});
 }

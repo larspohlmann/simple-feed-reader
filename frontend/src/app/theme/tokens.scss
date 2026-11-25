@@ -1,6 +1,7 @@
 @use './breakpoints' as bp;
 @use './brightness';
 @use './glass-rim';
+@use './icon-lead';
 @use './icon-scale';
 @use './type-scale';
 @use './themes/classic';
@@ -98,6 +99,10 @@
 @include brightness.theme-steps('dark', classic.$dark, 'classic');
 @include glass-rim.gradients;
 
+// Where a row's label starts, set by the sidebar (`_sidebar-row.scss` label-x). Registered, so it
+// computes in the font of the row it describes, not in the font of the row that reads it.
+@include icon-lead.register-length(--sidebar-label-x, true);
+
 // Mode-invariant tokens (same in every theme).
 :root {
   /* Inherited: every native checkbox, radio, range and progress takes the theme accent (#1624). */
@@ -164,8 +169,7 @@
   --sidebar-frame-h: 36px;
   --sidebar-card-pad: calc(var(--space-1) + var(--space-0));
   --sidebar-head-pad: var(--space-0);
-  --sidebar-row-inset: calc(var(--space-2) + var(--space-0));
-  --sidebar-row-deep-inset: calc(var(--sidebar-row-inset) + var(--icon-md) + var(--space-3));
+  --sidebar-handle-w: 40px;
   --drawer-shadow: 6px 0 24px rgb(0 0 0 / 18%);
 
   @include icon-scale.fixed;

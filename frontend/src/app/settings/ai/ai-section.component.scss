@@ -1,3 +1,5 @@
+@use '../../theme/icon-lead';
+
 /* Layout glue only. Grouped chrome now lives in `app-settings-group` and
    `app-disclosure` (drill-in). What stays here is the ruled connection-row
    list and the internals of one row, not a primitive's job. */
@@ -20,17 +22,16 @@ app-searchable-select {
 }
 
 .conn {
+  @include icon-lead.first-line('> .conn-dot', '> .conn-who');
+
   display: flex;
-  align-items: center;
   gap: var(--space-3);
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .conn-dot {
-  display: grid;
-  place-items: center;
-  flex: none;
-  padding: var(--space-2);
+  @include icon-lead.padded-slot(var(--icon-sm), var(--space-2));
+
   border-radius: var(--radius-pill);
   background: var(--bg-success);
   color: var(--success);

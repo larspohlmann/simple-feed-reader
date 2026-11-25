@@ -1,5 +1,6 @@
 @use '../../theme/breakpoints' as bp;
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 
 :host {
   display: block;
@@ -76,12 +77,10 @@
 // last pill's shape gets clipped mid-way instead of truncating cleanly.
 .pill {
   @include glass-rim.filled(var(--surface-0), var(--border), control);
+  @include icon-lead.box(0, '> app-tag-glyph', '> .name');
 
   display: inline-flex;
-  align-items: center;
   min-width: 0;
-  gap: var(--space-1);
-  padding: 0 var(--space-2);
   overflow: hidden;
   border-radius: var(--radius-pill);
   color: var(--text-secondary);

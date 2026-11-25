@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 @use '../../../theme/type';
 
 :host {
@@ -110,11 +111,13 @@ article {
    carry it. Flexible so it takes the width the back button and the actions
    leave; `min-width: 0` so that width may also shrink — see .mini-title. */
 .bar-name {
+  @include icon-lead.first-line('> app-favicon', '> .bar-title');
+
   display: flex;
   flex: 1;
   min-width: 0;
-  align-items: center;
   gap: var(--space-2);
+  font-size: var(--fs-base);
 }
 
 /* One line, cut with an ellipsis. `min-width: 0` because a flex item's floor is

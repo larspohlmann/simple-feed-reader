@@ -1,18 +1,24 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 .listen {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
+  @include icon-lead.box(
+    var(--space-2),
+    '> app-icon',
+    '> .listen-label, > .listen-duration',
+    $slot-size: var(--icon-lg),
+    $gap: var(--space-2)
+  );
 
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
   flex: 1;
   min-width: 0;
-  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
+  text-align: start;
 }
 
 :host {

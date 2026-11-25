@@ -1,5 +1,5 @@
 import { Page, Request, expect, test } from '@playwright/test';
-import { presetLocalStorage, STUB_PROFILE } from './support/auth';
+import { ACCOUNT_PREFERENCES, presetLocalStorage, stubAccountProfile } from './support/auth';
 import { stubMagazine } from './support/icon-rows';
 import { imageEntries } from './support/images';
 import { entryWire } from './support/reader';
@@ -26,42 +26,6 @@ const ENTRIES = [
   POST,
 ];
 
-const FULL_PROFILE = {
-  ...STUB_PROFILE,
-  email: 'theme@example.invalid',
-  roles: ['ROLE_USER'],
-  status: 'active',
-  createdAt: '2026-07-01T00:00:00+00:00',
-  locale: 'en',
-  trialEndsAt: null,
-  ai: { ready: false, model: null, capabilities: null },
-  mail: { enabled: false },
-  emailVerified: true,
-};
-
-const PREFERENCES = {
-  scrapeFallbackEnabled: false,
-  digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
-  passkeyOfferAnswered: true,
-  magazineStyle: 'boxed',
-  sidebarStyle: 'boxed',
-  handedness: 'right',
-  trendingEnabled: true,
-};
-
-async function stubAccount(page: Page, theme: string, release?: Promise<void>): Promise<void> {
-  await page.route(
-    (url) => url.pathname === '/api/me',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      await release;
-      await route.fulfill({
-        json: { ...FULL_PROFILE, preferences: { ...PREFERENCES, theme } },
-      });
-    },
-  );
-}
-
 interface ListView {
   local?: Record<string, string>;
   layout?: 'magazine' | 'pane';
@@ -71,7 +35,7 @@ async function openList(page: Page, theme: string, view: ListView = {}): Promise
   const { local = {}, layout = 'magazine' } = view;
   await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': layout, ...local });
   await stubMagazine(page, ENTRIES);
-  await stubAccount(page, theme);
+  await stubAccountProfile(page, { theme });
   await page.goto('/');
   await expect(
     page.locator(layout === 'magazine' ? '.rows.magazine' : 'app-entry-row').first(),
@@ -84,7 +48,7 @@ const STORY_TITLE = 'Hamburg dockworkers strike';
 async function openTrending(page: Page, theme: string): Promise<void> {
   await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': 'magazine' });
   await stubMagazine(page, ENTRIES);
-  await stubAccount(page, theme);
+  await stubAccountProfile(page, { theme });
   const lead = { ...entryWire({ id: 70, title: 'The lead article', source: 'Heise' }), shares: [] };
   await page.route(
     (url) => url.pathname === '/api/trending',
@@ -229,7 +193,7 @@ test.describe('type under classic', () => {
       const title = await styleOf(page, selector);
       expect(title.weight, `${kind} title weight`).toBe('600');
       expect(parseFloat(title.letterSpacing), `${kind} title letter-spacing`).toBeCloseTo(
-        -0.006 * parseFloat(title.size),
+        0.004 * parseFloat(title.size),
         2,
       );
     }
@@ -260,8 +224,8 @@ test.describe('the Trending story headline is a title', () => {
     await openTrending(page, 'classic');
     const headline = await styleOf(page, 'app-story-headline .title');
     expect(headline.weight).toBe('600');
-    expect(parseFloat(headline.letterSpacing)).toBeCloseTo(-0.006 * parseFloat(headline.size), 2);
-    expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.2 * parseFloat(headline.size), 2);
+    expect(parseFloat(headline.letterSpacing)).toBeCloseTo(0.004 * parseFloat(headline.size), 2);
+    expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.34 * parseFloat(headline.size), 2);
   });
 
   test("graphite keeps develop's literals", async ({ page }) => {
@@ -386,7 +350,7 @@ test.describe('first paint', () => {
     });
     const requests = fontRequests(page);
     await stubMagazine(page, ENTRIES);
-    await stubAccount(page, 'classic', held);
+    await stubAccountProfile(page, { theme: 'classic' }, held);
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
@@ -430,13 +394,13 @@ test.describe('switching and signing out', () => {
     const patches: unknown[] = [];
     await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': 'magazine' });
     await stubMagazine(page, ENTRIES);
-    await stubAccount(page, 'graphite');
+    await stubAccountProfile(page, { theme: 'graphite' });
     await page.route(
       (url) => url.pathname === '/api/me/preferences',
       async (route) => {
         if (route.request().method() !== 'PATCH') return route.fallback();
         patches.push(route.request().postDataJSON());
-        await route.fulfill({ json: { ...PREFERENCES, theme: 'classic' } });
+        await route.fulfill({ json: { ...ACCOUNT_PREFERENCES, theme: 'classic' } });
       },
     );
     await page.goto('/settings/preferences');

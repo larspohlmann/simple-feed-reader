@@ -1,12 +1,15 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 
 :host {
   display: inline-flex;
 }
 
 .pill {
+  @include icon-lead.first-line('> .arrow', '> .number');
+  @include icon-lead.centred-line;
+
   display: inline-flex;
-  align-items: center;
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
@@ -17,6 +20,11 @@
   min-height: var(--vote-pill-height);
   border-radius: var(--radius);
   color: inherit;
+}
+
+// The arrow is a hit area that sizes the pill, so its box counts in the line (not --icon-lead-self).
+.pill > .arrow {
+  block-size: auto;
 }
 
 .arrow {

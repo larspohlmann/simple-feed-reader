@@ -1,12 +1,18 @@
 @use 'glass-rim';
+@use 'icon-lead';
 
 // A rounded count-and-glyph button that turns accent while `.on`, and dims while `aria-disabled`
 // (the counts row's like, repost and reply).
 @mixin pill-toggle {
+  @include icon-lead.box(
+    var(--space-1),
+    '> app-icon, > app-network-logo, > app-pending-dots',
+    null,
+    $gap: var(--space-1)
+  );
+  @include icon-lead.centred-line;
+
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--pill-toggle-radius, var(--radius-pill));
   background: none;
   color: inherit;

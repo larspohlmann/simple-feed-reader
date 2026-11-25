@@ -12,9 +12,9 @@
   display: contents;
 }
 
-.section-head app-network-logo {
-  width: var(--icon-dense);
-  height: var(--icon-dense);
+/* The slot wraps the logo and its marker, so both carry the logo's box. */
+.section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-dense);
 }
 
 .section-head .section-link {
@@ -31,8 +31,16 @@
   flex: none;
 }
 
+/* With a fine pointer the '+' and bell overlap by --space-1 and the bell sits --space-1 from the count:
+   room for the network's name. */
 .section-head app-sidebar-compose-button + app-sidebar-notifications-bell {
-  margin-left: calc(var(--space-1) - var(--space-3));
+  margin-left: calc(var(--space-1) * -1 - var(--space-3));
+}
+
+.section-head app-sidebar-notifications-bell {
+  @media (pointer: fine) {
+    margin-right: calc(var(--space-1) - var(--space-3));
+  }
 }
 
 .section-head .section-rest {
@@ -64,10 +72,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-0);
+  font-size: var(--row-fs);
+
+  @include row.label-x(var(--row-h), var(--icon-md));
 }
 
 .tagfeeds {
-  --row-inset: var(--sidebar-row-deep-inset);
+  --row-inset: var(--sidebar-label-x);
 
   display: flex;
   flex-direction: column;
@@ -75,7 +86,7 @@
 
 .divider {
   flex: none;
-  margin: var(--space-1) var(--space-3) var(--space-1) var(--sidebar-row-deep-inset);
+  margin: var(--space-1) var(--space-3) var(--space-1) var(--sidebar-label-x);
   border-top: 1px solid var(--border);
 }
 
@@ -83,7 +94,8 @@
   /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
      line shrinks to nothing once the sidebar overflows. */
   flex: none;
-  margin: var(--space-2) var(--space-2) var(--space-1) var(--sidebar-row-inset);
+  margin: var(--space-2) var(--space-2) var(--space-1)
+    calc((var(--sidebar-label-x) - var(--icon-md)) / 2);
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--fs-xs);
@@ -92,14 +104,17 @@
 }
 
 /* The airy sidebar: the network's name is its heading, and its rows hang one step in on a hairline. */
-:host-context(.sidebar-airy) .section-head app-network-logo {
-  width: var(--icon-md);
-  height: var(--icon-md);
+:host-context(.sidebar-airy) .section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-md);
 }
 
 /* The '+' carries its own inner padding, so it can sit closer to the name: room for "Mastodon". */
 :host-context(.sidebar-airy) .section-head app-sidebar-compose-button {
   margin-left: calc(var(--space-1) * -1.5);
+
+  @media (pointer: fine) {
+    margin-left: calc(var(--space-1) - var(--space-3));
+  }
 }
 
 :host-context(.sidebar-airy) .rows {
@@ -115,13 +130,8 @@
   border-top-color: var(--airy-hrule);
 }
 
-.organising .section-head {
-  gap: calc(var(--space-2) + var(--space-0));
-}
-
-.organising .section-head app-network-logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+.organising .section-head :is(.favicon-slot, app-network-logo) {
+  --icon-lead-self: var(--icon-sm);
 }
 
 .organising .rows {

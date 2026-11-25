@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 :host {
   @include glass-rim.filled(var(--surface-1));
@@ -9,16 +10,18 @@
 }
 
 .reader-panel__toggle {
+  @include icon-lead.first-line('> app-icon', null);
+
   display: flex;
-  align-items: center;
   gap: var(--space-1);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: icon-lead.clearance(var(--space-2), var(--icon-md)) var(--space-3);
   background: none;
   border: none;
   color: var(--text-secondary);
   font: inherit;
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
+  text-align: start;
   cursor: pointer;
 }

@@ -1,5 +1,9 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 @use '../../theme/menu-items';
+
+// One line fills the tap target: the padding is what is left of it around the line.
+$item-inset: max(var(--row-pad-y), #{icon-lead.line-offset(var(--tap-target))});
 
 :host {
   @include glass-rim.filled(var(--surface-2));
@@ -10,6 +14,9 @@
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-2) var(--space-4);
+
+  @include menu-items.menu-lead-space($item-inset);
+
   max-height: 90vh;
   max-height: 90dvh;
   animation: sheet-enter 0.2s ease-out;
@@ -35,7 +42,7 @@
 }
 
 .title {
-  margin: 0 0 0 var(--space-3);
+  margin: 0 0 0 var(--icon-lead-space);
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
@@ -45,7 +52,11 @@ nav {
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  @include menu-items.menu-items;
+  @include menu-items.menu-items($item-inset);
+}
+
+nav [role='menuitem']:has(> .labelled) {
+  padding-block: var(--row-pad-y);
 }
 
 nav button {
@@ -61,7 +72,9 @@ nav app-menu-checkbox {
 
 .labelled {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
+  min-width: 0;
 }
 
 .hint {
@@ -71,7 +84,7 @@ nav app-menu-checkbox {
 
 .note {
   margin: 0;
-  padding: 0 var(--row-pad-x) var(--space-1);
+  padding: 0 var(--icon-lead-space) var(--space-1);
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }

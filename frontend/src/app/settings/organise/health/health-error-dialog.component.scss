@@ -1,3 +1,5 @@
+@use '../../../theme/icon-lead';
+
 // A step darker than the default panel, so the raised stat tiles below read
 // against it (surface-2 tiles over a surface-1 body). A rule under the header
 // sets it apart as a diagnostic title bar.
@@ -32,16 +34,14 @@
 // is wrong" is the first thing read, not a footnote. Borderless — the glyph and
 // the mono error carry it without a boxed callout.
 .hero {
+  @include icon-lead.first-line('> .hero-icon', '> .hero-body');
+
   display: flex;
-  align-items: flex-start;
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-sm);
   gap: var(--space-3);
   margin-top: var(--space-4);
   margin-bottom: var(--space-4);
-}
-
-.hero-icon {
-  flex: 0 0 auto;
-  margin-top: var(--space-0);
 }
 
 .hero-icon.dead {
@@ -61,14 +61,15 @@
 
 .hero-code {
   color: var(--text-primary);
-  font-family: ui-monospace, monospace;
-  font-size: var(--fs-sm);
+  font-family: inherit;
+  font-size: inherit;
   overflow-wrap: anywhere;
 }
 
 .gloss {
   margin: 0;
   color: var(--text-secondary);
+  font-family: var(--font-text);
   font-size: var(--fs-sm);
 }
 

@@ -183,7 +183,9 @@
       </div>
     }
     @if (branch.open) {
-      <ng-container *ngTemplateOutlet="tagFeeds; context: { $implicit: branch.node }" />
+      <ng-container
+        *ngTemplateOutlet="tagFeeds; context: { $implicit: branch.node, depth: branch.depth }"
+      />
     }
   </ng-template>
 
@@ -268,7 +270,7 @@
     </div>
   </ng-template>
 
-  <ng-template #tagFeeds let-node>
+  <ng-template #tagFeeds let-node let-depth="depth">
     <div
       class="tagfeeds"
       cdkDropList
@@ -280,6 +282,7 @@
         <div
           class="feedrow"
           cdkDrag
+          [cdkDragPreviewClass]="depth > 0 ? 'leaf-preview' : ''"
           [cdkDragData]="subscription"
           [cdkDragDisabled]="dragLocked()"
           [cdkDragStartDelay]="dragDelay()"

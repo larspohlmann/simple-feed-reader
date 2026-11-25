@@ -1,10 +1,13 @@
+@use '../../theme/icon-lead';
+
 :host {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: var(--icon-xs);
-  height: var(--icon-xs);
+
+  @include icon-lead.self-sized(var(--icon-xs));
+
   vertical-align: middle;
 }
 

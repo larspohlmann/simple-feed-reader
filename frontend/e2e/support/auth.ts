@@ -100,3 +100,44 @@ export async function stubMePreferences(
     },
   );
 }
+
+/** An account's saved preferences with nothing switched on that a spec does not ask for. */
+export const ACCOUNT_PREFERENCES = {
+  scrapeFallbackEnabled: false,
+  digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+  passkeyOfferAnswered: true,
+  magazineStyle: 'boxed',
+  sidebarStyle: 'boxed',
+  handedness: 'right',
+  trendingEnabled: true,
+};
+
+/** `/api/me` answers a full, active profile whose preferences carry `preferences`, once `release` settles. */
+export async function stubAccountProfile(
+  page: Page,
+  preferences: Record<string, unknown>,
+  release?: Promise<void>,
+): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/me',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await release;
+      await route.fulfill({
+        json: {
+          ...STUB_PROFILE,
+          email: 'account@example.invalid',
+          roles: ['ROLE_USER'],
+          status: 'active',
+          createdAt: '2026-07-01T00:00:00+00:00',
+          locale: 'en',
+          trialEndsAt: null,
+          ai: { ready: false, model: null, capabilities: null },
+          mail: { enabled: false },
+          emailVerified: true,
+          preferences: { ...ACCOUNT_PREFERENCES, ...preferences },
+        },
+      });
+    },
+  );
+}

@@ -1,3 +1,4 @@
+@use '../../../theme/icon-lead';
 @use 'sidebar-row' as row;
 @include row.row-parts;
 @include row.row-link('.nav');
@@ -10,8 +11,9 @@
   @include row.row-geometry;
 }
 
+/* The favicon's 2px either side make its column the 20px of a lead; the row's lead space follows it. */
 .favicon-slot {
-  margin-inline: var(--space-0);
+  margin-inline: var(--space-0) calc(var(--space-0) + #{icon-lead.lead-gap(var(--row-gap))});
 }
 
 .favicon-slot app-favicon {
@@ -23,7 +25,12 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--row-gap);
+}
+
+:host-context(.cdk-drag-preview).organising {
+  --row-fs: var(--fs-base);
+  --row-inset: 0px;
 }
 
 :host-context(.cdk-drag-preview) .rowmenu {

@@ -1,4 +1,5 @@
 @use '../../theme/glass-rim';
+@use '../../theme/icon-lead';
 
 // The host hugs its label so a button can sit in a footer row, a toolbar or a
 // table cell without a wrapper; `block` (below) is the opt-in for the auth
@@ -35,9 +36,15 @@ button {
 // set the row height instead of the content. Height comes from the padding so
 // the label and any leading icon still decide it.
 button.sm {
+  @include icon-lead.box(var(--space-1), '::ng-deep > app-icon', null, $gap: var(--space-1));
+  @include icon-lead.alone('::ng-deep > app-icon.alone');
+
   height: auto;
-  padding: var(--space-1) var(--space-3);
   font-size: var(--fs-sm);
+}
+
+button.sm ::ng-deep > app-icon.trailing {
+  margin-inline-end: 0;
 }
 
 button.primary {

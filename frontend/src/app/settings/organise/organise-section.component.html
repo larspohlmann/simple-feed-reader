@@ -244,7 +244,7 @@
             (click)="visibilityOpen.set(!visibilityOpen())"
           >
             {{ 'settings.organise.visibility' | transloco }}
-            <app-icon name="expand_more" size="sm" />
+            <app-icon class="trailing" name="expand_more" size="sm" />
           </app-button>
           @if (visibilityOpen()) {
             <div class="pop" role="menu" tabindex="-1" (keydown)="step($event)">

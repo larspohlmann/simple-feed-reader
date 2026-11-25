@@ -1,12 +1,14 @@
 @use '../../../shared/settings/probe-section';
+@use '../../../theme/icon-lead';
 @include probe-section.probe-section;
 
 // A provider-specific help callout for the Gmail App Password case (#841):
 // info-toned, full-bleed inside the panel like the settings groups' other
 // callouts (see docs/design-language.md, app-settings-group).
 .gmail-hint {
+  @include icon-lead.first-line('> app-icon', '> .gmail-hint-body');
+
   display: flex;
-  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--panel-inset-y) var(--panel-inset-x);
   background: var(--accent-soft);
@@ -14,7 +16,6 @@
 }
 
 .gmail-hint app-icon {
-  flex: none;
   color: var(--accent);
 }
 
@@ -55,9 +56,10 @@
 }
 
 .health-head {
+  @include icon-lead.first-line('> app-icon', '> .health-head-title');
+
   display: flex;
   flex: 1;
-  align-items: center;
   gap: var(--space-2);
 }
 

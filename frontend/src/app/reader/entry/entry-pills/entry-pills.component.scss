@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/icon-lead';
 
 /* An unbreakable pill name has nothing to wrap on, so without a min-width: 0
    chain from here down to .name it widened the card and pushed the magazine
@@ -12,12 +13,14 @@
 
 .pill {
   @include glass-rim.filled(var(--surface-1), var(--border), control);
+  @include icon-lead.box(
+    var(--space-0),
+    '> app-network-logo, > app-tag-glyph, > app-icon',
+    '> .name'
+  );
 
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
   min-width: 0;
-  padding: var(--space-0) var(--space-2);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--fs-xs, 0.72rem);
