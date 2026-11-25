@@ -115,16 +115,20 @@ Each importable feed has three tag modes:
   `tagIdsByFeedUrl`. A URL present in both maps is rejected with a 422. `OpmlImportItems::buildItem()` passes both
   the destination `tagPath` and the chosen tags for an added-tags feed (`BulkSubscribeItemModel` already accepts
   both). Tag ids are resolved against the user's tags the same way `OpmlImporter::findChosenTags()` does today.
-- **Frontend.** The per-feed "Change tags" / "Use folder" button pair becomes a small segmented choice (the shared
-  `segmented-choice` component) with the three modes, shown when the feed row is opened for tagging. The tag
-  picker appears for the two modes that take tags. The destination line under the feed reads, for example,
-  "→ Tech / News + Linux, Later". *My call on the exact presentation; the three modes are the rule.*
+- **Frontend.** No mode control: the "Tags" toggle opens the tag picker with the feed's folder as one extra
+  removable pill (folder glyph, the last segment of its destination) beside the chosen tags. Pill and no tags is
+  Folder only, pill and tags is Folder + tags, pill removed is Tags only; a ghost "+ Folder" button where the pill
+  was brings it back. A feed without a folder ("No tag") shows no pill and its tags go out as Tags only. The
+  destination line reads, for example, "→ Tech / News + Linux, Later". *Lars, 2026-11-25: the three-way segmented
+  choice was confusing; the folder is a tag pill.*
 
 ### 4. Bulk tagging
 
-- A "Tag ticked feeds" button in the list head opens a panel above the list with the same three-mode choice and
-  the tag picker, plus Apply and Cancel.
-- Apply writes the chosen mode and tags onto every ticked importable feed, replacing each one's previous choice.
+- A "Tag ticked feeds" button in the list head opens a panel above the list with the tag picker, plus Apply and
+  Cancel. It opens with the folder pill and no tags; the pill names the folder when every ticked feed shares one
+  destination and reads "Their folders" otherwise, and is absent when no ticked feed has a folder. Removing it and
+  "+ Folder" work as on a feed and map onto the same three modes. *Lars, 2026-11-25: pill, not three modes.*
+- Apply writes the resulting mode and tags onto every ticked importable feed, replacing each one's previous choice.
   Feeds that are not ticked are untouched. *My call: replace, not merge; the result is the same mode and tags on
   every ticked feed, which is what "set tags for all selected" asks.*
 - When every importable feed is ticked, the panel shows an inline `app-warning-box`: "This tags all N feeds in the
