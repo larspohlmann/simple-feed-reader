@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release stops duplicate posts when sharing to Lemmy, Mastodon or Bluesky.
+
+**No duplicate posts on Lemmy.** When a Lemmy instance takes long to answer
+a link share, the reader now watches your newest posts for up to 30 seconds
+and reports the share as posted once it shows up, instead of saying the
+instance could not be reached.
+
+**One share, one post.** A share is no longer sent a second time over another
+network route after an error. When the reader cannot tell whether a post went
+through, it says so, so you can check before sending it again.
+
 ## [v1.10.5] - 2026-11-25
 
 ### Highlights
