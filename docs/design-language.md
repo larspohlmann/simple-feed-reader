@@ -146,20 +146,24 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected text) has no
   selector: `$text: null` lines the whole row up on the baseline instead.
 - `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset`; its side padding
-  and icon gap follow the font. `box-lead($inset, $slot, $text, $gap)` when items follow the text: only
-  the icon gets the lead space, the rest stay `$gap` apart.
+  and icon gap are one lead space, `lead-space($inset)` = `$inset + (1lh - 1cap) / 2`, declared on the
+  row as `--icon-lead-space`. `box-lead($inset, $slot, $text, $gap)` when items follow the text: only
+  the icon gets the lead space (`lead-gap($gap)` is its end margin), the rest stay `$gap` apart.
 - An icon taller than the line keeps its clearance: `box`/`box-lead` take its size as a last `$slot-size`,
   and a row outside them pads with `clearance($inset, $size)`; one line is then the icon plus the inset twice.
 - `fixed-row($height, $slot, $text)`: a row or chip whose height is set, not grown by its text (a
-  sidebar row, a min-height chip); side padding and gap are `($height - 1cap) / 2`, and the text keeps
-  the place centring gave it. `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text.
+  sidebar row, a min-height chip); side padding and gap are `space($height)` = `($height - 1cap) / 2`,
+  and the text keeps the place centring gave it. `fixed-row-lead($height, $slot, $text, $gap)` when items
+  follow the text. The sidebar's `label-x` derives where a row's label starts from the same `space()`.
 - `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
-- `overhang($slot, $box-size)`: a slot that paints its own box taller than the line (the settings chip)
-  hangs from the baseline without moving the text.
-- A slot whose host is its own glyph (`app-network-logo`, `app-masked-logo`) publishes its size as
-  `--icon-lead-self` and sizes itself from it: the slot keeps that box and cancels it with a negative block
-  margin, so it neither collapses nor moves the text. A consumer that resizes such a host sets the property,
-  not `width`/`height`.
+- `alone($slot)`: a glyph with no text beside it (an icon-only button) takes its own box back, centred,
+  with no lead space after it. In an `<app-button>` it carries `class="alone"`.
+- A slot has no height in the line. One that paints a box of its own (a logo, a chip, a wrapper holding a
+  glyph and its badge) publishes that box's height as `--icon-lead-self` on itself: the slot keeps the box
+  and cancels it with a negative block margin. The property is registered and not inherited, so a wrapper
+  sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
+  The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
+- A slot's host spaces its own children with margins, not `gap`: the cap strut is a flex item too.
 - A menu's own items (a title, a note, a quote hint, a rule) start on the rows' icon edge: the menu declares
   `--icon-lead-space` where the row font applies (`menu-items.menu-lead-space`) and they read it.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
@@ -171,7 +175,9 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   needs `::ng-deep`.
 - The padding formula: `--px: calc(var(--py) + (1lh - 1cap) / 2)`.
 
-`e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle.
+`e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle, and
+a painted glyph inside its control. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
+its exclusion markers.
 
 Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
 error banner and the article byline favicon.
