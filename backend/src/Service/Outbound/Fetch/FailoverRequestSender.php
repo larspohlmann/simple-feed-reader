@@ -96,6 +96,39 @@ final readonly class FailoverRequestSender
         GuardedUrlModel $guarded,
         array $options,
     ): ResponseInterface {
+        return $this->sendDirectJudgedAs($method, $method, $url, $guarded, $options);
+    }
+
+    /**
+     * The direct retry of a request its caller knows changes nothing keeps the failover a read gets.
+     *
+     * @param array<string, mixed> $options any `resolve` is overridden per family attempt
+     *
+     * @throws DirectRouteUnavailableException when no proxy is configured or its direct fallback is off
+     * @throws TransportExceptionInterface     when the egress cannot be resolved, or the last family fails
+     */
+    public function sendRepeatableDirectAfterProxyRefusal(
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
+        return $this->sendDirectJudgedAs(self::REPEATABLE_METHOD, $method, $url, $guarded, $options);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @throws DirectRouteUnavailableException when no proxy is configured or its direct fallback is off
+     * @throws TransportExceptionInterface     when the egress cannot be resolved, or the last family fails
+     */
+    private function sendDirectJudgedAs(
+        string $judgedMethod,
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
         $proxy = $this->egressProxyOrFail();
         if (null === $proxy) {
             throw DirectRouteUnavailableException::withoutAProxy($url);
@@ -104,7 +137,7 @@ final readonly class FailoverRequestSender
             throw DirectRouteUnavailableException::withoutFallback($url);
         }
 
-        return $this->sendPinnedFamilies($method, $method, $url, $guarded, $options);
+        return $this->sendPinnedFamilies($judgedMethod, $method, $url, $guarded, $options);
     }
 
     /**

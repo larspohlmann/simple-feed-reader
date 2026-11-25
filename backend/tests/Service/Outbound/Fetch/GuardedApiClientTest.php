@@ -359,6 +359,34 @@ final class GuardedApiClientTest extends TestCase
         self::assertSame(1, $http->getRequestsCount());
     }
 
+    public function testADirectRetryOfAPostThatChangesNothingKeepsFailover(): void
+    {
+        $http = $this->forbiddenOverIpv6ThenOk();
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
+
+        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
+            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1])->changingNothing(),
+            ApiBudgetModel::standard(),
+        );
+
+        self::assertSame(Response::HTTP_OK, $response->status);
+        self::assertSame(2, $http->getRequestsCount());
+    }
+
+    public function testADirectRetryOfAWritePostIsNotSentTwice(): void
+    {
+        $http = $this->forbiddenOverIpv6ThenOk();
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
+
+        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
+            ApiRequestModel::postJson('https://dual.example.test/x', ['a' => 1]),
+            ApiBudgetModel::standard(),
+        );
+
+        self::assertSame(Response::HTTP_FORBIDDEN, $response->status);
+        self::assertSame(1, $http->getRequestsCount());
+    }
+
     private function forbiddenOverIpv6ThenOk(): MockHttpClient
     {
         return new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {

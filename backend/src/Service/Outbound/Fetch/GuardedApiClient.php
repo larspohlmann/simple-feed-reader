@@ -59,12 +59,22 @@ final readonly class GuardedApiClient
         $guarded = $this->urlGuard->assertSafe($request->url);
 
         try {
-            return self::answerFrom($this->requestSender->sendDirectAfterProxyRefusal(
-                $request->method,
-                $request->url,
-                $guarded,
-                $this->buildOptions($request, $budget),
-            ), $budget->sizeLimit);
+            $options = $this->buildOptions($request, $budget);
+            $response = $request->isRead()
+                ? $this->requestSender->sendRepeatableDirectAfterProxyRefusal(
+                    $request->method,
+                    $request->url,
+                    $guarded,
+                    $options,
+                )
+                : $this->requestSender->sendDirectAfterProxyRefusal(
+                    $request->method,
+                    $request->url,
+                    $guarded,
+                    $options,
+                );
+
+            return self::answerFrom($response, $budget->sizeLimit);
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
         }
