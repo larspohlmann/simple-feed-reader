@@ -6,6 +6,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
 import { LayoutService } from '../../reader/layout.service';
+import { By } from '@angular/platform-browser';
+import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagCreator } from '../../reader/feeds/tag-picker/tag-creator.service';
 import { SubscriptionRows } from '../../reader/state/subscription-rows';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -219,16 +221,118 @@ describe('OpmlImportDialogComponent', () => {
     expect(buttonOf('opml-import-apply').disabled).toBe(true);
   });
 
+  const pickMode = (root: ParentNode, label: string): void => {
+    const option = [
+      ...root.querySelectorAll<HTMLButtonElement>('app-segmented-choice button'),
+    ].find((button) => textOf(button) === label)!;
+    option.click();
+    fixture.detectChanges();
+  };
+  const toggleTagIn = (root: HTMLElement, tagId: number): void => {
+    const picker = fixture.debugElement
+      .queryAll(By.directive(TagPickerComponent))
+      .find((candidate) => root.contains(candidate.nativeElement))!;
+    picker.componentInstance.toggled.emit(tagId);
+    fixture.detectChanges();
+  };
+  const selectionOf = (): OpmlImportSelection =>
+    fixture.debugElement.injector.get(OpmlImportSelection);
+  const toggleButton = (folder: string): HTMLButtonElement =>
+    folderRow(folder).querySelector('[data-testid="opml-import-toggle-folder"]')!;
+
   it('swaps the destination for the tag picker and back', () => {
     mount();
 
-    press('opml-import-change-tags', feedRow('a1'));
+    pickMode(feedRow('a1'), 'Only tags');
     expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
     expect(textOf(feedRow('a1'))).not.toContain('→ X / A');
 
-    press('opml-import-use-folder', feedRow('a1'));
+    pickMode(feedRow('a1'), 'Folder');
     expect(feedRow('a1').querySelector('app-tag-picker')).toBeNull();
     expect(textOf(feedRow('a1'))).toContain('→ X / A');
+  });
+
+  it('picking Folder + tags shows the tag picker and the plus line', () => {
+    mount();
+
+    pickMode(feedRow('a1'), 'Folder + tags');
+    expect(feedRow('a1').querySelector('app-tag-picker')).not.toBeNull();
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A');
+
+    toggleTagIn(feedRow('a1'), 7);
+
+    expect(textOf(feedRow('a1').querySelector('.destination'))).toBe('→ X / A + Mine');
+  });
+
+  it('the chevron hides the folder rows', () => {
+    mount();
+    const count = (): number =>
+      element().querySelectorAll('[data-testid="opml-import-feed"]').length;
+    expect(count()).toBe(5);
+    expect(toggleButton('A').getAttribute('aria-expanded')).toBe('true');
+
+    toggleButton('A').click();
+    fixture.detectChanges();
+
+    expect(count()).toBe(1);
+    expect(toggleButton('A').getAttribute('aria-expanded')).toBe('false');
+    expect(toggleButton('A').getAttribute('aria-label')).toBe('Show or hide A');
+  });
+
+  it('the list head swaps Collapse all for Expand all', () => {
+    mount();
+
+    press('opml-import-collapse-all');
+    expect(byTestId('opml-import-collapse-all')).toBeNull();
+    press('opml-import-expand-all');
+    expect(byTestId('opml-import-collapse-all')).not.toBeNull();
+  });
+
+  it('the bulk panel applies its tags to the ticked feeds', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+    const panel = byTestId('opml-import-bulk')!;
+    pickMode(panel, 'Only tags');
+    expect(panel.querySelector('app-tag-picker')).not.toBeNull();
+    toggleTagIn(panel, 7);
+    press('opml-import-bulk-apply', element());
+
+    expect(byTestId('opml-import-bulk')).toBeNull();
+    const request = selectionOf().toRequest(OPML, null);
+    expect(request.tagIdsByFeedUrl).toEqual({
+      'https://a1.test/feed': [7],
+      'https://b1.test/feed': [7],
+    });
+  });
+
+  it('the bulk panel warns when every feed is ticked', () => {
+    mount();
+
+    press('opml-import-tag-ticked');
+
+    expect(textOf(byTestId('opml-import-bulk-all'))).toBe('This tags all 3 feeds in the file.');
+  });
+
+  it('the bulk panel does not warn when one is unticked', () => {
+    mount();
+    checkbox(feedRow('r')).click();
+    fixture.detectChanges();
+
+    press('opml-import-tag-ticked');
+
+    expect(byTestId('opml-import-bulk')).not.toBeNull();
+    expect(byTestId('opml-import-bulk-all')).toBeNull();
+  });
+
+  it('disables Tag ticked feeds when nothing is ticked', () => {
+    mount();
+
+    press('opml-import-select-none');
+
+    expect(buttonOf('opml-import-tag-ticked').disabled).toBe(true);
   });
 
   it('disables import over the limit and says why', () => {

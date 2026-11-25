@@ -277,4 +277,55 @@ describe('OpmlImportSelection', () => {
     selection.load(previewOf());
     expect(selection.modeOf('a1')).toBe('folderPlusTags');
   });
+  it('collapsing a folder hides its feeds and subfolders but keeps the folder row', () => {
+    selection.toggleCollapsed('f0');
+    const keys = selection.visibleRows().map((row) => row.key);
+    expect(keys).toContain('f0');
+    expect(keys).not.toContain('a1');
+    expect(keys).not.toContain('f0.0');
+    expect(keys).not.toContain('b1');
+    expect(keys).toContain('r');
+    expect(selection.isCollapsed('f0')).toBe(true);
+  });
+
+  it('collapse state survives a re-preview', () => {
+    selection.toggleCollapsed('f0');
+    selection.load(previewOf(10, 'Y'));
+    expect(selection.isCollapsed('f0')).toBe(true);
+    expect(selection.visibleRows().some((row) => row.key === 'a1')).toBe(false);
+  });
+
+  it('collapseAll then expandAll restores every row', () => {
+    const all = selection.rows().map((row) => row.key);
+    selection.collapseAll();
+    expect(selection.anyExpanded()).toBe(false);
+    expect(selection.visibleRows().every((row) => row.kind === 'folder' || row.depth === 0)).toBe(
+      true,
+    );
+    selection.expandAll();
+    expect(selection.anyExpanded()).toBe(true);
+    expect(selection.visibleRows().map((row) => row.key)).toEqual(all);
+  });
+
+  it('a feed with a tag choice that a re-preview drops is absent from the request maps', () => {
+    selection.setMode('b1', 'tagsOnly');
+    selection.toggleTag('b1', 4);
+    selection.setMode('a1', 'folderPlusTags');
+    selection.toggleTag('a1', 5);
+    selection.load(previewOf(10, 'X', 'subscribed'));
+    const request = selection.toRequest('<opml/>', null);
+    expect(request.tagIdsByFeedUrl).toEqual({});
+    expect(request.addedTagIdsByFeedUrl).toEqual({ a1: [5] });
+  });
+
+  it('an unticked feed with a choice is in neither map and sends its choice once re-ticked', () => {
+    selection.setMode('a1', 'tagsOnly');
+    selection.toggleTag('a1', 3);
+    selection.toggleFeed('a1');
+    const unticked = selection.toRequest('<opml/>', null);
+    expect(unticked.tagIdsByFeedUrl).toEqual({});
+    expect(unticked.addedTagIdsByFeedUrl).toEqual({});
+    selection.toggleFeed('a1');
+    expect(selection.toRequest('<opml/>', null).tagIdsByFeedUrl).toEqual({ a1: [3] });
+  });
 });

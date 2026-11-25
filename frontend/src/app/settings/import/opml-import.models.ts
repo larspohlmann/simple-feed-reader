@@ -40,6 +40,7 @@ export type OpmlImportRow =
       kind: 'folder';
       key: string;
       depth: number;
+      ancestors: string[];
       name: string;
       dropped: boolean;
       importableUrls: string[];
@@ -48,6 +49,7 @@ export type OpmlImportRow =
       kind: 'feed';
       key: string;
       depth: number;
+      ancestors: string[];
       feed: OpmlPreviewFeed;
       host: string;
       destination: string[];

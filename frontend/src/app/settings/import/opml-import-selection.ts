@@ -23,11 +23,13 @@ function hostLabel(url: string): string {
   return parsed === null ? url : hostOf(parsed);
 }
 
-function flatten(folder: OpmlPreviewFolder, depth: number, path: string): Flattened {
+function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
+  const path = ancestors.length === 0 ? 'f' : `${ancestors[ancestors.length - 1]}.`;
   const feedRows = folder.feeds.map((feed: OpmlPreviewFeed): OpmlImportRow => ({
     kind: 'feed',
     key: feed.url,
     depth,
+    ancestors,
     feed,
     host: hostLabel(feed.url),
     destination: folder.destination,
@@ -38,12 +40,13 @@ function flatten(folder: OpmlPreviewFolder, depth: number, path: string): Flatte
   const folderRows: OpmlImportRow[] = [];
   folder.folders.forEach((child, index) => {
     const key = `${path}${index}`;
-    const below = flatten(child, depth + 1, `${key}.`);
+    const below = flatten(child, depth + 1, [...ancestors, key]);
     folderRows.push(
       {
         kind: 'folder',
         key,
         depth,
+        ancestors,
         name: child.name ?? '',
         dropped: child.dropped,
         importableUrls: below.importableUrls,
@@ -67,10 +70,11 @@ export class OpmlImportSelection {
   private readonly preview = signal<OpmlPreview | null>(null);
   private readonly selectedUrls = signal<ReadonlySet<string>>(new Set());
   private readonly tagChoices = signal<ReadonlyMap<string, OpmlTagChoice>>(new Map());
+  private readonly collapsedKeys = signal<ReadonlySet<string>>(new Set());
 
   private readonly flattened = computed<Flattened>(() => {
     const current = this.preview();
-    return current === null ? { rows: [], importableUrls: [] } : flatten(current.root, 0, 'f');
+    return current === null ? { rows: [], importableUrls: [] } : flatten(current.root, 0, []);
   });
   private readonly importable = computed<ReadonlySet<string>>(
     () => new Set(this.flattened().importableUrls),
@@ -88,6 +92,17 @@ export class OpmlImportSelection {
   });
 
   readonly rows = computed(() => this.flattened().rows);
+  readonly visibleRows = computed(() => {
+    const collapsed = this.collapsedKeys();
+    return this.rows().filter((row) => !row.ancestors.some((key) => collapsed.has(key)));
+  });
+  private readonly folderKeys = computed(() =>
+    this.rows().flatMap((row) => (row.kind === 'folder' ? [row.key] : [])),
+  );
+  readonly hasFolders = computed(() => this.folderKeys().length > 0);
+  readonly anyExpanded = computed(() =>
+    this.folderKeys().some((key) => !this.collapsedKeys().has(key)),
+  );
   readonly selected = this.selectedUrls.asReadonly();
   readonly selectedCount = computed(() => this.selectedUrls().size);
   readonly allTicked = computed(
@@ -124,6 +139,22 @@ export class OpmlImportSelection {
       }
       return next;
     });
+  }
+
+  isCollapsed(folderKey: string): boolean {
+    return this.collapsedKeys().has(folderKey);
+  }
+
+  toggleCollapsed(folderKey: string): void {
+    this.collapsedKeys.update((previous) => toggled(previous, folderKey));
+  }
+
+  collapseAll(): void {
+    this.collapsedKeys.set(new Set(this.folderKeys()));
+  }
+
+  expandAll(): void {
+    this.collapsedKeys.set(new Set());
   }
 
   folderState(row: FolderRow): 'all' | 'some' | 'none' {

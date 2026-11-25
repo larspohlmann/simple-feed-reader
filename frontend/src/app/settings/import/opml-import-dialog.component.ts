@@ -15,10 +15,14 @@ import {
   switchMap,
   takeUntil,
 } from 'rxjs';
+import { toggled } from '../../core/toggled-set';
 import { pluralKey } from '../../core/i18n/plural-key';
 import { parseProblem } from '../../core/problem';
 import { TagPickerComponent } from '../../reader/feeds/tag-picker/tag-picker.component';
 import { TagsStore } from '../../reader/state/tags.store';
+import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
+import { IconComponent } from '../../shared/icon/icon.component';
+import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../shared/field/field.component';
@@ -27,7 +31,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SettingsApi } from '../settings-api';
 import { OpmlImportResult } from '../settings.models';
-import { OpmlFeedState, OpmlPreview } from './opml-import.models';
+import { OpmlFeedState, OpmlPreview, OpmlTagMode } from './opml-import.models';
 import { OpmlImportSelection } from './opml-import-selection';
 
 export interface OpmlImportDialogData {
@@ -36,6 +40,8 @@ export interface OpmlImportDialogData {
 }
 
 const PREVIEW_DEBOUNCE_MS = 300;
+
+const TAG_MODES: readonly OpmlTagMode[] = ['folder', 'folderPlusTags', 'tagsOnly'];
 
 const STATE_KEYS: Readonly<Record<Exclude<OpmlFeedState, 'new'>, string>> = {
   subscribed: 'settings.opml.stateSubscribed',
@@ -50,7 +56,10 @@ const STATE_KEYS: Readonly<Record<Exclude<OpmlFeedState, 'new'>, string>> = {
     ButtonComponent,
     ErrorBannerComponent,
     FieldComponent,
+    IconButtonDirective,
+    IconComponent,
     OverlayPanelComponent,
+    SegmentedChoiceComponent,
     TagPickerComponent,
     TranslocoPipe,
     WarningBoxComponent,
@@ -68,12 +77,19 @@ export class OpmlImportDialogComponent {
   protected readonly selection = inject(OpmlImportSelection);
 
   protected readonly stateKeys = STATE_KEYS;
+  protected readonly tagModes = TAG_MODES;
   protected readonly tags = this.tagsStore.tags;
   protected readonly topLevelTagNames = computed(() =>
     this.tags()
       .filter((tag) => tag.parentId === null)
       .map((tag) => tag.name),
   );
+  private readonly tagNamesById = computed(
+    () => new Map(this.tags().map((tag) => [tag.id, tag.name])),
+  );
+  protected readonly bulkOpen = signal(false);
+  protected readonly bulkMode = signal<OpmlTagMode>('folder');
+  protected readonly bulkTagIds = signal<ReadonlySet<number>>(new Set());
   protected readonly parent = signal('');
   protected readonly importing = signal(false);
   protected readonly failure = signal<string | null>(null);
@@ -129,6 +145,30 @@ export class OpmlImportDialogComponent {
   protected typeParent(event: Event): void {
     this.parent.set(inputValue(event));
     this.typedParents.next(this.parent());
+  }
+
+  protected tagNames(tagIds: ReadonlySet<number>): string {
+    const names = this.tagNamesById();
+    return [...tagIds].map((tagId) => names.get(tagId) ?? '').join(', ');
+  }
+
+  protected openBulk(): void {
+    this.bulkMode.set('folder');
+    this.bulkTagIds.set(new Set());
+    this.bulkOpen.set(true);
+  }
+
+  protected closeBulk(): void {
+    this.bulkOpen.set(false);
+  }
+
+  protected toggleBulkTag(tagId: number): void {
+    this.bulkTagIds.update((previous) => toggled(previous, tagId));
+  }
+
+  protected applyBulk(): void {
+    this.selection.applyToTicked(this.bulkMode(), this.bulkTagIds());
+    this.closeBulk();
   }
 
   protected apply(): void {

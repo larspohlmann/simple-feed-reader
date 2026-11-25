@@ -48,6 +48,36 @@
       >
         {{ 'settings.opml.selectNone' | transloco }}
       </app-button>
+      @if (selection.hasFolders()) {
+        @if (selection.anyExpanded()) {
+          <app-button
+            variant="ghost"
+            size="sm"
+            data-testid="opml-import-collapse-all"
+            (click)="selection.collapseAll()"
+          >
+            {{ 'settings.opml.collapseAll' | transloco }}
+          </app-button>
+        } @else {
+          <app-button
+            variant="ghost"
+            size="sm"
+            data-testid="opml-import-expand-all"
+            (click)="selection.expandAll()"
+          >
+            {{ 'settings.opml.expandAll' | transloco }}
+          </app-button>
+        }
+      }
+      <app-button
+        variant="ghost"
+        size="sm"
+        data-testid="opml-import-tag-ticked"
+        [disabled]="selection.selectedCount() === 0"
+        (click)="openBulk()"
+      >
+        {{ 'settings.opml.tagTicked' | transloco }}
+      </app-button>
     </div>
   </div>
 
@@ -58,22 +88,77 @@
     </app-warning-box>
   }
 
+  @if (bulkOpen()) {
+    <section class="bulk" data-testid="opml-import-bulk">
+      @if (selection.allTicked()) {
+        <app-warning-box data-testid="opml-import-bulk-all">
+          {{ 'settings.opml.bulkAll' | transloco: { count: selection.selectedCount() } }}
+        </app-warning-box>
+      }
+      <app-segmented-choice
+        [options]="tagModes"
+        [selected]="bulkMode()"
+        ariaLabelKey="settings.opml.tagTicked"
+        labelPrefix="settings.opml.mode."
+        (pick)="bulkMode.set($event)"
+      />
+      @if (bulkMode() !== 'folder') {
+        <app-tag-picker
+          [tags]="tags()"
+          [selected]="bulkTagIds()"
+          (toggled)="toggleBulkTag($event)"
+        />
+      }
+      <div class="bulk-actions">
+        <app-button
+          variant="ghost"
+          size="sm"
+          data-testid="opml-import-bulk-cancel"
+          (click)="closeBulk()"
+        >
+          {{ 'common.cancel' | transloco }}
+        </app-button>
+        <app-button
+          variant="primary"
+          size="sm"
+          data-testid="opml-import-bulk-apply"
+          (click)="applyBulk()"
+        >
+          {{ 'settings.opml.bulkApply' | transloco }}
+        </app-button>
+      </div>
+    </section>
+  }
+
   <ul class="rows">
-    @for (row of selection.rows(); track row.key) {
+    @for (row of selection.visibleRows(); track row.key) {
       @if (row.kind === 'folder') {
         @let state = selection.folderStates().get(row.key);
+        @let collapsed = selection.isCollapsed(row.key);
         <li class="row is-folder" data-testid="opml-import-folder" [style.--depth]="row.depth">
-          <label class="pick">
-            <input
-              type="checkbox"
-              [checked]="state === 'all'"
-              [indeterminate]="state === 'some'"
-              [disabled]="row.importableUrls.length === 0"
-              [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
-              (change)="selection.toggleFolder(row)"
-            />
-            <span class="name">{{ row.name }}</span>
-          </label>
+          <div class="line">
+            <button
+              appIconButton
+              type="button"
+              data-testid="opml-import-toggle-folder"
+              [attr.aria-expanded]="!collapsed"
+              [attr.aria-label]="'settings.opml.toggleFolder' | transloco: { name: row.name }"
+              (click)="selection.toggleCollapsed(row.key)"
+            >
+              <app-icon [name]="collapsed ? 'chevron_right' : 'expand_more'" size="md" />
+            </button>
+            <label class="pick">
+              <input
+                type="checkbox"
+                [checked]="state === 'all'"
+                [indeterminate]="state === 'some'"
+                [disabled]="row.importableUrls.length === 0"
+                [attr.aria-label]="'settings.opml.selectFolder' | transloco: { name: row.name }"
+                (change)="selection.toggleFolder(row)"
+              />
+              <span class="name">{{ row.name }}</span>
+            </label>
+          </div>
         </li>
       } @else {
         @let url = row.feed.url;
@@ -102,25 +187,13 @@
               </span>
             </label>
             @if (row.feed.state === 'new') {
-              @if (changed) {
-                <app-button
-                  variant="ghost"
-                  size="sm"
-                  data-testid="opml-import-use-folder"
-                  (click)="selection.setMode(url, 'folder')"
-                >
-                  {{ 'settings.opml.useFolder' | transloco }}
-                </app-button>
-              } @else {
-                <app-button
-                  variant="ghost"
-                  size="sm"
-                  data-testid="opml-import-change-tags"
-                  (click)="selection.setMode(url, 'tagsOnly')"
-                >
-                  {{ 'settings.opml.changeTags' | transloco }}
-                </app-button>
-              }
+              <app-segmented-choice
+                [options]="tagModes"
+                [selected]="selection.modeOf(url)"
+                ariaLabelKey="settings.opml.tagMode"
+                labelPrefix="settings.opml.mode."
+                (pick)="selection.setMode(url, $event)"
+              />
             } @else {
               <span class="state">{{ stateKeys[row.feed.state] | transloco }}</span>
             }
@@ -133,7 +206,8 @@
                 [selected]="selection.chosenTags(url)"
                 (toggled)="selection.toggleTag(url, $event)"
               />
-            } @else {
+            }
+            @if (selection.modeOf(url) !== 'tagsOnly') {
               <p class="destination">
                 {{
                   'settings.opml.destination'
@@ -144,6 +218,11 @@
                             : ('settings.opml.untagged' | transloco),
                         }
                 }}
+                @if (
+                  selection.modeOf(url) === 'folderPlusTags' && selection.chosenTags(url).size > 0
+                ) {
+                  + {{ tagNames(selection.chosenTags(url)) }}
+                }
               </p>
             }
           }
