@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.6] - 2026-11-25
+
 ### Highlights
 
 This release stops duplicate posts when sharing to Lemmy, Mastodon or Bluesky.
@@ -22,6 +24,14 @@ instance could not be reached.
 **One share, one post.** A share is no longer sent a second time over another
 network route after an error. When the reader cannot tell whether a post went
 through, it says so, so you can check before sending it again.
+
+## What's Changed
+* fix(#2548): a timed-out social write may have gone through; lemmy watches for the post by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2550
+* fix(#2549): failover never sends a write twice by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2552
+* docs(#2553): v1.10.6 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2554
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.5...v1.10.6
 
 ## [v1.10.5] - 2026-11-25
 
