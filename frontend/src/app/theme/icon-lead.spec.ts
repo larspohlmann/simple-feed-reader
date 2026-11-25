@@ -6,15 +6,15 @@ const PROBE = `
 @include icon-lead.register;
 
 .row {
-  @include icon-lead.first-line('> .glyph');
+  @include icon-lead.first-line('> .glyph', '> .text');
 }
 
 .note {
-  @include icon-lead.box(var(--space-3), '> .glyph');
+  @include icon-lead.box(var(--space-3), '> .glyph', '> .text');
 }
 
 .chip-row {
-  @include icon-lead.first-line('> .chip');
+  @include icon-lead.first-line('> .chip', '> .text');
   @include icon-lead.overhang('> .chip', calc(var(--icon-sm) + 2 * var(--space-2)));
 }
 
@@ -23,11 +23,16 @@ const PROBE = `
 }
 
 .fixed {
-  @include icon-lead.fixed-row(var(--sidebar-row-h), '> .glyph');
+  @include icon-lead.fixed-row(var(--sidebar-row-h), '> .glyph', '> .text');
 }
 
 .fixed-lead {
-  @include icon-lead.fixed-row-lead(var(--sidebar-row-h), '> .glyph', var(--space-3));
+  @include icon-lead.fixed-row-lead(
+    var(--sidebar-row-h),
+    '> .glyph',
+    '> .text',
+    var(--space-3)
+  );
 }
 `;
 
@@ -35,7 +40,7 @@ describe('icon-lead', () => {
   const css = compileScssSource(PROBE, [__dirname]);
   const rules = rulesBySelector(css.replace(/@property[^{]*\{[^}]*\}/g, ''));
 
-  it.each(['--icon-lead-line', '--icon-lead-space'])(
+  it.each(['--icon-lead-cap', '--icon-lead-space'])(
     'registers %s as a length that inherits and starts at 0px',
     (property) => {
       const block = new RegExp(`@property ${property}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
@@ -46,15 +51,20 @@ describe('icon-lead', () => {
     },
   );
 
-  it('measures one line on the row and starts the items at its top', () => {
-    expect(rules['.row']).toMatchObject({ '--icon-lead-line': '1lh', 'align-items': 'start' });
+  it('measures the cap on the row and lines the slot and the text up on one baseline', () => {
+    expect(rules['.row']).toMatchObject({ '--icon-lead-cap': '1cap', 'align-items': 'start' });
+    expect(rules['.row > .glyph, .row > .text']).toMatchObject({ 'align-self': 'baseline' });
   });
 
-  it('gives the slot the line as its height and centres the glyph in it', () => {
+  it('gives the slot a baseline a half cap below its centre and no height of its own', () => {
     expect(rules['.row > .glyph']).toMatchObject({
-      'block-size': 'var(--icon-lead-line)',
       'align-items': 'center',
       flex: 'none',
+      'block-size': '0',
+    });
+    expect(rules['.row > .glyph::before']).toMatchObject({
+      content: '""',
+      'block-size': 'var(--icon-lead-cap)',
     });
   });
 
@@ -66,11 +76,10 @@ describe('icon-lead', () => {
     });
   });
 
-  it('centres a slot box taller than the line on it, at its own height', () => {
+  it('lets a chip keep its height and hang from the baseline without moving the text', () => {
     expect(rules['.chip-row > .chip']).toMatchObject({
       'block-size': 'auto',
-      'margin-block':
-        'calc((var(--icon-lead-line) - calc(var(--icon-sm) + 2 * var(--space-2))) / 2)',
+      'margin-block': 'calc(calc(var(--icon-sm) + 2 * var(--space-2)) / -2)',
     });
   });
 
@@ -83,6 +92,9 @@ describe('icon-lead', () => {
       '--icon-lead-space': 'calc((var(--sidebar-row-h) - 1cap) / 2)',
       'padding-inline-start': 'var(--icon-lead-space)',
       gap: 'var(--icon-lead-space)',
+    });
+    expect(rules['.fixed > .text']).toMatchObject({
+      'margin-block-start': 'calc((var(--sidebar-row-h) - 1lh) / 2)',
     });
   });
 

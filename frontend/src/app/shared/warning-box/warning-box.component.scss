@@ -4,7 +4,11 @@
 // A leading marker sits on the first line and the body hangs beside it (projected, hence ::ng-deep).
 :host {
   @include glass-rim.filled(var(--surface-1), var(--border-warning));
-  @include icon-lead.box(var(--space-3), '::ng-deep > .warning-glyph, ::ng-deep > app-icon');
+  @include icon-lead.box(
+    var(--space-3),
+    '::ng-deep > .warning-glyph, ::ng-deep > app-icon',
+    '::ng-deep > .warning-text, ::ng-deep > .hint-text'
+  );
 
   display: flex;
   border-radius: var(--radius);

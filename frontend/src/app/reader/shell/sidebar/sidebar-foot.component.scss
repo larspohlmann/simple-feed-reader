@@ -82,7 +82,7 @@
 }
 
 .trial {
-  @include icon-lead.first-line('> app-icon');
+  @include icon-lead.first-line('> app-icon', '> span');
 
   display: flex;
   gap: var(--space-1);

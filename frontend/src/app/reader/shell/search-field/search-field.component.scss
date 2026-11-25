@@ -13,6 +13,7 @@
   @include icon-lead.fixed-row-lead(
     var(--search-row-h),
     '> app-icon, > app-spinner',
+    '> .input',
     var(--space-2)
   );
 
@@ -29,6 +30,11 @@
 
 .icon {
   color: var(--text-muted);
+}
+
+.row > .input {
+  block-size: 100%;
+  margin-block-start: 0;
 }
 
 .input {

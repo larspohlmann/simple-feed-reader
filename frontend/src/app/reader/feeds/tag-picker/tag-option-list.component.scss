@@ -11,8 +11,7 @@
 }
 
 .option {
-  @include icon-lead.first-line('> app-tag-glyph, > app-icon');
-  @include icon-lead.overhang('> app-tag-glyph', var(--icon-sm));
+  @include icon-lead.first-line('> app-tag-glyph, > app-icon', '> .name');
   @include icon-lead.centred-line;
 
   display: flex;

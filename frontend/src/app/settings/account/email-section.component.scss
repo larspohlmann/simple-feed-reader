@@ -4,7 +4,7 @@
 // informational block above the rows for a state controls can't fix. Reads
 // the panel's own inset tokens (see docs/design-language.md, app-settings-group).
 .callout {
-  @include icon-lead.first-line('> app-icon');
+  @include icon-lead.first-line('> app-icon', '> span');
 
   display: flex;
   gap: var(--space-3);

@@ -2,7 +2,7 @@
 @use '../../../theme/type';
 
 :host {
-  @include icon-lead.first-line('> .icon');
+  @include icon-lead.first-line('> .icon', '> .text');
 
   display: flex;
   font-size: var(--fs-base);

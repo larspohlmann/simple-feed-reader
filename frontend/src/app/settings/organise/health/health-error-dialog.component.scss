@@ -34,7 +34,7 @@
 // is wrong" is the first thing read, not a footnote. Borderless — the glyph and
 // the mono error carry it without a boxed callout.
 .hero {
-  @include icon-lead.first-line('> .hero-icon');
+  @include icon-lead.first-line('> .hero-icon', '> .hero-body');
 
   display: flex;
   font-family: ui-monospace, monospace;

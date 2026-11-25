@@ -14,8 +14,8 @@ import {
 import { entryWire } from './support/reader';
 
 /**
- * #2558: an icon in front of text that can wrap hangs its centre on the centre of the text's first
- * line, whatever the theme or the text size. Every API read is stubbed, so the spec owns what it
+ * #2558: an icon in front of text that can wrap hangs its centre on the cap middle of the text's
+ * first line, whatever the theme or the text size. Every API read is stubbed, so the spec owns what it
  * measures. A case is real only when its text spans two lines or more.
  */
 const PHONE = { width: 375, height: 812 };
@@ -66,7 +66,8 @@ async function expectTheme(page: Page, theme: ThemeName): Promise<void> {
   else await expect(html).not.toHaveAttribute('data-theme-name', /.*/);
 }
 
-async function settle(page: Page): Promise<void> {
+async function settle(page: Page, theme: ThemeName): Promise<void> {
+  await expectTheme(page, theme);
   await page.evaluate(() => document.fonts.ready);
   await settleAnimations(page.locator('body'));
 }
@@ -92,7 +93,7 @@ const CASES: Case[] = [
     path: '/?subscription=1&entry=1',
     parts: async (page) => {
       const box = page.locator('app-paywall-notice app-warning-box');
-      await expect(box.locator('.warning-glyph')).toBeVisible();
+      await expect(box.locator('.warning-text')).toBeVisible();
       return {
         icon: box.locator('.warning-glyph'),
         firstLine: box.locator('.warning-text'),
@@ -178,23 +179,26 @@ for (const setup of SETUPS) {
     for (const { name, stub, path, parts: locate } of CASES) {
       test(`${name} hangs its icon on the first line`, async ({ browser }) => {
         const page = await openPhone(browser, setup);
-        await stub(page);
-        await stubAccountTheme(page, setup.theme);
-        await page.goto(path);
-        const parts = await locate(page);
-        await settle(page);
-        await expectTheme(page, setup.theme);
+        try {
+          await stub(page);
+          // After the surface stubs: a later route wins, and they answer /api/me too.
+          await stubAccountTheme(page, setup.theme);
+          await page.goto(path);
+          const parts = await locate(page);
+          await settle(page, setup.theme);
 
-        const measured = await measureFirstLine(parts);
+          const measured = await measureFirstLine(parts);
 
-        expect(measured.lines, 'the text spans two lines or more').toBeGreaterThanOrEqual(
-          MIN_LINES,
-        );
-        expect(
-          Math.abs(measured.offset),
-          `icon centre ${measured.iconCentre} against line centre ${measured.lineCentre}`,
-        ).toBeLessThanOrEqual(TOLERANCE);
-        await page.context().close();
+          expect(measured.lines, 'the text spans two lines or more').toBeGreaterThanOrEqual(
+            MIN_LINES,
+          );
+          expect(
+            Math.abs(measured.offset),
+            `icon centre ${measured.iconCentre} against cap middle ${measured.capMiddle}`,
+          ).toBeLessThanOrEqual(TOLERANCE);
+        } finally {
+          await page.context().close();
+        }
       });
     }
   });

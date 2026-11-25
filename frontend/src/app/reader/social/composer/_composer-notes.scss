@@ -1,7 +1,7 @@
 @use '../../../theme/icon-lead';
 
 @mixin note {
-  @include icon-lead.first-line('> app-network-logo, > app-icon');
+  @include icon-lead.first-line('> app-network-logo, > app-icon', '> span');
 
   display: flex;
   gap: var(--space-2);

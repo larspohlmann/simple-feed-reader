@@ -11,34 +11,64 @@ export interface LeadParts {
 
 export interface FirstLineMeasure {
   iconCentre: number;
-  lineCentre: number;
-  /** Icon centre minus line-box centre, in px. */
+  capMiddle: number;
+  /** Icon centre minus the first line's cap middle, in px. */
   offset: number;
   /** How many lines of the first line's height the text block spans. */
   lines: number;
 }
 
-/** The first line's centre is its line box's: the element's content top plus half its computed
- *  line height. A `Range` rect is the font's content area and sits ~0.75px off it. */
+/** Runs in the page: the first line's cap middle and line height, read before its first character. */
+function readFirstLine(element: Element, iconElement: Element | null) {
+  const findFirstText = (): Text => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent?.trim() && !iconElement?.contains(node)) return node as Text;
+    }
+    throw new Error('no text in the first line');
+  };
+  const measureCapBefore = (text: Text, parent: HTMLElement): DOMRect => {
+    const itemised = /flex|grid/.test(getComputedStyle(parent).display);
+    const host = itemised ? document.createElement('span') : parent;
+    if (itemised) {
+      parent.insertBefore(host, text);
+      host.append(text);
+    }
+    const probe = document.createElement('span');
+    probe.style.cssText = 'display: inline-block; width: 0; height: 1cap; vertical-align: baseline';
+    host.insertBefore(probe, text);
+    const box = probe.getBoundingClientRect();
+    probe.remove();
+    if (itemised) {
+      parent.insertBefore(text, host);
+      host.remove();
+    }
+    return box;
+  };
+  const text = findFirstText();
+  const parent = text.parentElement!;
+  const cap = measureCapBefore(text, parent);
+  return {
+    capMiddle: cap.top + cap.height / 2,
+    lineHeight: parseFloat(getComputedStyle(parent).lineHeight),
+  };
+}
+
+/** The first line's cap middle: a `1cap` probe set on the baseline just before its first character.
+ *  Text that is a flex or grid item of its own is wrapped while it is measured, so the probe shares
+ *  its line instead of becoming an item beside it. */
 export async function measureFirstLine({
   icon,
   firstLine,
   block,
 }: LeadParts): Promise<FirstLineMeasure> {
-  const [iconBox, line, blockHeight] = await Promise.all([
+  const iconHandle = await icon.elementHandle();
+  const [iconCentre, line, blockHeight] = await Promise.all([
     icon.evaluate((element) => {
       const box = element.getBoundingClientRect();
       return box.top + box.height / 2;
     }),
-    firstLine.evaluate((element) => {
-      const style = getComputedStyle(element);
-      const lineHeight = parseFloat(style.lineHeight);
-      const top =
-        element.getBoundingClientRect().top +
-        parseFloat(style.borderTopWidth) +
-        parseFloat(style.paddingTop);
-      return { centre: top + lineHeight / 2, lineHeight };
-    }),
+    firstLine.evaluate(readFirstLine, iconHandle),
     block.evaluate((element) => {
       const style = getComputedStyle(element);
       return (
@@ -51,9 +81,9 @@ export async function measureFirstLine({
     }),
   ]);
   return {
-    iconCentre: iconBox,
-    lineCentre: line.centre,
-    offset: iconBox - line.centre,
+    iconCentre,
+    capMiddle: line.capMiddle,
+    offset: iconCentre - line.capMiddle,
     lines: blockHeight / line.lineHeight,
   };
 }

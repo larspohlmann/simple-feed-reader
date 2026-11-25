@@ -137,23 +137,26 @@ button's glyph, a list row's lead, a rail item — uses a step on the scale.**
 
 #### Icon lead
 
-An icon in front of text that can wrap hangs on the text's first line: its centre sits on the
-first line's centre, one line or five (#2558). `theme/_icon-lead.scss` is the one place:
+An icon in front of text that can wrap hangs on the text's first line: its centre sits on the first
+line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one place:
 
-- `icon-lead.first-line($slot)` on the row: `align-items: start`, and the slot is `1lh` tall with the
-  glyph centred in it. A free-standing boxed note uses `box($inset, $slot)`, whose padding follows the
-  font; a row with a min-height adds `centred-line`; a fixed-height row uses
-  `fixed-row($height, $slot)`, or `fixed-row-lead($height, $slot, $gap)` when items follow the
-  text: the lead space goes only between the lead and the text, and the rest stay `$gap` apart; a
-  slot box taller than the line (the settings chip) adds `overhang($slot, $box-size)`.
+- `icon-lead.first-line($slot, $text)` on the row: the slot and the named text share a baseline, and
+  the slot's baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on
+  the cap middle whatever the engine rounds. Nothing else in the row moves. A free-standing boxed note
+  uses `box($inset, $slot, $text)`, whose padding follows the font; a row with a min-height adds
+  `centred-line`; a fixed-height row uses `fixed-row($height, $slot, $text)`, which starts the text where
+  centring put it, or `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text: the lead
+  space goes only between the lead and the text, and the rest stay `$gap` apart; a slot box taller than
+  the line (the settings chip) adds `overhang($slot, $box-size)`, so it hangs from the baseline without
+  moving the text.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
   any child that sets its own: `1lh` and `1cap` are measured on the row.
-- The line reaches the slot as `--icon-lead-line`, a registered `<length>` (`icon-lead.register` in
-  `styles.scss`); unregistered, the slot's own font would resolve `1lh`. A slot projected from outside
+- The cap reaches the slot as `--icon-lead-cap`, a registered `<length>` (`icon-lead.register` in
+  `styles.scss`); unregistered, the slot's own font would resolve `1cap`. A slot projected from outside
   needs `::ng-deep`.
-- The formula: `--px: calc(var(--py) + (1lh - 1cap) / 2)`.
+- The padding formula: `--px: calc(var(--py) + (1lh - 1cap) / 2)`.
 
-`e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's line-box centre.
+`e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle.
 
 Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
 error banner and the article byline favicon.
@@ -260,9 +263,10 @@ for a cached classic. No request goes to another origin.
   `e2e/classic-theme.spec.ts` checks the room under that title.
 - **Reference platform.** Apple's system face (macOS, iOS). Another platform's system face sits elsewhere
   against Newsreader, and the alignment below is measured on Apple's only.
-- **Bound.** An icon in front of wrapping text sits with its centre on the first line's centre (see Icon
-  lead); the same goes for the tag pill, the vote pill, Reply, "Add comment" and a sidebar row. A change to
-  the face, the line metrics or an icon row is measured against it.
+- **Bound.** An icon in front of text sits with its centre on the first line's cap middle (see Icon
+  lead), in both themes; the same goes for the tag pill, the vote pill, Reply, "Add comment" and a sidebar
+  row. Newsreader's cap middle sits up to 1px above the line-box centre in Chromium, so the baseline, not
+  the line box, is what icons align to.
 - **Rebuilding.** `frontend/scripts/fonts/README.md` holds the three constants, the build command and the
   measuring script; the files are rebuilt, never edited.
 - **URLs are relative.** `_fonts.scss` and the preload say `fonts/…`, not `/fonts/…`, because the `strato`

@@ -344,7 +344,7 @@
 }
 
 .health-head {
-  @include icon-lead.first-line('> app-icon');
+  @include icon-lead.first-line('> app-icon', '> .health-head-title');
 
   display: flex;
   flex: 1;

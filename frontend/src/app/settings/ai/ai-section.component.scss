@@ -25,7 +25,7 @@ app-searchable-select {
 }
 
 .conn {
-  @include icon-lead.first-line('> .conn-dot');
+  @include icon-lead.first-line('> .conn-dot', '> .conn-who');
   @include icon-lead.overhang('> .conn-dot', $dot-box);
 
   display: flex;

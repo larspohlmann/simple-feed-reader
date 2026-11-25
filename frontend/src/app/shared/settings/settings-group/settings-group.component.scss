@@ -5,7 +5,7 @@ $chip-padding: var(--space-2);
 $chip-box: calc(var(--icon-sm) + 2 * #{$chip-padding});
 
 .g-head {
-  @include icon-lead.first-line('> .g-icon');
+  @include icon-lead.first-line('> .g-icon', '> .g-text');
   @include icon-lead.overhang('> .g-icon', $chip-box);
 
   display: flex;

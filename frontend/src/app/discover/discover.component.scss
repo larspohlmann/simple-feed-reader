@@ -76,7 +76,7 @@ app-category-chips {
 }
 
 .cat-head {
-  @include icon-lead.first-line('> .cat-ico');
+  @include icon-lead.first-line('> .cat-ico', '> h2');
 
   --cat-action-height: calc(var(--fs-sm) * var(--lh-normal) + var(--space-2) + var(--space-0));
 
@@ -104,9 +104,8 @@ app-category-chips {
     overflow-wrap: normal;
   }
 
-  .cat-ico,
   h2 {
-    margin-block-start: max(0px, calc((var(--cat-action-height) - var(--icon-lead-line)) / 2));
+    margin-block-start: max(0px, calc((var(--cat-action-height) - 1lh) / 2));
   }
 }
 

@@ -1,6 +1,6 @@
 // Registered <length>s: unregistered, a child's own font would resolve 1lh and 1cap.
 @mixin register {
-  @property --icon-lead-line {
+  @property --icon-lead-cap {
     syntax: '<length>';
     inherits: true;
     // stylelint-disable-next-line length-zero-no-unit
@@ -24,31 +24,45 @@
   @return calc(var(--icon-lead-space) - #{$gap});
 }
 
-@mixin first-line($slot) {
-  --icon-lead-line: 1lh;
+// The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
+// the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
+// The slot is zero tall, so a glyph taller than the line never moves the text.
+@mixin first-line($slot, $text) {
+  --icon-lead-cap: 1cap;
 
   align-items: start;
+
+  #{$slot},
+  #{$text} {
+    align-self: baseline;
+  }
 
   #{$slot} {
     display: flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    block-size: var(--icon-lead-line);
+    block-size: 0;
+
+    &::before {
+      content: '';
+      block-size: var(--icon-lead-cap);
+    }
   }
 }
 
+// A slot that paints its own box (a chip) keeps its height and hangs from the baseline the same way.
 @mixin overhang($slot, $box-size) {
   #{$slot} {
     block-size: auto;
-    margin-block: calc((var(--icon-lead-line) - #{$box-size}) / 2);
+    margin-block: calc(#{$box-size} / -2);
   }
 }
 
-@mixin box($inset, $slot) {
+@mixin box($inset, $slot, $text) {
   --icon-lead-band: calc((1lh - 1cap) / 2);
 
-  @include first-line($slot);
+  @include first-line($slot, $text);
 
   padding: #{$inset} calc(#{$inset} + var(--icon-lead-band));
   gap: calc(#{$inset} + var(--icon-lead-band));
@@ -59,18 +73,23 @@
   align-content: center;
 }
 
-@mixin fixed-row($height, $slot) {
+// The text keeps the place centring gave it: the baseline group starts at the row's top.
+@mixin fixed-row($height, $slot, $text) {
   --icon-lead-space: #{space($height)};
 
-  @include first-line($slot);
+  @include first-line($slot, $text);
 
   padding-inline-start: var(--icon-lead-space);
   gap: var(--icon-lead-space);
+
+  #{$text} {
+    margin-block-start: calc((#{$height} - 1lh) / 2);
+  }
 }
 
 // As fixed-row, but only the lead keeps the lead space to the text: the items after it stay $gap apart.
-@mixin fixed-row-lead($height, $slot, $gap) {
-  @include fixed-row($height, $slot);
+@mixin fixed-row-lead($height, $slot, $text, $gap) {
+  @include fixed-row($height, $slot, $text);
 
   gap: $gap;
 

@@ -79,6 +79,7 @@
   @include icon-lead.fixed-row-lead(
     var(--row-box),
     '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
+    '> .name, > .label, > .nav > .name, > .nav > .label',
     var(--row-gap)
   );
 
@@ -350,7 +351,7 @@
   .section-head {
     --head-box: var(--sidebar-sub-row-h);
 
-    @include icon-lead.fixed-row-lead(var(--head-box), '.favicon-slot', var(--space-3));
+    @include icon-lead.fixed-row-lead(var(--head-box), '.favicon-slot', '.label', var(--space-3));
 
     display: flex;
     flex: none;

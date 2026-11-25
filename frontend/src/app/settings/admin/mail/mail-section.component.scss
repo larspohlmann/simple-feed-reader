@@ -6,7 +6,7 @@
 // info-toned, full-bleed inside the panel like the settings groups' other
 // callouts (see docs/design-language.md, app-settings-group).
 .gmail-hint {
-  @include icon-lead.first-line('> app-icon');
+  @include icon-lead.first-line('> app-icon', '> .gmail-hint-body');
 
   display: flex;
   gap: var(--space-3);
@@ -56,7 +56,7 @@
 }
 
 .health-head {
-  @include icon-lead.first-line('> app-icon');
+  @include icon-lead.first-line('> app-icon', '> .health-head-title');
 
   display: flex;
   flex: 1;
