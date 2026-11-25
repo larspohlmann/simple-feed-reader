@@ -140,18 +140,22 @@ button's glyph, a list row's lead, a rail item — uses a step on the scale.**
 An icon in front of text that can wrap hangs on the text's first line: its centre sits on the first
 line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one place:
 
-- `icon-lead.first-line($slot, $text)` on the row: the slot and the named text share a baseline, and
-  the slot's baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on
-  the cap middle whatever the engine rounds. Nothing else in the row moves. Bare text (a chip's label,
-  an `<app-button>`'s projected text) has no selector: `$text: null` lines the whole row up on the
-  baseline instead. A free-standing boxed note or a pill uses `box($inset, $slot, $text)`, whose padding
-  and icon gap follow the font, or `box-lead($inset, $slot, $text, $gap)` when a count follows the text
-  and keeps `$gap`; a chip whose height is a min-height uses `fixed-row`; a row with a min-height adds
-  `centred-line`; a fixed-height row uses `fixed-row($height, $slot, $text)`, which starts the text where
-  centring put it, or `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text: the lead
-  space goes only between the lead and the text, and the rest stay `$gap` apart; a slot box taller than
-  the line (the settings chip) adds `overhang($slot, $box-size)`, so it hangs from the baseline without
-  moving the text.
+- `first-line($slot, $text)` on the row: the slot and the named text share a baseline, and the slot's
+  baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on the cap
+  middle whatever the engine rounds. Nothing else in the row moves. The slot must share a flex line with
+  its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected text) has no
+  selector: `$text: null` lines the whole row up on the baseline instead.
+- `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset`; its side padding
+  and icon gap follow the font. `box-lead($inset, $slot, $text, $gap)` when items follow the text: only
+  the icon gets the lead space, the rest stay `$gap` apart.
+- `fixed-row($height, $slot, $text)`: a row or chip whose height is set, not grown by its text (a
+  sidebar row, a min-height chip); side padding and gap are `($height - 1cap) / 2`, and the text keeps
+  the place centring gave it. `fixed-row-lead($height, $slot, $text, $gap)` when items follow the text.
+- `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
+- `overhang($slot, $box-size)`: a slot that paints its own box taller than the line (the settings chip)
+  hangs from the baseline without moving the text.
+- A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
+  `<app-button>` it carries `class="trailing"`.
 - The **row carries the first line's** `font-size`, `font-family` and `line-height`, and restates them on
   any child that sets its own: `1lh` and `1cap` are measured on the row.
 - The cap reaches the slot as `--icon-lead-cap`, a registered `<length>` (`icon-lead.register` in

@@ -42,8 +42,8 @@ button.sm {
   font-size: var(--fs-sm);
 }
 
-// The label is bare text, so a trailing chevron is found by its glyph and keeps the token gap.
-button.sm ::ng-deep > app-icon:is([name='expand_more'], [name='expand_less']) {
+// A label is bare text, so a trailing icon marks itself; it keeps the token gap after the label.
+button.sm ::ng-deep > app-icon.trailing {
   margin-inline-end: 0;
 }
 
