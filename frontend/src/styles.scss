@@ -17,7 +17,6 @@
 @use './styles/hidden-playback';
 @include icon-lead.register;
 
-
 // Every dialog.open() lands on the CDK's .cdk-overlay-pane; the frame is
 // app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres
 // it (discover, the one full-screen phone surface, is a route, not a pane).
