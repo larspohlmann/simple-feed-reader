@@ -56,29 +56,37 @@
   border-left: 1px solid var(--airy-rule);
 }
 
-@mixin row-box($height) {
+@mixin row-box-height($height) {
   --row-box: #{$height};
+}
 
+@mixin row-box-coarse {
   @media (pointer: coarse) {
     --row-box: var(--tap-target);
   }
 }
 
+@mixin row-box($height) {
+  @include row-box-height($height);
+  @include row-box-coarse;
+}
+
 // Where the label of a row $height tall, led by a $lead-wide icon, starts: lead space, lead, gap.
 // Set on the element whose font is that row's.
 @mixin label-x($height, $lead) {
-  @include row-box($height);
+  @include row-box-height($height);
 
   --sidebar-label-x: calc(2 * #{icon-lead.space(var(--row-box))} + #{$lead});
+
+  @include row-box-coarse;
 }
 
 @mixin row-geometry($color: var(--text-primary)) {
   --row-gap: var(--space-3);
 
-  @include row-box(var(--row-h, var(--sidebar-row-h)));
-  @include icon-lead.fixed-row(
+  @include row-box-height(var(--row-h, var(--sidebar-row-h)));
+  @include icon-lead.fixed-row-properties(
     var(--row-box),
-    '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
     '> .name, > .label, > .nav > .name, > .nav > .label',
     $gap: var(--row-gap)
   );
@@ -90,6 +98,14 @@
   color: $color;
   font-size: var(--row-fs, var(--fs-base));
   text-decoration: none;
+
+  @include icon-lead.fixed-row-slots(
+    var(--row-box),
+    '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
+    '> .name, > .label, > .nav > .name, > .nav > .label',
+    $gap: var(--row-gap)
+  );
+  @include row-box-coarse;
 
   @media (pointer: coarse) {
     --row-gap: calc(var(--space-3) + var(--space-0));
@@ -346,8 +362,8 @@
 /* A section head — Saved searches, Tags, Feeds, a network: a title that opens the combined list (#1735). */
 @mixin section-head {
   .section-head {
-    @include row-box(var(--head-h, var(--sidebar-sub-row-h)));
-    @include icon-lead.fixed-row(var(--row-box), '.favicon-slot', '.label', $gap: var(--space-3));
+    @include row-box-height(var(--head-h, var(--sidebar-sub-row-h)));
+    @include icon-lead.fixed-row-properties(var(--row-box), '.label', $gap: var(--space-3));
 
     display: flex;
     flex: none;
@@ -355,6 +371,14 @@
     padding: 0 var(--space-2) 0 var(--icon-lead-space);
     border-radius: var(--radius);
     font-size: var(--fs-sm);
+
+    @include icon-lead.fixed-row-slots(
+      var(--row-box),
+      '.favicon-slot',
+      '.label',
+      $gap: var(--space-3)
+    );
+    @include row-box-coarse;
   }
 
   @include row-states('.section-head', '.section-head.current');

@@ -10,8 +10,6 @@
 @include row.group;
 
 .sidebar {
-  @include row.label-x(var(--sidebar-row-h), var(--icon-md));
-
   // The top-level lead's centre: half its label x, for the rails that hang under it.
   --sidebar-rail-x: calc(var(--sidebar-label-x) / 2);
 
@@ -19,6 +17,8 @@
   flex-direction: column;
   gap: var(--space-2);
   height: 100%;
+
+  @include row.label-x(var(--sidebar-row-h), var(--icon-md));
 }
 
 /* Positioned so its overflow clips the footer's absolute `.sr-only` outputs: unclipped, they
@@ -157,8 +157,6 @@
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
 
-  @include row.row-box(var(--row-h));
-
   display: flex;
   flex-direction: column;
   gap: var(--space-0);
@@ -168,6 +166,8 @@
   border-radius: var(--radius);
   background: var(--surface-1);
   font-size: var(--row-fs);
+
+  @include row.row-box(var(--row-h));
 }
 
 .tag-child > .tagfeeds,

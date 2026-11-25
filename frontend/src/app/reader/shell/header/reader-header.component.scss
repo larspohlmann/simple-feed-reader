@@ -199,6 +199,9 @@ header {
   padding: var(--space-1);
   border-radius: var(--radius-lg);
   font-size: var(--fs-sm);
+  box-shadow:
+    0 12px 32px rgb(0 0 0 / 16%),
+    0 2px 6px rgb(0 0 0 / 8%);
 
   @include icon-lead.fixed-lead-space(var(--control-h));
 
@@ -207,10 +210,6 @@ header {
 
     @include icon-lead.fixed-lead-space(var(--tap-target));
   }
-
-  box-shadow:
-    0 12px 32px rgb(0 0 0 / 16%),
-    0 2px 6px rgb(0 0 0 / 8%);
 }
 
 .menu .who {

@@ -4,9 +4,9 @@
 
 // A button of a post's action row (#2309): icon, label and count, the label dropped on phones.
 @mixin action-button {
-  @include pill-toggle.pill-toggle;
-
   min-height: var(--action-height);
+
+  @include pill-toggle.pill-toggle;
 
   .number {
     color: var(--text-muted);

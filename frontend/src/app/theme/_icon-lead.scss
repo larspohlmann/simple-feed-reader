@@ -54,20 +54,24 @@
   @return calc(var(--icon-lead-space) - #{$gap});
 }
 
-// The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
-// the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
-@mixin first-line($slot, $text) {
+@mixin -first-line-properties($text) {
   --icon-lead-cap: 1cap;
 
   @if $text {
     align-items: center;
+  } @else {
+    align-items: baseline;
+  }
+}
 
+// The text and the slot share a baseline; the slot's is the bottom of a cap-tall strut centred in it, so
+// the glyph centres on the cap middle of the text's first line, whatever rounding the engine applies.
+@mixin -first-line-slots($slot, $text) {
+  @if $text {
     #{$slot},
     #{$text} {
       align-self: baseline;
     }
-  } @else {
-    align-items: baseline;
   }
 
   #{$slot} {
@@ -86,6 +90,11 @@
       block-size: var(--icon-lead-cap);
     }
   }
+}
+
+@mixin first-line($slot, $text) {
+  @include -first-line-properties($text);
+  @include -first-line-slots($slot, $text);
 }
 
 // A slot with no text beside it takes its own box back, centred in its row, with no lead space after it.
@@ -122,35 +131,40 @@
   @return max(#{$inset}, calc(#{$inset} + (#{$slot-size} - 1lh) / 2));
 }
 
-// Without $gap, the lead space parts every item; with it, only the lead keeps it to the text.
-@mixin -gaps($slot, $gap) {
+@mixin -gap-properties($gap) {
   @if $gap {
     gap: $gap;
+  } @else {
+    gap: var(--icon-lead-space);
+  }
+}
 
+// Without $gap, the lead space parts every item; with it, only the lead keeps it to the text.
+@mixin -gap-slots($slot, $gap) {
+  @if $gap {
     #{$slot} {
       margin-inline-end: lead-gap($gap);
     }
-  } @else {
-    gap: var(--icon-lead-space);
   }
 }
 
 // $slot-size: the icon's size, when it can be taller than the line.
 @mixin box($inset, $slot, $text, $slot-size: null, $gap: null) {
   $inset: -to-length($inset);
-
-  @include lead-space($inset);
-  @include first-line($slot, $text);
-
   $block: $inset;
 
   @if $slot-size {
     $block: clearance($inset, $slot-size);
   }
 
+  @include lead-space($inset);
+  @include -first-line-properties($text);
+
   padding: #{$block} var(--icon-lead-space);
 
-  @include -gaps($slot, $gap);
+  @include -gap-properties($gap);
+  @include -first-line-slots($slot, $text);
+  @include -gap-slots($slot, $gap);
 }
 
 @mixin centred-line {
@@ -158,16 +172,26 @@
   align-content: center;
 }
 
-// The baseline group starts at the row's top; the margins put a one-line text where centring did.
-@mixin fixed-row($height, $slot, $text, $gap: null) {
+@mixin fixed-row-properties($height, $text, $gap: null) {
   @include fixed-lead-space($height);
-  @include first-line($slot, $text);
+  @include -first-line-properties($text);
 
   padding-inline-start: var(--icon-lead-space);
 
-  @include -gaps($slot, $gap);
+  @include -gap-properties($gap);
+}
+
+@mixin fixed-row-slots($height, $slot, $text, $gap: null) {
+  @include -first-line-slots($slot, $text);
+  @include -gap-slots($slot, $gap);
 
   #{$text} {
     margin-block: line-offset($height);
   }
+}
+
+// The baseline group starts at the row's top; the margins put a one-line text where centring did.
+@mixin fixed-row($height, $slot, $text, $gap: null) {
+  @include fixed-row-properties($height, $text, $gap);
+  @include fixed-row-slots($height, $slot, $text, $gap);
 }
