@@ -34,7 +34,7 @@ function previewOf(
             },
           ],
         },
-        { name: 'Deep', dropped: true, destination: [], feeds: [], folders: [] },
+        { name: 'Deep', dropped: true, destination: ['A', 'B', 'C'], feeds: [], folders: [] },
       ],
     },
   };
@@ -100,14 +100,35 @@ describe('OpmlImportSelection', () => {
         name: null,
         dropped: false,
         destination: [],
-        feeds: [feed('https://blog.example/feed.xml'), feed('not a url')],
+        feeds: [feed('https://blog.example/feed.xml')],
         folders: [],
       },
     });
     expect(selection.rows().map((row) => row.kind === 'feed' && row.siteHref)).toEqual([
       'https://blog.example/',
-      'not a url',
     ]);
+  });
+
+  it('a feed whose url is no web address has no link', () => {
+    selection.load({
+      freeSlots: 1,
+      root: {
+        name: null,
+        dropped: false,
+        destination: [],
+        feeds: [feed('not a url'), feed('feed://blog.example/rss')],
+        folders: [],
+      },
+    });
+    expect(selection.rows().map((row) => row.kind === 'feed' && row.siteHref)).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it('a dropped folder keeps its own name, not its ancestor path end', () => {
+    const deep = selection.rows().find((row) => row.kind === 'folder' && row.dropped);
+    expect(deep?.kind === 'folder' && deep.tagName).toBe('Deep');
   });
 
   it('a folder row knows the importable feeds below it', () => {

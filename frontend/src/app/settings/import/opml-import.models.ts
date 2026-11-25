@@ -59,6 +59,6 @@ export type OpmlImportRow =
       ancestors: string[];
       feed: OpmlPreviewFeed;
       host: string;
-      siteHref: string;
+      siteHref: string | null;
       destination: string[];
     };

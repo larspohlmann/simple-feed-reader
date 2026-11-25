@@ -23,10 +23,11 @@ function hostLabel(url: string): string {
   return parsed === null ? url : hostOf(parsed);
 }
 
-function siteHrefOf(feed: OpmlPreviewFeed): string {
+function siteHrefOf(feed: OpmlPreviewFeed): string | null {
   if (feed.siteUrl !== null) return feed.siteUrl;
   const parsed = parseUrl(feed.url);
-  return parsed === null ? feed.url : `${parsed.protocol}//${parsed.host}/`;
+  const isWeb = parsed?.protocol === 'http:' || parsed?.protocol === 'https:';
+  return parsed !== null && isWeb ? `${parsed.protocol}//${parsed.host}/` : null;
 }
 
 function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]): Flattened {
@@ -55,7 +56,9 @@ function flatten(folder: OpmlPreviewFolder, depth: number, ancestors: string[]):
         depth,
         ancestors,
         name: child.name ?? '',
-        tagName: child.destination.at(-1) ?? child.name ?? '',
+        tagName: child.dropped
+          ? (child.name ?? '')
+          : (child.destination.at(-1) ?? child.name ?? ''),
         dropped: child.dropped,
         importableUrls: below.importableUrls,
       },
