@@ -96,6 +96,18 @@ final class LemmyOwnPostsTest extends TestCase
         self::assertNull($this->lookUp(new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])));
     }
 
+    public function testALookupTheInstanceCannotFindTheAccountFindsNothing(): void
+    {
+        self::assertNull($this->lookUp(new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND])));
+    }
+
+    public function testALookupTheInstanceRefusesTheCommunityFindsNothing(): void
+    {
+        $banned = new MockResponse('{"error":"banned_from_community"}', ['http_code' => Response::HTTP_BAD_REQUEST]);
+
+        self::assertNull($this->lookUp($banned));
+    }
+
     public function testAnUnreadablePublishedTimeIsNoMatch(): void
     {
         self::assertNull($this->lookUp(self::listing(self::post('Title', 7, 'yesterday-ish'))));

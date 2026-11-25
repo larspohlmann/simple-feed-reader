@@ -11,7 +11,6 @@ use App\Service\Social\Lemmy\Model\LemmyPostAttemptModel;
 use App\Service\Social\Notification\Support\NetworkTimestamp;
 use App\Service\Social\Publishing\Model\PublishedPostModel;
 use App\Service\Social\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Social\Exception\SocialPostRefusedException;
@@ -37,7 +36,6 @@ final readonly class LemmyOwnPosts
             SocialCredentialsRejectedException
             | SocialPostRefusedException
             | SocialPostNotFoundException
-            | SocialNetworkThrottledException
             | SocialNetworkUnreachableException
         ) {
             return null;
