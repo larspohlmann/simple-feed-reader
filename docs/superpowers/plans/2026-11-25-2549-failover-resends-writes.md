@@ -49,7 +49,7 @@
 
 `FailoverRequestSenderTest` (dual-stack fixture as in `testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders`):
 - `testAWriteThatResetBeforeItLeftIsSentOverTheNextFamily`: IPv6 pin → `new MockResponse('', ['error' => 'Connection reset by peer', 'request_size' => 0])`, IPv4 → 200; `send('POST', …)` → 200, 2 requests.
-- `testAWriteThatResetAfterItLeftIsNotSentAgain`: same with `'request_size' => 05` → `TransportExceptionInterface` thrown, exactly 1 request.
+- `testAWriteThatResetAfterItLeftIsNotSentAgain`: same with `'request_size' => 122` → `TransportExceptionInterface` thrown, exactly 1 request.
 - `testAWriteAnsweredWithAnErrorStatusKeepsThatAnswer`: IPv6 → `HTTP_BAD_GATEWAY`, IPv4 → 200; `send('POST', …)` → status 502, exactly 1 request.
 - `testALowercaseWriteIsAWriteToo`: as the previous with method `post`.
 
@@ -73,8 +73,35 @@
 - [ ] **Step 1: Write the failing tests** (fixtures as in `testProxyErrorStatusFallsThroughToPinnedDirectWhenFallbackOn` and `testProxyTransportFailureFallsThroughToPinnedDirect`, fallback on):
 - `testAProxiedWriteAnsweredWithAnErrorStatusIsNotSentDirectly`: proxy answers `HTTP_FORBIDDEN` to `POST` → that 403 returned, exactly 1 request.
 - `testAProxiedWriteThatNeverLeftFallsThroughToDirect`: proxy attempt fails with `request_size` 0 → direct answer returned, 2 requests.
-- `testAProxiedWriteThatMayHaveLeftIsNotSentDirectly`: proxy attempt fails with `request_size` 05 → transport error thrown, 1 request.
+- `testAProxiedWriteThatMayHaveLeftIsNotSentDirectly`: proxy attempt fails with `request_size` 122 → transport error thrown, 1 request.
 - [ ] **Step 2: Run to verify they fail** — `php bin/phpunit tests/Service/Outbound/Fetch/FailoverRequestSenderProxyTest.php` → FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** `php bin/phpunit tests/Service/Outbound/Fetch tests/Service/Social` → PASS; cs/stan/PHPMD on changed `src` files.
 - [ ] **Step 5: Commit** — `fix(#2549): a proxied write never falls through to a second send`
+
+---
+
+### Task 3: A request its caller knows changes nothing keeps failover
+
+Ruling (2026-11-25, after Task 1 review): deciding by method alone takes status failover away from POSTs that change nothing — the YouTube player `postJson` (`YouTubePlayerDetailsSource`, route-specific 403s are what failover rescues) and the Lemmy/Bluesky login POSTs marked `changingNothing()`. Their caller already knows: `ApiRequestModel::isRead()`.
+
+**Files:**
+- Modify: `backend/src/Service/Outbound/Fetch/FailoverRequestSender.php`
+- Modify: `backend/src/Service/Outbound/Fetch/CrossFamilyFailover.php` (only if the policy needs a method-free entry point)
+- Modify: `backend/src/Service/Outbound/Fetch/GuardedApiClient.php` (`sendWithin`, `sendDirectAfterProxyRefusal` unchanged)
+- Modify: `backend/src/Service/Outbound/Fetch/ResponseExchange/ApiResponseExchange.php` (defence: it calls method-blind `isRetryableStatus`; route it through `allowsRetryAfterStatus` with the attempt's method, so a future write ticket is never resent)
+- Test: `backend/tests/Service/Outbound/Fetch/FailoverRequestSenderTest.php`, `FailoverRequestSenderProxyTest.php`, `GuardedApiClientTest.php`, the `ApiResponseExchange` test
+
+**Interfaces:**
+- Produces: `FailoverRequestSender::sendRepeatable(string $method, string $url, GuardedUrlModel $guarded, array $options): ResponseInterface` — same as `send()`, but the request counts as repeatable whatever its method (today's failover rules). `send()` keeps deciding by method. No boolean flag parameter anywhere: an internal private enum or a split private method is fine.
+- `GuardedApiClient::sendWithin()` calls `sendRepeatable` when `$request->isRead()`, else `send`.
+
+- [ ] **Step 1: Write the failing tests**
+- `FailoverRequestSenderTest::testARepeatablePostIsAskedAgainOverTheNextFamilyOnAnErrorStatus`: `sendRepeatable('POST', …)`, IPv6 → `HTTP_FORBIDDEN`, IPv4 → 200 → 200, 2 requests.
+- `FailoverRequestSenderProxyTest::testARepeatableProxiedPostFallsThroughToDirectOnAnErrorStatus` (fallback on): proxy → `HTTP_FORBIDDEN` → direct 200, 2 requests.
+- `GuardedApiClientTest::testAPostThatChangesNothingKeepsFailover`: `ApiRequestModel::postJson(...)->changingNothing()` on a dual-stack host, IPv6 → 403, IPv4 → 200 → 200; and `testAWritePostIsNotSentTwice`: plain `postJson` → 403 returned, 1 request.
+- The `ApiResponseExchange` test: a POST attempt with a retryable status is not re-driven over the next family; a GET still is.
+- [ ] **Step 2: Run to verify they fail.**
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run** `php bin/phpunit tests/Service/Outbound/Fetch tests/Service/Social tests/Service/Content` → PASS; cs/stan/PHPMD on changed `src` files.
+- [ ] **Step 5: Commit** — `fix(#2549): a request that changes nothing keeps its failover`
