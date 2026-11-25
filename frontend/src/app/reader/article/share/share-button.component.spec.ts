@@ -8,6 +8,7 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import {
   ACTION_SHEET_DIVIDER,
   ActionSheetAction,
+  ActionSheetCheck,
   ActionSheetData,
   ActionSheetItem,
 } from '../../../shared/action-sheet/action-sheet.component';
@@ -452,6 +453,7 @@ describe('ShareButtonComponent', () => {
   });
 
   const QUOTE: SelectedQuote = { text: 'One two three', words: 3, anchorable: true };
+  const PAGE_URL = 'https://example.com/a?id=1';
   const FRAGMENT = 'https://example.com/a?id=1#:~:text=One%20two%20three';
   const selection = {
     quote: signal<SelectedQuote | null>(null),
@@ -517,14 +519,50 @@ describe('ShareButtonComponent', () => {
         expect(x.textContent).toContain('(link only)');
       });
 
-      it('opens the composer on the quote with a link that points at it', () => {
+      it('opens the composer on the quote with the plain page link', () => {
         item(openMenu(), 'Quote on Mastodon').click();
+
+        expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
+          url: PAGE_URL,
+          title: 'First',
+          quote: 'One two three',
+        });
+      });
+
+      it('offers a link to the quote, unchecked', () => {
+        const option = openMenu().querySelector<HTMLInputElement>('[role="menuitemcheckbox"]');
+
+        expect(option?.closest('label')?.textContent?.trim()).toBe('Link to the quote');
+        expect(option?.checked).toBe(false);
+      });
+
+      it('points the link at the quote once asked to', () => {
+        const menu = openMenu();
+        menu.querySelector<HTMLInputElement>('[role="menuitemcheckbox"]')!.click();
+        fixture.detectChanges();
+
+        item(menu, 'Quote on Mastodon').click();
 
         expect(postActions.postLink).toHaveBeenCalledWith('mastodon', {
           url: FRAGMENT,
           title: 'First',
           quote: 'One two three',
         });
+      });
+
+      it('starts unchecked again the next time the menu opens', () => {
+        openMenu().querySelector<HTMLInputElement>('[role="menuitemcheckbox"]')!.click();
+        press();
+        fixture.detectChanges();
+
+        const option = openMenu().querySelector<HTMLInputElement>('[role="menuitemcheckbox"]');
+        expect(option?.checked).toBe(false);
+      });
+
+      it('offers no link to a quote no text fragment can find', () => {
+        selection.quote.set({ ...QUOTE, anchorable: false });
+
+        expect(openMenu().querySelector('[role="menuitemcheckbox"]')).toBeNull();
       });
 
       it('copies the quote above its link', async () => {
@@ -534,7 +572,7 @@ describe('ShareButtonComponent', () => {
         item(openMenu(), 'Copy quote with link').click();
         await Promise.resolve();
 
-        expect(writeText).toHaveBeenCalledWith(`“One two three”\n\n${FRAGMENT}`);
+        expect(writeText).toHaveBeenCalledWith(`“One two three”\n\n${PAGE_URL}`);
         expect(toast.show).toHaveBeenCalledWith(
           expect.objectContaining({ message: 'Quote copied' }),
         );
@@ -546,7 +584,7 @@ describe('ShareButtonComponent', () => {
         item(openMenu(), 'Open in Bluesky app').click();
 
         expect(open).toHaveBeenCalledWith(
-          `https://bsky.app/intent/compose?text=${encodeURIComponent(`“One two three” ${FRAGMENT}`)}`,
+          `https://bsky.app/intent/compose?text=${encodeURIComponent(`“One two three” ${PAGE_URL}`)}`,
           '_blank',
           'noopener,noreferrer',
         );
@@ -621,7 +659,7 @@ describe('ShareButtonComponent', () => {
 
           expect(selection.releasePageSelection).toHaveBeenCalledTimes(1);
           expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
-            url: FRAGMENT,
+            url: PAGE_URL,
             title: 'First',
             quote: 'One two three',
           });
@@ -652,8 +690,39 @@ describe('ShareButtonComponent', () => {
 
       const actions = sheetData().actions as ActionSheetAction[];
       expect(sheetData().title).toBe('“One two three”');
-      expect(actions[0].label).toBe('Quote on Bluesky');
+      expect(actions[2].label).toBe('Quote on Bluesky');
       expect(actions.find((action) => action.label === 'X')?.hint).toBe('(link only)');
+    });
+
+    it('heads the sheet with an unchecked link to the quote', () => {
+      offer(QUOTE);
+      press();
+
+      const check = sheetData().actions[0] as ActionSheetCheck;
+      expect(check.label).toBe('Link to the quote');
+      expect(check.checked()).toBe(false);
+      expect(sheetData().actions[1]).toBe(ACTION_SHEET_DIVIDER);
+    });
+
+    it('offers no link to a quote no text fragment can find on the sheet', () => {
+      offer({ ...QUOTE, anchorable: false });
+      press();
+
+      expect(sheetData().actions.some((action) => 'toggle' in action)).toBe(false);
+    });
+
+    it('points the link at the quote once the sheet is asked to', () => {
+      offer(QUOTE);
+      press();
+      (sheetData().actions[0] as ActionSheetCheck).toggle();
+
+      chosen.next('post-bluesky');
+
+      expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
+        url: FRAGMENT,
+        title: 'First',
+        quote: 'One two three',
+      });
     });
 
     it('opens the composer on the offered quote', () => {
@@ -663,7 +732,7 @@ describe('ShareButtonComponent', () => {
       chosen.next('post-bluesky');
 
       expect(postActions.postLink).toHaveBeenCalledWith('bluesky', {
-        url: FRAGMENT,
+        url: PAGE_URL,
         title: 'First',
         quote: 'One two three',
       });

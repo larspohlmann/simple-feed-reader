@@ -1842,6 +1842,7 @@
       "quoteCopy": "Zitat mit Link kopieren",
       "quoteCopied": "Zitat kopiert",
       "linkOnly": "(nur Link)",
+      "linkToQuote": "Link zum Zitat",
       "quoteHint": "Text im Artikel markieren, um ihn als Zitat zu teilen",
       "selection": "Markierung teilen",
       "selectedWords": "{{count}} Wörter markiert"
