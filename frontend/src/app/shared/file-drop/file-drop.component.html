@@ -10,12 +10,13 @@
   (drop)="onDrop($event)"
 >
   <app-icon name="upload_file" size="lg" />
-  <span class="label">{{ label() }}</span>
+  <span class="label" [id]="labelId">{{ label() }}</span>
   @if (hint(); as hintText) {
-    <span class="hint">{{ hintText }}</span>
+    <span class="hint" [id]="hintId">{{ hintText }}</span>
   }
   <app-button
     size="sm"
+    [ariaDescribedBy]="describedBy()"
     [disabled]="disabled()"
     (click)="$event.stopPropagation(); openPicker(picker)"
   >

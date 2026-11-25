@@ -5,6 +5,7 @@
   [class.off]="disabled() && !loading()"
   [attr.aria-label]="ariaLabel() ?? null"
   [attr.aria-expanded]="ariaExpanded()"
+  [attr.aria-describedby]="ariaDescribedBy()"
   [attr.cdkFocusInitial]="focusInitial() ? '' : null"
 >
   @if (loading()) {

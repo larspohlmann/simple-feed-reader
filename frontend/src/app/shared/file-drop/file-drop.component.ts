@@ -4,6 +4,8 @@ import { ButtonComponent } from '../button/button.component';
 import { IconComponent } from '../icon/icon.component';
 import { matchesAccept } from './matches-accept';
 
+let nextId = 0;
+
 @Component({
   selector: 'app-file-drop',
   imports: [ButtonComponent, IconComponent, TranslocoPipe],
@@ -21,6 +23,11 @@ export class FileDropComponent {
   protected readonly over = computed(() => this.depth() > 0);
   private readonly depth = signal(0);
   protected readonly rejected = signal(false);
+  protected readonly labelId = `file-drop-${nextId}-label`;
+  protected readonly hintId = `file-drop-${nextId++}-hint`;
+  protected readonly describedBy = computed(() =>
+    this.hint() ? `${this.labelId} ${this.hintId}` : this.labelId,
+  );
 
   protected onDragEnter(event: DragEvent): void {
     event.preventDefault();

@@ -19,6 +19,15 @@ class HostComponent {
   readonly received: File[] = [];
 }
 
+@Component({
+  imports: [FileDropComponent],
+  template: `
+    <app-file-drop accept=".opml" label="Drop one" hint="Up to 1 MB" />
+    <app-file-drop accept=".zip" label="Drop two" />
+  `,
+})
+class TwoDropsComponent {}
+
 describe('FileDropComponent', () => {
   function create() {
     TestBed.configureTestingModule({
@@ -61,6 +70,44 @@ describe('FileDropComponent', () => {
   beforeEach(() => (valueWrites.length = 0));
 
   const opml = () => new File(['<opml/>'], 'a.opml');
+
+  describe('accessible name', () => {
+    function buttons(): HTMLButtonElement[] {
+      TestBed.configureTestingModule({
+        imports: [TwoDropsComponent, provideTranslocoTesting()],
+      });
+      const fixture = TestBed.createComponent(TwoDropsComponent);
+      fixture.detectChanges();
+      return [...fixture.nativeElement.querySelectorAll('button')];
+    }
+
+    function describedText(button: HTMLButtonElement): string {
+      return (button.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent?.trim())
+        .join(' | ');
+    }
+
+    it('describes the button by the label and the hint', () => {
+      const [first] = buttons();
+
+      expect(describedText(first)).toBe('Drop one | Up to 1 MB');
+    });
+
+    it('describes the button by the label alone without a hint', () => {
+      const [, second] = buttons();
+
+      expect(describedText(second)).toBe('Drop two');
+    });
+
+    it('gives each drop zone its own ids', () => {
+      const [first, second] = buttons();
+
+      expect(first.getAttribute('aria-describedby')).not.toBe(
+        second.getAttribute('aria-describedby'),
+      );
+    });
+  });
 
   it('emits the file picked through the input', () => {
     const fixture = create();
