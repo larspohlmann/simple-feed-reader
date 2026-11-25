@@ -22,7 +22,7 @@ class HostComponent {
 @Component({
   imports: [FileDropComponent],
   template: `
-    <app-file-drop accept=".opml" label="Drop one" hint="Up to 1 MB" />
+    <app-file-drop accept=".opml" label="Drop one" />
     <app-file-drop accept=".zip" label="Drop two" />
   `,
 })
@@ -88,15 +88,10 @@ describe('FileDropComponent', () => {
         .join(' | ');
     }
 
-    it('describes the button by the label and the hint', () => {
-      const [first] = buttons();
+    it('describes the button by its label', () => {
+      const [first, second] = buttons();
 
-      expect(describedText(first)).toBe('Drop one | Up to 1 MB');
-    });
-
-    it('describes the button by the label alone without a hint', () => {
-      const [, second] = buttons();
-
+      expect(describedText(first)).toBe('Drop one');
       expect(describedText(second)).toBe('Drop two');
     });
 
@@ -107,6 +102,16 @@ describe('FileDropComponent', () => {
         second.getAttribute('aria-describedby'),
       );
     });
+  });
+
+  it('opens the picker once when the choose button is clicked', () => {
+    const fixture = create();
+    const input = fixture.nativeElement.querySelector('input[type=file]') as HTMLInputElement;
+    const opened = jest.spyOn(input, 'click').mockImplementation(() => undefined);
+
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+
+    expect(opened).toHaveBeenCalledTimes(1);
   });
 
   it('emits the file picked through the input', () => {

@@ -1036,7 +1036,6 @@ container, also inside a flex column that aligns its items to the start. It only
 |---|---|---|
 | `accept` | `string` | required — comma-separated `.suffix` and MIME entries, as in `<input accept>`; `''` accepts everything |
 | `label` | `string` | required — an already-translated prompt |
-| `hint` | `string \| null` | `null` — an already-translated second line (formats, size) |
 | `disabled` | `boolean` | `false` |
 | `picked` | `output<File>` | — fires for a picked file, and for the first dropped file that matches `accept` |
 
@@ -1057,7 +1056,7 @@ choosing the same file twice emits twice. Matching is by suffix or exact MIME
 type, a convenience filter and not validation: the caller still handles a file
 that parses badly.
 
-**Do** pass the format names in `hint`. **Don't** wrap it in another click
+**Do** name the accepted formats in `label`. **Don't** wrap it in another click
 handler or style its border from outside; a second drop target nested in it
 would swallow the drag events.
 

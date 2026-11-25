@@ -16,26 +16,17 @@ let nextId = 0;
 export class FileDropComponent {
   readonly accept = input.required<string>();
   readonly label = input.required<string>();
-  readonly hint = input<string | null>(null);
   readonly disabled = input(false);
   readonly picked = output<File>();
 
   protected readonly over = computed(() => this.depth() > 0);
   private readonly depth = signal(0);
   protected readonly rejected = signal(false);
-  protected readonly labelId = `file-drop-${nextId}-label`;
-  protected readonly hintId = `file-drop-${nextId++}-hint`;
-  protected readonly describedBy = computed(() =>
-    this.hint() ? `${this.labelId} ${this.hintId}` : this.labelId,
-  );
+  protected readonly labelId = `file-drop-${nextId++}-label`;
 
   protected onDragEnter(event: DragEvent): void {
     event.preventDefault();
     if (!this.disabled()) this.depth.update((depth) => depth + 1);
-  }
-
-  protected onDragOver(event: DragEvent): void {
-    event.preventDefault();
   }
 
   protected onDragLeave(): void {

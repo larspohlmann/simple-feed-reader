@@ -1,6 +1,6 @@
 :host {
   display: block;
-  align-self: stretch;
+  width: 100%;
 }
 
 .target {
@@ -28,10 +28,6 @@
 
 .label {
   color: var(--text);
-}
-
-.hint {
-  font-size: var(--fs-sm);
 }
 
 .error {
