@@ -56,6 +56,7 @@
      instead of leaving a dead strip (#87). Only the sidebar takes the offset. -->
 <div
   class="body"
+  [class.airy-chrome]="sidebarStyle.airy()"
   [class.is-narrow]="screen.isNarrow()"
   [class.sidebar-hidden]="sidebarCollapsed()"
   appDrawerSwipe

@@ -18,6 +18,15 @@
   }
 }
 
+/* Beside the airy sidebar the rule keeps the sheet's side margin, as its search row's rule does. */
+:host-context(.airy-chrome) {
+  border-bottom: 0;
+  background-image: linear-gradient(var(--border), var(--border));
+  background-position: bottom;
+  background-size: calc(100% - 2 * var(--space-3)) 1px;
+  background-repeat: no-repeat;
+}
+
 /* Not animated: the pane reserves the measured height, and an animating box reports every step (#87). */
 @media (width < bp.$bp-lg) {
   :host(.collapsed) {

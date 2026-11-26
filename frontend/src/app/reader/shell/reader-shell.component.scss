@@ -78,6 +78,7 @@ app-reader-header.hidden {
   --airy-sheet: var(--surface-2);
   --airy-rule: var(--border);
   --airy-hrule: color-mix(in srgb, var(--border) 35%, var(--airy-sheet));
+  --airy-edge-cast: rgb(0 0 0 / 5%);
 
   background: var(--airy-sheet);
 }
@@ -86,6 +87,7 @@ app-reader-header.hidden {
   --airy-sheet: var(--surface-read);
   --airy-rule: color-mix(in srgb, var(--border-strong), var(--text-muted));
   --airy-hrule: var(--border);
+  --airy-edge-cast: rgb(0 0 0 / 35%);
 }
 
 /* The sheet's gutter widens the column, so the content keeps --sidebar-nav-w; the search band starts at the bar. */
@@ -93,6 +95,15 @@ app-reader-header.hidden {
   width: calc(var(--sidebar-nav-w) + 2 * var(--space-3));
   padding-top: var(--app-bar-h, var(--bar-h));
   padding-inline: var(--space-3);
+}
+
+/* A hairline and a faint cast along the sheet's edge, drawn as shadows so they add no width.
+   Above the fixed list frame (2), which would otherwise cover the cast. */
+.body:not(.is-narrow) .sidebar.sidebar-airy {
+  z-index: 3;
+  box-shadow:
+    1px 0 0 var(--border),
+    2px 0 var(--space-2) var(--airy-edge-cast);
 }
 
 .main {
