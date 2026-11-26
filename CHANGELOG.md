@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.8] - 2026-11-26
+
+## What's Changed
+* fix(#2573): verifying an already active account marks its address verified by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2574
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.7...v1.10.8
+
 ## [v1.10.7] - 2026-11-26
 
 ### Highlights
