@@ -25,8 +25,8 @@ final class ReadingSettings
     #[ORM\Column(length: 10, enumType: MagazineStyle::class, options: ['default' => 'boxed'])]
     private MagazineStyle $magazineStyle = MagazineStyle::Boxed;
 
-    #[ORM\Column(length: 10, enumType: SidebarStyle::class, options: ['default' => 'boxed'])]
-    private SidebarStyle $sidebarStyle = SidebarStyle::Boxed;
+    #[ORM\Column(length: 10, enumType: SidebarStyle::class, options: ['default' => 'airy'])]
+    private SidebarStyle $sidebarStyle = SidebarStyle::Airy;
 
     #[ORM\Column(length: 10, enumType: Theme::class, options: ['default' => 'graphite'])]
     private Theme $theme = Theme::Graphite;

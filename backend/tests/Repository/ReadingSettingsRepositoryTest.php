@@ -35,13 +35,13 @@ final class ReadingSettingsRepositoryTest extends DbTestCase
     {
         $changed = $this->user('sidebar-changed@example.test');
         $untouched = $this->user('sidebar-untouched@example.test');
-        $this->repository()->forUser($changed)->setSidebarStyle(SidebarStyle::Airy);
+        $this->repository()->forUser($changed)->setSidebarStyle(SidebarStyle::Boxed);
         $this->entityManager->flush();
 
         $changedSettings = $this->repository()->forUser($this->reload($changed));
         $untouchedSettings = $this->repository()->forUser($this->reload($untouched));
-        self::assertSame(SidebarStyle::Airy, $changedSettings->getSidebarStyle());
-        self::assertSame(SidebarStyle::Boxed, $untouchedSettings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Boxed, $changedSettings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Airy, $untouchedSettings->getSidebarStyle());
     }
 
     public function testTheThemeIsPerUser(): void

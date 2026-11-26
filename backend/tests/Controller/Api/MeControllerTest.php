@@ -184,7 +184,7 @@ final class MeControllerTest extends ApiTestCase
             [
                 'scrapeFallbackEnabled' => false,
                 'magazineStyle' => 'boxed',
-                'sidebarStyle' => 'boxed',
+                'sidebarStyle' => 'airy',
                 'theme' => 'graphite',
                 'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
@@ -214,7 +214,7 @@ final class MeControllerTest extends ApiTestCase
         $this->patch($client, '/api/me/preferences', [
             'scrapeFallbackEnabled' => true,
             'magazineStyle' => 'airy',
-            'sidebarStyle' => 'airy',
+            'sidebarStyle' => 'boxed',
             'theme' => 'classic',
             'handedness' => 'left',
             'trendingEnabled' => false,
@@ -230,7 +230,7 @@ final class MeControllerTest extends ApiTestCase
             '/api/me/digest',
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
-        $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","sidebarStyle":"airy","theme":"classic",'
+        $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","sidebarStyle":"boxed","theme":"classic",'
             . '"handedness":"left",'
             . '"passkeyOfferAnswered":true,"trendingEnabled":false,'
             . '"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
