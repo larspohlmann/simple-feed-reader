@@ -66,6 +66,27 @@ final class EmailVerifierTest extends DbTestCase
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
     }
 
+    public function testAnActiveAccountIsMarkedVerifiedAndKeepsItsApproval(): void
+    {
+        $approvedAt = new \DateTimeImmutable('2026-07-01 11:00:00');
+        $user = new User('verifier-active@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
+        $user->approve($approvedAt);
+        $token = $this->issuedToken($user);
+        $recording = new AwaitingApprovalRecorder();
+        $policy = $this->registrationPolicy(confirm: true, approve: true);
+
+        $status = $this->verifier($policy, $recording->dispatcher)->verify($token);
+
+        self::assertSame(UserStatus::Active, $status);
+        self::assertSame([], $recording->events());
+        $this->entityManager->clear();
+        $reloaded = $this->users()->findOneByEmail('verifier-active@example.com');
+        self::assertInstanceOf(User::class, $reloaded);
+        self::assertTrue($reloaded->isEmailVerified());
+        self::assertSame(UserStatus::Active, $reloaded->getStatus());
+        self::assertEquals($approvedAt, $reloaded->getApprovedAt());
+    }
+
     public function testAnUnknownTokenIsRefused(): void
     {
         $verifier = $this->verifier($this->registrationPolicy(confirm: true, approve: false), new EventDispatcher());
@@ -79,6 +100,12 @@ final class EmailVerifierTest extends DbTestCase
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
         self::assertSame(UserStatus::PendingVerification, $user->getStatus());
+
+        return $this->issuedToken($user);
+    }
+
+    private function issuedToken(User $user): string
+    {
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
