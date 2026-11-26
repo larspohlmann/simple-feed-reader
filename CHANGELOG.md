@@ -10,6 +10,25 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+This release keeps every episode of podcast feeds and refines the classic theme, icon alignment and dimming.
+
+**Every podcast episode kept.** Some podcast feeds, such as those hosted on
+Simplecast, link every episode to the show's page. The reader took them all
+for the same item and kept only the first. Each episode is now kept as its
+own entry.
+
+**Classic theme typography.** Headlines and text in the classic theme get
+more line height and letter spacing, so the serif type reads less cramped.
+
+**Icons line up with their text.** Icons in the sidebar, menus, buttons and
+tag pills now sit on the middle of their text's first line, at every font
+size.
+
+**Dimming in light mode.** Text now darkens at the same rate as the page
+when you dim it, and the Bluesky and Mastodon logos dim along with it.
+
 ## [v1.10.6] - 2026-11-25
 
 ### Highlights
