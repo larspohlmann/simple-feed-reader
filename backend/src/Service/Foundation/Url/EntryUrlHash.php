@@ -23,6 +23,14 @@ final readonly class EntryUrlHash
         return $this->urlNormalizer->hash($this->identityUrl($guid) ?? $url);
     }
 
+    /** A link to the feed's own site names the show or the blog, not this item, so the item dedupes on GUID alone. */
+    public function hashEntryUrlInFeed(string $guid, ?string $url, ?string $feedSiteUrl): ?string
+    {
+        $hash = $this->hashEntryUrl($guid, $url);
+
+        return $hash === $this->urlNormalizer->hash($feedSiteUrl) ? null : $hash;
+    }
+
     private function identityUrl(string $guid): ?string
     {
         foreach ($this->identityUrls as $identityUrl) {

@@ -48,7 +48,7 @@ final readonly class EntryIngestor
 
         $incoming = array_map(
             fn (ParsedEntryModel $parsedEntry): IncomingEntryModel
-                => $this->incoming($this->platformRules->apply($parsedEntry)),
+                => $this->incoming($feed, $this->platformRules->apply($parsedEntry)),
             $parsed->entries,
         );
         $deduplicator = $this->loadDeduplicator($feed, $incoming);
@@ -75,12 +75,12 @@ final readonly class EntryIngestor
         return $created;
     }
 
-    private function incoming(ParsedEntryModel $entry): IncomingEntryModel
+    private function incoming(Feed $feed, ParsedEntryModel $entry): IncomingEntryModel
     {
         return new IncomingEntryModel(
             $entry,
             EntryGuid::hashGuid($entry->guid),
-            $this->urlHash->hashEntryUrl($entry->guid, $entry->url),
+            $this->urlHash->hashEntryUrlInFeed($entry->guid, $entry->url, $feed->getSiteUrl()),
         );
     }
 

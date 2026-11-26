@@ -238,6 +238,30 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
+    /** Simplecast podcasts link every episode to the show page, which is the feed's own site URL (#2562). */
+    public function testEpisodesThatAllLinkToTheShowPageAreEachStored(): void
+    {
+        $feed = $this->feed();
+        $showPage = 'https://www.zeit.de/serie/ok-america';
+
+        $this->ingestor->ingest($feed, new ParsedFeedModel(null, $showPage, null, null, [
+            $this->parsedEntryAt('episode-1', $showPage),
+        ]), self::context());
+        $this->entityManager->flush();
+
+        $created = $this->ingestor->ingest($feed, new ParsedFeedModel(null, $showPage, null, null, [
+            $this->parsedEntryAt('episode-3', $showPage),
+            $this->parsedEntryAt('episode-2', $showPage),
+            $this->parsedEntryAt('episode-1', $showPage),
+        ]), self::context());
+        $this->entityManager->flush();
+
+        self::assertCount(2, $created);
+        self::assertCount(3, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertNull($created[0]->getUrlHash());
+        self::assertSame($showPage, $created[0]->getUrl());
+    }
+
     public function testDifferentUrlsWithDifferentGuidsRemainSeparate(): void
     {
         $feed = $this->feed();

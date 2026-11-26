@@ -46,6 +46,26 @@ final class EntryUrlHashTest extends TestCase
         self::assertSame($normalizer->hash($url), $hash->hashEntryUrl('https://example.com/story', $url));
     }
 
+    public function testALinkToTheFeedsOwnSiteHasNoHash(): void
+    {
+        self::assertNull(EntryUrlHashes::production()->hashEntryUrlInFeed(
+            'episode-1',
+            'https://www.zeit.de/serie/ok-america?utm_source=rss',
+            'https://www.zeit.de/serie/ok-america',
+        ));
+    }
+
+    public function testALinkBesideTheFeedsSiteHashesItsNormalizedLink(): void
+    {
+        $normalizer = new UrlNormalizer();
+        $url = 'https://www.zeit.de/serie/ok-america/episode-1';
+
+        self::assertSame(
+            $normalizer->hash($url),
+            EntryUrlHashes::production()->hashEntryUrlInFeed('episode-1', $url, 'https://www.zeit.de/serie/ok-america'),
+        );
+    }
+
     public function testAnUnlinkedEntryWithAPlainGuidHasNoHash(): void
     {
         self::assertNull((new EntryUrlHash(new UrlNormalizer(), []))->hashEntryUrl('only-guid', null));
