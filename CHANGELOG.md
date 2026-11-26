@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.10.7] - 2026-11-26
+
 ### Highlights
 
 This release keeps every episode of podcast feeds and refines the classic theme, icon alignment and dimming.
@@ -28,6 +30,19 @@ size.
 
 **Dimming in light mode.** Text now darkens at the same rate as the page
 when you dim it, and the Bluesky and Mastodon logos dim along with it.
+
+## What's Changed
+* Classic theme: give the type room to breathe by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2557
+* Icons sit on the first line, spaced from the font by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2559
+* Vote pill arrows stay aligned on touch screens by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2561
+* fix(#2562): an item linking to its feed's own site dedupes on GUID alone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2564
+* Airy chrome polish: inset rules, sidebar edge, darker dimmed text, airy by default by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2566
+* Saved-search icons sit on their row's text by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2568
+* Bluesky and Mastodon marks dim with the brightness steps by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2570
+* docs(#2571): v1.10.7 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/2572
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.10.6...v1.10.7
 
 ## [v1.10.6] - 2026-11-25
 
