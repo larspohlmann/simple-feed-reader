@@ -12,14 +12,14 @@ $colour-brighten: 1.09;
 $user-colour-dim: 0.08;
 
 // The Sass mirror of BRIGHTNESS_MIN/MAX in brightness.ts. Light drives its text
-// to true black exactly at its floor; dark stays short of black (0.13 < 1/3) so
-// text holds up as the surface sinks, and reaches white exactly at its top.
+// to true black by -3, halfway down, or it reads lighter as the surface sinks (#2565);
+// dark stays short of black (0.13 < 1/3), and reaches white exactly at its top.
 // Dark media rests below 1 and dims faster, or a white picture outshines the text (#1691).
 $ranges: (
   light: (
     min: -6,
     max: 0,
-    text-dim: math.div(1, 6),
+    text-dim: math.div(1, 3),
     text-brighten: 0,
     media-rest: 1,
     media-dim: 0.08,

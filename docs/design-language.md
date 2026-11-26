@@ -381,9 +381,10 @@ hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
 backgrounds) scale multiplicatively, fast when dimming and gently when
 brightening; **colours** (accent, status hues, on-accent) scale at a gentler
 rate so they stay themselves and only soften; **text** interpolates toward an
-extreme, black when dimming and white when brightening, reaching it exactly at
-the range end (light reaches black at `-6`; dark stays short of black so text
-holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
+extreme, black when dimming and white when brightening (light reaches black
+at `-3`, halfway down, or its text reads lighter as the surface sinks, #2565;
+dark stays short of black so text holds up as the surface sinks, and reaches
+white at `+3`). Contrast eases as you
 dim instead of being pinned. `--media-brightness` is per mode (#1691): light
 has none at and above the default and `0.92…0.52` (8 % per step) when dimming;
 dark rests at `0.85` at every step and dims 20 % per step to `0.25`, or a white
