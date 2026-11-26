@@ -132,6 +132,7 @@ const SURFACES = ['surface-0', 'surface-1', 'surface-2', 'surface-read'];
 // Every colour token is scaled; only favicon-backdrop is not.
 const SCALED = Object.keys(TODAY.light).filter((token) => token !== 'favicon-backdrop');
 const TEXT = ['text-primary', 'text-secondary', 'text-muted'];
+const BRAND_MARKS = ['brand-bluesky', 'brand-mastodon'];
 const MEDIA: Record<Theme, Partial<Record<number, string>>> = {
   light: { [-1]: '0.92', [-2]: '0.84', [-3]: '0.76', [-4]: '0.68', [-5]: '0.6', [-6]: '0.52' },
   dark: { 0: '0.85', [-1]: '0.65', [-2]: '0.45', [-3]: '0.25' },
@@ -145,6 +146,8 @@ const USER_COLOUR: Partial<Record<number, string>> = {
   [-6]: '0.52',
 };
 const TOLERANCE = 0.02;
+
+const BRAND_MARKS_TODAY: Palette = { 'brand-bluesky': '#1185fe', 'brand-mastodon': '#6364ff' };
 
 const linear = (channel: number): number => {
   const normalized = channel / 255;
@@ -184,8 +187,18 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
   it.each(STEPS[theme])('step %i redefines every colour token and nothing else', (step) => {
     const mediaToken = step < 0 ? ['media-brightness', 'user-colour-brightness'] : [];
     expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
-      [...SCALED, 'rim-light', ...mediaToken].sort(),
+      [...SCALED, ...BRAND_MARKS, 'rim-light', ...mediaToken].sort(),
     );
+  });
+
+  it.each(STEPS[theme])('step %i moves the network brand marks with the step', (step) => {
+    const palette = paletteAt(theme, step);
+    for (const token of BRAND_MARKS) {
+      const now = luminance(rgb(palette[token]));
+      const today = luminance(rgb(BRAND_MARKS_TODAY[token]));
+      if (step < 0) expect(now).toBeLessThan(today);
+      else expect(now).toBeGreaterThan(today);
+    }
   });
 
   it.each(STEPS[theme])('step %i moves the canvas and the text with the step', (step) => {
@@ -321,4 +334,11 @@ describe.each(['light', 'dark'] as const)('classic %s', (theme) => {
     }).sort((left, right) => left - right);
     expect(steps).toEqual([...STEPS[theme]]);
   });
+});
+
+it('emits the network brand marks unscaled outside the steps', () => {
+  const invariant = ALL_BLOCKS.find(
+    (block) => block.selector === ':root' && 'brand-bluesky' in block.tokens,
+  );
+  for (const token of BRAND_MARKS) expect(invariant?.tokens[token]).toBe(BRAND_MARKS_TODAY[token]);
 });
