@@ -35,6 +35,8 @@ app-reader-header.hidden {
    bar's height in their own padding, so retracting it reveals content instead
    of leaving a gap. The in-flow sidebar takes its own offset below. */
 .body {
+  --pane-rule-inset: var(--space-2);
+
   /* Clips sideways overflow, a split list held at its min-width, so the page never scrolls sideways. */
   overflow-x: clip;
   display: flex;
@@ -72,6 +74,10 @@ app-reader-header.hidden {
    way back. */
 .body.sidebar-hidden:not(.is-narrow) .sidebar {
   display: none;
+}
+
+.body.airy-chrome {
+  --pane-rule-inset: var(--space-3);
 }
 
 .sidebar.sidebar-airy {

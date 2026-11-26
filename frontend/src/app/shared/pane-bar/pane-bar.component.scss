@@ -8,7 +8,19 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
+
+  /* The rule keeps the sidebar's side margin, which the shell sets per sidebar style. A border
+     image, not a background layer: longhands after the frost's var() shorthand blank its fill. */
+  --rule-inset: var(--pane-rule-inset, var(--space-2));
+
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(
+      to right,
+      transparent var(--rule-inset),
+      var(--border) var(--rule-inset) calc(100% - var(--rule-inset)),
+      transparent calc(100% - var(--rule-inset))
+    )
+    0 0 1 0;
 
   @include frost.frosted(var(--surface-0), 80%);
 
@@ -16,15 +28,6 @@
     min-block-size: var(--bar-h);
     padding-block: 0;
   }
-}
-
-/* Beside the airy sidebar the rule keeps the sheet's side margin, as its search row's rule does. */
-:host-context(.airy-chrome) {
-  border-bottom: 0;
-  background-image: linear-gradient(var(--border), var(--border));
-  background-position: bottom;
-  background-size: calc(100% - 2 * var(--space-3)) 1px;
-  background-repeat: no-repeat;
 }
 
 /* Not animated: the pane reserves the measured height, and an animating box reports every step (#87). */
