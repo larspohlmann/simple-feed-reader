@@ -37,6 +37,12 @@ $surfaces:
   surface-0, surface-1, surface-2, surface-read, surface-sunken, border, border-strong,
   border-danger, border-warning, accent-soft, bg-danger, bg-success, bg-warning;
 $colours: accent, on-accent, danger, success, warning;
+
+// Network brand marks (#1599): one value in every theme, scaled like the colours (#2569).
+$brand-marks: (
+  brand-bluesky: #1185fe,
+  brand-mastodon: #6364ff,
+);
 $text: text-primary, text-secondary, text-muted;
 
 // Returned through rgb() on purpose: Sass then prints every derived colour as
@@ -85,6 +91,10 @@ $text: text-primary, text-secondary, text-muted;
 
   @each $name in $colours {
     --#{$name}: #{scale(map.get($palette, $name), $step, $colour-dim, $colour-brighten)};
+  }
+
+  @each $name, $mark in $brand-marks {
+    --#{$name}: #{scale($mark, $step, $colour-dim, $colour-brighten)};
   }
 
   @each $name in $text {

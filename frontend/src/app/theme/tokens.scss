@@ -108,9 +108,10 @@
   /* Inherited: every native checkbox, radio, range and progress takes the theme accent (#1624). */
   accent-color: var(--accent);
 
-  /* Network brand marks (#1599): fixed like the mascot, readable on the light and the dark surface. */
-  --brand-bluesky: #1185fe;
-  --brand-mastodon: #6364ff;
+  /* Network brand marks (#1599): readable on the light and the dark surface; the steps scale them. */
+  @each $name, $mark in brightness.$brand-marks {
+    --#{$name}: #{$mark};
+  }
 
   /* Spacing scale. --space-0 is a real half-step for tight gaps (rail rows,
      icon-grid padding), not a stray. Anything off this scale is a Stylelint

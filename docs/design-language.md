@@ -379,7 +379,8 @@ brightness, so light only dims). Step 0 is the active theme's palette
 block, repeated under `[data-theme-name='classic']` for classic. A step is a lightness dial over three planes, each moving in OKLCH with
 hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
 backgrounds) scale multiplicatively, fast when dimming and gently when
-brightening; **colours** (accent, status hues, on-accent) scale at a gentler
+brightening; **colours** (accent, status hues, on-accent, and the network brand
+marks `--brand-bluesky`/`--brand-mastodon`, #2569) scale at a gentler
 rate so they stay themselves and only soften; **text** interpolates toward an
 extreme, black when dimming and white when brightening (light reaches black
 at `-3`, halfway down, or its text reads lighter as the surface sinks, #2565;
