@@ -20,20 +20,20 @@ describe('SidebarStyleService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('starts boxed, so airy() is false', () => {
+  it('starts airy, so airy() is true', () => {
     const service = make();
 
-    expect(service.style()).toBe('boxed');
-    expect(service.airy()).toBe(false);
+    expect(service.style()).toBe('airy');
+    expect(service.airy()).toBe(true);
   });
 
-  it('writes the airy choice to the account and airy() follows', () => {
+  it('writes the boxed choice to the account and airy() follows', () => {
     const service = make();
 
-    service.set('airy');
+    service.set('boxed');
 
-    expect(write).toHaveBeenCalledWith({ sidebarStyle: 'airy' });
-    expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBe('airy');
-    expect(service.airy()).toBe(true);
+    expect(write).toHaveBeenCalledWith({ sidebarStyle: 'boxed' });
+    expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBe('boxed');
+    expect(service.airy()).toBe(false);
   });
 });

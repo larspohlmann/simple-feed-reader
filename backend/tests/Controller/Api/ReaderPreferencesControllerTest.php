@@ -16,7 +16,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     private const array READING_DEFAULTS = [
         'scrapeFallbackEnabled' => false,
         'magazineStyle' => 'boxed',
-        'sidebarStyle' => 'boxed',
+        'sidebarStyle' => 'airy',
         'theme' => 'graphite',
         'handedness' => 'right',
         'trendingEnabled' => true,
@@ -82,7 +82,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
             [
                 'scrapeFallbackEnabled' => true,
                 'magazineStyle' => 'boxed',
-                'sidebarStyle' => 'boxed',
+                'sidebarStyle' => 'airy',
                 'theme' => 'graphite',
                 'handedness' => 'right',
                 'passkeyOfferAnswered' => false,
@@ -112,7 +112,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
     {
         yield 'scrape fallback' => ['scrapeFallbackEnabled', true];
         yield 'magazine style' => ['magazineStyle', 'airy'];
-        yield 'sidebar style' => ['sidebarStyle', 'airy'];
+        yield 'sidebar style' => ['sidebarStyle', 'boxed'];
         yield 'theme' => ['theme', 'classic'];
         yield 'handedness' => ['handedness', 'left'];
         yield 'trending' => ['trendingEnabled', false];

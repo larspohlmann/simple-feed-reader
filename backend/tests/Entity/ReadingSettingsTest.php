@@ -16,13 +16,13 @@ use PHPUnit\Framework\TestCase;
 
 final class ReadingSettingsTest extends TestCase
 {
-    public function testANewRowHasScrapingOffTheBoxedStyleAndTrendingOn(): void
+    public function testANewRowHasScrapingOffBoxedMagazineAirySidebarAndTrendingOn(): void
     {
         $settings = UnsavedUserSettings::reading();
 
         self::assertFalse($settings->isScrapeFallbackEnabled());
         self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
-        self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Airy, $settings->getSidebarStyle());
         self::assertSame(Theme::Graphite, $settings->getTheme());
         self::assertTrue($settings->isTrendingEnabled());
     }
@@ -31,9 +31,9 @@ final class ReadingSettingsTest extends TestCase
     {
         $settings = UnsavedUserSettings::reading();
 
-        $settings->apply(new ReadingSettingsChange(sidebarStyle: SidebarStyle::Airy));
+        $settings->apply(new ReadingSettingsChange(sidebarStyle: SidebarStyle::Boxed));
 
-        self::assertSame(SidebarStyle::Airy, $settings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
         self::assertSame(MagazineStyle::Boxed, $settings->getMagazineStyle());
     }
 
@@ -49,7 +49,7 @@ final class ReadingSettingsTest extends TestCase
         $settings->apply(new ReadingSettingsChange(theme: Theme::Classic));
 
         self::assertSame(Theme::Classic, $settings->getTheme());
-        self::assertSame(SidebarStyle::Boxed, $settings->getSidebarStyle());
+        self::assertSame(SidebarStyle::Airy, $settings->getSidebarStyle());
     }
 
     public function testAChangeNamingOnlyTheThemeIsNotEmpty(): void

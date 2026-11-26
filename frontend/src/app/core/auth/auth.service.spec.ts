@@ -276,21 +276,21 @@ describe('AuthService', () => {
     const body = meFixture({ passkeyOfferAnswered: true });
     ctrl
       .expectOne('https://api.test/api/me')
-      .flush({ ...body, preferences: { ...body.preferences, sidebarStyle: 'airy' } });
+      .flush({ ...body, preferences: { ...body.preferences, sidebarStyle: 'boxed' } });
 
-    expect(TestBed.inject(SidebarStyleService).style()).toBe('airy');
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
   });
 
   it('logout clears the cached sidebar style, so the next account never inherits it', () => {
     tokens.set('jwt');
-    TestBed.inject(SidebarStyleService).set('airy');
+    TestBed.inject(SidebarStyleService).set('boxed');
     TestBed.tick();
 
     service.logout();
     TestBed.tick();
 
     expect(localStorage.getItem(SIDEBAR_STYLE_KEY)).toBeNull();
-    expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('airy');
   });
 
   it('adopts the account theme from /api/me and paints it', () => {

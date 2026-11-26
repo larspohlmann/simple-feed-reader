@@ -58,17 +58,17 @@ describe('PreferencesSectionComponent', () => {
   it('writes the sidebar style picked in its segmented choice', () => {
     const fixture = mount();
     const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
-    const airy = Array.from(
+    const boxed = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
         '[aria-label="Sidebar style"] button',
       ),
-    ).find((button) => button.textContent?.trim() === en.settings.sidebarStyleOption.airy)!;
+    ).find((button) => button.textContent?.trim() === en.settings.sidebarStyleOption.boxed)!;
 
-    airy.click();
+    boxed.click();
     fixture.detectChanges();
 
-    expect(TestBed.inject(SidebarStyleService).style()).toBe('airy');
-    expect(write).toHaveBeenCalledWith({ sidebarStyle: 'airy' });
+    expect(TestBed.inject(SidebarStyleService).style()).toBe('boxed');
+    expect(write).toHaveBeenCalledWith({ sidebarStyle: 'boxed' });
   });
 
   it('surfaces a banner when the sidebar style write failed', () => {

@@ -48,7 +48,13 @@ $corner-clear: calc(
 }
 
 // The sheet a magazine-measure column sits on, padded by the list's --space-5 gutter.
+// It fills the column once a margin beside it would be narrower than a gutter (#2565).
 @mixin sheet-column($fill) {
+  $sheet: calc(var(--magazine-measure) + 2 * var(--space-5));
+
+  // Zero once the column has room for both margins; else so large that min() takes 100%.
+  $fill-when-cramped: clamp(0%, (#{$sheet} + 2 * var(--space-5) - 100%) * 1000, 100%);
+
   background: linear-gradient($fill, $fill) center /
-    min(100%, calc(var(--magazine-measure) + 2 * var(--space-5))) 100% no-repeat;
+    min(100%, calc(#{$sheet} + #{$fill-when-cramped})) 100% no-repeat;
 }

@@ -239,8 +239,9 @@ it('turns the body text pure white at the brightest dark step', () => {
   expect(rgb(paletteAt('dark', 3)['text-primary'])).toEqual([255, 255, 255]);
 });
 
-it('turns the body text pure black at the darkest light step', () => {
-  expect(rgb(paletteAt('light', -6)['text-primary'])).toEqual([0, 0, 0]);
+it('turns all light text pure black halfway down, before the surface has sunk far', () => {
+  const palette = paletteAt('light', -3);
+  for (const name of TEXT) expect(rgb(palette[name])).toEqual([0, 0, 0]);
 });
 
 /** The classic palette as ruled; accent-soft is derived and checked on its own. */

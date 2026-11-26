@@ -381,9 +381,10 @@ hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
 backgrounds) scale multiplicatively, fast when dimming and gently when
 brightening; **colours** (accent, status hues, on-accent) scale at a gentler
 rate so they stay themselves and only soften; **text** interpolates toward an
-extreme, black when dimming and white when brightening, reaching it exactly at
-the range end (light reaches black at `-6`; dark stays short of black so text
-holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
+extreme, black when dimming and white when brightening (light reaches black
+at `-3`, halfway down, or its text reads lighter as the surface sinks, #2565;
+dark stays short of black so text holds up as the surface sinks, and reaches
+white at `+3`). Contrast eases as you
 dim instead of being pinned. `--media-brightness` is per mode (#1691): light
 has none at and above the default and `0.92…0.52` (8 % per step) when dimming;
 dark rests at `0.85` at every step and dims 20 % per step to `0.25`, or a white
@@ -1941,7 +1942,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
 
-**Airy** (#2493). The Settings choice `sidebarStyle` (`boxed` by default, under the magazine style) puts `.sidebar-airy` on the shell's `aside.sidebar`, and every airy rule is scoped by that class; the magazine's `.airy` is a separate choice. The column is one sheet (`--airy-sheet`: `--surface-2` in light, `--surface-read` in dark) with no card boxes, drawn with hairline rules (`--airy-rule`, and the fainter `--airy-hrule` between sections). The search row is the list header's band, its height and one inset rule running into the header's own. A network head is a heading and its rows hang `--space-5` in on a hairline; the other section heads are heading-only, with no band when open. The current row is accent text plus a 3px inset accent bar, and hover keeps today's fill.
+**Airy** (#2493). The Settings choice `sidebarStyle` (`airy` for a new account since #2565, `boxed` the other option, under the magazine style) puts `.sidebar-airy` on the shell's `aside.sidebar`, and every airy rule is scoped by that class; the magazine's `.airy` is a separate choice. The column is one sheet (`--airy-sheet`: `--surface-2` in light, `--surface-read` in dark) with no card boxes, drawn with hairline rules (`--airy-rule`, and the fainter `--airy-hrule` between sections). The search row is the list header's band, its height and one inset rule running into the header's own. The sheet's edge is a hairline with a faint cast (`--airy-edge-cast`), both shadows so they add no width (#2565). A network head is a heading and its rows hang `--space-5` in on a hairline; the other section heads are heading-only, with no band when open. The current row is accent text plus a 3px inset accent bar, and hover keeps today's fill.
 
 ### Notifications list (#2240)
 

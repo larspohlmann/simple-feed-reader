@@ -12,7 +12,7 @@ export class SidebarStyleService extends CachedAccountChoice<'sidebarStyle'> {
     super({
       key: SIDEBAR_STYLE_KEY,
       choices: SIDEBAR_STYLES,
-      fallback: 'boxed',
+      fallback: 'airy',
       field: 'sidebarStyle',
     });
   }
