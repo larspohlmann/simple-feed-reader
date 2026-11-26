@@ -27,28 +27,30 @@ final readonly class EmailVerifier
     public function verify(string $plainToken): UserStatus
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::VerifyEmail);
+        $now = $this->clock->now();
+        $user->markEmailVerified($now);
 
-        // Re-verifying an already-approved account must not demote it back to
-        // the admin queue.
-        if (UserStatus::PendingVerification === $user->getStatus()) {
-            $now = $this->clock->now();
-            // The token was just consumed, which proves the address regardless
-            // of which status the account lands in next.
-            $user->markEmailVerified($now);
+        // Re-verifying an already-approved account must not demote it back to the admin queue.
+        if (UserStatus::PendingVerification !== $user->getStatus()) {
+            $this->entityManager->flush();
 
-            if ($this->policy->approvalRequired()) {
-                $user->queueForApproval();
-                $this->entityManager->flush();
-
-                // After the flush: the account is now persisted in the queue, so
-                // a listener that counts it sees the true number, and a failed
-                // flush above means no notification goes out.
-                $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
-            } else {
-                $user->approve($now);
-                $this->entityManager->flush();
-            }
+            return $user->getStatus();
         }
+
+        if ($this->policy->approvalRequired()) {
+            $user->queueForApproval();
+            $this->entityManager->flush();
+
+            // After the flush: the account is now persisted in the queue, so
+            // a listener that counts it sees the true number, and a failed
+            // flush above means no notification goes out.
+            $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
+
+            return $user->getStatus();
+        }
+
+        $user->approve($now);
+        $this->entityManager->flush();
 
         return $user->getStatus();
     }
