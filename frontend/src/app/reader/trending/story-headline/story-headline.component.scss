@@ -27,18 +27,20 @@
 .title,
 .synopsis {
   margin: 0;
-  font-size: var(--fs-base);
-  line-height: var(--lh-tight);
   overflow-wrap: break-word;
 }
 
 .title {
   @include type.headline(700, var(--lh-tight));
 
+  font-size: var(--fs-base);
   color: var(--text-primary);
 }
 
 .synopsis {
+  @include type.summary(var(--lh-normal));
+
+  font-size: var(--fs-dense);
   font-weight: 400;
   color: var(--text-secondary);
 }
