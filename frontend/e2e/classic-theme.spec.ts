@@ -44,6 +44,8 @@ async function openList(page: Page, theme: string, view: ListView = {}): Promise
 }
 
 const STORY_TITLE = 'Hamburg dockworkers strike';
+const STORY_SYNOPSIS =
+  'Dockworkers in Hamburg walked out over pay, halting the container terminals.';
 
 async function openTrending(page: Page, theme: string): Promise<void> {
   await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': 'magazine' });
@@ -61,7 +63,7 @@ async function openTrending(page: Page, theme: string): Promise<void> {
             {
               id: 7,
               title: STORY_TITLE,
-              synopsis: null,
+              synopsis: STORY_SYNOPSIS,
               followed: false,
               outletCount: 1,
               viewed: false,
@@ -228,6 +230,16 @@ test.describe('the Trending story headline is a title', () => {
     expect(parseFloat(headline.lineHeight)).toBeCloseTo(1.34 * parseFloat(headline.size), 2);
   });
 
+  test('classic sets the synopsis a step below the title, like every other summary', async ({
+    page,
+  }) => {
+    await openTrending(page, 'classic');
+    const headline = await styleOf(page, 'app-story-headline .title');
+    const synopsis = await styleOf(page, 'app-story-headline .synopsis');
+    expect(parseFloat(synopsis.size)).toBeLessThan(parseFloat(headline.size));
+    expect(parseFloat(synopsis.lineHeight)).toBeCloseTo(1.55 * parseFloat(synopsis.size), 2);
+  });
+
   test("graphite keeps develop's literals", async ({ page }) => {
     await openTrending(page, 'graphite');
     const headline = await styleOf(page, 'app-story-headline .title');
@@ -235,6 +247,10 @@ test.describe('the Trending story headline is a title', () => {
       weight: '700',
       lineHeight: '18.75px',
       letterSpacing: 'normal',
+    });
+    expect(await styleOf(page, 'app-story-headline .synopsis')).toMatchObject({
+      size: '14px',
+      lineHeight: '21px',
     });
   });
 });
