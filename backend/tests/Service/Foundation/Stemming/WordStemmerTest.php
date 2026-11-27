@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Foundation\Stemming;
 
 use App\Enum\FeedLanguage;
-use App\Service\Foundation\Stemming\Factory\SnowballStemmerFactory;
 use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Foundation\Stemming\WordStemmer;
+use App\Tests\Support\StemmingWiring;
 use PHPUnit\Framework\TestCase;
 
 final class WordStemmerTest extends TestCase
@@ -16,7 +16,7 @@ final class WordStemmerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->stemmer = new WordStemmer(new SnowballStemmerFactory());
+        $this->stemmer = StemmingWiring::stemmer();
     }
 
     public function testGermanCompoundsKeepTheirOwnStems(): void
