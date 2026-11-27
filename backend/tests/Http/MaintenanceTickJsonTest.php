@@ -10,6 +10,7 @@ use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
@@ -70,6 +71,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         0,
                     ),
                 ]),
+                'interestTerms' => new InterestTermSweepReportModel(3, 2, 1, 0),
             ]),
             new LokiSpoolReportModel(14, 15),
         );
@@ -117,6 +119,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
                 'notificationPoll' => ['accountsChecked' => 40, 'failed' => 41, 'newRows' => 42, 'pruned' => 43],
                 'trending' => ['windowsRebuilt' => 2, 'storiesBuilt' => 57],
+                'interestTerms' => ['due' => 3, 'stored' => 2, 'failed' => 1, 'raritiesRefreshed' => 0],
                 'logShipping' => ['shipped' => 14, 'failed' => 15],
             ],
             $this->json()->report($report),

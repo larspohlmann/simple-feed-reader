@@ -57,6 +57,22 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /**
+     * Every active account holding a stored profile; the finder decides which of them are due for new terms.
+     *
+     * @return list<RecommendationSettings>
+     */
+    public function findWithStoredProfile(\DateTimeImmutable $now): array
+    {
+        $qb = $this->withOwner()->andWhere('s.storedProfile.text IS NOT NULL');
+        ActiveAccountDql::restrict($qb, 'owner', $now);
+
+        /** @var list<RecommendationSettings> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return $rows;
+    }
+
     private function withOwner(): QueryBuilder
     {
         return $this->createQueryBuilder('s')

@@ -11,6 +11,7 @@ use App\Service\Operations\Worker\Message\PollSocialNotifications;
 use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
+use App\Service\Operations\Worker\Message\RefreshDueInterestTerms;
 use App\Service\Operations\Worker\Message\RefreshProfileImages;
 use App\Service\Operations\Worker\Message\ResolvePendingLinks;
 use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
@@ -40,7 +41,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(17, $recurringMessages);
+        self::assertCount(18, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -64,6 +65,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 ResolvePendingLinks::class,
                 PollSocialNotifications::class,
                 RunDueStoryAiTasks::class,
+                RefreshDueInterestTerms::class,
             ],
             $classes,
         );
@@ -92,12 +94,13 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 1 minute',
                 'every 5 minutes',
                 'every 5 minutes',
+                'every 5 minutes',
             ],
             $frequencies,
         );
     }
 
-    public function testStoryAiTasksAreScheduledLast(): void
+    public function testInterestTermsAreScheduledLast(): void
     {
         self::bootKernel();
         $provider = self::getContainer()->get(WorkerSchedule::class);
@@ -106,7 +109,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         $last = array_last($provider->getSchedule()->getRecurringMessages());
         self::assertNotNull($last);
 
-        self::assertSame(RunDueStoryAiTasks::class, self::firstMessageClass($last));
+        self::assertSame(RefreshDueInterestTerms::class, self::firstMessageClass($last));
         self::assertSame('every 5 minutes', (string) $last->getTrigger());
     }
 

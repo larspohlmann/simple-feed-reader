@@ -10,6 +10,7 @@ use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\InterestTermsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkResolutionsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
@@ -45,6 +46,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'privateFeedSync' => PrivateFeedSyncTickSweep::class,
             'notificationPoll' => NotificationPollTickSweep::class,
             'trending' => TrendingTickSweep::class,
+            'interestTerms' => InterestTermsTickSweep::class,
             'storyAi' => StoryAiTickSweep::class,
         ], $this->wiredSweeps());
     }

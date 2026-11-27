@@ -6,6 +6,9 @@ namespace App\Repository;
 
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
+use App\Entity\InterestTerm;
+use App\Entity\InterestTermRun;
+use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
 use App\Entity\NetworkExclusion;
 use App\Entity\PrivateFeedSyncChange;
@@ -49,9 +52,13 @@ final readonly class AccountWipeRepository
             ))->setParameter('user', $user)->execute();
         }
         $this->logs->deleteForUserOutsideStoryAiRuns($user, []);
+        $this->logs->deleteForUserOutsideInterestTermRuns($user, []);
         $this->deleteByUser(RecommendationRun::class, $user);
         $this->deleteByUser(StoryAiRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);
+        $this->deleteByUser(InterestTermRun::class, $user);
+        $this->deleteByUser(InterestTerm::class, $user);
+        $this->deleteByUser(InterestTermSet::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
         $this->deleteByUser(StorySettings::class, $user);
     }

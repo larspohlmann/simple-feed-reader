@@ -17,8 +17,20 @@ services:
     App\Tests\Support\StubChatClient:
         autowire: true
 
-    # Nothing in the app injects it yet: the extractor test fetches it by class.
+    # The extractor test fetches the extractor by class; the interest-term tests fetch the refresh pieces the same way.
     App\Service\Curation\Recommendation\Llm\Run\LlmInterestTermExtractor:
+        autowire: true
+        public: true
+
+    App\Service\Curation\Recommendation\Stream\DueInterestTermFinder:
+        autowire: true
+        public: true
+
+    App\Service\Curation\Recommendation\Stream\InterestTermRefresh:
+        autowire: true
+        public: true
+
+    App\Service\Curation\Recommendation\Stream\InterestTermSweep:
         autowire: true
         public: true
 

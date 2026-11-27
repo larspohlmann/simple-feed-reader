@@ -185,8 +185,13 @@ final readonly class RecommendationRunFixtures
 
     public function storeProfile(User $user, string $text): void
     {
+        $this->storeProfileGeneratedAt($user, $text, '2026-10-03 06:00:00');
+    }
+
+    public function storeProfileGeneratedAt(User $user, string $text, string $generatedAt): void
+    {
         $this->settingsRowOf($user)->storeProfile(
-            new StoredProfile($text, new \DateTimeImmutable('2026-10-03 06:00:00'), 'api.example.test', 'm'),
+            new StoredProfile($text, new \DateTimeImmutable($generatedAt), 'api.example.test', 'm'),
         );
         $this->entityManager->flush();
     }

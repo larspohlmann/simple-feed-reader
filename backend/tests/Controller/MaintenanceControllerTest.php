@@ -306,6 +306,7 @@ final class MaintenanceControllerTest extends WebTestCase
                 'privateFeedSync',
                 'notificationPoll',
                 'trending',
+                'interestTerms',
                 'storyAi',
                 'logShipping',
             ],
