@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\InterestPhrase;
+use App\Entity\InterestTermSet;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Tests\Support\ApiTestCase;
@@ -14,7 +17,9 @@ use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 /** No AI provider row is seeded unless a case adds one, so the context window resolves to the fallback. */
 final class RecommendationSettingsControllerTest extends ApiTestCase
@@ -60,6 +65,155 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         $settings->chooseModel(new ModelDescriptor('m', $contextWindow), $now);
         $user->setActiveAiProviderSettings($settings);
         $entityManager->flush();
+    }
+
+    public function testShowCarriesTheStreamDefaultsAndAnEmptyListWithoutTermSet(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-defaults@example.test'));
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['enabled' => true, 'precision' => 'wide', 'defaultPrecision' => 'wide', 'phrases' => []],
+            $this->payload($client)['forYouStream'],
+        );
+    }
+
+    public function testPutStoresTheStreamSwitchAndPrecision(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-put@example.test'));
+
+        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'narrow']);
+
+        self::assertResponseIsSuccessful();
+        $saved = $this->payload($client)['forYouStream'];
+        self::assertIsArray($saved);
+        self::assertFalse($saved['enabled']);
+        self::assertSame('narrow', $saved['precision']);
+
+        $client->request('GET', self::URI, server: $headers);
+        $shown = $this->payload($client)['forYouStream'];
+        self::assertIsArray($shown);
+        self::assertFalse($shown['enabled']);
+        self::assertSame('narrow', $shown['precision']);
+    }
+
+    public function testAPutWithoutForYouStreamKeepsTheStoredSettings(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-keep@example.test'));
+        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'balanced']);
+
+        $this->putWithStream($client, $headers, null);
+
+        self::assertResponseIsSuccessful();
+        $kept = $this->payload($client)['forYouStream'];
+        self::assertIsArray($kept);
+        self::assertFalse($kept['enabled']);
+        self::assertSame('balanced', $kept['precision']);
+    }
+
+    public function testAPutWithANullForYouStreamKeepsTheStoredSettings(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-null@example.test'));
+        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'widest']);
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode([...$this->fullPayload(), 'forYouStream' => null], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseIsSuccessful();
+        $kept = $this->payload($client)['forYouStream'];
+        self::assertIsArray($kept);
+        self::assertFalse($kept['enabled']);
+        self::assertSame('widest', $kept['precision']);
+    }
+
+    public function testAPutWithAnUnknownPrecisionIsRejected(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-unknown@example.test'));
+
+        $this->putWithStream($client, $headers, ['enabled' => true, 'precision' => 'sharpest']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+    }
+
+    public function testAPutWithAStreamMissingItsPrecisionIsRejected(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-partial@example.test'));
+
+        $this->putWithStream($client, $headers, ['enabled' => false]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testShowListsTheStoredPhrases(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('recsettings-stream-phrases@example.test');
+        $headers = $this->bearerFor($user);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $at = new \DateTimeImmutable('2026-11-27 10:00:00');
+        $set = new InterestTermSet($user, $at, $at, 0);
+        $set->recordPhrases([
+            new InterestPhrase(FeedLanguage::English, 'heat pumps', 0.8),
+            new InterestPhrase(FeedLanguage::English, 'grid', 1.0),
+        ]);
+        $entityManager->persist($set);
+        $entityManager->flush();
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $forYouStream = $this->payload($client)['forYouStream'];
+        self::assertIsArray($forYouStream);
+        self::assertEquals(
+            [['language' => 'en', 'phrases' => [
+                ['phrase' => 'grid', 'weight' => 1],
+                ['phrase' => 'heat pumps', 'weight' => 0.8],
+            ]]],
+            $forYouStream['phrases'],
+        );
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed>|null $forYouStream
+     */
+    private function putWithStream(KernelBrowser $client, array $headers, ?array $forYouStream): void
+    {
+        $body = $this->fullPayload();
+        if (null !== $forYouStream) {
+            $body['forYouStream'] = $forYouStream;
+        }
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function fullPayload(): array
+    {
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+
+        /** @var array<string, mixed> $body */
+        return $body;
     }
 
     public function testAnUnconfiguredAccountReportsAllDefaults(): void

@@ -47,6 +47,8 @@ final readonly class SaveRecommendationSettingsRequest
         #[Assert\Choice(choices: [null, 1, 3, 6, 12, 24])]
         public ?int $autoGenerateIntervalHours,
         public bool $showScoreAndReasons = false,
+        #[Assert\Valid]
+        public ?SaveForYouStreamRequest $forYouStream = null,
     ) {
     }
 
@@ -61,6 +63,7 @@ final readonly class SaveRecommendationSettingsRequest
             debugEnabled: $this->debugEnabled,
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
             showScoreAndReasons: $this->showScoreAndReasons,
+            forYouStream: $this->forYouStream?->toTuning(),
         );
     }
 }

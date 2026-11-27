@@ -10,6 +10,7 @@ use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabil
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
+use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamStateModel;
 
 /**
  * The effective recommendation settings and, for an engine that sends a prompt, the prompt
@@ -25,6 +26,7 @@ final class RecommendationSettingsJson
         EffectiveRecommendationSettingsModel $effective,
         RecommendationEngineCapabilitiesModel $capabilities,
         bool $workerAlive,
+        ForYouStreamStateModel $forYouStream,
     ): array {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
@@ -52,6 +54,7 @@ final class RecommendationSettingsJson
             'showScoreAndReasons' => $effective->showScoreAndReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
             'workerAlive' => $workerAlive,
+            'forYouStream' => ForYouStreamSettingsJson::state($forYouStream),
         ];
     }
 

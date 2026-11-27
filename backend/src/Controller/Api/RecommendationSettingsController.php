@@ -11,6 +11,7 @@ use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
+use App\Service\Curation\Recommendation\Stream\ForYouStreamSettingsReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,6 +25,7 @@ final readonly class RecommendationSettingsController
         private RecommendationSettingsWriter $writer,
         private WorkerPresence $presence,
         private RecommendationEngineResolver $engines,
+        private ForYouStreamSettingsReader $forYouStream,
     ) {
     }
 
@@ -34,6 +36,7 @@ final readonly class RecommendationSettingsController
             $this->resolver->forUser($user),
             $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
+            $this->forYouStream->readState($user),
         ));
     }
 
@@ -48,6 +51,7 @@ final readonly class RecommendationSettingsController
             $this->resolver->forUser($user),
             $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
+            $this->forYouStream->readState($user),
         ));
     }
 }
