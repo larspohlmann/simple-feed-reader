@@ -47,16 +47,27 @@
 }
 
 // The hairline an indented run of rows hangs on, under the parent row's icon.
-@mixin rail($top, $color: var(--airy-rule)) {
+@mixin rail($top) {
   content: '';
   position: absolute;
   top: $top;
   bottom: var(--space-1);
   left: var(--sidebar-rail-x);
-  border-left: 1px solid $color;
+  border-left: 1px solid var(--rail-color, var(--border));
 }
 
-@mixin -sublist-rows {
+@mixin -hanging {
+  position: relative;
+  padding-left: var(--space-5);
+
+  &::before {
+    @include rail(var(--space-0));
+  }
+}
+
+// A head's rows hang --space-5 in on the rail under its lead (#2593); a network's, `$boxed: flush`,
+// hang only in the airy sidebar and stay flush in the boxed card.
+@mixin sublist($boxed: hung) {
   .sublist {
     --row-h: var(--sidebar-sub-row-h);
     --row-fs: var(--fs-dense);
@@ -65,37 +76,16 @@
     flex-direction: column;
     gap: var(--space-0);
     font-size: var(--row-fs);
-  }
-}
 
-@mixin -hanging($rail-color) {
-  position: relative;
-  padding-left: var(--space-5);
-
-  &::before {
-    @include rail(var(--space-0), $rail-color);
-  }
-}
-
-// A view's rows hang --space-5 in on a hairline under the head's lead, boxed and airy alike (#2593).
-@mixin sublist {
-  @include -sublist-rows;
-
-  .sublist {
-    @include -hanging(var(--border));
+    @if $boxed == hung {
+      @include -hanging;
+    }
   }
 
-  :host-context(.sidebar-airy) .sublist::before {
-    border-left-color: var(--airy-rule);
-  }
-}
-
-// A network's rows hang on the hairline only in the airy sidebar; the boxed card keeps them flush.
-@mixin airy-sublist {
-  @include -sublist-rows;
-
-  :host-context(.sidebar-airy) .sublist {
-    @include -hanging(var(--airy-rule));
+  @if $boxed == flush {
+    :host-context(.sidebar-airy) .sublist {
+      @include -hanging;
+    }
   }
 }
 
