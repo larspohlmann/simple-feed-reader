@@ -14,9 +14,10 @@ final readonly class ForYouStreamScorer
 
     public function findMatch(InterestTermsModel $terms, EntryStemsModel $stems): ?StreamScoreModel
     {
+        $strengths = $terms->readStrengths($stems->language);
         $contributions = [];
         foreach ($stems->positionWeights as $stem => $positionWeight) {
-            $strength = $terms->findStrength($stems->language, (string) $stem);
+            $strength = $strengths[$stem] ?? null;
             if ($strength !== null) {
                 $contributions[(string) $stem] = $strength * $positionWeight;
             }

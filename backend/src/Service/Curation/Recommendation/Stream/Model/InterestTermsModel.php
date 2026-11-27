@@ -24,8 +24,9 @@ final readonly class InterestTermsModel
         return $language->value ?? '';
     }
 
-    public function findStrength(?FeedLanguage $language, string $stem): ?float
+    /** @return array<array-key, float> weight × rarity per stem, empty when the language has no terms */
+    public function readStrengths(?FeedLanguage $language): array
     {
-        return $this->strengthsByLanguageKey[self::languageKey($language)][$stem] ?? null;
+        return $this->strengthsByLanguageKey[self::languageKey($language)] ?? [];
     }
 }
