@@ -12,19 +12,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 import { LabelMenu } from '../../labels/label-menu.service';
 import { isLabellable } from '../../labels/labellable';
 
-/**
- * The per-entry actions — favorite, like on the post's network with its count (#1600), keep,
- * mark read, delete my own post (#1972), led by the declared duration, play and
- * add-to-playlist on an audio entry (#1436, #1449) — as one control cluster.
- * Lives here, not repeated per block: a second copy (hero vs entry-row) once
- * made actions read as unreliable across the view (#414).
- *
- * Clicks stop propagating — the surrounding card is itself clickable and would
- * open the entry instead of toggling the flag. Enter/Space keydowns stop
- * propagating too, since every card binds its own keydown to open on keyboard
- * activation; neither calls `preventDefault()`, which would cancel the
- * button's own native activation.
- */
+/** The per-entry action cluster shown on every entry row and magazine block. */
 @Component({
   selector: 'app-entry-actions',
   imports: [
