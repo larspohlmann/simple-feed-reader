@@ -39,13 +39,4 @@
   font-size: var(--fs-2xs);
 }
 
-/* On touch a story's ⋯ takes the 44px chevron column, so its count lines up with the head's. */
-@media (pointer: coarse) {
-  .followed-row app-sidebar-row-menu {
-    margin-right: 0;
-  }
-
-  .followed-row app-sidebar-row-menu + .trail {
-    display: none;
-  }
-}
+@include row.menu-takes-chevron-column('.followed-row app-sidebar-row-menu');

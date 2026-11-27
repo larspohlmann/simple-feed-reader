@@ -252,6 +252,19 @@
   }
 }
 
+// On touch a row's ⋯ takes the 44px chevron column, so its count lines up with the head's.
+@mixin menu-takes-chevron-column($menu) {
+  @media (pointer: coarse) {
+    #{$menu} {
+      margin-right: 0;
+    }
+
+    #{$menu} + .trail {
+      display: none;
+    }
+  }
+}
+
 @mixin slot-button($button, $color) {
   #{$button} {
     flex: none;
