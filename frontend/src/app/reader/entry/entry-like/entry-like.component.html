@@ -8,7 +8,7 @@
     [attr.title]="'reader.actionHint.' + likeKey() | transloco"
     [attr.aria-label]="likeCountLabel === null ? likeLabel : likeLabel + ', ' + likeCountLabel"
     [appFlagToggle]="thumb.isLiked"
-    [attr.aria-busy]="liking.pending() || null"
+    [attr.aria-busy]="awaitingCount() || null"
     (click)="$event.stopPropagation(); toggleLike()"
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"
@@ -16,7 +16,7 @@
     @if (countSide() === 'start' && likeCount !== null) {
       <span class="count">{{ likeCount.text }}</span>
     }
-    @if (liking.pending()) {
+    @if (awaitingCount()) {
       <app-pending-dots [size]="size()" />
     } @else {
       <app-icon name="thumb_up" [size]="size()" [fill]="thumb.isLiked" />

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { EMPTY } from 'rxjs';
+import { EMPTY, Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { EntryDto } from '../../models';
@@ -106,6 +106,68 @@ describe('EntryLikeComponent', () => {
       const element = mount({ social: null, myVote: null, likeCount: 12 });
 
       expect(precedes(element.querySelector('button')!)).toBe(false);
+    });
+  });
+
+  describe('pending display', () => {
+    function mountPending(overrides: Partial<EntryDto>) {
+      const answer = new Subject<void>();
+      actions.like.mockReset();
+      actions.like.mockReturnValue(answer);
+      TestBed.configureTestingModule({
+        imports: [EntryLikeComponent, provideTranslocoTesting()],
+        providers: [{ provide: EntryActionHandler, useValue: actions }],
+      });
+      const fixture = TestBed.createComponent(EntryLikeComponent);
+      fixture.componentRef.setInput('entry', anEntry(overrides));
+      fixture.detectChanges();
+      return { fixture, answer, host: fixture.nativeElement as HTMLElement };
+    }
+
+    it('flips the thumb at once and shows no dots when the entry has no like count', () => {
+      const { fixture, host } = mountPending({ social: null, myVote: null, likeCount: null });
+
+      button(host).click();
+      fixture.componentRef.setInput(
+        'entry',
+        anEntry({ social: null, myVote: null, likeCount: null, isLiked: true }),
+      );
+      fixture.detectChanges();
+
+      expect(host.querySelector('app-pending-dots')).toBeNull();
+      expect(host.querySelector('app-icon')?.getAttribute('name')).toBe('thumb_up');
+      expect(button(host).hasAttribute('aria-busy')).toBe(false);
+      expect(button(host).getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('ignores a second click while a no-count like is in flight', () => {
+      const { host } = mountPending({ social: null, myVote: null, likeCount: null });
+
+      button(host).click();
+      button(host).click();
+
+      expect(actions.like).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the dots while a like count waits for the answer', () => {
+      const { fixture, answer, host } = mountPending({
+        social: null,
+        myVote: null,
+        likeCount: 12,
+      });
+
+      button(host).click();
+      fixture.detectChanges();
+
+      expect(host.querySelector('app-pending-dots')).not.toBeNull();
+      expect(host.querySelector('app-icon')).toBeNull();
+      expect(button(host).getAttribute('aria-busy')).toBe('true');
+
+      answer.complete();
+      fixture.detectChanges();
+
+      expect(host.querySelector('app-pending-dots')).toBeNull();
+      expect(host.querySelector('app-icon')?.getAttribute('name')).toBe('thumb_up');
     });
   });
 });

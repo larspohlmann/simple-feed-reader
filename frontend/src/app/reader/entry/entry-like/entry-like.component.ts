@@ -39,6 +39,7 @@ export class EntryLikeComponent {
   );
   private readonly actions = inject(EntryActionHandler);
   protected readonly liking = new PendingAction<true>();
+  protected readonly awaitingCount = computed(() => this.liking.pending() && this.likes() !== null);
 
   protected toggleLike(): void {
     this.liking.run(true, () => this.actions.like(this.entry()));
