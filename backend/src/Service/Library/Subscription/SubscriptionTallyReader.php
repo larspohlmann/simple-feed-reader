@@ -57,7 +57,7 @@ final readonly class SubscriptionTallyReader
 
     private function countStream(int $userId): ForYouStreamTallyModel
     {
-        if (!$this->interestTermSets->hasForUser($userId)) {
+        if (!$this->interestTermSets->hasEnabledStreamForUser($userId)) {
             return ForYouStreamTallyModel::unavailable();
         }
 

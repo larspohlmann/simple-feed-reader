@@ -27,6 +27,7 @@ use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerInterface;
 
 /**
  * The recommendation pipeline's shared fixtures (a ready AI connection, candidate entries, a run and its log rows), so
@@ -38,6 +39,11 @@ final readonly class RecommendationRunFixtures
         private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
     ) {
+    }
+
+    public static function fromContainer(ContainerInterface $container): self
+    {
+        return new self($container->get(EntityManagerInterface::class), $container->get(ApiKeyCipher::class));
     }
 
     public function seedReadyAiSettings(User $user): void

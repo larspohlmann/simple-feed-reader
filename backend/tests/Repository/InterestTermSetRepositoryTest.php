@@ -10,7 +10,6 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\ForYouStreamPrecision;
 use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
@@ -102,11 +101,7 @@ final class InterestTermSetRepositoryTest extends DbTestCase
         bool $enabled,
         ForYouStreamPrecision $precision = ForYouStreamPrecision::Balanced,
     ): void {
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        (new RecommendationRunFixtures($this->entityManager, $cipher))->storeForYouStreamTuning(
-            $user,
-            new ForYouStreamTuning($enabled, $precision),
-        );
+        RecommendationRunFixtures::fromContainer(self::getContainer())
+            ->storeForYouStreamTuning($user, new ForYouStreamTuning($enabled, $precision));
     }
 }

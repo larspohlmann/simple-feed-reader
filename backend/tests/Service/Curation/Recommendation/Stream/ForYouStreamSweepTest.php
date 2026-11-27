@@ -23,7 +23,6 @@ use App\Repository\ForYouStreamMembershipRepository;
 use App\Repository\ForYouStreamSourceRepository;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Stream\Factory\EntryStemmingFactory;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamMembershipWriter\ForYouStreamMembershipWriterInterface;
@@ -556,9 +555,7 @@ final class ForYouStreamSweepTest extends DbTestCase
 
     private function storeTuning(User $user, ForYouStreamTuning $tuning): void
     {
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        (new RecommendationRunFixtures($this->entityManager, $cipher))->storeForYouStreamTuning($user, $tuning);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->storeForYouStreamTuning($user, $tuning);
     }
 
     private function countTerms(User $user): int

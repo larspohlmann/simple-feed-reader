@@ -25,24 +25,24 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         return $this->find($user);
     }
 
-    public function hasForUser(int $userId): bool
+    public function hasEnabledStreamForUser(int $userId): bool
     {
-        return $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->select('1')
             ->andWhere('IDENTITY(s.user) = :userId')
             ->setParameter('userId', $userId)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult() !== null;
+            ->setMaxResults(1);
+
+        return $this->restrictToEnabledStream($qb)->getQuery()->getOneOrNullResult() !== null;
     }
 
     /** @return array<int, int> user id => mark, for the active, stream-enabled accounts whose mark is below the ceiling */
     public function findBelowMark(int $ceiling, \DateTimeImmutable $now): array
     {
-        $qb = $this->buildBelowMarkQuery($ceiling, $now)
-            ->select('IDENTITY(s.user) AS userId', 's.matchedUpToEntryId AS mark')
-            ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
-            ->andWhere('settings.id IS NULL OR settings.forYouStream.enabled = true');
+        $qb = $this->restrictToEnabledStream(
+            $this->buildBelowMarkQuery($ceiling, $now)
+                ->select('IDENTITY(s.user) AS userId', 's.matchedUpToEntryId AS mark'),
+        );
 
         /** @var list<array{userId: int|string, mark: int}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
@@ -130,6 +130,13 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         $sets = $qb->getQuery()->getResult();
 
         return $sets;
+    }
+
+    private function restrictToEnabledStream(QueryBuilder $qb): QueryBuilder
+    {
+        return $qb
+            ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
+            ->andWhere('settings.id IS NULL OR settings.forYouStream.enabled = true');
     }
 
     private function buildBelowMarkQuery(int $ceiling, \DateTimeImmutable $now): QueryBuilder
