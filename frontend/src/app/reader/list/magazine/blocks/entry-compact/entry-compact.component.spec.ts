@@ -217,6 +217,17 @@ describe('EntryCompactComponent', () => {
     expect(element.querySelectorAll('app-entry-actions button').length).toBe(4);
   });
 
+  it('leads the kicker-line actions with the like', () => {
+    const fixture = mount();
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    const actions = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-entry-kicker-line app-entry-actions',
+    );
+
+    expect(actions!.firstElementChild?.tagName).toBe('APP-ENTRY-LIKE');
+  });
+
   it('emits keep without opening the entry', () => {
     const fixture = mount();
     const keep = jest.fn();
@@ -225,7 +236,7 @@ describe('EntryCompactComponent', () => {
     entryActions.open.mockImplementation(open);
 
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[1] as HTMLElement).click();
+    (buttons[2] as HTMLElement).click();
 
     expect(keep).toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();

@@ -46,7 +46,7 @@ export class EntryActionsComponent {
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   /** Off in the article view, whose own Listen row offers the same two controls. */
   readonly audio = input(true);
-  readonly like = input(true);
+  readonly like = input<'first' | 'after-favorite' | 'none'>('after-favorite');
   /** Where the label button of a favorite or kept entry goes: `list` leads the star, `article` follows the tick. */
   readonly labelMenu = input<'list' | 'article'>('list');
   protected readonly entryAudio = new EntryAudio(

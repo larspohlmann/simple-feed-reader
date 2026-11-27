@@ -115,35 +115,54 @@ describe('EntryMetaComponent', () => {
       ).toBeNull();
     });
 
-    it('puts the like before the comment count, out of the actions', () => {
+    it('hands the like to the actions, first and count-first', () => {
       const element = discussionMeta({
         score: null,
         commentCount: 3,
         likeCount: 47,
         social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
       });
-      const discussion = element.querySelector('.discussion') as HTMLElement;
-      expect(discussion.firstElementChild?.tagName).toBe('APP-ENTRY-LIKE');
-      expect(discussion.lastElementChild?.classList).toContain('comments');
-      const like = discussion.querySelector('app-entry-like button') as HTMLElement;
-      expect(like.getAttribute('aria-label')).toBe('Like on Bluesky, 47 likes');
-      expect(element.querySelector('app-entry-actions app-entry-like')).toBeNull();
+      const actions = element.querySelector('app-entry-actions') as HTMLElement;
+      const like = actions.firstElementChild as HTMLElement;
+      expect(element.querySelector('.discussion app-entry-like')).toBeNull();
+      expect(like.tagName).toBe('APP-ENTRY-LIKE');
+      expect(like.querySelectorAll('app-entry-like').length).toBe(0);
+      expect(actions.querySelectorAll('app-entry-like').length).toBe(1);
+      expect(
+        like.querySelector('.count')!.compareDocumentPosition(like.querySelector('app-icon')!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(like.querySelector('button')?.getAttribute('aria-label')).toBe(
+        'Like on Bluesky, 47 likes',
+      );
     });
 
-    it('keeps the like count beside the local toggle where the reader cannot like on the network', () => {
+    it('keeps the vote pill in the discussion and leads the actions with the bare count of a voted post', () => {
+      const element = discussionMeta({
+        social: null,
+        score: 5,
+        myVote: 1,
+        likeCount: 9,
+        commentCount: null,
+      });
+      expect(element.querySelector('.discussion app-vote-pill')).not.toBeNull();
+      expect(element.querySelector('.discussion app-entry-like')).toBeNull();
+      const like = element.querySelector('app-entry-actions')!.firstElementChild as HTMLElement;
+      expect(like.tagName).toBe('APP-ENTRY-LIKE');
+      expect(like.querySelector('button')).toBeNull();
+      expect(like.querySelector('.likes .count')?.textContent).toBe('9');
+    });
+
+    it('renders no discussion span for an entry with only a like', () => {
       const element = discussionMeta({
         score: null,
         commentCount: null,
         likeCount: 4,
-        social: { network: 'bluesky', isLiked: false, canLike: false, isOwn: false },
+        social: null,
+        myVote: null,
       });
-      const like = element.querySelector('.discussion app-entry-like button');
-      expect(like?.getAttribute('aria-label')).toBe('Like, 4 likes');
-    });
-
-    it('gives an article the local toggle in the discussion cluster', () => {
-      const element = discussionMeta({ score: null, commentCount: null, likeCount: null });
-      expect(element.querySelector('.discussion app-entry-like button')).not.toBeNull();
+      expect(element.querySelector('.discussion')).toBeNull();
+      expect(element.querySelector('app-entry-actions app-entry-like')).not.toBeNull();
     });
 
     it('shows the opened thread’s total over the stored count (#2433)', () => {
@@ -165,7 +184,7 @@ describe('EntryMetaComponent', () => {
   it('renders the tag pills beside the actions', () => {
     const element = mount([tag(1, 'Tech')]).nativeElement as HTMLElement;
     expect(element.textContent).toContain('Tech');
-    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(4);
   });
 
   describe('label pills (#2581)', () => {
@@ -188,7 +207,7 @@ describe('EntryMetaComponent', () => {
   it('still renders the actions when the entry has no tags', () => {
     const element = mount([]).nativeElement as HTMLElement;
     expect(element.querySelector('.pill')).toBeNull();
-    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(4);
   });
 
   it('sends each action to the entry action handler', () => {
@@ -201,9 +220,9 @@ describe('EntryMetaComponent', () => {
     entryActions.toggleRead.mockImplementation(read);
 
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[0] as HTMLElement).click();
     (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();
+    (buttons[3] as HTMLElement).click();
 
     expect(favorite).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(keep).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));

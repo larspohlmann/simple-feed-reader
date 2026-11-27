@@ -1,3 +1,6 @@
+@if (like() === 'first') {
+  <app-entry-like [entry]="entry()" [size]="size()" countSide="start" />
+}
 @if (audio() && entryAudio.track()) {
   @if (entryAudio.duration(); as duration) {
     <span class="duration">{{ duration }}</span>
@@ -47,7 +50,7 @@
 >
   <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
-@if (like()) {
+@if (like() === 'after-favorite') {
   <app-entry-like [entry]="entry()" [size]="size()" />
 }
 <button

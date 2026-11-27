@@ -19,11 +19,15 @@ import { EntryActionHandler } from '../entry-actions/entry-action-handler';
   imports: [IconComponent, PendingDotsComponent, TranslocoPipe, FlagToggleDirective],
   templateUrl: './entry-like.component.html',
   styleUrl: './entry-like.component.scss',
-  host: { '[class.glyph-md]': "size() === 'md'" },
+  host: {
+    '[class.glyph-md]': "size() === 'md'",
+    '[class.count-start]': "countSide() === 'start'",
+  },
 })
 export class EntryLikeComponent {
   readonly entry = input.required<EntryDto>();
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
+  readonly countSide = input<'start' | 'end'>('end');
   protected readonly toggle = computed(() => likeToggle(this.entry()));
   protected readonly likeKey = computed(() => {
     const toggle = this.toggle();

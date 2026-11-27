@@ -13,18 +13,26 @@
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"
   >
+    @if (countSide() === 'start' && likeCount !== null) {
+      <span class="count">{{ likeCount.text }}</span>
+    }
     @if (liking.pending()) {
       <app-pending-dots [size]="size()" />
     } @else {
       <app-icon name="thumb_up" [size]="size()" [fill]="thumb.isLiked" />
     }
-    @if (likeCount !== null) {
+    @if (countSide() === 'end' && likeCount !== null) {
       <span class="count">{{ likeCount.text }}</span>
     }
   </button>
 } @else if (likeCount !== null) {
   <span class="likes" role="img" [attr.aria-label]="likeCountLabel">
+    @if (countSide() === 'start') {
+      <span class="count">{{ likeCount.text }}</span>
+    }
     <app-icon name="thumb_up" [size]="size()" aria-hidden="true" />
-    <span class="count">{{ likeCount.text }}</span>
+    @if (countSide() === 'end') {
+      <span class="count">{{ likeCount.text }}</span>
+    }
   </span>
 }

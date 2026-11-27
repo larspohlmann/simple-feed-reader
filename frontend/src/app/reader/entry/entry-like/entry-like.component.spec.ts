@@ -10,7 +10,7 @@ describe('EntryLikeComponent', () => {
   const actions = { like: jest.fn() };
   const network = { network: 'bluesky' as const, isLiked: false, canLike: true, isOwn: false };
 
-  function mount(overrides: Partial<EntryDto>): HTMLElement {
+  function mount(overrides: Partial<EntryDto>, countSide?: 'start' | 'end'): HTMLElement {
     actions.like.mockReset();
     actions.like.mockReturnValue(EMPTY);
     TestBed.configureTestingModule({
@@ -19,6 +19,7 @@ describe('EntryLikeComponent', () => {
     });
     const fixture = TestBed.createComponent(EntryLikeComponent);
     fixture.componentRef.setInput('entry', anEntry(overrides));
+    if (countSide !== undefined) fixture.componentRef.setInput('countSide', countSide);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -78,5 +79,33 @@ describe('EntryLikeComponent', () => {
     const element = mount({ social: null, myVote: null, score: 3 });
 
     expect(button(element).getAttribute('aria-label')).toBe('Like');
+  });
+
+  describe('countSide', () => {
+    const precedes = (element: HTMLElement): boolean =>
+      !!(
+        element
+          .querySelector('.count')!
+          .compareDocumentPosition(element.querySelector('app-icon')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+
+    it('puts the count before the thumb when countSide is start', () => {
+      const element = mount({ social: null, myVote: null, likeCount: 12 }, 'start');
+
+      expect(precedes(element.querySelector('button')!)).toBe(true);
+    });
+
+    it('puts the bare count of a voted Lemmy post before the thumb when countSide is start', () => {
+      const element = mount({ social: null, myVote: 1, score: 3, likeCount: 12 }, 'start');
+
+      expect(precedes(element.querySelector('.likes')!)).toBe(true);
+    });
+
+    it('keeps the thumb first by default', () => {
+      const element = mount({ social: null, myVote: null, likeCount: 12 });
+
+      expect(precedes(element.querySelector('button')!)).toBe(false);
+    });
   });
 });

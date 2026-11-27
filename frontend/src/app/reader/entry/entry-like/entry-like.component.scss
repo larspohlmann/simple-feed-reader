@@ -31,6 +31,10 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+:host(.count-start) .count {
+  margin-inline: 0 var(--space-1);
+}
+
 /* Same tap-target math as the action cluster: the hit box reaches --tap-target
    without making the row taller. */
 @media (pointer: coarse) {
