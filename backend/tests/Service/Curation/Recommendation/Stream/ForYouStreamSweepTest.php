@@ -264,6 +264,37 @@ final class ForYouStreamSweepTest extends DbTestCase
         self::assertSame(array_last($ids), $this->readMark($user));
     }
 
+    public function testAMarkFarBehindStartsAtTheWindowFloorAndCatchesUpInOneBudgetedRun(): void
+    {
+        $user = $this->subscriber('laggard@example.com');
+        $this->term($user, 'solar', 2.0);
+        $this->entries(MarkGroupWalker::CHUNK + 1, '2026-11-01 08:00:00');
+        $fresh = $this->entry('Solar panels');
+        $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
+
+        $report = $this->sweep($clock)->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertTrue($report->caughtUp);
+        self::assertSame(1, $report->entriesScanned);
+        self::assertSame([$fresh->requireId()], $this->readEntryIds($user));
+        self::assertSame($fresh->requireId(), $this->readMark($user));
+    }
+
+    public function testAMarkBehindAWindowWithNothingSettledMovesToTheCeilingUnwalked(): void
+    {
+        $user = $this->subscriber('idle-laggard@example.com');
+        $this->term($user, 'solar', 2.0);
+        $old = $this->entries(2, '2026-11-01 08:00:00');
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(
+            ['usersSwept' => 0, 'entriesScanned' => 0, 'matchesInserted' => 0, 'caughtUp' => true],
+            $report->toLogContext(),
+        );
+        self::assertSame($old[1]->requireId(), $this->readMark($user));
+    }
+
     public function testAFailingChunkStopsTheRunAndLeavesTheMark(): void
     {
         $user = $this->subscriber('failing@example.com');
@@ -347,6 +378,7 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         return new ForYouStreamSweep(
             $sets,
+            new ForYouStreamSourceRepository($this->entityManager),
             $terms,
             new SettledCeiling($entries, $clock),
             new MarkGroupWalker($entries, $this->entityManager, $clock),
@@ -409,11 +441,11 @@ final class ForYouStreamSweepTest extends DbTestCase
     }
 
     /** @return list<Entry> */
-    private function entries(int $count): array
+    private function entries(int $count, string $effectiveAt = self::RECENT): array
     {
         $entries = [];
         for ($index = 0; $index < $count; $index++) {
-            $entries[] = $this->unsavedEntry('Filler', self::SETTLED, self::RECENT, FeedLanguage::English);
+            $entries[] = $this->unsavedEntry('Filler', self::SETTLED, $effectiveAt, FeedLanguage::English);
         }
         $this->entityManager->flush();
 

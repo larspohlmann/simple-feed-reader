@@ -65,6 +65,7 @@ trait SeedsForYouStreamBacklog
 
         return new ForYouStreamSweep(
             $sets,
+            new ForYouStreamSourceRepository($this->entityManager),
             $terms,
             new SettledCeiling($entries, $clock),
             new MarkGroupWalker($entries, $this->entityManager, $clock),
