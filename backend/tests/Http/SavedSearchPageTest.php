@@ -43,7 +43,9 @@ final class SavedSearchPageTest extends TestCase
     {
         $row = $this->row(
             7,
-            new EntryListRowEnrichment(groupings: new EntryListRowGroupings([['id' => 3, 'slug' => 'climate', 'term' => 'climate']])),
+            new EntryListRowEnrichment(
+                groupings: new EntryListRowGroupings([['id' => 3, 'slug' => 'climate', 'term' => 'climate']]),
+            ),
         );
         $result = new SavedSearchEntriesResultModel([$row]);
 
