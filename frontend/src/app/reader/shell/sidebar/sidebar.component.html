@@ -55,6 +55,7 @@
         </div>
       }
       <app-sidebar-views
+        section="primary"
         [selection]="selection()"
         [totalUnread]="totalUnread()"
         [sharedCount]="sharedCount()"
@@ -77,6 +78,13 @@
           (toggleDigest)="toggleDigest.emit($event)"
         />
       </div>
+      <app-sidebar-views
+        section="discover"
+        [selection]="selection()"
+        [totalUnread]="totalUnread()"
+        [forYouUnread]="forYouUnread()"
+        [trendingUnopened]="trendingUnopened()"
+      />
     }
 
     @if (tagTree().length) {

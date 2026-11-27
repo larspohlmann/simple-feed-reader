@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
@@ -9,7 +9,7 @@ import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 
-/** The sidebar's first card: All items, Shared and Recently read, Trending and For you. */
+/** The smart views: the first card holds All items, Shared and Recently read; the discover card, below the collections, Trending and For you. */
 @Component({
   selector: 'app-sidebar-views',
   imports: [IconComponent, RouterLink, TranslocoPipe],
@@ -23,6 +23,10 @@ export class SidebarViewsComponent {
   protected readonly recs = inject(RecommendationsService);
   protected readonly preferences = inject(PreferencesService);
 
+  readonly section = input<'primary' | 'discover'>('primary');
+  protected readonly showsDiscover = computed(
+    () => this.preferences.trendingEnabled() || this.ai.ready(),
+  );
   readonly selection = input.required<Selection>();
   readonly totalUnread = input.required<number>();
   readonly sharedCount = input(0);

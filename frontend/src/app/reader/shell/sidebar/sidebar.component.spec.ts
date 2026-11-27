@@ -304,11 +304,15 @@ describe('SidebarComponent', () => {
         (nav) => nav.querySelector('.name')?.textContent?.trim() === 'Trending',
       )!;
 
-    it('shows right after Recently read even while nothing trends, with no badge', () => {
+    it('shows below the collections group even while nothing trends, with no badge', () => {
       const element = mount().nativeElement as HTMLElement;
-      const labels = navLabels(element);
+      const savedSearches = element.querySelector('app-sidebar-saved-searches')!;
 
-      expect(labels[labels.indexOf('Recently read') + 1]).toBe('Trending');
+      expect(
+        savedSearches.compareDocumentPosition(trendingNav(element)) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(element.querySelector('.card.primary .trending')).toBeNull();
       expect(trendingNav(element).querySelector('.count')).toBeNull();
     });
 
