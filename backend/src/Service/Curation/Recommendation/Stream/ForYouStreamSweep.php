@@ -117,7 +117,7 @@ final readonly class ForYouStreamSweep
         try {
             $matches = $this->matcher->matchChunk($pass, $chunk);
             $lastId = array_last($chunk);
-            $pass->matchesInserted += $this->entityManager->wrapInTransaction(
+            $inserted = $this->entityManager->wrapInTransaction(
                 function () use ($pass, $matches, $lastId): int {
                     $inserted = $this->memberships->insertMissing($matches, $this->clock->now());
                     $this->sets->advanceMarks($pass->collectUserIds(), $lastId);
@@ -132,7 +132,7 @@ final readonly class ForYouStreamSweep
 
             return false;
         }
-        $pass->entriesScanned += \count($chunk);
+        $pass->recordChunk(\count($chunk), $inserted);
 
         return true;
     }
