@@ -57,6 +57,12 @@ final class LabelControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         self::assertSame('label_name_taken', $conflict['type']);
 
+        $longest = str_repeat('a', 60);
+        $this->send($client, 'POST', '/api/labels', $headers, ['name' => $longest]);
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $this->send($client, 'POST', '/api/labels', $headers, ['name' => $longest . 'a']);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+
         $blank = $this->send($client, 'POST', '/api/labels', $headers, ['name' => '   ']);
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame('validation_error', $blank['type']);
@@ -76,6 +82,9 @@ final class LabelControllerTest extends ApiTestCase
         $renamed = $this->send($client, 'PATCH', '/api/labels/' . $readLaterId, $headers, ['name' => 'READ LATER']);
         self::assertResponseIsSuccessful();
         self::assertSame(['label' => ['id' => $readLaterId, 'name' => 'READ LATER']], $renamed);
+
+        $this->send($client, 'PATCH', '/api/labels/' . $workId, $headers, ['name' => str_repeat('a', 61)]);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $conflict = $this->send($client, 'PATCH', '/api/labels/' . $workId, $headers, ['name' => 'read later']);
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);

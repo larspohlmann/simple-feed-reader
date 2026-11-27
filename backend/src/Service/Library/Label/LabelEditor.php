@@ -8,6 +8,7 @@ use App\Entity\Label;
 use App\Entity\User;
 use App\Repository\LabelRepository;
 use App\Service\Library\Label\Exception\LabelNameTakenException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class LabelEditor
@@ -39,7 +40,7 @@ final readonly class LabelEditor
         }
 
         $label->rename($name);
-        $this->entityManager->flush();
+        $this->flushUnlessNameTaken();
     }
 
     public function delete(Label $label): void
@@ -52,8 +53,17 @@ final readonly class LabelEditor
     {
         $label = new Label($user, $name);
         $this->entityManager->persist($label);
-        $this->entityManager->flush();
+        $this->flushUnlessNameTaken();
 
         return $label;
+    }
+
+    private function flushUnlessNameTaken(): void
+    {
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException $exception) {
+            throw new LabelNameTakenException(previous: $exception);
+        }
     }
 }

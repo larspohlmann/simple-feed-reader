@@ -21,7 +21,7 @@ final class LabelEditorTest extends DbTestCase
         $ensured = $this->editor()->ensureNamed($user, 'WORK');
 
         self::assertSame($existing->requireId(), $ensured->requireId());
-        self::assertCount(2, $this->labels()->findForUser($user->requireId()));
+        self::assertCount(2, $this->labels()->countTalliesForUser($user->requireId())->labels);
     }
 
     public function testEnsureNamedCreatesWhenAbsent(): void

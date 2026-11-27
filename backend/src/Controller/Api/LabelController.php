@@ -27,7 +27,7 @@ final readonly class LabelController
     #[Route('', name: 'api_labels_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(LabelJson::tallies($this->labels->tallyForUser($user->requireId())));
+        return new JsonResponse(LabelJson::tallies($this->labels->countTalliesForUser($user->requireId())));
     }
 
     #[Route('', name: 'api_labels_create', methods: ['POST'])]

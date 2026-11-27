@@ -26,20 +26,6 @@ final class LabelRepository extends ServiceEntityRepository
         parent::__construct($registry, Label::class);
     }
 
-    /** @return list<Label> */
-    public function findForUser(int $userId): array
-    {
-        /** @var list<Label> $labels */
-        $labels = $this->createQueryBuilder('l')
-            ->andWhere('IDENTITY(l.user) = :user')->setParameter('user', $userId)
-            ->orderBy('LOWER(l.name)', 'ASC')
-            ->addOrderBy('l.id', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $labels;
-    }
-
     public function findOneForUser(int $userId, int $labelId): ?Label
     {
         /** @var Label|null $label */
@@ -71,7 +57,6 @@ final class LabelRepository extends ServiceEntityRepository
         return $label;
     }
 
-    /** $excludeId lets a rename skip the label being renamed. */
     public function existsForUserAndName(int $userId, string $name, ?int $excludeId = null): bool
     {
         $qb = $this->createQueryBuilder('l')
@@ -87,7 +72,7 @@ final class LabelRepository extends ServiceEntityRepository
     }
 
     /** Counts cover still-subscribed feeds only, the scope of the Favorites and Kept lists. */
-    public function tallyForUser(int $userId): LabelTalliesModel
+    public function countTalliesForUser(int $userId): LabelTalliesModel
     {
         return new LabelTalliesModel(
             $this->tallyLabels($userId),
