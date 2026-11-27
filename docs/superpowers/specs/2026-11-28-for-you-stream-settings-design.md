@@ -17,7 +17,8 @@ and tune how strict the matching is.
   with entries swept from then on, with no backfill (the #2582 rule).
 - **The generated word list**: the phrases the AI returned, per language, with their weight, read-only, shown
   under the toggle while it is on. Empty state when no term set exists yet.
-- **Precision in five steps**, narrow → wide, as a select or segmented control. Step 4 (second widest) is
+- **Precision in five steps**, narrow → wide, as the shared stepper from the sidebar
+  brightness control (narrow end left, wide end right, a click on the bar resets to the default). Step 4 (second widest) is
   today's `MIN_SCORE` 1.5 and is the default. A change applies to entries swept afterwards.
 
 ## Non-goals
@@ -49,4 +50,4 @@ and tune how strict the matching is.
 ## Left to the builder
 
 Module placement, exact class names, whether the phrases sit in a JSON column or a child table, the response
-shape, and the control for the five steps (labels: e.g. Narrowest / Narrow / Balanced / Wide / Widest).
+shape, and the step labels (e.g. Narrowest / Narrow / Balanced / Wide / Widest).
