@@ -117,17 +117,18 @@
   }
 }
 
-// Favorites, Kept, Followed stories and Saved searches read as one group: closer together, and
-// under the airy style only the first keeps the rule above it.
+// Favorites, Kept, Followed stories and Saved searches read as consecutive rows at the views list's
+// pitch: no card padding, and the card's borders stand in for the rows' gap
+// (the boxed head is shorter, so it adds --space-1). Under the airy style only the first keeps its rule.
 .collections {
+  --collections-pad-y: 0px;
+
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
 :host-context(.sidebar-airy) .collections {
-  --airy-card-pad-y: var(--space-2);
-
   gap: 0;
 }
 

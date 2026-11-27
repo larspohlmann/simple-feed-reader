@@ -8,7 +8,7 @@
   .card {
     @include glass-rim.filled(var(--surface-1), var(--border));
 
-    --card-pad-y: var(--sidebar-card-pad);
+    --card-pad-y: var(--collections-pad-y, var(--sidebar-card-pad));
 
     display: flex;
     flex-direction: column;
@@ -20,12 +20,12 @@
 
   @media (pointer: coarse) {
     .card {
-      --card-pad-y: var(--space-2);
+      --card-pad-y: var(--collections-pad-y, var(--space-2));
     }
   }
 
   .card:has(> .section-head > [aria-expanded='false']) {
-    --card-pad-y: var(--sidebar-head-pad);
+    --card-pad-y: var(--collections-pad-y, var(--sidebar-head-pad));
   }
 
   .organising .card,
@@ -40,7 +40,7 @@
 
 // The airy sidebar (#2493) draws no box: a faint rule above each section.
 @mixin airy-section-rule {
-  padding-block: var(--airy-card-pad-y, var(--space-3));
+  padding-block: var(--collections-pad-y, var(--space-3));
   border-color: var(--airy-hrule) transparent transparent;
   border-radius: 0;
   background: none;
