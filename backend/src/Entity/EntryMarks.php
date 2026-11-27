@@ -30,6 +30,19 @@ final readonly class EntryMarks
         return clone($this, ['isKept' => $isKept]);
     }
 
+    /** A like keeps its earlier instant. */
+    #[\NoDiscard]
+    public function withLikedAt(\DateTimeImmutable $likedAt): self
+    {
+        return clone($this, ['likedAt' => self::earlier($this->likedAt, $likedAt)]);
+    }
+
+    #[\NoDiscard]
+    public function withoutLike(): self
+    {
+        return clone($this, ['likedAt' => null]);
+    }
+
     /** Either side's flag stands, and a like keeps its earlier instant. */
     #[\NoDiscard]
     public function withMergedFrom(self $other): self

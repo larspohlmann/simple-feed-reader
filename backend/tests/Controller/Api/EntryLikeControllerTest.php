@@ -74,6 +74,23 @@ final class EntryLikeControllerTest extends ApiTestCase
         );
     }
 
+    public function testAConnectedReadersLikeStillReachesTheNetwork(): void
+    {
+        $client = $this->clientRouting(
+            self::ROUTED_HOSTS,
+            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted()],
+        );
+        $user = $this->signIn($client, 'like-network-only@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
+
+        self::assertSame(['isLiked' => true, 'likeCount' => 6], $this->payload($client));
+        self::assertSame([self::SEARCH, self::FAVOURITE], $this->routesAsked());
+        self::assertFalse($this->entryOf($client, $entryId)['isLiked']);
+    }
+
     public function testASecondLikeCallsNoNetwork(): void
     {
         $client = $this->clientRouting(
@@ -148,7 +165,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
-    public function testAnOrdinaryArticleIsNoPostToLike(): void
+    public function testAnOrdinaryArticleIsLikedLocally(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-plain@example.test');
@@ -160,23 +177,17 @@ final class EntryLikeControllerTest extends ApiTestCase
             '2026-10-12T10:00:00Z',
         )->requireId();
 
-        $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
-
-        $this->assertRejected($client, Response::HTTP_CONFLICT);
-        self::assertSame('social_post_unsupported', $this->payload($client)['type']);
+        $this->assertLikedLocally($client, $entryId);
         self::assertNull($this->socialOf($client, $entryId));
     }
 
-    public function testAPostOnANetworkWithoutAnAccountIsRefusedAndCannotBeLiked(): void
+    public function testAPostOnANetworkWithoutAnAccountIsLikedLocally(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-no-account@example.test');
         $entryId = $this->mastodonPostFor($user);
 
-        $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
-
-        $this->assertRejected($client, Response::HTTP_CONFLICT);
-        self::assertSame('social_account_missing', $this->payload($client)['type']);
+        $this->assertLikedLocally($client, $entryId);
         self::assertSame(
             ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false, 'isOwn' => false],
             $this->socialOf($client, $entryId),
@@ -275,21 +286,21 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame(0, $this->likeRows());
     }
 
-    public function testALikeAndAnUnlikeDrawOnOneBudget(): void
+    public function testANetworkLikeAndAnUnlikeDrawOnOneBudget(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-budget@example.test');
         $this->mastodonAccountOf($user);
-        $path = sprintf('/api/entries/%d/like', $this->mastodonPostFor($user));
-        for ($attempt = 0; $attempt < self::LIKE_BUDGET; ++$attempt) {
-            $client->request('DELETE', $path);
-            self::assertResponseIsSuccessful();
-        }
 
-        $client->request('PUT', $path);
+        $this->assertBudgetRunsOut($client, $this->mastodonPostFor($user));
+    }
 
-        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
-        self::assertSame([], $this->http->requests);
+    public function testALocalLikeAndAnUnlikeDrawOnOneBudget(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'like-budget-local@example.test');
+
+        $this->assertBudgetRunsOut($client, $this->mastodonPostFor($user));
     }
 
     public function testTheLikeStateMovedToTheViewerCall(): void
@@ -310,6 +321,50 @@ final class EntryLikeControllerTest extends ApiTestCase
         $client->request('PUT', '/api/entries/999999/like');
 
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+    }
+
+    private function assertBudgetRunsOut(KernelBrowser $client, int $entryId): void
+    {
+        $path = sprintf('/api/entries/%d/like', $entryId);
+        for ($attempt = 0; $attempt < self::LIKE_BUDGET; ++$attempt) {
+            $client->request('DELETE', $path);
+            self::assertResponseIsSuccessful();
+        }
+
+        $client->request('PUT', $path);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+        self::assertSame([], $this->http->requests);
+    }
+
+    private function assertLikedLocally(KernelBrowser $client, int $entryId): void
+    {
+        $path = sprintf('/api/entries/%d/like', $entryId);
+
+        $client->request('PUT', $path);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['isLiked' => true, 'likeCount' => null], $this->payload($client));
+        self::assertTrue($this->entryOf($client, $entryId)['isLiked']);
+
+        $client->request('DELETE', $path);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['isLiked' => false, 'likeCount' => null], $this->payload($client));
+        self::assertFalse($this->entryOf($client, $entryId)['isLiked']);
+        self::assertSame([], $this->http->requests);
+        self::assertSame(0, $this->likeRows());
+    }
+
+    /** @return array<array-key, mixed> */
+    private function entryOf(KernelBrowser $client, int $entryId): array
+    {
+        $client->request('GET', sprintf('/api/entries/%d', $entryId));
+        self::assertResponseIsSuccessful();
+        $entry = $this->payload($client)['entry'];
+        self::assertIsArray($entry);
+
+        return $entry;
     }
 
     private static function found(): MockResponse

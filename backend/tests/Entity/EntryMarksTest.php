@@ -60,4 +60,41 @@ final class EntryMarksTest extends TestCase
         self::assertTrue($merged->isFavorite);
         self::assertTrue($merged->isKept);
     }
+
+    public function testALikeTakesItsInstant(): void
+    {
+        $likedAt = new \DateTimeImmutable(self::LATER);
+
+        $marks = EntryMarks::none()->withFavorite(true)->withLikedAt($likedAt);
+
+        self::assertEquals($likedAt, $marks->likedAt);
+        self::assertTrue($marks->isFavorite);
+    }
+
+    public function testALikeAgainKeepsTheEarlierInstant(): void
+    {
+        $earlier = new \DateTimeImmutable(self::EARLIER);
+
+        $marks = (new EntryMarks(false, false, $earlier))->withLikedAt(new \DateTimeImmutable(self::LATER));
+
+        self::assertEquals($earlier, $marks->likedAt);
+    }
+
+    public function testALikeBeforeTheStoredOneTakesTheEarlierInstant(): void
+    {
+        $earlier = new \DateTimeImmutable(self::EARLIER);
+
+        $marks = (new EntryMarks(false, false, new \DateTimeImmutable(self::LATER)))->withLikedAt($earlier);
+
+        self::assertEquals($earlier, $marks->likedAt);
+    }
+
+    public function testWithoutLikeDropsOnlyTheLike(): void
+    {
+        $marks = (new EntryMarks(true, true, new \DateTimeImmutable(self::LATER)))->withoutLike();
+
+        self::assertNull($marks->likedAt);
+        self::assertTrue($marks->isFavorite);
+        self::assertTrue($marks->isKept);
+    }
 }
