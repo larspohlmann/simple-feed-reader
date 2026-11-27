@@ -168,7 +168,7 @@ const OWN_SURFACE: Record<string, Lead> = {
   'a tag': groupRow(TAG_ROW(1)),
   'a child tag': groupRow(TAG_ROW(2)),
   'an untagged feed': feedRow('.feeds-card'),
-  'a social account feed': feedRow('app-sidebar-social-section .rows > .feedrow'),
+  'a social account feed': feedRow('app-sidebar-social-section .sublist > .feedrow'),
   'a social feed kind': groupRow(SOCIAL_KIND_ROW),
 };
 
@@ -277,7 +277,7 @@ for (const { theme, style } of VARIANTS) {
         expectNear(tagRail, tag.leadCentre, 'tag rail');
 
         const head = await measure(page, HEADS['the social head']!);
-        const socialRail = await railLeft(page, 'app-sidebar-social-section .rows', '::before');
+        const socialRail = await railLeft(page, 'app-sidebar-social-section .sublist', '::before');
         expectNear(socialRail, head.leadCentre, 'social rail');
       });
     }
