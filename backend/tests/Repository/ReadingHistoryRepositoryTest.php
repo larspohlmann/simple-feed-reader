@@ -243,6 +243,30 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertNotSame($lower->requireId(), $higher->requireId());
     }
 
+    public function testANetworkLikedCopyAndALocallyLikedCopyGiveOneLine(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->likeItemOf($lower);
+        $this->likeLocally($higher, '2026-10-02 12:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$higher->requireId()], $this->entryIds($liked));
+    }
+
+    public function testTwoLocallyLikedCopiesGiveOneLine(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->likeLocally($lower, '2026-10-02 10:00:00');
+        $this->likeLocally($higher, '2026-10-02 11:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertCount(1, $liked);
+    }
+
     public function testALocalLikeInAFeedTheReaderLeftHasNoLine(): void
     {
         [, $left] = $this->persistPostInAFollowedAndALeftFeed();

@@ -68,7 +68,7 @@ final readonly class ReadingHistoryRepository
             ...$this->readLikedRows($this->locallyLikedEntriesQueryBuilder($userId)->setMaxResults($cap)),
         ];
 
-        $newestFirst = self::sortNewestLikeFirst(self::keepNewestLikePerEntry($rows));
+        $newestFirst = self::sortNewestLikeFirst(self::keepNewestLikePerPost($rows));
 
         return array_column(array_slice($newestFirst, 0, $cap), 'titled');
     }
@@ -196,13 +196,16 @@ final readonly class ReadingHistoryRepository
      * @param list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> $rows
      * @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}>
      */
-    private static function keepNewestLikePerEntry(array $rows): array
+    private static function keepNewestLikePerPost(array $rows): array
     {
         $newest = [];
         foreach ($rows as $row) {
-            $entryId = $row['titled']->entry->requireId();
-            if (!isset($newest[$entryId]) || $newest[$entryId]['likedAt'] < $row['likedAt']) {
-                $newest[$entryId] = $row;
+            $entry = $row['titled']->entry;
+            $post = null === $entry->getCanonicalItemId()
+                ? 'entry' . $entry->requireId()
+                : 'item' . $entry->getCanonicalItemId();
+            if (!isset($newest[$post]) || $newest[$post]['likedAt'] < $row['likedAt']) {
+                $newest[$post] = $row;
             }
         }
 
