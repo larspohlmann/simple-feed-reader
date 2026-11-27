@@ -10,12 +10,15 @@ use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /** Refreshes the interest terms of every account whose stored profile is newer than them. */
 final readonly class InterestTermSweep
 {
+    public const int UNHURRIED_BUDGET_SECONDS = 3600;
+
     public function __construct(
         private DueInterestTermFinder $finder,
         private InterestTermRefresh $refresh,
@@ -27,24 +30,14 @@ final readonly class InterestTermSweep
     ) {
     }
 
-    public function refreshDue(): InterestTermSweepReportModel
+    public function sweep(SweepBudgetModel $budget): InterestTermSweepReportModel
     {
-        return $this->refreshDueUntil(null);
-    }
-
-    /** Starts an account only before the deadline. */
-    public function refreshDueBefore(\DateTimeImmutable $deadline): InterestTermSweepReportModel
-    {
-        return $this->refreshDueUntil($deadline);
-    }
-
-    private function refreshDueUntil(?\DateTimeImmutable $deadline): InterestTermSweepReportModel
-    {
+        $deadline = $budget->deadlineFrom($this->clock->now());
         $due = $this->finder->findDue();
         $stored = 0;
         $failed = 0;
         foreach ($due as $accountDue) {
-            if (null !== $deadline && $this->clock->now() >= $deadline) {
+            if ($this->clock->now() >= $deadline) {
                 break;
             }
             $result = $this->refreshOne($accountDue);
@@ -64,7 +57,7 @@ final readonly class InterestTermSweep
     }
 
     /** The first stale set always finishes, so a walk longer than a tick still makes progress. */
-    private function refreshStaleRarities(?\DateTimeImmutable $deadline): int
+    private function refreshStaleRarities(\DateTimeImmutable $deadline): int
     {
         $now = $this->clock->now();
         $refreshed = 0;

@@ -15,6 +15,7 @@ use App\Service\Curation\Recommendation\Stream\InterestTermRarity;
 use App\Service\Curation\Recommendation\Stream\InterestTermRefresh;
 use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsProfiledAccounts;
@@ -41,7 +42,7 @@ final class InterestTermSweepTest extends DbTestCase
         $this->chat()->queueFailure(new \RuntimeException('boom'));
         $this->chat()->queueContent(self::USABLE_REPLY);
 
-        $report = $this->sweep()->refreshDue();
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(
             ['due' => 2, 'stored' => 1, 'failed' => 0, 'raritiesRefreshed' => 0],
@@ -54,7 +55,7 @@ final class InterestTermSweepTest extends DbTestCase
     {
         $this->profiledAccount('terms-sweep-late@example.test');
 
-        $report = $this->sweep()->refreshDueBefore(new \DateTimeImmutable('2000-01-01 00:00:00'));
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(0));
 
         self::assertSame(
             ['due' => 1, 'stored' => 0, 'failed' => 0, 'raritiesRefreshed' => 0],
@@ -68,7 +69,7 @@ final class InterestTermSweepTest extends DbTestCase
         $this->profiledAccount('terms-sweep-early@example.test');
         $this->chat()->queueContent(self::USABLE_REPLY);
 
-        $report = $this->sweep()->refreshDueBefore(new \DateTimeImmutable('+1 hour'));
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(3600));
 
         self::assertSame(1, $report->stored);
         $sets = self::getContainer()->get(InterestTermSetRepository::class);
@@ -81,9 +82,8 @@ final class InterestTermSweepTest extends DbTestCase
         $this->profiledAccount('terms-sweep-edge@example.test');
         $this->chat()->queueContent(self::USABLE_REPLY);
 
-        $atDeadline = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
-        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)
-            ->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW . ' +1 second'));
+        $atDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
+        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(1));
 
         self::assertSame(0, $atDeadline->stored);
         self::assertSame(1, $beforeDeadline->stored);
@@ -94,13 +94,13 @@ final class InterestTermSweepTest extends DbTestCase
         $first = $this->staleSet('terms-sweep-stale-first@example.test', '2026-11-26 07:00:00');
         $second = $this->staleSet('terms-sweep-stale-second@example.test', '2026-11-26 08:00:00');
 
-        $atDeadline = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+        $atDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
 
         self::assertSame(1, $atDeadline->raritiesRefreshed);
         self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $first->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 08:00:00'), $second->getRaritiesRefreshedAt());
 
-        $nextRun = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+        $nextRun = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
 
         self::assertSame(1, $nextRun->raritiesRefreshed);
         self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $second->getRaritiesRefreshedAt());
@@ -111,8 +111,7 @@ final class InterestTermSweepTest extends DbTestCase
         $this->staleSet('terms-sweep-stale-a@example.test', '2026-11-26 07:00:00');
         $this->staleSet('terms-sweep-stale-b@example.test', '2026-11-26 08:00:00');
 
-        $report = $this->sweepAt(self::EDGE_NOW)
-            ->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW . ' +1 second'));
+        $report = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(1));
 
         self::assertSame(2, $report->raritiesRefreshed);
     }
@@ -123,7 +122,7 @@ final class InterestTermSweepTest extends DbTestCase
         $older = $this->staleSet('terms-sweep-order-older@example.test', '2026-11-26 07:00:00');
         $never = $this->staleSet('terms-sweep-order-never@example.test', null);
 
-        $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+        $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
 
         self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $never->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 07:00:00'), $older->getRaritiesRefreshedAt());
@@ -143,7 +142,7 @@ final class InterestTermSweepTest extends DbTestCase
         $this->entityManager->persist($set);
         $this->entityManager->flush();
 
-        $untouched = $this->sweep()->refreshDue();
+        $untouched = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(0, $untouched->raritiesRefreshed);
         self::assertEquals($recent, $set->getRaritiesRefreshedAt());
@@ -151,7 +150,7 @@ final class InterestTermSweepTest extends DbTestCase
         $set->recordRaritiesRefreshed(new \DateTimeImmutable('-25 hours'));
         $this->entityManager->flush();
 
-        $refreshed = $this->sweep()->refreshDue();
+        $refreshed = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(1, $refreshed->raritiesRefreshed);
         self::assertGreaterThan(new \DateTimeImmutable('-1 minute'), $set->getRaritiesRefreshedAt());
@@ -162,7 +161,7 @@ final class InterestTermSweepTest extends DbTestCase
         $user = $this->profiledAccount('terms-sweep-fresh@example.test');
         $this->chat()->queueContent(self::USABLE_REPLY);
 
-        $report = $this->sweep()->refreshDue();
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(1, $report->stored);
         self::assertSame(0, $report->raritiesRefreshed);
@@ -180,14 +179,14 @@ final class InterestTermSweepTest extends DbTestCase
     {
         $user = $this->profiledAccount('terms-sweep-replaced@example.test');
         $this->chat()->queueContent(self::USABLE_REPLY);
-        $this->sweep()->refreshDue();
+        $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
         $terms = $this->entityManager->getRepository(InterestTerm::class);
         $oldTerms = $terms->findBy(['user' => $user]);
         self::assertNotSame([], $oldTerms);
 
         $this->fixtures()->storeProfileGeneratedAt($user, 'Likes wind power.', '2026-10-04 06:00:00');
         $this->chat()->queueContent('{"terms":[{"language":"en","term":"wind","weight":8}]}');
-        $report = $this->sweep()->refreshDue();
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(1, $report->stored);
         foreach ($oldTerms as $oldTerm) {

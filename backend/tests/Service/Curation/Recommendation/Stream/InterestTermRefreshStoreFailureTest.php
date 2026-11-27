@@ -19,6 +19,7 @@ use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RequiresServices;
@@ -118,7 +119,7 @@ final class InterestTermRefreshStoreFailureTest extends DbTestCase
             }
         };
 
-        $stopped = $this->sweep($logger)->refreshDue();
+        $stopped = $this->sweep($logger)->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(2, $stopped->due);
         self::assertSame(0, $stopped->stored);
@@ -132,7 +133,7 @@ final class InterestTermRefreshStoreFailureTest extends DbTestCase
         );
 
         $this->store->failing = false;
-        $next = $this->sweep($logger)->refreshDue();
+        $next = $this->sweep($logger)->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(2, $next->due);
         self::assertSame(2, $next->stored);
