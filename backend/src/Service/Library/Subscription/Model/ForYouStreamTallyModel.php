@@ -6,11 +6,16 @@ namespace App\Service\Library\Subscription\Model;
 
 final readonly class ForYouStreamTallyModel
 {
-    public function __construct(
+    private function __construct(
         public bool $available,
         public int $unreadCount,
         public int $entryCount,
     ) {
+    }
+
+    public static function available(int $unreadCount, int $entryCount): self
+    {
+        return new self(true, $unreadCount, $entryCount);
     }
 
     public static function unavailable(): self

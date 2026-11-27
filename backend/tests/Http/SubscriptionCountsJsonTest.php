@@ -24,7 +24,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
                 new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
                 [],
-                new ForYouStreamTallyModel(true, 4, 9),
+                ForYouStreamTallyModel::available(4, 9),
             ),
             new TrendingUnopenedModel(TrendingWindow::Week, 7),
         ));

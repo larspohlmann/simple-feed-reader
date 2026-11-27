@@ -80,7 +80,7 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
         /** @var array{entryCount: int|string, unreadCount: int|string|null} $row */
         $row = $qb->getQuery()->getSingleResult();
 
-        return new ForYouStreamTallyModel(true, (int) $row['unreadCount'], (int) $row['entryCount']);
+        return ForYouStreamTallyModel::available((int) $row['unreadCount'], (int) $row['entryCount']);
     }
 
     private function restrictToMembers(QueryBuilder $qb, int $userId): void
