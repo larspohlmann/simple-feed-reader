@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Library\Search\Membership\MarkGroupWalk;
+namespace App\Service\Library\Search\Membership\Pass\MarkGroupWalk;
 
 /**
  * What one membership sweep supplies to the shared mark-group walk: its members, its chunk matching and its writes.

@@ -9,7 +9,7 @@ use App\Repository\SavedSearchRepository;
 use App\Service\Library\Search\Membership\Model\MarkGroupsModel;
 use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
-use App\Service\Library\Search\Membership\Pass\SavedSearchMarkGroupWalk;
+use App\Service\Library\Search\Membership\Pass\MarkGroupWalk\SavedSearchMarkGroupWalk;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use Psr\Clock\ClockInterface;

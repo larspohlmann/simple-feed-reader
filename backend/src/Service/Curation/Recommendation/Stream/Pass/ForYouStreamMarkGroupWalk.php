@@ -10,7 +10,7 @@ use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamMembershipWriter\ForYouStreamMembershipWriterInterface;
 use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamMatchModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use App\Service\Library\Search\Membership\MarkGroupWalk\MarkGroupWalkInterface;
+use App\Service\Library\Search\Membership\Pass\MarkGroupWalk\MarkGroupWalkInterface;
 use Psr\Log\LoggerInterface;
 
 /**

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Library\Search\Membership;
 
 use App\Repository\EntryMembershipSweepRepository;
-use App\Service\Library\Search\Membership\MarkGroupWalk\MarkGroupWalkInterface;
 use App\Service\Library\Search\Membership\Model\MarkGroupsModel;
 use App\Service\Library\Search\Membership\Model\MarkGroupWalkReportModel;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\Pass\MarkGroupWalk\MarkGroupWalkInterface;
 use App\Service\Library\Search\Membership\Pass\SweepTally;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;

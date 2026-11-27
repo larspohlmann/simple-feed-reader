@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Library\Search\Membership\Pass;
+namespace App\Service\Library\Search\Membership\Pass\MarkGroupWalk;
 
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchRepository;
 use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Library\Search\Membership\MarkGroupWalk\MarkGroupWalkInterface;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Library\Search\Model\SavedSearchTermModel;
