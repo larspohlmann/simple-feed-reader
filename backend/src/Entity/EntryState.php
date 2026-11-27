@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EntryStateRepository::class)]
 #[ORM\Table(name: 'entry_state')]
+#[ORM\Index(name: 'idx_entry_state_user_liked_at', columns: ['user_id', 'liked_at'])]
 final class EntryState
 {
     // No `nullable: false` on these identifier join columns: Doctrine forces them NOT NULL and deprecates saying so.
