@@ -10,8 +10,22 @@ export interface SidebarTotalsDto {
   unreadTotals: UnreadTotalsDto;
   /** Unopened Trending stories in the window the request asked for (#2017). */
   trending: TrendingUnopened;
+  forYouStream: ForYouStreamTallyDto;
   notifications: NotificationCountDto[];
 }
+
+/** The For you stream's tally; the sidebar row shows only while it is available. */
+export interface ForYouStreamTallyDto {
+  available: boolean;
+  unreadCount: number;
+  entryCount: number;
+}
+
+export const NO_FOR_YOU_STREAM_TALLY: ForYouStreamTallyDto = {
+  available: false,
+  unreadCount: 0,
+  entryCount: 0,
+};
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
  *  plus the totals, without the feeds, tags or descriptions the

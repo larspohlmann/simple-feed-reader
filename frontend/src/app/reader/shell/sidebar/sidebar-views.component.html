@@ -76,5 +76,22 @@
         <span class="trail" aria-hidden="true"></span>
       </a>
     }
+    @if (forYouStream().available) {
+      <a
+        class="nav for-you-stream"
+        [class.active]="selection().kind === 'for-you-stream'"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ view: 'for-you-stream' })"
+        queryParamsHandling="merge"
+      >
+        <app-icon name="stream" size="md" />
+        <span class="name">{{ 'reader.forYouStream' | transloco }}</span>
+        @if (forYouStream().unreadCount > 0) {
+          <span class="count">{{ forYouStream().unreadCount }}</span>
+        }
+        <span class="slot" aria-hidden="true"></span>
+        <span class="trail" aria-hidden="true"></span>
+      </a>
+    }
   </div>
 }

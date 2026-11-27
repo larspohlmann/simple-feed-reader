@@ -83,6 +83,8 @@ export class MarkReadActions {
         return this.api.markSearchRead(target.term, until);
       case 'for-you':
         return this.api.markForYouRead(until);
+      case 'for-you-stream':
+        return this.api.markForYouStreamRead(until);
       case 'saved-searches':
         return this.api.markSavedSearchesRead(until);
       case 'saved-search':

@@ -1368,6 +1368,8 @@
     "shared": "Compartidos",
     "viewed": "Leídos recientemente",
     "forYou": "Para ti",
+    "forYouStream": "Flujo Para ti",
+    "forYouStreamEmpty": "Aún no hay nada que encaje con tus intereses. Las nuevas publicaciones que encajen llegarán aquí en cuanto aparezcan.",
     "trending": "Tendencias",
     "alsoCoveredBy": "También lo cubren",
     "trendingSources": "{{count}} fuentes",

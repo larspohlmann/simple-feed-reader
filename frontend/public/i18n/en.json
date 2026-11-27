@@ -1368,6 +1368,8 @@
     "shared": "Shared",
     "viewed": "Recently read",
     "forYou": "For you",
+    "forYouStream": "For you stream",
+    "forYouStreamEmpty": "Nothing has matched your interests yet. New posts that fit land here as they arrive.",
     "trending": "Trending",
     "alsoCoveredBy": "Also covered by",
     "trendingSources": "{{count}} sources",

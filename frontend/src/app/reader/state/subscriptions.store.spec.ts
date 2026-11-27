@@ -30,6 +30,7 @@ import {
   TagDto,
   UnreadTotalsDto,
 } from '../models';
+import { ForYouStreamTallyDto } from '../sidebar-totals';
 import { TrendingUnopened } from '../trending/trending.models';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
@@ -84,6 +85,7 @@ interface CountTotals {
   shared?: number;
   viewed?: number;
   trending?: TrendingUnopened;
+  forYouStream?: ForYouStreamTallyDto;
   unreadTotals?: Partial<UnreadTotalsDto>;
   notifications?: NotificationCountDto[];
 }
@@ -104,6 +106,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   sharedCount: totals.shared ?? 0,
   viewedCount: totals.viewed ?? 0,
   trending: totals.trending ?? { window: 'day', unopened: 0 },
+  forYouStream: totals.forYouStream ?? { available: false, unreadCount: 0, entryCount: 0 },
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
   notifications: totals.notifications ?? [],
 });
@@ -408,6 +411,20 @@ describe('SubscriptionsStore', () => {
     expect(store.keptCount()).toBe(2);
     expect(store.sharedCount()).toBe(3);
     expect(store.loading()).toBe(false);
+  });
+
+  it('takes the For you stream tally from a counts reload', () => {
+    const tally = { available: true, unreadCount: 3, entryCount: 8 };
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 3)]));
+    expect(store.forYouStream().available).toBe(false);
+
+    store.reloadCountsQuietly();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions/counts')
+      .flush({ ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }]), forYouStream: tally });
+
+    expect(store.forYouStream()).toEqual(tally);
   });
 
   it('holds the notification counts the full load carries', () => {

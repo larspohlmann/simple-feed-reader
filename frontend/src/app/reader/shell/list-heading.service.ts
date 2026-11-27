@@ -120,6 +120,7 @@ export class ListHeading {
     kept: this.feedFetchedAt,
     shared: this.feedFetchedAt,
     viewed: this.feedFetchedAt,
+    'for-you-stream': this.feedFetchedAt,
     'saved-searches': this.feedFetchedAt,
     'saved-search': this.feedFetchedAt,
     'trending-story': this.feedFetchedAt,
@@ -152,6 +153,7 @@ export class ListHeading {
     trending: (selection) =>
       `${this.i18n.translate('reader.trending')} · ${this.i18n.translate(`reader.trendingWindow.${selection.window}`)}`,
     notifications: () => this.i18n.translate('reader.notifications.title'),
+    'for-you-stream': () => this.i18n.translate('reader.forYouStream'),
     'saved-searches': () => this.i18n.translate('reader.savedSearches'),
     'saved-search': () =>
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
@@ -252,6 +254,10 @@ export class ListHeading {
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
+    'for-you-stream': (selection) => {
+      const tally = this.subscriptions.forYouStream();
+      return bySwitch(selection, tally.unreadCount, tally.entryCount);
+    },
     trending: () => items(this.entries.items().length),
     notifications: () => items(0),
     'saved-searches': (selection) =>

@@ -105,6 +105,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
         keptCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
         unreadTotals: {
           allItems: 0,
           forYou: 0,
