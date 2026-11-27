@@ -65,7 +65,6 @@ export interface LikeToggle {
   target: LikeTarget;
 }
 
-/** What of an entry says whether the reader likes it. */
 export interface LikeFacts {
   social: EntrySocialDto | null;
   isLiked: boolean;
