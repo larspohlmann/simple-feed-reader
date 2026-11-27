@@ -1,97 +1,93 @@
 @if (savedSearches().length) {
-  <div class="card">
-    <div class="section-head savedsearch-head" [class.current]="combinedActive()">
-      <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
-      <a class="section-link savedsearch-toggle" [routerLink]="['/searches/saved/all']">
-        <span class="favicon-slot"><app-icon name="saved_search" size="dense" /></span>
-        <span class="label">{{ 'reader.savedSearches' | transloco }}</span>
-        @if (savedSearchesUnread() > 0) {
-          <span class="count section-count">{{ savedSearchesUnread() }}</span>
-        }
-      </a>
-      <span class="slot" aria-hidden="true"></span>
-      <button
-        class="chevzone"
-        type="button"
-        [attr.aria-expanded]="savedSearchesExpanded()"
-        [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
-        (click)="toggleSavedSearches()"
-      >
-        <app-icon [name]="savedSearchesExpanded() ? 'expand_more' : 'chevron_right'" size="dense" />
-      </button>
-    </div>
-    @if (savedSearchesExpanded()) {
-      <div class="sublist">
-        @for (saved of visibleSavedSearches(); track saved.id) {
-          <a
-            class="nav savedsearch-item"
-            [class.active]="saved.id === activeSavedSearchId()"
-            [routerLink]="['/searches/saved', saved.slug]"
-          >
-            <app-icon name="search" size="md" />
-            <span class="name saved-term-group">
-              <span class="saved-term">{{ saved.term }}</span>
-              @if (saved.wholeWord) {
-                <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
-                <span
-                  class="whole-word-badge"
-                  aria-hidden="true"
-                  [attr.title]="'reader.searchWholeWordHint' | transloco"
-                >
-                  {{ 'reader.searchWholeWordShort' | transloco }}
-                </span>
-              }
-              @if (saved.phrase) {
-                <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
-                <span
-                  class="phrase-badge"
-                  aria-hidden="true"
-                  [attr.title]="'reader.searchPhraseHint' | transloco"
-                >
-                  {{ 'reader.searchPhraseShort' | transloco }}
-                </span>
-              }
-            </span>
-            @if (saved.unreadCount > 0) {
-              <span class="count">{{ saved.unreadCount }}</span>
-            }
-            @if (showDigestToggles()) {
-              <button
-                class="digest-toggle"
-                type="button"
-                [attr.aria-pressed]="saved.includeInDigest"
-                [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
-                (click)="
-                  toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
-                "
-              >
-                <app-icon name="mail" size="dense" [class.muted]="!saved.includeInDigest" />
-              </button>
-            } @else {
-              <span class="slot" aria-hidden="true"></span>
-            }
-            <span class="trail" aria-hidden="true"></span>
-          </a>
-        }
-        @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
-          <button
-            class="savedsearch-more"
-            type="button"
-            [attr.aria-expanded]="savedSearchListExpanded()"
-            (click)="toggleSavedSearchList()"
-          >
-            <app-icon
-              [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
-              size="dense"
-            />
-            <span class="name">{{
-              savedSearchListExpanded()
-                ? ('reader.showLess' | transloco)
-                : ('reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() })
-            }}</span>
-          </button>
-        }
-      </div>
-    }
+  <div class="folder-head savedsearch-head" [class.current]="combinedActive()">
+    <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
+    <a class="section-link savedsearch-toggle" [routerLink]="['/searches/saved/all']">
+      <app-icon name="saved_search" size="md" />
+      <span class="label">{{ 'reader.savedSearches' | transloco }}</span>
+      @if (savedSearchesUnread() > 0) {
+        <span class="count section-count">{{ savedSearchesUnread() }}</span>
+      }
+    </a>
+    <span class="slot" aria-hidden="true"></span>
+    <button
+      class="chevzone"
+      type="button"
+      [attr.aria-expanded]="savedSearchesExpanded()"
+      [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
+      (click)="toggleSavedSearches()"
+    >
+      <app-icon [name]="savedSearchesExpanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+    </button>
   </div>
+  @if (savedSearchesExpanded()) {
+    <div class="sublist">
+      @for (saved of visibleSavedSearches(); track saved.id) {
+        <a
+          class="nav savedsearch-item"
+          [class.active]="saved.id === activeSavedSearchId()"
+          [routerLink]="['/searches/saved', saved.slug]"
+        >
+          <app-icon name="search" size="md" />
+          <span class="name saved-term-group">
+            <span class="saved-term">{{ saved.term }}</span>
+            @if (saved.wholeWord) {
+              <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+              <span
+                class="whole-word-badge"
+                aria-hidden="true"
+                [attr.title]="'reader.searchWholeWordHint' | transloco"
+              >
+                {{ 'reader.searchWholeWordShort' | transloco }}
+              </span>
+            }
+            @if (saved.phrase) {
+              <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
+              <span
+                class="phrase-badge"
+                aria-hidden="true"
+                [attr.title]="'reader.searchPhraseHint' | transloco"
+              >
+                {{ 'reader.searchPhraseShort' | transloco }}
+              </span>
+            }
+          </span>
+          @if (saved.unreadCount > 0) {
+            <span class="count">{{ saved.unreadCount }}</span>
+          }
+          @if (showDigestToggles()) {
+            <button
+              class="digest-toggle"
+              type="button"
+              [attr.aria-pressed]="saved.includeInDigest"
+              [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
+              (click)="toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()"
+            >
+              <app-icon name="mail" size="dense" [class.muted]="!saved.includeInDigest" />
+            </button>
+          } @else {
+            <span class="slot" aria-hidden="true"></span>
+          }
+          <span class="trail" aria-hidden="true"></span>
+        </a>
+      }
+      @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
+        <button
+          class="savedsearch-more"
+          type="button"
+          [attr.aria-expanded]="savedSearchListExpanded()"
+          (click)="toggleSavedSearchList()"
+        >
+          <app-icon
+            [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
+            size="dense"
+          />
+          <span class="name">{{
+            savedSearchListExpanded()
+              ? ('reader.showLess' | transloco)
+              : ('reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() })
+          }}</span>
+        </button>
+      }
+    </div>
+  }
 }

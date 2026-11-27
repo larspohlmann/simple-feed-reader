@@ -242,49 +242,158 @@ const tagNodeFixture: TagNode = {
 };
 
 describe('SidebarComponent', () => {
-  it('shows the all-items total and marks it active', () => {
-    const element = mount({ totalUnread: 24 }).nativeElement as HTMLElement;
-    const all = element.querySelector('.nav.all')!;
-    expect(all.textContent).toContain('24');
-    expect(all.classList).toContain('active');
-  });
+  describe('the views groups (#2593)', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
 
-  it('leaves Favorites and Kept to their own blocks, ahead of the followed stories (#2581)', () => {
-    const fixture = mount();
-    fixture.componentRef.setInput('followedStories', [
-      { id: 1, headline: 'Story', newCount: 0, quiet: false, lastJoinedAt: 'x' },
-    ]);
-    fixture.detectChanges();
-    const element = fixture.nativeElement as HTMLElement;
+    const ALL_ITEMS_KEY = 'sfr.sidebar.all-items.collapsed';
+    const groups = (element: HTMLElement): HTMLElement[] => [
+      ...element.querySelectorAll<HTMLElement>('.views-group'),
+    ];
+    const rowLabels = (group: HTMLElement): string[] =>
+      [...group.querySelectorAll('.folder-head .label, .nav .name')]
+        .filter((label) => label.closest('.sublist') === null)
+        .map((label) => label.textContent?.trim() ?? '');
+    const childLabels = (element: HTMLElement): string[] =>
+      [...element.querySelectorAll('.all-head + .sublist .nav .name')].map(
+        (name) => name.textContent?.trim() ?? '',
+      );
+    const chevron = (element: HTMLElement): HTMLButtonElement =>
+      element.querySelector<HTMLButtonElement>('.all-head .chevzone')!;
+    const childNav = (element: HTMLElement, label: string): HTMLAnchorElement | undefined =>
+      [...element.querySelectorAll<HTMLAnchorElement>('.all-head + .sublist .nav')].find(
+        (nav) => nav.querySelector('.name')?.textContent?.trim() === label,
+      );
+    const openFolder = (fixture: ComponentFixture<SidebarComponent>): HTMLElement => {
+      const element = fixture.nativeElement as HTMLElement;
+      chevron(element).click();
+      fixture.detectChanges();
+      return element;
+    };
 
-    const viewNames = [...element.querySelectorAll('app-sidebar-views .nav .name')].map((name) =>
-      name.textContent?.trim(),
-    );
-    expect(viewNames).not.toContain('Favorites');
-    expect(viewNames).not.toContain('Kept');
-    const blocks = [
-      ...element.querySelectorAll('app-sidebar-collection, app-sidebar-followed-stories'),
-    ].map((block) => block.querySelector('.label')?.textContent?.trim());
-    expect(blocks).toEqual(['Favorites', 'Kept', 'Followed stories']);
+    it('orders the first group All items, Favorites, Kept and the second Saved searches, Followed stories, For you, For you stream, Trending', () => {
+      const fixture = mount({
+        forYouStream: { available: true, unreadCount: 0, entryCount: 9 },
+        savedSearches: [
+          {
+            id: 1,
+            slug: '1-climate',
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 0,
+            memberCount: 0,
+            includeInDigest: false,
+          },
+        ],
+      });
+      TestBed.inject(AiAvailabilityService).apply({
+        ready: true,
+        model: 'model',
+        capabilities: null,
+      });
+      fixture.componentRef.setInput('followedStories', [
+        { id: 1, headline: 'Story', newCount: 0, quiet: false, lastJoinedAt: 'x' },
+      ]);
+      fixture.detectChanges();
+      const [first, second] = groups(fixture.nativeElement as HTMLElement);
+
+      expect(rowLabels(first)).toEqual(['All items', 'Favorites', 'Kept']);
+      expect(rowLabels(second)).toEqual([
+        'Saved searches',
+        'Followed stories',
+        'For you',
+        'For you stream',
+        'Trending',
+      ]);
+    });
+
+    it('keeps the All items folder closed by default and remembers it', () => {
+      const fixture = mount({ sharedCount: 2 });
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('.all-head + .sublist')).toBeNull();
+      expect(element.textContent).not.toContain('Recently read');
+      expect(chevron(element).getAttribute('aria-expanded')).toBe('false');
+      expect(chevron(element).getAttribute('aria-label')).toBe('Toggle All items');
+
+      openFolder(fixture);
+
+      expect(childLabels(element)).toEqual(['Recently read', 'Liked', 'Shared']);
+      expect(chevron(element).getAttribute('aria-expanded')).toBe('true');
+      expect(localStorage.getItem(ALL_ITEMS_KEY)).toBe('false');
+
+      TestBed.resetTestingModule();
+      const remounted = mount({ sharedCount: 2 }).nativeElement as HTMLElement;
+      expect(childLabels(remounted)).toEqual(['Recently read', 'Liked', 'Shared']);
+    });
+
+    it('lists Shared last and only once something is shared', () => {
+      const element = openFolder(mount({ sharedCount: 0 }));
+
+      expect(childLabels(element)).toEqual(['Recently read', 'Liked']);
+    });
+
+    it('opens the folder on a current child without storing it, and the chevron still closes it', () => {
+      const fixture = mount({ selection: { kind: 'liked' } });
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(childNav(element, 'Liked')?.classList).toContain('active');
+      expect(localStorage.getItem(ALL_ITEMS_KEY)).toBeNull();
+
+      chevron(element).click();
+      fixture.detectChanges();
+
+      expect(element.querySelector('.all-head + .sublist')).toBeNull();
+    });
+
+    it('falls back to the stored closed folder on leaving a child', () => {
+      const fixture = mount({ selection: { kind: 'liked' } });
+      fixture.componentRef.setInput('selection', { kind: 'all', unread: true });
+      fixture.detectChanges();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.all-head + .sublist'),
+      ).toBeNull();
+    });
+
+    it('marks the All items head current on the all selection', () => {
+      const element = mount({ totalUnread: 24 }).nativeElement as HTMLElement;
+      const head = element.querySelector('.all-head')!;
+
+      expect(head.classList).toContain('current');
+      expect(head.querySelector('.section-count')?.textContent?.trim()).toBe('24');
+      expect(head.querySelector('.section-link')?.getAttribute('href')).not.toContain('view=');
+    });
+
+    it('draws no second group when none of its views shows', () => {
+      const fixture = mount();
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+      const [, second] = groups(fixture.nativeElement as HTMLElement);
+
+      expect(second.querySelector('.nav, .folder-head')).toBeNull();
+    });
   });
 
   describe('the Shared item (#2007)', () => {
-    const navLabels = (element: HTMLElement): string[] =>
-      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+    beforeEach(() => localStorage.setItem('sfr.sidebar.all-items.collapsed', 'false'));
+    afterEach(() => localStorage.clear());
+
+    const sharedNav = (element: HTMLElement) =>
+      [...element.querySelectorAll('.nav')].find((nav) =>
+        nav.querySelector('.name')?.textContent?.includes('Shared'),
+      );
 
     it('is hidden while nothing is shared', () => {
       const element = mount({ sharedCount: 0 }).nativeElement as HTMLElement;
-      expect(navLabels(element)).not.toContain('Shared');
+      expect(sharedNav(element)).toBeUndefined();
     });
 
-    it('sits right below All items with its count once something is shared', () => {
+    it('carries its count once something is shared', () => {
       const element = mount({ sharedCount: 2 }).nativeElement as HTMLElement;
-      const labels = navLabels(element);
-      expect(labels[labels.indexOf('All items') + 1]).toBe('Shared');
-      const shared = [...element.querySelectorAll('.nav')].find((nav) =>
-        nav.querySelector('.name')?.textContent?.includes('Shared'),
-      )!;
-      expect(shared.querySelector('.count')?.textContent?.trim()).toBe('2');
+      expect(sharedNav(element)?.querySelector('.count')?.textContent?.trim()).toBe('2');
     });
 
     it('is marked active on the shared selection', () => {
@@ -292,30 +401,18 @@ describe('SidebarComponent', () => {
         sharedCount: 2,
         selection: { kind: 'shared' },
       }).nativeElement as HTMLElement;
-      const shared = [...element.querySelectorAll('.nav')].find((nav) =>
-        nav.querySelector('.name')?.textContent?.includes('Shared'),
-      )!;
-      expect(shared.classList).toContain('active');
+      expect(sharedNav(element)?.classList).toContain('active');
     });
   });
 
   describe('the Liked item (#2587)', () => {
-    const navLabels = (element: HTMLElement): string[] =>
-      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+    beforeEach(() => localStorage.setItem('sfr.sidebar.all-items.collapsed', 'false'));
+    afterEach(() => localStorage.clear());
+
     const likedNav = (element: HTMLElement): HTMLAnchorElement =>
       [...element.querySelectorAll<HTMLAnchorElement>('.nav')].find((nav) =>
         nav.querySelector('.name')?.textContent?.includes('Liked'),
       )!;
-
-    it('sits between Shared and Recently read', () => {
-      const labels = navLabels(mount({ sharedCount: 2 }).nativeElement as HTMLElement);
-
-      expect(labels.slice(labels.indexOf('Shared'), labels.indexOf('Recently read') + 1)).toEqual([
-        'Shared',
-        'Liked',
-        'Recently read',
-      ]);
-    });
 
     it('shows with no count while nothing is liked', () => {
       const liked = likedNav(mount({ likedCount: 0 }).nativeElement as HTMLElement);
@@ -357,7 +454,7 @@ describe('SidebarComponent', () => {
       expect(streamNav(element)?.getAttribute('href')).toContain('view=for-you-stream');
     });
 
-    it('keeps the discover card when only the stream is available', () => {
+    it('shows when it is the only view of the second group', () => {
       const fixture = mount({
         forYouStream: { available: true, unreadCount: 2, entryCount: 9 },
       });
@@ -383,43 +480,22 @@ describe('SidebarComponent', () => {
   describe('the Trending item (#2017)', () => {
     beforeEach(() => localStorage.clear());
 
-    const navLabels = (element: HTMLElement): string[] =>
-      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
-    const trendingNav = (element: HTMLElement): HTMLAnchorElement =>
-      [...element.querySelectorAll<HTMLAnchorElement>('.nav')].find(
-        (nav) => nav.querySelector('.name')?.textContent?.trim() === 'Trending',
-      )!;
+    const trendingNav = (element: HTMLElement): HTMLAnchorElement | null =>
+      element.querySelector<HTMLAnchorElement>('.nav.trending');
 
-    it('shows below the collections group even while nothing trends, with no badge', () => {
+    it('closes the second group, even while nothing trends, with no badge', () => {
       const element = mount().nativeElement as HTMLElement;
-      const savedSearches = element.querySelector('app-sidebar-saved-searches')!;
+      const [, second] = [...element.querySelectorAll('.views-group')];
 
-      expect(
-        savedSearches.compareDocumentPosition(trendingNav(element)) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      expect(element.querySelector('.card.primary .trending')).toBeNull();
-      expect(trendingNav(element).querySelector('.count')).toBeNull();
-    });
-
-    it('sits directly above For you', () => {
-      const fixture = mount();
-      TestBed.inject(AiAvailabilityService).apply({
-        ready: true,
-        model: 'model',
-        capabilities: null,
-      });
-      fixture.detectChanges();
-      const labels = navLabels(fixture.nativeElement as HTMLElement);
-
-      expect(labels[labels.indexOf('Trending') + 1]).toBe('For you');
+      expect(second.lastElementChild?.querySelector('.nav')).toBe(trendingNav(element));
+      expect(trendingNav(element)?.querySelector('.count')).toBeNull();
     });
 
     it('counts the unopened stories the server reported', () => {
       const element = mount({ trendingUnopened: { window: 'week', unopened: 9 } })
         .nativeElement as HTMLElement;
 
-      expect(trendingNav(element).querySelector('.count')?.textContent?.trim()).toBe('9');
+      expect(trendingNav(element)?.querySelector('.count')?.textContent?.trim()).toBe('9');
     });
 
     it('links to the Trending view and is marked active on it', () => {
@@ -427,9 +503,9 @@ describe('SidebarComponent', () => {
         selection: { kind: 'trending', window: 'day' },
       }).nativeElement as HTMLElement;
 
-      expect(trendingNav(element).getAttribute('href')).toContain('view=trending');
-      expect(trendingNav(element).getAttribute('href')).not.toContain('window=');
-      expect(trendingNav(element).classList).toContain('active');
+      expect(trendingNav(element)?.getAttribute('href')).toContain('view=trending');
+      expect(trendingNav(element)?.getAttribute('href')).not.toContain('window=');
+      expect(trendingNav(element)?.classList).toContain('active');
     });
 
     it('is gone, badge and all, once the account switched Trending off (D39)', () => {
@@ -438,8 +514,11 @@ describe('SidebarComponent', () => {
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;
 
-      expect(navLabels(element)).not.toContain('Trending');
-      expect(element.querySelector('.nav.trending')).toBeNull();
+      const labels = [...element.querySelectorAll('.nav .name')].map((name) =>
+        name.textContent?.trim(),
+      );
+      expect(labels).not.toContain('Trending');
+      expect(trendingNav(element)).toBeNull();
     });
   });
 
@@ -1629,7 +1708,7 @@ describe('SidebarComponent', () => {
         ],
       });
       const head: HTMLElement = fixture.nativeElement.querySelector('.savedsearch-head');
-      expect(head.querySelector('.favicon-slot app-icon')?.textContent?.trim()).toBe(
+      expect(head.querySelector('.section-link > app-icon')?.textContent?.trim()).toBe(
         'saved_search',
       );
       head.querySelector<HTMLButtonElement>('.chevzone')!.click();
@@ -2585,7 +2664,7 @@ describe('organise mode', () => {
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
     expect(element.querySelector('.tool')).toBeNull();
-    expect(element.querySelector('.nav.all')).toBeNull();
+    expect(element.querySelector('.all-head')).toBeNull();
     expect(element.querySelector('app-view-controls')).toBeNull();
     expect(element.querySelector('.trial')).toBeNull();
     expect(element.querySelector('.version')).not.toBeNull();
@@ -2599,7 +2678,7 @@ describe('organise mode', () => {
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
     expect(element.querySelector('.tool[aria-label="Refresh"]')).not.toBeNull();
-    expect(element.querySelector('.nav.all')).not.toBeNull();
+    expect(element.querySelector('.all-head')).not.toBeNull();
     expect(element.querySelector('app-view-controls')).not.toBeNull();
     expect(element.querySelector('.trial')).not.toBeNull();
   });

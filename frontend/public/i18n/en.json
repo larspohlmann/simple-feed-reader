@@ -1440,6 +1440,7 @@
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",
     "toggleSavedSearches": "Toggle saved searches",
+    "toggleAllItems": "Toggle All items",
     "followedStories": "Followed stories",
     "toggleFollowedStories": "Show or hide followed stories",
     "followedStoryFallback": "Followed story",

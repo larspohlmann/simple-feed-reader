@@ -54,23 +54,19 @@
           </button>
         </div>
       }
-      <app-sidebar-views
-        section="primary"
-        [selection]="selection()"
-        [totalUnread]="totalUnread()"
-        [sharedCount]="sharedCount()"
-        [likedCount]="likedCount()"
-        [viewedCount]="viewedCount()"
-        [forYouUnread]="forYouUnread()"
-        [trendingUnopened]="trendingUnopened()"
-      />
-      <div class="collections">
+      <div class="card views-group">
+        <app-sidebar-views
+          section="all-items"
+          [selection]="selection()"
+          [totalUnread]="totalUnread()"
+          [sharedCount]="sharedCount()"
+          [likedCount]="likedCount()"
+          [viewedCount]="viewedCount()"
+        />
         <app-sidebar-collection collection="favorites" [selection]="selection()" />
         <app-sidebar-collection collection="kept" [selection]="selection()" />
-        <app-sidebar-followed-stories
-          [stories]="followedStories()"
-          [activeStoryId]="activeStoryId()"
-        />
+      </div>
+      <div class="card views-group">
         <app-sidebar-saved-searches
           [savedSearches]="savedSearches()"
           [activeSavedSearchId]="activeSavedSearchId()"
@@ -78,15 +74,24 @@
           [showDigestToggles]="showDigestToggles()"
           (toggleDigest)="toggleDigest.emit($event)"
         />
+        <app-sidebar-followed-stories
+          [stories]="followedStories()"
+          [activeStoryId]="activeStoryId()"
+        />
+        <app-sidebar-views
+          section="for-you"
+          [selection]="selection()"
+          [totalUnread]="totalUnread()"
+          [forYouUnread]="forYouUnread()"
+          [forYouStream]="forYouStream()"
+        />
+        <app-sidebar-views
+          section="trending"
+          [selection]="selection()"
+          [totalUnread]="totalUnread()"
+          [trendingUnopened]="trendingUnopened()"
+        />
       </div>
-      <app-sidebar-views
-        section="discover"
-        [selection]="selection()"
-        [totalUnread]="totalUnread()"
-        [forYouUnread]="forYouUnread()"
-        [trendingUnopened]="trendingUnopened()"
-        [forYouStream]="forYouStream()"
-      />
     }
 
     @if (tagTree().length) {

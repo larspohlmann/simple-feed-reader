@@ -120,12 +120,12 @@ describe('SidebarCollectionComponent (#2581)', () => {
   it('marks the head current on the whole collection only', () => {
     expect(
       root(mount('favorites', { kind: 'favorites' }))
-        .querySelector('.section-head')
+        .querySelector('.folder-head')
         ?.classList.contains('current'),
     ).toBe(true);
     expect(
       root(mount('favorites', { kind: 'favorites', label: 3 }))
-        .querySelector('.section-head')
+        .querySelector('.folder-head')
         ?.classList.contains('current'),
     ).toBe(false);
   });
