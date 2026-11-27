@@ -89,33 +89,28 @@ describe('EntryLikeComponent', () => {
   });
 
   describe('countSide', () => {
-    const precedes = (element: HTMLElement): boolean =>
-      !!(
-        element
-          .querySelector('.count')!
-          .compareDocumentPosition(element.querySelector('app-icon')!) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-      );
+    const host = (fixture: ComponentFixture<EntryLikeComponent>): HTMLElement =>
+      fixture.nativeElement as HTMLElement;
 
-    it('puts the count before the thumb when countSide is start', () => {
-      const element = mount({ social: null, myVote: null, likeCount: 12 }, 'start')
-        .nativeElement as HTMLElement;
+    it('flags the host count-start when countSide is start, with the count rendered once', () => {
+      const fixture = mount({ social: null, myVote: null, likeCount: 12 }, 'start');
 
-      expect(precedes(element.querySelector('button')!)).toBe(true);
+      expect(host(fixture).classList).toContain('count-start');
+      expect(host(fixture).querySelectorAll('button .count')).toHaveLength(1);
     });
 
-    it('puts the bare count of a voted Lemmy post before the thumb when countSide is start', () => {
-      const element = mount({ social: null, myVote: 1, score: 3, likeCount: 12 }, 'start')
-        .nativeElement as HTMLElement;
+    it('flags the bare count of a voted Lemmy post count-start, rendered once', () => {
+      const fixture = mount({ social: null, myVote: 1, score: 3, likeCount: 12 }, 'start');
 
-      expect(precedes(element.querySelector('.likes')!)).toBe(true);
+      expect(host(fixture).classList).toContain('count-start');
+      expect(host(fixture).querySelectorAll('.likes .count')).toHaveLength(1);
     });
 
     it('keeps the thumb first by default', () => {
-      const element = mount({ social: null, myVote: null, likeCount: 12 })
-        .nativeElement as HTMLElement;
+      const fixture = mount({ social: null, myVote: null, likeCount: 12 });
 
-      expect(precedes(element.querySelector('button')!)).toBe(false);
+      expect(host(fixture).classList).not.toContain('count-start');
+      expect(host(fixture).querySelectorAll('button .count')).toHaveLength(1);
     });
   });
 
