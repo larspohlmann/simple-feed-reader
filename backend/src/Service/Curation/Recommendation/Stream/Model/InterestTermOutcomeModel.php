@@ -16,13 +16,13 @@ final readonly class InterestTermOutcomeModel
         return new self($extracted, null);
     }
 
-    public function requireExtracted(): ExtractedTermsModel
-    {
-        return $this->extracted ?? throw new \LogicException('An unusable outcome carries no extracted terms.');
-    }
-
     public static function unusable(string $reply): self
     {
         return new self(null, $reply);
+    }
+
+    public function requireExtracted(): ExtractedTermsModel
+    {
+        return $this->extracted ?? throw new \LogicException('An unusable outcome carries no extracted terms.');
     }
 }

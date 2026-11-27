@@ -60,7 +60,7 @@ final class InterestTermStoreTest extends DbTestCase
         $set = $this->store->replaceTerms(
             $this->user,
             new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->extractedOf('solar'),
+            $this->buildExtractedTerms('solar'),
         );
 
         self::assertSame($old->requireId(), $set->matchedUpToEntryId());
@@ -72,7 +72,7 @@ final class InterestTermStoreTest extends DbTestCase
     {
         $this->entry('old', '2026-11-27T09:00:00');
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $set = $this->store->replaceTerms($this->user, $generatedAt, $this->extractedOf('solar'));
+        $set = $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTerms('solar'));
         $advancedMark = $set->matchedUpToEntryId() + 42;
         $this->termSets->advanceMarks([$this->user->requireId()], $advancedMark);
         $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-27T09:30:00'));
@@ -81,7 +81,7 @@ final class InterestTermStoreTest extends DbTestCase
 
         $user = $this->entityManager->find(User::class, $this->user->requireId());
         self::assertNotNull($user);
-        $second = $this->store->replaceTerms($user, $generatedAt, $this->extractedOf('wind'));
+        $second = $this->store->replaceTerms($user, $generatedAt, $this->buildExtractedTerms('wind'));
 
         self::assertSame($advancedMark, $second->matchedUpToEntryId());
         self::assertNull($second->getRaritiesRefreshedAt());
@@ -99,7 +99,7 @@ final class InterestTermStoreTest extends DbTestCase
         $this->store->replaceTerms(
             $this->user,
             new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->extractedOf('solar'),
+            $this->buildExtractedTerms('solar'),
         );
         $this->termSets->advanceMarks([$this->user->requireId()], 500);
 
@@ -116,9 +116,9 @@ final class InterestTermStoreTest extends DbTestCase
         $this->entityManager->persist($other);
         $this->entityManager->flush();
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $this->store->replaceTerms($other, $generatedAt, $this->extractedOf('solar'));
+        $this->store->replaceTerms($other, $generatedAt, $this->buildExtractedTerms('solar'));
 
-        $this->store->replaceTerms($this->user, $generatedAt, $this->extractedOf('wind'));
+        $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTerms('wind'));
 
         self::assertCount(2, $this->storedTerms->findForUser($other->requireId()));
     }
@@ -133,7 +133,7 @@ final class InterestTermStoreTest extends DbTestCase
         $this->store->replaceTerms(
             $this->user,
             new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->extractedFrom($phrases),
+            $this->buildExtractedTermsFrom($phrases),
         );
         $this->entityManager->clear();
 
@@ -145,13 +145,13 @@ final class InterestTermStoreTest extends DbTestCase
     public function testASecondReplaceSwapsThePhrasesWholesale(): void
     {
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $this->store->replaceTerms($this->user, $generatedAt, $this->extractedFrom([
+        $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTermsFrom([
             new InterestPhrase(FeedLanguage::English, 'alpha', 1.0),
             new InterestPhrase(FeedLanguage::English, 'beta', 0.5),
         ]));
         $this->entityManager->clear();
 
-        $this->store->replaceTerms($this->requireUser(), $generatedAt, $this->extractedFrom([
+        $this->store->replaceTerms($this->requireUser(), $generatedAt, $this->buildExtractedTermsFrom([
             new InterestPhrase(FeedLanguage::French, 'vélo', 0.7),
         ]));
         $this->entityManager->clear();
@@ -190,13 +190,13 @@ final class InterestTermStoreTest extends DbTestCase
         return $user;
     }
 
-    private function extractedOf(string $phrase): ExtractedTermsModel
+    private function buildExtractedTerms(string $phrase): ExtractedTermsModel
     {
-        return $this->extractedFrom([new InterestPhrase(FeedLanguage::English, $phrase, 0.8)]);
+        return $this->buildExtractedTermsFrom([new InterestPhrase(FeedLanguage::English, $phrase, 0.8)]);
     }
 
     /** @param list<InterestPhrase> $phrases */
-    private function extractedFrom(array $phrases): ExtractedTermsModel
+    private function buildExtractedTermsFrom(array $phrases): ExtractedTermsModel
     {
         $stems = (new InterestTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()))
             ->buildTermStems($phrases);
