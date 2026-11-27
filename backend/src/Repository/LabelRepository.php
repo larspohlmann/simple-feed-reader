@@ -93,10 +93,10 @@ final class LabelRepository extends ServiceEntityRepository
                 'COUNT(DISTINCT NULLIF(CASE WHEN s.id IS NOT NULL AND (es.isFavorite = :true OR es.isKept = :true) '
                 . 'THEN e.id ELSE 0 END, 0)) AS articles',
             )
-            ->leftJoin(EntryLabel::class, 'el', Join::WITH, 'el.label = l')
+            ->leftJoin(EntryLabel::class, 'el', Join::ON, 'el.label = l')
             ->leftJoin('el.entry', 'e')
-            ->leftJoin(EntryState::class, 'es', Join::WITH, 'es.entry = e AND IDENTITY(es.user) = :user')
-            ->leftJoin(Subscription::class, 's', Join::WITH, 's.feed = e.feed AND IDENTITY(s.user) = :user')
+            ->leftJoin(EntryState::class, 'es', Join::ON, 'es.entry = e AND IDENTITY(es.user) = :user')
+            ->leftJoin(Subscription::class, 's', Join::ON, 's.feed = e.feed AND IDENTITY(s.user) = :user')
             ->andWhere('IDENTITY(l.user) = :user')
             ->setParameter('user', $userId)
             ->setParameter('true', true, Types::BOOLEAN)
@@ -125,7 +125,7 @@ final class LabelRepository extends ServiceEntityRepository
             ->select('COUNT(es.entry)')
             ->from(EntryState::class, 'es')
             ->join('es.entry', 'e')
-            ->join(Subscription::class, 's', Join::WITH, 's.feed = e.feed AND IDENTITY(s.user) = :user')
+            ->join(Subscription::class, 's', Join::ON, 's.feed = e.feed AND IDENTITY(s.user) = :user')
             ->andWhere('IDENTITY(es.user) = :user')
             ->andWhere('es.' . $flag . ' = :true')
             ->andWhere($this->noLabelOfUserOn('es'))
