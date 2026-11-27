@@ -46,21 +46,16 @@ final class StreamSweepPass
 
     public function caughtUp(): ForYouStreamSweepReportModel
     {
-        return $this->report(true);
+        return $this->stoppedShort()->withCaughtUp();
     }
 
     public function stoppedShort(): ForYouStreamSweepReportModel
-    {
-        return $this->report(false);
-    }
-
-    private function report(bool $caughtUp): ForYouStreamSweepReportModel
     {
         return new ForYouStreamSweepReportModel(
             $this->usersSwept,
             $this->entriesScanned,
             $this->matchesInserted,
-            $caughtUp,
+            false,
         );
     }
 }

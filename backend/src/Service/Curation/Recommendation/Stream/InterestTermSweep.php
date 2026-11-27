@@ -67,14 +67,14 @@ final readonly class InterestTermSweep
             if (null !== $deadline && $this->clock->now() >= $deadline) {
                 break;
             }
-            $refreshed += $this->refreshRaritiesOf($set) ? 1 : 0;
+            $refreshed += $this->refreshSetRarities($set) ? 1 : 0;
         }
 
         return $refreshed;
     }
 
     /** One account's failure must not cost the others their refresh. */
-    private function refreshRaritiesOf(InterestTermSet $set): bool
+    private function refreshSetRarities(InterestTermSet $set): bool
     {
         try {
             $this->rarity->refreshRarities($set);

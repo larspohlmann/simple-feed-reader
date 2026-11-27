@@ -49,7 +49,7 @@ final readonly class ForYouStreamEntriesController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkForYouStreamReadRequest $request,
     ): JsonResponse {
-        $this->markRead->markReadUpTo($user, $request->until);
+        $this->markRead->mark($user, $request->until);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

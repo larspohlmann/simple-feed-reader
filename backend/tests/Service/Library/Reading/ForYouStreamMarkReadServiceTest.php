@@ -37,7 +37,7 @@ final class ForYouStreamMarkReadServiceTest extends DbTestCase
         }
         $this->entityManager->flush();
 
-        $this->requireService()->markReadUpTo($reader, new \DateTimeImmutable('2026-11-27T12:00:00Z'));
+        $this->requireService()->mark($reader, new \DateTimeImmutable('2026-11-27T12:00:00Z'));
 
         $this->entityManager->clear();
         self::assertTrue($this->isRead($reader, $entry));

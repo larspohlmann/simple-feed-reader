@@ -580,7 +580,7 @@ public function testDeletingTheEntryDeletesItsRows(): void           // retentio
     - Membership is an EXISTS on `ForYouStreamEntry` for `:user`, plus `InclusionScopeDql::restrict($aliases->subscription, InclusionSurface::ForYou)`. It is applied on the primary alias and inside the collapse subquery alike, through a private `applyMembership(QueryBuilder, EntryAliases)`, as in `SavedSearchEntryRepository`.
   - `GET /api/entries/for-you-stream` (`api_entries_for_you_stream`), which takes `EntryPageParameters` and answers `{entries, nextCursor}`.
   - `POST /api/entries/for-you-stream/mark-read` (`api_entries_for_you_stream_mark_read`), with body `{until}`, which answers `Response::HTTP_NO_CONTENT`.
-  - `ForYouStreamMarkReadService::markReadUpTo(User $user, \DateTimeImmutable $until): void`.
+  - `ForYouStreamMarkReadService::mark(User $user, \DateTimeImmutable $until): void`.
 
 - [ ] **Step 1: Write the failing tests.** These are `ApiTestCase` tests that seed `for_you_stream_entry` rows directly.
 

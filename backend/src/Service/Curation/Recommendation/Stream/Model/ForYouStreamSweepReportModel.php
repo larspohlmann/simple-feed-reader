@@ -19,6 +19,12 @@ final readonly class ForYouStreamSweepReportModel
         return new self(0, 0, 0, false);
     }
 
+    #[\NoDiscard]
+    public function withCaughtUp(): self
+    {
+        return clone($this, ['caughtUp' => true]);
+    }
+
     /** @return array{usersSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool} */
     public function toLogContext(): array
     {

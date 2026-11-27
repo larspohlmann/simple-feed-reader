@@ -16,7 +16,7 @@ final readonly class ForYouStreamMarkReadService
     ) {
     }
 
-    public function markReadUpTo(User $user, \DateTimeImmutable $until): void
+    public function mark(User $user, \DateTimeImmutable $until): void
     {
         $userId = $user->requireId();
 

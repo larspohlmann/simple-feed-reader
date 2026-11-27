@@ -33,7 +33,7 @@ trait SeedsProfiledAccounts
         return $user;
     }
 
-    private function connectionOf(User $user): AiProviderSettings
+    private function requireConnection(User $user): AiProviderSettings
     {
         $connection = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
         self::assertInstanceOf(AiProviderSettings::class, $connection);

@@ -28,13 +28,13 @@ final class DueInterestTermFinderTest extends DbTestCase
         self::assertSame($owner->getEmail(), $due[0]->user->getEmail());
         self::assertSame('Likes solar power.', $due[0]->profileText);
         self::assertEquals($this->profileGeneratedAt(), $due[0]->profileGeneratedAt);
-        self::assertSame($this->connectionOf($owner), $due[0]->connection);
+        self::assertSame($this->requireConnection($owner), $due[0]->connection);
     }
 
     public function testTermsAsNewAsTheProfileAreNotDue(): void
     {
         $owner = $this->profiledAccount('terms-due-current@example.test');
-        $this->storeTermsOfProfile($owner, $this->profileGeneratedAt());
+        $this->storeProfileTerms($owner, $this->profileGeneratedAt());
 
         self::assertSame([], $this->findDue());
     }
@@ -42,7 +42,7 @@ final class DueInterestTermFinderTest extends DbTestCase
     public function testTermsOlderThanTheProfileAreDue(): void
     {
         $owner = $this->profiledAccount('terms-due-stale@example.test');
-        $this->storeTermsOfProfile($owner, new \DateTimeImmutable('2026-10-02 06:00:00'));
+        $this->storeProfileTerms($owner, new \DateTimeImmutable('2026-10-02 06:00:00'));
 
         self::assertSame(['terms-due-stale@example.test'], $this->dueEmails());
     }
@@ -102,7 +102,7 @@ final class DueInterestTermFinderTest extends DbTestCase
         return array_map(static fn (DueInterestTermsModel $due): string => $due->user->getEmail(), $this->findDue());
     }
 
-    private function storeTermsOfProfile(User $owner, \DateTimeImmutable $profileGeneratedAt): void
+    private function storeProfileTerms(User $owner, \DateTimeImmutable $profileGeneratedAt): void
     {
         $this->entityManager->persist(new InterestTermSet($owner, $profileGeneratedAt, $profileGeneratedAt, 0));
         $this->entityManager->flush();
