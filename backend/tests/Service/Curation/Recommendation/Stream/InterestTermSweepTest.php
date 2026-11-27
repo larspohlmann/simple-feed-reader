@@ -89,24 +89,45 @@ final class InterestTermSweepTest extends DbTestCase
         self::assertSame(1, $beforeDeadline->stored);
     }
 
-    public function testASetStaleExactlyAtTheDeadlineIsNotRefreshed(): void
+    public function testTheFirstStaleSetFinishesAtTheDeadlineAndTheSecondWaitsForTheNextRun(): void
     {
-        $set = new InterestTermSet(
-            $this->user('terms-sweep-stale-edge@example.test'),
-            new \DateTimeImmutable('2026-10-03 06:00:00'),
-            new \DateTimeImmutable('2026-10-03 06:00:00'),
-            0,
-        );
-        $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-26 08:00:00'));
-        $this->entityManager->persist($set);
-        $this->entityManager->flush();
+        $first = $this->staleSet('terms-sweep-stale-first@example.test', '2026-11-26 07:00:00');
+        $second = $this->staleSet('terms-sweep-stale-second@example.test', '2026-11-26 08:00:00');
 
         $atDeadline = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
-        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)
+
+        self::assertSame(1, $atDeadline->raritiesRefreshed);
+        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $first->getRaritiesRefreshedAt());
+        self::assertEquals(new \DateTimeImmutable('2026-11-26 08:00:00'), $second->getRaritiesRefreshedAt());
+
+        $nextRun = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+
+        self::assertSame(1, $nextRun->raritiesRefreshed);
+        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $second->getRaritiesRefreshedAt());
+    }
+
+    public function testASecondStaleSetBeforeTheDeadlineIsRefreshedToo(): void
+    {
+        $this->staleSet('terms-sweep-stale-a@example.test', '2026-11-26 07:00:00');
+        $this->staleSet('terms-sweep-stale-b@example.test', '2026-11-26 08:00:00');
+
+        $report = $this->sweepAt(self::EDGE_NOW)
             ->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW . ' +1 second'));
 
-        self::assertSame(0, $atDeadline->raritiesRefreshed);
-        self::assertSame(1, $beforeDeadline->raritiesRefreshed);
+        self::assertSame(2, $report->raritiesRefreshed);
+    }
+
+    public function testStaleSetsAreTakenOldestFirstWithNeverRefreshedAheadOfThem(): void
+    {
+        $recent = $this->staleSet('terms-sweep-order-recent@example.test', '2026-11-26 09:00:00');
+        $older = $this->staleSet('terms-sweep-order-older@example.test', '2026-11-26 07:00:00');
+        $never = $this->staleSet('terms-sweep-order-never@example.test', null);
+
+        $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+
+        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $never->getRaritiesRefreshedAt());
+        self::assertEquals(new \DateTimeImmutable('2026-11-26 07:00:00'), $older->getRaritiesRefreshedAt());
+        self::assertEquals(new \DateTimeImmutable('2026-11-26 09:00:00'), $recent->getRaritiesRefreshedAt());
     }
 
     public function testStaleRaritiesAreRefreshedOnceADay(): void
@@ -183,6 +204,23 @@ final class InterestTermSweepTest extends DbTestCase
         ));
     }
 
+    private function staleSet(string $email, ?string $refreshedAt): InterestTermSet
+    {
+        $set = new InterestTermSet(
+            $this->user($email),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            0,
+        );
+        if (null !== $refreshedAt) {
+            $set->recordRaritiesRefreshed(new \DateTimeImmutable($refreshedAt));
+        }
+        $this->entityManager->persist($set);
+        $this->entityManager->flush();
+
+        return $set;
+    }
+
     private function sweep(): InterestTermSweep
     {
         $sweep = self::getContainer()->get(InterestTermSweep::class);
@@ -208,6 +246,7 @@ final class InterestTermSweepTest extends DbTestCase
             ),
             $clock,
             new NullLogger(),
+            $this->entityManager,
         );
     }
 

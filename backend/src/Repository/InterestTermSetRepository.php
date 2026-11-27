@@ -72,7 +72,9 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('s')
             ->join('s.user', 'owner')
             ->andWhere('s.raritiesRefreshedAt IS NULL OR s.raritiesRefreshedAt < :refreshedBefore')
-            ->setParameter('refreshedBefore', $refreshedBefore);
+            ->setParameter('refreshedBefore', $refreshedBefore)
+            ->addOrderBy('s.raritiesRefreshedAt', 'ASC')
+            ->addOrderBy('owner.id', 'ASC');
         ActiveAccountDql::restrict($qb, 'owner', $now);
 
         /** @var list<InterestTermSet> $sets */

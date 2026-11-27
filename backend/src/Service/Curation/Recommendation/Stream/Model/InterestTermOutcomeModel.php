@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream\Model;
 
-/** What an extraction call settled to: the weighted terms, or the unusable reply its caller retries. */
+/** What an extraction call settled to: the storable stems, or the unusable reply its caller retries. */
 final readonly class InterestTermOutcomeModel
 {
-    /** @param list<InterestTermModel> $terms */
-    private function __construct(public bool $usable, private array $terms, private ?string $unusableReply)
+    /** @param list<TermStemModel> $stems */
+    private function __construct(public bool $usable, private array $stems, private ?string $unusableReply)
     {
     }
 
-    /** @param list<InterestTermModel> $terms */
-    public static function usable(array $terms): self
+    /** @param list<TermStemModel> $stems */
+    public static function usable(array $stems): self
     {
-        return new self(true, $terms, null);
+        return new self(true, $stems, null);
     }
 
     public static function unusable(string $reply): self
@@ -23,14 +23,14 @@ final readonly class InterestTermOutcomeModel
         return new self(false, [], $reply);
     }
 
-    /** @return list<InterestTermModel> */
-    public function requireTerms(): array
+    /** @return list<TermStemModel> */
+    public function requireStems(): array
     {
         if (!$this->usable) {
-            throw new \LogicException('An unusable interest-term outcome has no terms.');
+            throw new \LogicException('An unusable interest-term outcome has no stems.');
         }
 
-        return $this->terms;
+        return $this->stems;
     }
 
     public function requireUnusableReply(): string

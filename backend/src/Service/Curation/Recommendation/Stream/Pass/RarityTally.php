@@ -13,10 +13,10 @@ final class RarityTally
     /** @var array<string, int> */
     private array $entryCounts = [];
 
-    /** @var array<string, array<string, int>> */
+    /** @var array<string, array<array-key, int>> */
     private array $documentFrequencies = [];
 
-    /** @param array<string, array<string, true>> $wantedStemsByLanguageKey */
+    /** @param array<string, array<array-key, true>> $wantedStemsByLanguageKey */
     public function __construct(private readonly array $wantedStemsByLanguageKey)
     {
     }

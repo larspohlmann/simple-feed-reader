@@ -10,6 +10,7 @@ use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /** Refreshes the interest terms of every account whose stored profile is newer than them. */
@@ -22,6 +23,7 @@ final readonly class InterestTermSweep
         private InterestTermRarity $rarity,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -46,6 +48,9 @@ final readonly class InterestTermSweep
                 break;
             }
             $result = $this->refreshOne($accountDue);
+            if (null === $result && !$this->entityManager->isOpen()) {
+                return new InterestTermSweepReportModel(\count($due), $stored, $failed, 0);
+            }
             $stored += InterestTermRefreshResult::Stored === $result ? 1 : 0;
             $failed += InterestTermRefreshResult::Failed === $result ? 1 : 0;
         }
@@ -58,16 +63,18 @@ final readonly class InterestTermSweep
         );
     }
 
+    /** The first stale set always finishes, so a walk longer than a tick still makes progress. */
     private function refreshStaleRarities(?\DateTimeImmutable $deadline): int
     {
         $now = $this->clock->now();
         $refreshed = 0;
         $cutoff = $now->modify(\sprintf('-%d hours', InterestTermRarity::REFRESH_HOURS));
-        foreach ($this->termSets->findWithStaleRarities($cutoff, $now) as $set) {
-            if (null !== $deadline && $this->clock->now() >= $deadline) {
+        foreach ($this->termSets->findWithStaleRarities($cutoff, $now) as $index => $set) {
+            $setDeadline = 0 === $index ? null : $deadline;
+            if (null !== $setDeadline && $this->clock->now() >= $setDeadline) {
                 break;
             }
-            $refreshed += $this->refreshSetRarities($set, $deadline) ? 1 : 0;
+            $refreshed += $this->refreshSetRarities($set, $setDeadline) ? 1 : 0;
         }
 
         return $refreshed;

@@ -15,7 +15,7 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Llm\Run\LlmInterestTermExtractor;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
+use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
 use App\Service\Curation\Recommendation\Stream\Pass\InterestTermPass;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -60,7 +60,14 @@ final class LlmInterestTermExtractorTest extends DbTestCase
         $outcome = $this->extractor->extractTerms($this->pass([FeedLanguage::English]));
 
         self::assertTrue($outcome->usable);
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'solar', 0.9)], $outcome->requireTerms());
+        self::assertSame(
+            ['solar'],
+            array_values(array_unique(array_map(
+                static fn (TermStemModel $stem): string => substr($stem->stem, 0, 5),
+                $outcome->requireStems(),
+            ))),
+        );
+        self::assertEqualsWithDelta(0.9, $outcome->requireStems()[0]->weight, 1e-9);
         $log = $this->onlyLogRow();
         self::assertSame(CallPhase::InterestTerms, $log->getPhase());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());
@@ -75,6 +82,18 @@ final class LlmInterestTermExtractorTest extends DbTestCase
 
         self::assertFalse($outcome->usable);
         self::assertSame('not json at all', $outcome->requireUnusableReply());
+        self::assertSame(CallVerdict::Unusable, $this->onlyLogRow()->getVerdict());
+    }
+
+    public function testATermWhoseStemsAllDropIsRecordedUnusableWithTheRealReply(): void
+    {
+        $reply = '{"terms":[{"language":"en","term":"the","weight":8}]}';
+        $this->chat()->queueContent($reply);
+
+        $outcome = $this->extractor->extractTerms($this->pass([FeedLanguage::English]));
+
+        self::assertFalse($outcome->usable);
+        self::assertSame($reply, $outcome->requireUnusableReply());
         self::assertSame(CallVerdict::Unusable, $this->onlyLogRow()->getVerdict());
     }
 

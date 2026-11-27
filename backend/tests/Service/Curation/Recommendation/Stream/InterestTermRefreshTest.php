@@ -74,6 +74,10 @@ final class InterestTermRefreshTest extends DbTestCase
         self::assertSame(RunStatus::Running, $this->latestRun()->getStatus());
         self::assertSame(1, $this->latestRun()->getAttempts());
         self::assertNull($this->termSet());
+        self::assertSame(
+            '{"terms":[{"language":"en","term":"the","weight":8}]}',
+            $this->latestRun()->getLastInvalidReply(),
+        );
     }
 
     public function testThreeUnusableRepliesFailTheRunAndKeepThePreviousTerms(): void
