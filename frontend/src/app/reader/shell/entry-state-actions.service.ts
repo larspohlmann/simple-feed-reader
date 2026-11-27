@@ -6,13 +6,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { StateSaveOutcome } from '../state/entries.store';
-import {
-  ActOutcome,
-  EntryRowCache,
-  buildLikePatch,
-  buildVotePatch,
-  localStatePatch,
-} from '../state/entry-row-cache';
+import { ActOutcome, EntryRowCache } from '../state/entry-row-cache';
+import { buildLikePatch, buildVotePatch, localStatePatch } from '../state/optimistic-patches';
 import { RowPatch } from '../state/in-flight-patches';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';

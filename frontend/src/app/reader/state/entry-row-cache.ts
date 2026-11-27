@@ -6,13 +6,13 @@ import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi, VoteAnswer } from '../social-post-api';
-import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { LabelPill } from '../labels/labels.models';
 import { byLabelName } from '../labels/label-order';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
+import { buildLikePatch, buildVotePatch, localStatePatch } from './optimistic-patches';
 import {
   InFlightLabelChanges,
   LabelChange,
@@ -29,6 +29,15 @@ export interface ActOutcome {
   readonly onSaved?: () => void;
   readonly onFailed: (problem: Problem) => void;
 }
+
+/** A like or a vote: what shows at once, its request, and what its answer lays over the entry and its copies. */
+interface LikeAct<T> {
+  readonly patch: RowPatch;
+  readonly request: () => Observable<T>;
+  readonly adopt: (row: EntryDto, answer: T) => EntryDto;
+}
+
+const LIKE_FIELDS: (keyof RowPatch)[] = ['social', 'isLiked', 'myVote'];
 
 const NONE: ReadonlySet<number> = new Set();
 
@@ -87,19 +96,17 @@ export class EntryRowCache {
   }
 
   setLiked(entry: EntryDto, isLiked: boolean, outcome: ActOutcome): Observable<void> {
-    if (this.inFlight.onTheWire(entry.id, 'social', 'isLiked')) return EMPTY;
-    outcome.onStarted?.();
-    const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    return subscribeUntilSettled(this.optimistic(entry, buildLikePatch(entry, isLiked), request$), {
-      next: (answer) => {
-        if (answer.likeCount === null) return;
-        this.patch(this.collectCopyIds(entry), (row) => ({
-          ...row,
-          likeCount: answer.likeCount,
-        }));
+    return this.runLikeAct(
+      entry,
+      {
+        patch: buildLikePatch(entry, isLiked),
+        request: () =>
+          isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id),
+        adopt: (row, answer) =>
+          answer.likeCount === null ? row : { ...row, likeCount: answer.likeCount },
       },
-      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
-    });
+      outcome,
+    );
   }
 
   /** The label shows on the entry at once, its copies keep their own; a failure takes back this label alone. */
@@ -122,26 +129,20 @@ export class EntryRowCache {
 
   /** The vote shows at once; its score waits for the answer. */
   setVote(entry: EntryDto, to: VoteValue, outcome: ActOutcome): Observable<void> {
-    if (
-      entry.myVote === null ||
-      entry.score === null ||
-      this.inFlight.onTheWire(entry.id, 'myVote')
-    )
-      return EMPTY;
-    outcome.onStarted?.();
-    return subscribeUntilSettled(
-      this.optimistic(entry, buildVotePatch(to), this.socialPosts.vote(entry.id, to)),
+    if (entry.myVote === null || entry.score === null) return EMPTY;
+    return this.runLikeAct(
+      entry,
       {
-        next: (answer) => {
-          this.patch(this.collectCopyIds(entry), (row) => ({
-            ...row,
-            myVote: answer.myVote,
-            score: answer.score,
-            discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
-          }));
-        },
-        error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
+        patch: buildVotePatch(to),
+        request: () => this.socialPosts.vote(entry.id, to),
+        adopt: (row, answer) => ({
+          ...row,
+          myVote: answer.myVote,
+          score: answer.score,
+          discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
+        }),
       },
+      outcome,
     );
   }
 
@@ -206,6 +207,19 @@ export class EntryRowCache {
     const created = signal(shown);
     this.records.set(entry.id, created);
     return created;
+  }
+
+  /** Dropped while any like or vote of the entry is on the wire, so the two never race over its liked state. */
+  private runLikeAct<T>(entry: EntryDto, act: LikeAct<T>, outcome: ActOutcome): Observable<void> {
+    if (this.inFlight.onTheWire(entry.id, ...LIKE_FIELDS)) return EMPTY;
+    outcome.onStarted?.();
+    return subscribeUntilSettled(this.optimistic(entry, act.patch, act.request()), {
+      next: (answer) => {
+        this.patch(this.collectCopyIds(entry), (row) => act.adopt(row, answer));
+        outcome.onSaved?.();
+      },
+      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
+    });
   }
 
   private dropUnlessHeld(id: number): void {
@@ -333,27 +347,4 @@ function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
     shared.social = { ...copy.social, isLiked: patch.social.isLiked };
   }
   return shared;
-}
-
-/** The like as it shows at once: on the post's network where the reader can like there, else here. A network
- *  unlike takes the local like with it, as the server does. */
-export function buildLikePatch(entry: EntryDto, isLiked: boolean): RowPatch {
-  const social = likeableSocial(entry);
-  if (!social) return { isLiked };
-  const networkLike = { social: { ...social, isLiked } };
-  return isLiked ? networkLike : { ...networkLike, isLiked: false };
-}
-
-/** The vote as it shows at once; it replaces the entry's local like, as the server does. */
-export function buildVotePatch(to: VoteValue): RowPatch {
-  return { myVote: to, isLiked: false };
-}
-
-/** Mirrors the backend's flag coupling (#482): viewing also hides
- *  (ViewedImpliesHiddenListener), un-hiding clears viewed (EntryState::markUnread).
- *  Un-ticking isViewed alone leaves hidden set — hiding from the unread list is sticky. */
-export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
-  if (patch.isViewed === true) return { ...patch, isHidden: true };
-  if (patch.isHidden === false) return { ...patch, isViewed: false };
-  return patch;
 }

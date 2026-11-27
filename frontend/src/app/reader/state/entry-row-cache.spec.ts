@@ -333,6 +333,32 @@ describe('EntryRowCache', () => {
     expect(socialPosts.vote).toHaveBeenCalledTimes(1);
   });
 
+  it('holds back a vote while a like of the entry is on the wire, and a like while a vote is (#2587)', () => {
+    socialPosts.like.mockReturnValue(new Subject());
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, null), buildCopy(2, null));
+    const started = jest.fn();
+
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+    cache.setVote(readShownEntry(1), 1, { onStarted: started, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), 1, { onFailed: jest.fn() });
+    cache.setLiked(readShownEntry(2), true, { onStarted: started, onFailed: jest.fn() });
+
+    expect(socialPosts.vote).toHaveBeenCalledTimes(1);
+    expect(socialPosts.like).toHaveBeenCalledTimes(1);
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('says a like and a vote saved once their answers land', () => {
+    holdEntries(buildCopy(1, null), buildCopy(2, null));
+    const saved = jest.fn();
+
+    cache.setLiked(readShownEntry(1), true, { onSaved: saved, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), 1, { onSaved: saved, onFailed: jest.fn() });
+
+    expect(saved).toHaveBeenCalledTimes(2);
+  });
+
   it('saveState read on a copy patches the other copy and sends one request', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
