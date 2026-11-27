@@ -30,6 +30,10 @@ services:
         autowire: true
         public: true
 
+    App\Service\Curation\Recommendation\Stream\ForYouStreamSweep:
+        autowire: true
+        public: true
+
     App\Service\Curation\Recommendation\Stream\InterestTermSweep:
         autowire: true
         public: true

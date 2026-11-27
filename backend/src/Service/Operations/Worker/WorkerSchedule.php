@@ -18,6 +18,7 @@ use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
 use App\Service\Operations\Worker\Message\SendDueDigests;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
+use App\Service\Operations\Worker\Message\SweepForYouStream;
 use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
 use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
@@ -64,6 +65,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('5 minutes', new PollSocialNotifications()))
             ->add(RecurringMessage::every('5 minutes', new RunDueStoryAiTasks()))
             ->add(RecurringMessage::every('5 minutes', new RefreshDueInterestTerms()))
+            ->add(RecurringMessage::every('1 minute', new SweepForYouStream()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

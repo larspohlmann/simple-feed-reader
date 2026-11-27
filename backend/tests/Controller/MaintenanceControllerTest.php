@@ -303,6 +303,7 @@ final class MaintenanceControllerTest extends WebTestCase
                 'profileImages',
                 'hiddenProfiles',
                 'savedSearchMemberships',
+                'forYouStream',
                 'privateFeedSync',
                 'notificationPoll',
                 'trending',

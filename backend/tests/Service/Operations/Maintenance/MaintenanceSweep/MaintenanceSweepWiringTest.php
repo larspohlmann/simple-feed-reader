@@ -8,6 +8,7 @@ use App\Http\MaintenanceTickJson;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\ForYouStreamTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\InterestTermsTickSweep;
@@ -43,6 +44,7 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'profileImages' => ProfileImagesTickSweep::class,
             'hiddenProfiles' => HiddenProfilesTickSweep::class,
             'savedSearchMemberships' => SavedSearchMembershipsTickSweep::class,
+            'forYouStream' => ForYouStreamTickSweep::class,
             'privateFeedSync' => PrivateFeedSyncTickSweep::class,
             'notificationPoll' => NotificationPollTickSweep::class,
             'trending' => TrendingTickSweep::class,

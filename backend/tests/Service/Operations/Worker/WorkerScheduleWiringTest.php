@@ -18,6 +18,7 @@ use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
 use App\Service\Operations\Worker\Message\SendDueDigests;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
+use App\Service\Operations\Worker\Message\SweepForYouStream;
 use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
 use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
@@ -41,7 +42,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(18, $recurringMessages);
+        self::assertCount(19, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -66,6 +67,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 PollSocialNotifications::class,
                 RunDueStoryAiTasks::class,
                 RefreshDueInterestTerms::class,
+                SweepForYouStream::class,
             ],
             $classes,
         );
@@ -95,12 +97,13 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 5 minutes',
                 'every 5 minutes',
                 'every 5 minutes',
+                'every 1 minute',
             ],
             $frequencies,
         );
     }
 
-    public function testInterestTermsAreScheduledLast(): void
+    public function testTheForYouStreamSweepIsScheduledLast(): void
     {
         self::bootKernel();
         $provider = self::getContainer()->get(WorkerSchedule::class);
@@ -109,8 +112,8 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         $last = array_last($provider->getSchedule()->getRecurringMessages());
         self::assertNotNull($last);
 
-        self::assertSame(RefreshDueInterestTerms::class, self::firstMessageClass($last));
-        self::assertSame('every 5 minutes', (string) $last->getTrigger());
+        self::assertSame(SweepForYouStream::class, self::firstMessageClass($last));
+        self::assertSame('every 1 minute', (string) $last->getTrigger());
     }
 
     /** Without a persistent pool the daily entry never fires: an in-process checkpoint re-anchors at each restart. */
