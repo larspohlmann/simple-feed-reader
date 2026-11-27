@@ -22,6 +22,8 @@ use App\Tests\Support\SeedsProfiledAccounts;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\TickingClock;
+use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
@@ -89,21 +91,16 @@ final class InterestTermSweepTest extends DbTestCase
         self::assertSame(1, $beforeDeadline->stored);
     }
 
-    public function testTheFirstStaleSetFinishesAtTheDeadlineAndTheSecondWaitsForTheNextRun(): void
+    public function testNoStaleSetStartsAtTheDeadline(): void
     {
         $first = $this->staleSet('terms-sweep-stale-first@example.test', '2026-11-26 07:00:00');
         $second = $this->staleSet('terms-sweep-stale-second@example.test', '2026-11-26 08:00:00');
 
         $atDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
 
-        self::assertSame(1, $atDeadline->raritiesRefreshed);
-        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $first->getRaritiesRefreshedAt());
+        self::assertSame(0, $atDeadline->raritiesRefreshed);
+        self::assertEquals(new \DateTimeImmutable('2026-11-26 07:00:00'), $first->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 08:00:00'), $second->getRaritiesRefreshedAt());
-
-        $nextRun = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
-
-        self::assertSame(1, $nextRun->raritiesRefreshed);
-        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $second->getRaritiesRefreshedAt());
     }
 
     public function testASecondStaleSetBeforeTheDeadlineIsRefreshedToo(): void
@@ -122,9 +119,12 @@ final class InterestTermSweepTest extends DbTestCase
         $older = $this->staleSet('terms-sweep-order-older@example.test', '2026-11-26 07:00:00');
         $never = $this->staleSet('terms-sweep-order-never@example.test', null);
 
-        $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
+        // Every reading moves the clock 6 s: the deadline, the cutoff and the window are read before the first
+        // set's check (18 s), its stamp is the fourth reading (24 s), and the second set's check (30 s) is past 20 s.
+        $this->sweepOnClock(new TickingClock(new \DateTimeImmutable(self::EDGE_NOW), 6))
+            ->sweep(SweepBudgetModel::seconds(20));
 
-        self::assertEquals(new \DateTimeImmutable(self::EDGE_NOW), $never->getRaritiesRefreshedAt());
+        self::assertEquals(new \DateTimeImmutable('2026-11-27 10:00:24'), $never->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 07:00:00'), $older->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 09:00:00'), $recent->getRaritiesRefreshedAt());
     }
@@ -230,7 +230,12 @@ final class InterestTermSweepTest extends DbTestCase
 
     private function sweepAt(string $now): InterestTermSweep
     {
-        $clock = new NaiveUtcClock(new MockClock($now));
+        return $this->sweepOnClock(new MockClock($now));
+    }
+
+    private function sweepOnClock(ClockInterface $wallClock): InterestTermSweep
+    {
+        $clock = new NaiveUtcClock($wallClock);
 
         return new InterestTermSweep(
             $this->requireFromContainer(DueInterestTermFinder::class),

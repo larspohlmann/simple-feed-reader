@@ -9,6 +9,7 @@ use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
+use App\Service\Curation\Recommendation\Stream\Pass\RaritySweepPass;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use Doctrine\ORM\EntityManagerInterface;
@@ -56,28 +57,39 @@ final readonly class InterestTermSweep
         );
     }
 
-    /** The first stale set always finishes, so a walk longer than a tick still makes progress. */
     private function refreshStaleRarities(\DateTimeImmutable $deadline): int
     {
         $now = $this->clock->now();
-        $refreshed = 0;
         $cutoff = $now->modify(\sprintf('-%d hours', InterestTermRarity::REFRESH_HOURS));
-        foreach ($this->termSets->findWithStaleRarities($cutoff, $now) as $index => $set) {
-            $setDeadline = 0 === $index ? null : $deadline;
-            if (null !== $setDeadline && $this->clock->now() >= $setDeadline) {
+        $stale = $this->termSets->findWithStaleRarities($cutoff, $now);
+        if ([] === $stale) {
+            return 0;
+        }
+        try {
+            $pass = $this->rarity->buildSweepPass();
+        } catch (\Throwable $exception) {
+            $this->logger->error('Interest-term sweep: reading the rarity window failed.', ['exception' => $exception]);
+
+            return 0;
+        }
+        $refreshed = 0;
+        foreach ($stale as $set) {
+            if ($this->clock->now() >= $deadline) {
                 break;
             }
-            $refreshed += $this->refreshSetRarities($set, $setDeadline) ? 1 : 0;
+            $refreshed += $this->refreshSetRarities($set, $pass) ? 1 : 0;
         }
 
         return $refreshed;
     }
 
     /** One account's failure must not cost the others their refresh. */
-    private function refreshSetRarities(InterestTermSet $set, ?\DateTimeImmutable $deadline): bool
+    private function refreshSetRarities(InterestTermSet $set, RaritySweepPass $pass): bool
     {
         try {
-            return $this->rarity->refreshRarities($set, $deadline);
+            $this->rarity->refreshRarities($set, $pass);
+
+            return true;
         } catch (\Throwable $exception) {
             $this->logger->error('Interest-term sweep: refreshing an account\'s rarities failed.', [
                 'userId' => $set->getUser()->getId(),

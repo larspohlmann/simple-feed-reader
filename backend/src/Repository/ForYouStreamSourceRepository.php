@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
+use App\Service\Curation\Recommendation\Stream\Model\RarityWindowModel;
 use App\Service\Curation\Recommendation\Stream\Model\StreamCandidateModel;
 use App\Service\Curation\Recommendation\Stream\Model\StreamEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
@@ -55,19 +56,21 @@ final readonly class ForYouStreamSourceRepository
         return null === $lowest ? null : (int) $lowest;
     }
 
-    /** @return list<StreamEntryModel> ascending by id, from the For you feeds the account is subscribed to */
-    public function findRecentEntries(int $userId, \DateTimeImmutable $since, int $afterId, int $limit): array
+    /** @return list<StreamEntryModel> descending by id below $beforeId, from the account's For you feeds */
+    public function findNewestEntries(int $userId, RarityWindowModel $window, int $beforeId, int $limit): array
     {
         $qb = $this->selectEntries()
             ->join(Subscription::class, 'subscription', 'WITH', 'subscription.feed = feed')
             ->where('IDENTITY(subscription.user) = :user')
             ->andWhere('entry.dates.effectiveDate >= :since')
             ->andWhere('entry.id > :afterId')
-            ->orderBy('entry.id', 'ASC')
+            ->andWhere('entry.id < :beforeId')
+            ->orderBy('entry.id', 'DESC')
             ->setMaxResults($limit)
             ->setParameter('user', $userId)
-            ->setParameter('since', $since)
-            ->setParameter('afterId', $afterId);
+            ->setParameter('since', $window->since)
+            ->setParameter('afterId', $window->afterId)
+            ->setParameter('beforeId', $beforeId);
         InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
 
         /** @var list<array{id: int, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */

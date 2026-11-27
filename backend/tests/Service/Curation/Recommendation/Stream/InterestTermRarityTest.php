@@ -65,7 +65,7 @@ final class InterestTermRarityTest extends DbTestCase
         $this->term('energy', FeedLanguage::English);
         $this->entries(600, FeedLanguage::English, [3 => 'solar', 300 => 'energy']);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEqualsWithDelta(log(602 / 4), $this->termRarity('solar', FeedLanguage::English), 1e-9);
         self::assertEqualsWithDelta(log(602 / 301), $this->termRarity('energy', FeedLanguage::English), 1e-9);
@@ -76,7 +76,7 @@ final class InterestTermRarityTest extends DbTestCase
         $this->term('solar', FeedLanguage::English);
         $this->entries(10, FeedLanguage::English, [2 => 'solar']);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEqualsWithDelta(log(502 / 3), $this->termRarity('solar', FeedLanguage::English), 1e-9);
     }
@@ -87,7 +87,7 @@ final class InterestTermRarityTest extends DbTestCase
         $this->entries(2, FeedLanguage::English, [2 => 'solar']);
         $this->entries(3, null, [1 => 'solar']);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEqualsWithDelta(log(502 / 2), $this->termRarity('solar', null), 1e-9);
     }
@@ -101,7 +101,7 @@ final class InterestTermRarityTest extends DbTestCase
         $this->entries(1, FeedLanguage::English, [1 => 'solar']);
         $this->excludeFromForYou($excluded);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEqualsWithDelta(log(502 / 2), $this->termRarity('solar', FeedLanguage::English), 1e-9);
     }
@@ -110,41 +110,34 @@ final class InterestTermRarityTest extends DbTestCase
     {
         $this->term('solar', FeedLanguage::English);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
     }
 
-    public function testAWalkCutShortByTheDeadlineBetweenChunksLeavesTheSetUnstamped(): void
+    public function testAWindowLargerThanTheSampleCountsOnlyItsNewestEntries(): void
     {
         $this->term('solar', FeedLanguage::English);
-        $this->entries(InterestTermRarity::CHUNK + 1, FeedLanguage::English, [2 => 'solar']);
+        $this->entries(InterestTermRarity::SAMPLE_ENTRIES + 1, FeedLanguage::English, [1 => 'solar']);
 
-        $finished = $this->rarity->refreshRarities($this->set, new \DateTimeImmutable(self::NOW));
+        $this->refreshRarities();
 
-        self::assertFalse($finished);
-        self::assertNull($this->set->getRaritiesRefreshedAt());
-        self::assertSame(1.0, $this->termRarity('solar', FeedLanguage::English));
-    }
-
-    public function testAWalkWithinTheDeadlineFinishesAndStamps(): void
-    {
-        $this->term('solar', FeedLanguage::English);
-        $this->entries(InterestTermRarity::CHUNK + 1, FeedLanguage::English, [2 => 'solar']);
-
-        $finished = $this->rarity->refreshRarities($this->set, new \DateTimeImmutable(self::NOW . ' +1 second'));
-
-        self::assertTrue($finished);
-        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
+        $sampled = InterestTermRarity::SAMPLE_ENTRIES;
+        self::assertEqualsWithDelta(log(($sampled + 2) / 1), $this->termRarity('solar', FeedLanguage::English), 1e-9);
     }
 
     public function testASetWithoutTermsIsStampedAndWeighsNothing(): void
     {
         $this->entries(3, FeedLanguage::English, [1 => 'solar']);
 
-        $this->rarity->refreshRarities($this->set);
+        $this->refreshRarities();
 
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
+    }
+
+    private function refreshRarities(): void
+    {
+        $this->rarity->refreshRarities($this->set, $this->rarity->buildSweepPass());
     }
 
     private function subscribedFeed(string $url): Feed

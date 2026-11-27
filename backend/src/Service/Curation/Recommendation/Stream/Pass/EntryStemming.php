@@ -17,6 +17,7 @@ final class EntryStemming
     public const float HEADLINE_WEIGHT = 1.0;
     public const float BODY_WEIGHT = 0.5;
     public const int BODY_CHARACTERS = 600;
+    public const int CACHED_WORDS = 50_000;
 
     /** @var array<string, list<string>> the stems of a word, by language value and word */
     private array $stemsByWord = [];
@@ -56,6 +57,9 @@ final class EntryStemming
     private function findWordStems(string $word, string $bare, ?FeedLanguage $language): array
     {
         $key = InterestTermsModel::languageKey($language) . ':' . $word;
+        if (!isset($this->stemsByWord[$key]) && \count($this->stemsByWord) >= self::CACHED_WORDS) {
+            $this->stemsByWord = [];
+        }
 
         return $this->stemsByWord[$key] ??= array_values(array_filter(
             $this->equivalents->stemWordAndParts($word, $bare, $language),

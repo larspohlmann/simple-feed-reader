@@ -32,9 +32,9 @@ Decisions the spec and the code left open. Each one gives what was decided, why,
 6. **The reader's languages are the distinct non-null `feed.language` values of the user's For-you-included subscriptions. When there are none, all four are used.** If wrong: someone who reads a language none of their feeds declares gets no terms in it.
 7. **An entry's language is `COALESCE(entry.language, feed.language)`** (the rule `TrendingEntryRepository` uses). The body is the first 600 plain-text characters of the summary (`EntryPlainText::cut`). If wrong: a little recall is lost on long summaries.
 8. **Rarity is `log((max(N, 500) + 2) / (df + 1))`.**
-   - It is computed per language key over 30 days of the user's For-you entries. Entries with no language use the cut key.
-   - It is computed in the term refresh right after a term set is stored, and again once a day. Matching reads the stored value. Rarity is 1.0 until it is first computed.
-   - Each pass caches word stems, so the 30-day pass stems each distinct word once.
+   - It is computed per language key over the newest N (`InterestTermRarity::SAMPLE_ENTRIES`, 5000) entries of the last 30 days of the user's For-you entries; N counts that sample. Entries with no language use the cut key. The cap bounds one account's walk, so a refresh always finishes within a tick.
+   - The interest-term sweep computes it in the run that stores a term set (never-computed sets go first), and again once a day. Matching reads the stored value. Rarity is 1.0 until it is first computed.
+   - One sweep run reads the window's first entry id once and shares one word-stem cache across its accounts, capped at `EntryStemming::CACHED_WORDS`.
    - If wrong: the first sweep after a store sees one tick of unrarified scores (they all stay under the threshold).
 9. **Scoring.** A stem counts once, at its best position (headline 1.0, body 0.5). An entry enters at `MIN_SCORE = 1.5`. If wrong: the stream is too loud or too quiet. The stored scores tell us which, and the fix is one constant.
 10. **The 48-hour window reads `entry.effective_date`** (published, else created) at sweep time. The settle delay is 60 s, as for saved searches. The first mark is the settled ceiling when the user's first term set is stored, and replacing the set keeps the mark. If wrong: an entry with no publish date that is created late enters anyway. That is accepted.
