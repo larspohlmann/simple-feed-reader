@@ -47,8 +47,6 @@ final readonly class DiscussionVotes
     }
 
     /**
-     * The vote replaces the reader's local like of the entry, as a network unlike does.
-     *
      * @throws NotASocialPostException
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNeedsReconnectException
