@@ -173,7 +173,7 @@ describe('EntryHeroComponent', () => {
   it('carries the actions on the meta row, not on a row of its own', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.querySelector('.actions')).toBeNull();
-    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(4);
   });
 
   it('emits favorite, keep and read from the meta row', () => {
@@ -186,9 +186,9 @@ describe('EntryHeroComponent', () => {
     entryActions.toggleRead.mockImplementation(read);
 
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[0] as HTMLElement).click();
     (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();
+    (buttons[3] as HTMLElement).click();
 
     expect(favorite).toHaveBeenCalled();
     expect(keep).toHaveBeenCalled();

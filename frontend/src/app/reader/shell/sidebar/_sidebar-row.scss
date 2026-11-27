@@ -8,7 +8,7 @@
   .card {
     @include glass-rim.filled(var(--surface-1), var(--border));
 
-    --card-pad-y: var(--collections-pad-y, var(--sidebar-card-pad));
+    --card-pad-y: var(--sidebar-card-pad);
 
     display: flex;
     flex-direction: column;
@@ -20,12 +20,12 @@
 
   @media (pointer: coarse) {
     .card {
-      --card-pad-y: var(--collections-pad-y, var(--space-2));
+      --card-pad-y: var(--space-2);
     }
   }
 
   .card:has(> .section-head > [aria-expanded='false']) {
-    --card-pad-y: var(--collections-pad-y, var(--sidebar-head-pad));
+    --card-pad-y: var(--sidebar-head-pad);
   }
 
   .organising .card,
@@ -40,24 +40,34 @@
 
 // The airy sidebar (#2493) draws no box: a faint rule above each section.
 @mixin airy-section-rule {
-  padding-block: var(--collections-pad-y, var(--space-3));
+  padding-block: var(--space-3);
   border-color: var(--airy-hrule) transparent transparent;
   border-radius: 0;
   background: none;
 }
 
 // The hairline an indented run of rows hangs on, under the parent row's icon.
-@mixin airy-rail($top) {
+@mixin rail($top) {
   content: '';
   position: absolute;
   top: $top;
   bottom: var(--space-1);
   left: var(--sidebar-rail-x);
-  border-left: 1px solid var(--airy-rule);
+  border-left: 1px solid var(--rail-color, var(--border));
 }
 
-// The airy sidebar hangs a section's rows --space-5 in on a hairline under the head's lead.
-@mixin sublist {
+@mixin -hanging {
+  position: relative;
+  padding-left: var(--space-5);
+
+  &::before {
+    @include rail(var(--space-0));
+  }
+}
+
+// A head's rows hang --space-5 in on the rail under its lead (#2593); a network's, `$boxed: flush`,
+// hang only in the airy sidebar and stay flush in the boxed card.
+@mixin sublist($boxed: hung) {
   .sublist {
     --row-h: var(--sidebar-sub-row-h);
     --row-fs: var(--fs-dense);
@@ -66,15 +76,16 @@
     flex-direction: column;
     gap: var(--space-0);
     font-size: var(--row-fs);
+
+    @if $boxed == hung {
+      @include -hanging;
+    }
   }
 
-  :host-context(.sidebar-airy) .sublist {
-    position: relative;
-    padding-left: var(--space-5);
-  }
-
-  :host-context(.sidebar-airy) .sublist::before {
-    @include airy-rail(var(--space-0));
+  @if $boxed == flush {
+    :host-context(.sidebar-airy) .sublist {
+      @include -hanging;
+    }
   }
 }
 
@@ -109,7 +120,7 @@
   @include row-box-height(var(--row-h, var(--sidebar-row-h)));
   @include icon-lead.fixed-row-properties(
     var(--row-box),
-    '> .name, > .label, > .nav > .name, > .nav > .label',
+    '> .name, > .label, > .nav > .name, > .nav > .label, > .section-link > .label',
     $gap: var(--row-gap)
   );
 
@@ -123,8 +134,8 @@
 
   @include icon-lead.fixed-row-slots(
     var(--row-box),
-    '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon',
-    '> .name, > .label, > .nav > .name, > .nav > .label',
+    '> .lead, > app-icon, > .nav > .lead, > .nav > app-icon, > .section-link > app-icon',
+    '> .name, > .label, > .nav > .name, > .nav > .label, > .section-link > .label',
     $gap: var(--row-gap)
   );
   @include row-box-coarse;
@@ -176,7 +187,8 @@
 }
 
 @mixin row-parts {
-  .name {
+  .name,
+  .folder-head .label {
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -191,7 +203,8 @@
     justify-content: center;
   }
 
-  .count {
+  .count,
+  .folder-head .section-count {
     flex: none;
     margin-left: auto;
     color: var(--text-secondary);
@@ -200,12 +213,15 @@
     text-align: right;
   }
 
-  .active .name {
+  .active .name,
+  .folder-head.current .label {
     font-weight: 600;
   }
 
   .active .count,
-  .active > app-icon {
+  .active > app-icon,
+  .folder-head.current .section-count,
+  .folder-head.current .section-link > app-icon {
     color: var(--accent);
   }
 
@@ -232,6 +248,19 @@
     .trail {
       width: var(--tap-target);
       height: var(--tap-target);
+    }
+  }
+}
+
+// On touch a row's ⋯ takes the 44px chevron column, so its count lines up with the head's.
+@mixin menu-takes-chevron-column($menu) {
+  @media (pointer: coarse) {
+    #{$menu} {
+      margin-right: 0;
+    }
+
+    #{$menu} + .trail {
+      display: none;
     }
   }
 }
@@ -381,6 +410,26 @@
   }
 }
 
+/* A view head: a row with a chevron, no band when open (#2593). */
+@mixin folder-head {
+  .folder-head {
+    @include row-geometry;
+  }
+
+  @include row-states('.folder-head', '.folder-head.current');
+  @include row-link('.folder-head > .section-link');
+
+  // The link reaches back over the row's inset, so the whole head left of the chevron opens the view.
+  .folder-head > .section-link {
+    margin-left: calc(var(--icon-lead-space) * -1);
+    padding-left: var(--icon-lead-space);
+  }
+
+  .folder-head:not(.current) .section-link > app-icon {
+    color: var(--text-muted);
+  }
+}
+
 /* A section head — Saved searches, Tags, Feeds, a network: a title that opens the combined list (#1735). */
 @mixin section-head {
   .section-head {
@@ -502,23 +551,6 @@
     &.current .label {
       color: var(--accent);
     }
-  }
-}
-
-@mixin section-head-glyph {
-  .section-head .favicon-slot {
-    --icon-lead-self: var(--icon-dense);
-
-    width: var(--icon-lead-self);
-  }
-
-  .section-head:not(.current) .favicon-slot app-icon {
-    color: var(--text-muted);
-  }
-
-  // The airy network head's logo box, so the label and the rail line up with a network's.
-  :host-context(.sidebar-airy) .section-head .favicon-slot {
-    --icon-lead-self: var(--icon-md);
   }
 }
 

@@ -62,12 +62,12 @@ describe('EntryKickerComponent', () => {
     const fixture = mount(entry());
     expect(
       fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
-    ).toBe(3);
+    ).toBe(4);
 
     const read = jest.fn();
     entryActions.toggleRead.mockImplementation(read);
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[2] as HTMLElement).click();
+    (buttons[3] as HTMLElement).click();
     expect(read).toHaveBeenCalled();
   });
 });

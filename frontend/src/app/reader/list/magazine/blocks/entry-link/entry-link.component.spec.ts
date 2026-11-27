@@ -205,7 +205,7 @@ describe('EntryLinkComponent', () => {
   it('carries the meta row', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 
-    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(4);
   });
 
   it('holds the card place with a placeholder while the post is still being completed', () => {

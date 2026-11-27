@@ -62,10 +62,10 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
     menuFor.set(null);
   });
 
-  it('renders no card without stories', () => {
+  it('renders no head without stories', () => {
     const fixture = mount([]);
 
-    expect(root(fixture).querySelector('.card')).toBeNull();
+    expect(root(fixture).querySelector('.followed-head')).toBeNull();
   });
 
   it('starts collapsed, with the head label and the summed new count', () => {
@@ -106,7 +106,7 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
     const fixture = mount([story(1)]);
 
     expect(
-      root(fixture).querySelector('.section-head .favicon-slot app-icon')?.textContent?.trim(),
+      root(fixture).querySelector('.folder-head .section-link > app-icon')?.textContent?.trim(),
     ).toBe('notifications_active');
   });
 

@@ -83,12 +83,12 @@ describe('EntryThumbComponent', () => {
     const fixture = mount(entry());
     expect(
       fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
-    ).toBe(3);
+    ).toBe(4);
 
     const favorite = jest.fn();
     entryActions.favorite.mockImplementation(favorite);
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[0] as HTMLElement).click();
+    (buttons[1] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();
   });
 

@@ -3,8 +3,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
-import { EntryLikeComponent } from '../../entry/entry-like/entry-like.component';
-import { likeToggle } from '../../entry-social';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { CompactCount } from '../../../core/i18n/compact-count';
@@ -17,8 +15,8 @@ import { CommentTotals } from '../../state/comment-totals';
 
 /**
  * The line a magazine card or a list row ends on: the entry's pills, led by a Lemmy
- * post's score or a social post's like and the comment count, with its actions
- * right-aligned against them. One component, not a row assembled per host, so the wrap geometry has one definition
+ * post's score and the comment count, with its actions, the like first, right-aligned against
+ * them. One component, not a row assembled per host, so the wrap geometry has one definition
  * everywhere. A grouped compact entry has no pills, so its actions live on the
  * kicker line.
  */
@@ -27,7 +25,6 @@ import { CommentTotals } from '../../state/comment-totals';
   imports: [
     EntryPillsComponent,
     EntryActionsComponent,
-    EntryLikeComponent,
     VotePillComponent,
     IconComponent,
     TranslocoPipe,
@@ -52,9 +49,6 @@ export class EntryMetaComponent {
       this.commentTotals.latestCount(this.entry()),
       'reader.discussionCounts.comments',
     ),
-  );
-  protected readonly showsLike = computed(
-    () => likeToggle(this.entry()) !== null || this.entry().likeCount !== null,
   );
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.imageShown()));
 }

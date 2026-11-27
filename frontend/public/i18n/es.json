@@ -1440,6 +1440,7 @@
     "savedSearches": "Búsquedas guardadas",
     "savedSearchesEmpty": "Aún no hay búsquedas guardadas. Guarda una búsqueda para verla aquí.",
     "toggleSavedSearches": "Mostrar u ocultar búsquedas guardadas",
+    "toggleAllItems": "Mostrar u ocultar Todo",
     "followedStories": "Noticias seguidas",
     "toggleFollowedStories": "Mostrar u ocultar las noticias seguidas",
     "followedStoryFallback": "Noticia seguida",

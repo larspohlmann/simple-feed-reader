@@ -156,7 +156,7 @@ describe('SourceGroupComponent', () => {
     entryActions.favorite.mockImplementation(favorite);
 
     const rows = fixture.nativeElement.querySelectorAll('app-entry-compact');
-    const secondRowStar = rows[1].querySelectorAll('app-entry-actions button')[0] as HTMLElement;
+    const secondRowStar = rows[1].querySelectorAll('app-entry-actions button')[1] as HTMLElement;
     secondRowStar.click();
 
     expect(favorite).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
