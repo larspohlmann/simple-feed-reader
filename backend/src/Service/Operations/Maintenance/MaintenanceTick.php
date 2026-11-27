@@ -15,9 +15,9 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Refresh first, then the sweeps, then the log spool. An aborted refresh closed the shared
- * EntityManager, so the sweeps must not run that tick; the spool touches no EntityManager and ships anyway.
- * A sweep that closes the manager has it reset before the next one runs.
+ * Refresh first, then the sweeps, then the log spool. A refresh that aborted on a persistence failure skips the
+ * sweeps that tick: the database just failed, so they wait for the next one; the spool touches no EntityManager and
+ * ships anyway. A sweep that closes the manager has it reset before the next one runs.
  */
 final readonly class MaintenanceTick
 {
