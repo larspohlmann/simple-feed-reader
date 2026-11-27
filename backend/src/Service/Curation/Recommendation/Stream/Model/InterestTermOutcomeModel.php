@@ -8,34 +8,18 @@ namespace App\Service\Curation\Recommendation\Stream\Model;
 final readonly class InterestTermOutcomeModel
 {
     /** @param list<TermStemModel> $stems */
-    private function __construct(public bool $usable, private array $stems, private ?string $unusableReply)
+    private function __construct(public array $stems, public ?string $unusableReply)
     {
     }
 
     /** @param list<TermStemModel> $stems */
     public static function usable(array $stems): self
     {
-        return new self(true, $stems, null);
+        return new self($stems, null);
     }
 
     public static function unusable(string $reply): self
     {
-        return new self(false, [], $reply);
-    }
-
-    /** @return list<TermStemModel> */
-    public function requireStems(): array
-    {
-        if (!$this->usable) {
-            throw new \LogicException('An unusable interest-term outcome has no stems.');
-        }
-
-        return $this->stems;
-    }
-
-    public function requireUnusableReply(): string
-    {
-        return $this->unusableReply
-            ?? throw new \LogicException('A usable interest-term outcome has no invalid reply to retry.');
+        return new self([], $reply);
     }
 }

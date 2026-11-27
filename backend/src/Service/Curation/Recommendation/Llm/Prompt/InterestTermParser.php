@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Recommendation\Llm\Prompt\Model\InterestTermParseResultModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 
@@ -25,14 +24,18 @@ final readonly class InterestTermParser
     {
     }
 
-    /** @param list<FeedLanguage> $languages */
-    public function parse(string $content, array $languages): InterestTermParseResultModel
+    /**
+     * @param list<FeedLanguage> $languages
+     *
+     * @return list<InterestTermModel> empty when the reply is unusable
+     */
+    public function parse(string $content, array $languages): array
     {
         $decoded = $this->decoder->decode($content);
         $items = $decoded['terms'] ?? null;
 
         if (!\is_array($items)) {
-            return InterestTermParseResultModel::unusable();
+            return [];
         }
 
         $terms = [];
@@ -54,7 +57,7 @@ final readonly class InterestTermParser
             $terms[] = $term;
         }
 
-        return [] === $terms ? InterestTermParseResultModel::unusable() : InterestTermParseResultModel::usable($terms);
+        return $terms;
     }
 
     /** @param list<FeedLanguage> $languages */

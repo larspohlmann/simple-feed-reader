@@ -37,9 +37,7 @@ final readonly class LlmInterestTermExtractor implements InterestTermExtractorIn
         ));
         $recordedCall = $this->callRecorder->beginForInterestTermRun($pass->run, $request);
         $content = $this->providerCall->complete($pass->callRoute(), $request, $recordedCall);
-        $result = $this->termParser->parse($content, $pass->languages);
-
-        $stems = $result->usable ? $this->stems->buildTermStems($result->terms) : [];
+        $stems = $this->stems->buildTermStems($this->termParser->parse($content, $pass->languages));
         if ([] === $stems) {
             $recordedCall->finishUnusable($content);
 

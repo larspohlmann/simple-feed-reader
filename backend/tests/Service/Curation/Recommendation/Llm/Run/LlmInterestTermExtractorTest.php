@@ -59,15 +59,15 @@ final class LlmInterestTermExtractorTest extends DbTestCase
 
         $outcome = $this->extractor->extractTerms($this->pass([FeedLanguage::English]));
 
-        self::assertTrue($outcome->usable);
+        self::assertNull($outcome->unusableReply);
         self::assertSame(
             ['solar'],
             array_values(array_unique(array_map(
                 static fn (TermStemModel $stem): string => substr($stem->stem, 0, 5),
-                $outcome->requireStems(),
+                $outcome->stems,
             ))),
         );
-        self::assertEqualsWithDelta(0.9, $outcome->requireStems()[0]->weight, 1e-9);
+        self::assertEqualsWithDelta(0.9, $outcome->stems[0]->weight, 1e-9);
         $log = $this->onlyLogRow();
         self::assertSame(CallPhase::InterestTerms, $log->getPhase());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());
@@ -80,8 +80,7 @@ final class LlmInterestTermExtractorTest extends DbTestCase
 
         $outcome = $this->extractor->extractTerms($this->pass([FeedLanguage::English]));
 
-        self::assertFalse($outcome->usable);
-        self::assertSame('not json at all', $outcome->requireUnusableReply());
+        self::assertSame('not json at all', $outcome->unusableReply);
         self::assertSame(CallVerdict::Unusable, $this->onlyLogRow()->getVerdict());
     }
 
@@ -92,8 +91,7 @@ final class LlmInterestTermExtractorTest extends DbTestCase
 
         $outcome = $this->extractor->extractTerms($this->pass([FeedLanguage::English]));
 
-        self::assertFalse($outcome->usable);
-        self::assertSame($reply, $outcome->requireUnusableReply());
+        self::assertSame($reply, $outcome->unusableReply);
         self::assertSame(CallVerdict::Unusable, $this->onlyLogRow()->getVerdict());
     }
 

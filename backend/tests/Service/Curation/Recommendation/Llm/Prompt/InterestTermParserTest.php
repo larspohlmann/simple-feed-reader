@@ -26,8 +26,7 @@ final class InterestTermParserTest extends TestCase
             [FeedLanguage::German],
         );
 
-        self::assertTrue($result->usable);
-        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Wärmepumpe', 0.7)], $result->terms);
+        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Wärmepumpe', 0.7)], $result);
     }
 
     public function testATermInALanguageNotAskedForIsDropped(): void
@@ -41,8 +40,8 @@ final class InterestTermParserTest extends TestCase
             [FeedLanguage::German],
         );
 
-        self::assertFalse($dropped->usable);
-        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Pumpe', 0.5)], $kept->terms);
+        self::assertSame([], $dropped);
+        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Pumpe', 0.5)], $kept);
     }
 
     public function testWeightsAreClampedToOneToTen(): void
@@ -57,7 +56,7 @@ final class InterestTermParserTest extends TestCase
                 new InterestTermModel(FeedLanguage::English, 'low', 0.1),
                 new InterestTermModel(FeedLanguage::English, 'high', 1.0),
             ],
-            $result->terms,
+            $result,
         );
     }
 
@@ -68,7 +67,7 @@ final class InterestTermParserTest extends TestCase
             [FeedLanguage::English],
         );
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'seven', 0.7)], $result->terms);
+        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'seven', 0.7)], $result);
     }
 
     public function testAnInfiniteOrHugeWeightClampsToTheTop(): void
@@ -84,7 +83,7 @@ final class InterestTermParserTest extends TestCase
                 new InterestTermModel(FeedLanguage::English, 'infinite', 1.0),
                 new InterestTermModel(FeedLanguage::English, 'huge', 1.0),
             ],
-            $result->terms,
+            $result,
         );
     }
 
@@ -102,7 +101,7 @@ final class InterestTermParserTest extends TestCase
 
         $result = $this->parser->parse($reply, [FeedLanguage::English]);
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'kept', 0.5)], $result->terms);
+        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'kept', 0.5)], $result);
     }
 
     public function testEmptyAndOverlongTermsAreDropped(): void
@@ -116,7 +115,7 @@ final class InterestTermParserTest extends TestCase
 
         $result = $this->parser->parse($reply, [FeedLanguage::English]);
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, str_repeat('b', 80), 0.5)], $result->terms);
+        self::assertEquals([new InterestTermModel(FeedLanguage::English, str_repeat('b', 80), 0.5)], $result);
     }
 
     public function testEachLanguageKeepsItsFirstSixtyTerms(): void
@@ -133,27 +132,26 @@ final class InterestTermParserTest extends TestCase
         );
 
         $german = array_values(array_filter(
-            $result->terms,
+            $result,
             static fn (InterestTermModel $term): bool => FeedLanguage::German === $term->language,
         ));
         self::assertCount(60, $german);
         self::assertSame('term1', $german[0]->phrase);
         self::assertSame('term60', $german[59]->phrase);
-        self::assertCount(61, $result->terms);
+        self::assertCount(61, $result);
     }
 
     public function testAReplyThatIsNotJsonOrHasNoTermsListIsUnusable(): void
     {
-        self::assertFalse($this->parser->parse('not json', [FeedLanguage::English])->usable);
-        self::assertFalse($this->parser->parse('{"nope":1}', [FeedLanguage::English])->usable);
-        self::assertFalse($this->parser->parse('{"terms":"x"}', [FeedLanguage::English])->usable);
+        self::assertSame([], $this->parser->parse('not json', [FeedLanguage::English]));
+        self::assertSame([], $this->parser->parse('{"nope":1}', [FeedLanguage::English]));
+        self::assertSame([], $this->parser->parse('{"terms":"x"}', [FeedLanguage::English]));
     }
 
     public function testAReplyWhoseTermsAllDropIsUnusable(): void
     {
         $result = $this->parser->parse('{"terms":[{"language":"en","term":"","weight":5}]}', [FeedLanguage::English]);
 
-        self::assertFalse($result->usable);
-        self::assertSame([], $result->terms);
+        self::assertSame([], $result);
     }
 }

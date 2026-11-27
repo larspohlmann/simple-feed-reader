@@ -85,14 +85,14 @@ final readonly class InterestTermRefresh
         InterestTermRun $run,
         InterestTermOutcomeModel $outcome,
     ): InterestTermRefreshResult {
-        if (!$outcome->usable) {
-            return $this->recordInvalidReply($run, $outcome->requireUnusableReply());
+        if (null !== $outcome->unusableReply) {
+            return $this->recordInvalidReply($run, $outcome->unusableReply);
         }
 
         $run->recordTransportFailure();
         $this->entityManager->flush();
 
-        $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireStems());
+        $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->stems);
         $run->complete($this->clock->now());
         $this->entityManager->flush();
         $this->rarity->refreshRarities($set);
