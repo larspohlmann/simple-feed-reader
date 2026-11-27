@@ -265,6 +265,19 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
   });
 
+  it('drops the local like of the voted entry alone, and puts it back when the vote fails', () => {
+    const failing = new Subject<never>();
+    socialPosts.vote.mockReturnValue(failing);
+    holdEntries(buildCopy(1, 7, { isLiked: true }), buildCopy(2, 7, { isLiked: true }));
+
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
+    expect(readShownEntry(1).isLiked).toBe(false);
+    expect(readShownEntry(2).isLiked).toBe(true);
+
+    failing.error(new Error('no'));
+    expect(readShownEntry(1).isLiked).toBe(true);
+  });
+
   it('restores the vote when the vote fails', () => {
     const failing = new Subject<never>();
     socialPosts.vote.mockReturnValue(failing);

@@ -12,9 +12,11 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
+use App\Repository\EntryListRow;
 use App\Service\Content\Comments\CommentsLoader;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Url\Support\AbsoluteHttpUrl;
+use App\Service\Library\Reading\LocalLikes;
 use App\Service\Social\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Social\Exception\NotASocialPostException;
 use App\Service\Social\Social\Exception\SocialAccountNeedsReconnectException;
@@ -40,10 +42,13 @@ final readonly class DiscussionVotes
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private CommentsLoader $comments,
+        private LocalLikes $localLikes,
     ) {
     }
 
     /**
+     * The vote replaces the reader's local like of the entry, as a network unlike does.
+     *
      * @throws NotASocialPostException
      * @throws NoSocialAccountForNetworkException
      * @throws SocialAccountNeedsReconnectException
@@ -53,13 +58,15 @@ final readonly class DiscussionVotes
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function vote(User $user, Entry $entry, VoteScore $score): DiscussionVoteResultModel
+    public function vote(User $user, EntryListRow $row, VoteScore $score): DiscussionVoteResultModel
     {
+        $entry = $row->entry;
         $network = $this->requireVotingNetwork($entry);
         $item = $this->requireItem($entry);
         $account = $this->requireVotingAccount($user, $entry, $item, $network);
 
         $result = $this->selectVoter($network)->castVoteOnPost($account, $entry, $score);
+        $this->localLikes->unlike($user, $row);
 
         return $this->adopt($user, $item, $account, $result);
     }

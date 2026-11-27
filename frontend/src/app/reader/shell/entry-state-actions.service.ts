@@ -89,11 +89,11 @@ export class EntryStateActions implements EntryActionHandler {
     return this.rows.setLiked(entry, isLiked, this.buildLikedMove(entry, isLiked));
   }
 
-  /** Only a move onto or off an up-vote changes what the Liked view holds. */
+  /** The vote replaces a local like, so only an up-vote keeps the entry in Liked. */
   vote(entry: EntryDto, to: VoteValue): Observable<void> {
     const isUp = to === 1;
     const outcome =
-      (entry.myVote === 1) === isUp
+      (entry.myVote === 1 || entry.isLiked) === isUp
         ? { onFailed: (problem: Problem) => this.toast.showProblem(problem) }
         : this.buildLikedMove(entry, isUp);
     return this.rows.setVote(entry, to, outcome);

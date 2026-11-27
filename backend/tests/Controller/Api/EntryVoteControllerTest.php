@@ -10,6 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\VoteScore;
+use App\Repository\EntryStateRepository;
 use App\Service\Content\Comments\CommentsCache;
 use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
@@ -85,6 +86,26 @@ final class EntryVoteControllerTest extends ApiTestCase
         self::assertSame('{"post_id":42,"score":1}', $this->http->requests[0]['body']);
         self::assertSame([VoteScore::Up], $this->storedScores());
         self::assertSame(43, $this->itemScoreOf($entryId));
+    }
+
+    public function testAVoteReplacesALocalLikeGivenBeforeTheAccountWasLinked(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::LIKE => self::fixture('post-like-no-vote.json'),
+        ]);
+        $user = $this->signIn($client, 'vote-replaces-like@example.test');
+        $entryId = $this->persistLemmyPost($user);
+        $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->isLikedLocally($user, $entryId));
+        $reader = $this->entityManager()->find(User::class, $user->requireId());
+        self::assertNotNull($reader);
+        $this->lemmyAccountOf($reader);
+
+        $this->vote($client, $entryId, 0);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->isLikedLocally($user, $entryId));
     }
 
     public function testAVoteOnAFederatedCopyActsOnTheResolvedPost(): void
@@ -489,6 +510,15 @@ final class EntryVoteControllerTest extends ApiTestCase
             static fn (DiscussionVote $vote): VoteScore => $vote->getScore(),
             $this->entityManager()->getRepository(DiscussionVote::class)->findAll(),
         );
+    }
+
+    private function isLikedLocally(User $user, int $entryId): bool
+    {
+        $this->entityManager()->clear();
+        $states = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+
+        return $states->findOneForUserEntry($user->requireId(), $entryId)?->isLiked() ?? false;
     }
 
     private function homeUrlOf(int $entryId): ?string

@@ -597,6 +597,18 @@ describe('EntryStateActions voting (#2218)', () => {
     expect(bumpLiked).not.toHaveBeenCalled();
   });
 
+  it('counts a vote that replaces a local like out of Liked unless it is an up-vote (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0, isLiked: true }), 1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: 0, isLiked: true }), -1);
+    actions.vote(anEntry({ id: 3, score: 3, myVote: 1, isLiked: true }), 0);
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+    outcome(2).onStarted?.();
+
+    expect(bumpLiked.mock.calls).toEqual([[-1], [-1]]);
+  });
+
   it('takes the count back and toasts when the up-vote fails (#2587)', () => {
     actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), 1);
 

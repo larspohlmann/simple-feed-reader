@@ -129,7 +129,7 @@ export class EntryRowCache {
     return this.changeLabel({ entryId, label, attached: false }, request$);
   }
 
-  /** The vote shows at once; its score waits for the answer. */
+  /** The vote shows at once and replaces the entry's local like; its score waits for the answer. */
   setVote(entry: EntryDto, to: VoteValue, outcome: SocialActOutcome): Observable<void> {
     if (
       entry.myVote === null ||
@@ -139,7 +139,7 @@ export class EntryRowCache {
       return EMPTY;
     outcome.onStarted?.();
     return subscribeUntilSettled(
-      this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)),
+      this.optimistic(entry, { myVote: to, isLiked: false }, this.socialPosts.vote(entry.id, to)),
       {
         next: (answer) => {
           this.patch(this.collectCopyIds(entry), (row) => ({
