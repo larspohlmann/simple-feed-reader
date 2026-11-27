@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A second per-user list beside For you, filled every minute from newly ingested entries whose stems match a weighted, AI-derived term list, readable and mark-readable like the combined saved-search list, with a sidebar badge and an opt-in digest section.
+**Goal:** A second per-user list beside For you, filled every minute from newly ingested entries whose stems match a weighted, AI-derived term list, readable and mark-readable like the combined saved-search list, with a sidebar badge.
 
-**Architecture:** A follow-up AI call (its own `InterestTermRun`, on the distillation's connection and call path) turns the stored prose profile into weighted terms per language; they are stemmed with `Foundation/Stemming` and stored with a 30-day rarity. A budgeted sweep modelled on `SavedSearchMembershipSweep` walks settled entries above a per-user mark, stems each once, scores it against every waiting user's terms, and writes hits to `for_you_stream_entry`. Reads, mark-read, tallies and the digest go over that table the way the saved-search ones go over `saved_search_entry`.
+**Architecture:** A follow-up AI call (its own `InterestTermRun`, on the distillation's connection and call path) turns the stored prose profile into weighted terms per language; they are stemmed with `Foundation/Stemming` and stored with a 30-day rarity. A budgeted sweep modelled on `SavedSearchMembershipSweep` walks settled entries above a per-user mark, stems each once, scores it against every waiting user's terms, and writes hits to `for_you_stream_entry`. Reads, mark-read and tallies go over that table the way the saved-search ones go over `saved_search_entry`.
 
 **Tech Stack:** Symfony 8.1 / PHP 8.5, Doctrine ORM + DBAL (MySQL and SQLite), Symfony Scheduler/Messenger, Angular 20 standalone components with signals, Jest, Transloco.
 
@@ -38,20 +38,15 @@ Decisions the spec and the code left open. Each one gives what was decided, why,
    - If wrong: the first sweep after a store sees one tick of unrarified scores (they all stay under the threshold).
 9. **Scoring.** A stem counts once, at its best position (headline 1.0, body 0.5). An entry enters at `MIN_SCORE = 1.5`. If wrong: the stream is too loud or too quiet. The stored scores tell us which, and the fix is one constant.
 10. **The 48-hour window reads `entry.effective_date`** (published, else created) at sweep time. The settle delay is 60 s, as for saved searches. The first mark is the settled ceiling when the user's first term set is stored, and replacing the set keeps the mark. If wrong: an entry with no publish date that is created late enters anyway. That is accepted.
-11. **Read-time scope.** Stream rows are visible only while the user still subscribes to the entry's feed and the subscription, its network and its tags are switched in for For you (`InclusionScopeDql::restrict(…, ForYou)`). The same scope applies to the list, mark-read, counts and the digest, as saved searches do with `inSavedSearches`. If wrong: a feed switched back in reveals its old matches again. That is intended.
+11. **Read-time scope.** Stream rows are visible only while the user still subscribes to the entry's feed and the subscription, its network and its tags are switched in for For you (`InclusionScopeDql::restrict(…, ForYou)`). The same scope applies to the list, mark-read and counts, as saved searches do with `inSavedSearches`. If wrong: a feed switched back in reveals its old matches again. That is intended.
 12. **The list reads the repository straight from the controller**, as `SavedSearchEntriesController` reads `SavedSearchRepository`, with no pass-through service. Mark-read lives in `Service/Library/Reading/ForYouStreamMarkReadService`, because the boundary rule puts mark-read in Reading. Reading names only repositories, so `Reading → Recommendation` never appears.
 13. **One new mark-read endpoint, `POST /api/entries/for-you-stream/mark-read {until}`.** Marking one entry and mark-above-read already write per-entry read state through `/api/entries/{id}/state` and `/api/entries/mark-read-batch`. If wrong: we add a no-op duplicate endpoint later.
 14. **The stream's tally is `{available, unreadCount, entryCount}` in the surface totals.** `available` is "has a term set". The sidebar row shows whenever `available` is true, even after the AI connection is gone, because matching is local. The badge follows the server totals and gets no optimistic patch, as For you does.
-15. **The digest flag.**
-   - The flag is `user_digest_settings.include_for_you_stream`, default false.
-   - `UpdateDigestRequest` gains a required `includeForYouStream`, because the DTO's house rule says "no field has a default". The web client sends the whole config, so it ships in the same PR.
-   - The stream's group comes after the saved-search groups and is capped at `DigestEntryFinder::PER_SEARCH`.
-   - The intro line becomes neutral copy, since a digest may now hold only the stream.
-   - If wrong: a cached old SPA bundle gets one 422 on a digest save until it reloads.
+15. **Dropped: no digest section.** Lars, 2026-11-27: "For you stream should not be in email digest. It's a stream".
 16. **Term runs get no debug-log UI and no `AiRunKind` case.** Their call logs are kept for the newest `RunLogRetention::RUNS` term runs, as `StoryAiRuns` keeps them. If wrong: we add one enum case and one loader arm.
 17. **Matched stems are stored space-joined, highest contribution first, and cut at 255 characters.**
 18. **The list takes the unread switch and the newest/oldest order**, as the combined saved-search list does. Newest is the default.
-19. **The digest settings toggle always shows.** The settings page does not load the sidebar totals.
+19. **Dropped** with Ruling 15.
 20. **The term refresh and the sweep skip inactive accounts** (`ActiveAccountDql`).
 
 ### Where the spec and the code disagree
@@ -87,7 +82,7 @@ Decisions the spec and the code left open. Each one gives what was decided, why,
 1. **A reader whose feeds declare no language.** The term call asks for all four languages, and their entries (no language, cut stems) still match through the cut-form terms. Pinned in Task 4 (`testAReaderWithNoFeedLanguageIsAskedForAllFour`) and Task 6 (`testAnEntryWithoutALanguageMatchesThroughTheCutForm`).
 2. **A sloppy model reply:** an unrequested language, a weight of 0 or 42, a weight given as `"7"`, 80 terms in one language, empty terms. The parser drops or clamps each case and still yields what is usable. Pinned in Task 2.
 3. **The profile regenerates while a term run for the old version is retrying.** The old run is abandoned, a fresh run asks with the new profile, and the attempt counter restarts. Pinned in Task 4 (`testANewProfileOpensAFreshRunInsteadOfContinuingTheOldOne`).
-4. **A feed is switched out of For you after its entries matched.** Its rows leave the list, the unread count, mark-read and the digest. Pinned in Task 8 (`testAFeedSwitchedOutOfForYouHidesItsMatches`), Task 9 and Task 10.
+4. **A feed is switched out of For you after its entries matched.** Its rows leave the list, the unread count and mark-read. Pinned in Task 8 (`testAFeedSwitchedOutOfForYouHidesItsMatches`) and Task 9.
 5. **A newly subscribed feed's back catalogue lands above the mark.** Entries older than 48 h are not matched, and the mark still passes them. Pinned in Task 6 (`testAnEntryPublishedMoreThan48HoursBeforeTheSweepIsSkippedAndPassed`).
 
 ---
@@ -654,66 +649,7 @@ public function testTheCountsPayloadCarriesTheStreamTally(): void     // GET /ap
 
 ### Task 10: The digest section
 
-**Files:**
-- Modify: `backend/src/Entity/DigestSettings.php`, `backend/src/Dto/Me/UpdateDigestRequest.php`, `backend/src/Service/Outbound/Mail/Digest/Model/DigestConfigurationModel.php`, `…/Digest/DigestEnablement.php`, `backend/src/Http/MeJson.php`
-- Create: `…/Digest/Model/DigestGroupSource.php`
-- Modify: `…/Digest/Model/DigestGroupModel.php`, `…/Digest/Model/DigestPageGroupModel.php`, `…/Digest/Factory/DigestPageFactory.php`, `…/Digest/DigestComposer.php`, `…/Digest/DigestEntryFinder.php`, `…/Digest/DigestLinkBuilder.php`, `…/Digest/DigestTextRenderer.php`, `backend/templates/emails/digest/_group.html.twig`, `backend/translations/emails.{de,en,fr,es}.yaml`, `backend/src/Repository/ForYouStreamEntryRepository.php` (add `findUnreadMemberIdsSince`)
-- Create: `backend/migrations/Version20261127150000.php`
-- Test: `…/tests/Service/Outbound/Mail/Digest/DigestComposerTest.php`, `DigestEntryFinderTest.php`, `DigestTextRendererTest.php`, `DigestHtmlRendererTest.php`, `DigestLinkBuilderTest.php`, `DigestEnablementTest.php`, `backend/tests/Controller/Api/DigestSettingsControllerTest.php` (extend all)
-
-**Interfaces:**
-- Consumes: Task 8's scope and `DigestSettingsRepository::forUser(User)`.
-- Produces:
-  - `DigestSettings`: column `include_for_you_stream` (BOOLEAN, default false), with `isForYouStreamIncluded(): bool` and `setForYouStreamIncluded(bool): void`.
-  - `UpdateDigestRequest` gains a required `public bool $includeForYouStream`. `DigestConfigurationModel` gains `bool $includeForYouStream`, and `DigestEnablement::applyTo` sets it.
-  - `MeJson` adds `'includeForYouStream'` to `digest`.
-  - The `DigestGroupSource` enum: `SavedSearch`, `ForYouStream`. `DigestGroupModel` and `DigestPageGroupModel` gain `DigestGroupSource $source` as their last parameter.
-  - `ForYouStreamEntryRepository::findUnreadMemberIdsSince(int $userId, \DateTimeImmutable $since): list<int>`, newest first.
-  - `DigestEntryFinder::findStreamMatchesSince(int $userId, \DateTimeImmutable $since): DigestSearchMatchesModel`, capped at `PER_SEARCH`.
-  - `DigestLinkBuilder::forYouStreamUrl(): string`, which returns `base() . '?view=for-you-stream'`.
-  - The composer appends the stream group last when the flag is set. Its `term` is `''`, its `moreUrl` is `forYouStreamUrl()` and its source is `ForYouStream`.
-  - The renderers and `_group.html.twig` translate `digest.for_you_stream_heading` and `digest.for_you_stream_more_link` for a `ForYouStream` group.
-
-The email copy:
-
-| key | en | de | fr | es |
-|---|---|---|---|---|
-| `digest.intro` | New entries from what you follow, grouped by section. | Neue Einträge aus dem, was Sie verfolgen, nach Bereich gruppiert. | Nouveaux articles de ce que vous suivez, regroupés par rubrique. | Nuevas entradas de lo que sigues, agrupadas por sección. |
-| `digest.for_you_stream_heading` | For you stream (%count%) | Für-dich-Stream (%count%) | Flux Pour vous (%count%) | Flujo Para ti (%count%) |
-| `digest.for_you_stream_more_link` | +%count% more in your For you stream | +%count% weitere in Ihrem Für-dich-Stream | +%count% de plus dans votre flux Pour vous | +%count% más en tu flujo Para ti |
-
-- [ ] **Step 1: Write the failing tests.**
-
-```php
-// DigestComposerTest
-public function testTheStreamIsTheLastGroupWhenIncluded(): void
-{
-    $this->includeStream();
-    $model = $this->composer->compose($this->user, $this->since);
-    $last = array_last($model->groups);
-    self::assertSame(DigestGroupSource::ForYouStream, $last->source);
-    self::assertSame('https://reader.test/?view=for-you-stream', $last->moreUrl);
-}
-public function testTheStreamIsLeftOutWhenNotIncluded(): void
-public function testADigestWithOnlyStreamMatchesIsSent(): void        // compose() is not null with no saved search
-public function testTheStreamContributesAtMostTenEntriesAndCountsTheRest(): void // 14 unread → 10 entries, totalCount 14, hasMore
-public function testReadAndOlderStreamMatchesAreLeftOut(): void
-public function testAFeedSwitchedOutOfForYouLeavesTheDigest(): void
-
-// DigestTextRendererTest / DigestHtmlRendererTest
-public function testTheStreamGroupHasItsOwnHeadingInEachLocale(): void // en "For you stream (3)", de "Für-dich-Stream (3)"
-
-// DigestSettingsControllerTest
-public function testTheStreamFlagIsSavedAndReturned(): void           // PATCH with includeForYouStream true → me.preferences.digest.includeForYouStream true
-public function testAPatchWithoutTheStreamFlagIsUnprocessable(): void // HTTP_UNPROCESSABLE_ENTITY
-```
-
-- [ ] **Step 2: Run the tests and see them fail.** Run `php bin/phpunit tests/Service/Outbound/Mail/Digest tests/Controller/Api/DigestSettingsControllerTest.php`.
-- [ ] **Step 3: Implement the column, the migration (`ALTER TABLE user_digest_settings ADD …` on both platforms), the DTO, the configuration model, `DigestEnablement` and `MeJson`.**
-- [ ] **Step 4: Implement the source enum, the group models, the page factory, the finder, the link builder, the composer, the renderers, the template and the translations.**
-- [ ] **Step 5: Run the tests and see them pass.** Then run `composer cs -- <changed files>` and `composer stan`. Verify the migration on both platforms.
-- [ ] **Step 6: Run the §6 checklist on the changed `PATCH /api/me/digest`:** it still takes a JSON body with bearer auth, and its 422 is problem+json. The digest's new link uses the configurable public base URL.
-- [ ] **Step 7: Commit** with `feat(#2582): an opt-in For you stream section in the digest`.
+Dropped (Lars, 2026-11-27): the stream stays out of the email digest. It was built as a8bc10a0e and reverted.
 
 ### Task 11: Frontend — the stream list and its sidebar row
 
@@ -777,42 +713,7 @@ it('titles and counts the stream list', () => { /* list-heading: title 'For you 
 
 ### Task 12: Frontend — the digest toggle
 
-**Files:**
-- Modify: `frontend/src/app/core/auth/auth.service.ts` (`UserDigestPreferences`), `…/core/preferences/digest-writer.ts`, `…/core/preferences/digest.service.ts`, `…/core/preferences/http-digest-writer.ts`, `…/settings/account/email-section.component.{ts,html}`, `frontend/public/i18n/{de,en,fr,es}.json`
-- Test: `core/preferences/digest.service.spec.ts`, `settings/account/email-section.component.spec.ts` (extend)
-
-**Interfaces:**
-- Consumes: Task 10's `includeForYouStream` in `PATCH /api/me/digest` and in `me.preferences.digest`.
-- Produces:
-  - `DigestConfig.includeForYouStream: boolean` and `UserDigestPreferences.includeForYouStream: boolean` (default false).
-  - `DigestService.includeForYouStream` (a signal) and `setIncludeForYouStream(include: boolean): void`, which writes the whole config.
-  - A settings group `icon="stream"`, titled `settings.email.includedStream`, with one row (`labelFor="digest-for-you-stream"`, an `app-toggle` with `data-testid="digest-for-you-stream"`), placed before the saved-search group.
-  - The test-mail "nothing included" check counts the stream flag.
-
-The UI strings:
-
-| key | en | de | fr | es |
-|---|---|---|---|---|
-| `settings.email.includedStream` | For you stream | Für-dich-Stream | Flux Pour vous | Flujo Para ti |
-| `settings.email.includeForYouStream` | Include the For you stream | Für-dich-Stream einbeziehen | Inclure le flux Pour vous | Incluir el flujo Para ti |
-| `settings.email.includeForYouStreamHint` | New posts that match your interests, once For you knows them. | Neue Beiträge, die zu Ihren Interessen passen, sobald „Für dich“ sie kennt. | Les nouveaux articles qui correspondent à vos centres d'intérêt, dès que Pour vous les connaît. | Las nuevas publicaciones que encajan con tus intereses, en cuanto Para ti los conoce. |
-
-- [ ] **Step 1: Write the failing specs.**
-
-```ts
-it('writes the whole config with the stream flag', () => {
-  service.setIncludeForYouStream(true);
-  expect(writer.write).toHaveBeenCalledWith(expect.objectContaining({ includeForYouStream: true, cadence: 'daily' }));
-});
-it('adopts includeForYouStream false when the account omits it', () => { /* adopt({preferences:{digest:{}}}) */ });
-it('toggles the stream into the digest', () => { /* click [data-testid=digest-for-you-stream] → setIncludeForYouStream(true) */ });
-it('offers the test mail when only the stream is included', () => { /* no saved search included, flag on → send enabled */ });
-```
-
-- [ ] **Step 2: Run the specs and see them fail** (worktree jest command, two spec files).
-- [ ] **Step 3: Implement the types, the service, the writer body, the section and the i18n keys** in all four files.
-- [ ] **Step 4: Run the specs and see them pass.**
-- [ ] **Step 5: Commit** with `feat(#2582): the For you stream toggle in the digest settings`.
+Dropped with Task 10.
 
 ---
 
