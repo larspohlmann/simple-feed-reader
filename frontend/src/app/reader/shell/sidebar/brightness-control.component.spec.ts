@@ -43,6 +43,14 @@ describe('BrightnessControlComponent', () => {
     expect(element(fixture, '.brighter').textContent).toContain('light_mode');
   });
 
+  it('keeps the frame structure the sidebar styles rely on', () => {
+    const fixture = create();
+    expect(element(fixture, '.seg[role=group] > button.end.darker')).not.toBeNull();
+    expect(element(fixture, '.seg > button.bar > .track > .fill')).not.toBeNull();
+    expect(element(fixture, '.seg > button.end.brighter')).not.toBeNull();
+    expect(element(fixture, '.seg > output.sr-only[aria-live=polite]')).not.toBeNull();
+  });
+
   it('half-fills the bar at the dark default', () => {
     expect(fill(create())).toBeCloseTo(50);
   });

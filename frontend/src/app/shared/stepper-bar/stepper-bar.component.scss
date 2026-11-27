@@ -1,0 +1,7 @@
+@use '../../theme/segmented';
+@include segmented.frame;
+@include segmented.stepper-bar;
+
+:host {
+  display: flex;
+}
