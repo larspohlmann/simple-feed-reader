@@ -73,6 +73,7 @@ final readonly class RecommendationSettingsWriter
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
             showScoreAndReasons: $values->showScoreAndReasons,
+            forYouStream: $values->forYouStream,
         );
     }
 }

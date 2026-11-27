@@ -21,6 +21,7 @@ final readonly class RecommendationSettingsValues
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
         public bool $showScoreAndReasons = false,
+        public ?ForYouStreamTuning $forYouStream = null,
     ) {
     }
 }

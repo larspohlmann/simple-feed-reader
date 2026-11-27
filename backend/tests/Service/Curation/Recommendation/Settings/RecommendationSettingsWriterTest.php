@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Settings;
 
+use App\Entity\ForYouStreamTuning;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
+use App\Enum\ForYouStreamPrecision;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
@@ -108,16 +110,57 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(9, $profileSettings->viewedCap);
     }
 
-    private function values(bool $showScoreAndReasons): RecommendationSettingsValues
+    public function testSavingStoresTheStreamTuningThroughTheGuidanceNormalisation(): void
     {
+        $this->writer->save($this->user, $this->values(
+            showScoreAndReasons: false,
+            guidancePrompt: '   ',
+            forYouStream: new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow),
+        ));
+
+        $reloaded = $this->reloaded();
+        self::assertNull($reloaded->values()->guidancePrompt);
+        self::assertFalse($reloaded->getForYouStreamTuning()->isEnabled());
+        self::assertSame(ForYouStreamPrecision::Narrow, $reloaded->getForYouStreamTuning()->getPrecision());
+    }
+
+    public function testSavingWithoutStreamTuningKeepsTheStoredOne(): void
+    {
+        $this->writer->save($this->user, $this->values(
+            showScoreAndReasons: false,
+            forYouStream: new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced),
+        ));
+
+        $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
+
+        $reloaded = $this->reloaded();
+        self::assertTrue($reloaded->values()->showScoreAndReasons);
+        self::assertFalse($reloaded->getForYouStreamTuning()->isEnabled());
+        self::assertSame(ForYouStreamPrecision::Balanced, $reloaded->getForYouStreamTuning()->getPrecision());
+    }
+
+    public function testANewRowStreamsAtTheDefaultPrecision(): void
+    {
+        $tuning = (new RecommendationSettings($this->user))->getForYouStreamTuning();
+
+        self::assertTrue($tuning->isEnabled());
+        self::assertSame(ForYouStreamPrecision::Wide, $tuning->getPrecision());
+    }
+
+    private function values(
+        bool $showScoreAndReasons,
+        string $guidancePrompt = 'Only cats.',
+        ?ForYouStreamTuning $forYouStream = null,
+    ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
-            guidancePrompt: 'Only cats.',
+            guidancePrompt: $guidancePrompt,
             favoritesCap: 10,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
             showScoreAndReasons: $showScoreAndReasons,
+            forYouStream: $forYouStream,
         );
     }
 
