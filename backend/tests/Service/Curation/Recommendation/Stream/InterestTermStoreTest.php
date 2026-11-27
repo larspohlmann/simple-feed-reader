@@ -72,7 +72,8 @@ final class InterestTermStoreTest extends DbTestCase
         $this->entry('old', '2026-11-27T09:00:00');
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
         $set = $this->store->replaceTerms($this->user, $generatedAt, $this->stemsOf('solar'));
-        $this->termSets->advanceMarks([$this->user->requireId()], 42);
+        $advancedMark = $set->matchedUpToEntryId() + 42;
+        $this->termSets->advanceMarks([$this->user->requireId()], $advancedMark);
         $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-27T09:30:00'));
         $this->entityManager->flush();
         $this->entityManager->clear();
@@ -81,7 +82,7 @@ final class InterestTermStoreTest extends DbTestCase
         self::assertNotNull($user);
         $second = $this->store->replaceTerms($user, $generatedAt, $this->stemsOf('wind'));
 
-        self::assertSame(42, $second->matchedUpToEntryId());
+        self::assertSame($advancedMark, $second->matchedUpToEntryId());
         self::assertNull($second->getRaritiesRefreshedAt());
         self::assertEqualsCanonicalizing(
             [StemmingWiring::stemmer()->stem('wind', FeedLanguage::English), 'wind'],

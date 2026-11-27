@@ -299,7 +299,7 @@ final class ForYouStreamSweepTest extends DbTestCase
     {
         $user = $this->subscriber('failing@example.com');
         $this->term($user, 'solar', 2.0);
-        $this->entry('Solar panels');
+        $entry = $this->entry('Solar panels');
         $realWriter = self::getContainer()->get(ForYouStreamMembershipRepository::class);
         self::assertInstanceOf(ForYouStreamMembershipWriterInterface::class, $realWriter);
         $failingAfterInsert = new class ($realWriter) implements ForYouStreamMembershipWriterInterface {
@@ -321,7 +321,7 @@ final class ForYouStreamSweepTest extends DbTestCase
         self::assertFalse($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
         self::assertSame(0, $report->entriesScanned);
-        self::assertSame(0, $this->readMark($user));
+        self::assertSame($entry->requireId() - 1, $this->readMark($user));
         self::assertSame([], $this->readRows($user));
         self::assertCount(1, $logger->records);
         self::assertSame('error', $logger->records[0]['level']);
