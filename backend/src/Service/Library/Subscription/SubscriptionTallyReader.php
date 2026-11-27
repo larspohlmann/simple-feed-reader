@@ -7,10 +7,13 @@ namespace App\Service\Library\Subscription;
 use App\Entity\User;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
+use App\Repository\ForYouStreamEntryRepository;
+use App\Repository\InterestTermSetRepository;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\SocialNotificationRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
+use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
 
@@ -23,6 +26,8 @@ final readonly class SubscriptionTallyReader
         private RecommendationItemRepository $recommendationItems,
         private EntryShareRepository $entryShares,
         private SocialNotificationRepository $socialNotifications,
+        private InterestTermSetRepository $interestTermSets,
+        private ForYouStreamEntryRepository $streamEntries,
     ) {
     }
 
@@ -44,6 +49,20 @@ final readonly class SubscriptionTallyReader
                 $this->unreadCounts->perFeedGroup($userId, $perSubscription),
             ),
             $this->socialNotifications->countUnseenGroups($user),
+            $this->countStream($userId),
+        );
+    }
+
+    private function countStream(int $userId): ForYouStreamTallyModel
+    {
+        if (!$this->interestTermSets->hasForUser($userId)) {
+            return ForYouStreamTallyModel::unavailable();
+        }
+
+        return new ForYouStreamTallyModel(
+            true,
+            $this->streamEntries->countUnreadMembers($userId),
+            $this->streamEntries->countMembers($userId),
         );
     }
 

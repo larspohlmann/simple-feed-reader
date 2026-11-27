@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\ForYouStreamEntry;
+use App\Entity\Subscription;
 use App\Enum\InclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -59,6 +60,25 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
         $this->restrictToMembers($qb, $userId);
 
         return $this->projection->scalarIds($qb);
+    }
+
+    public function countUnreadMembers(int $userId): int
+    {
+        $qb = $this->projection->unreadEntriesQueryBuilder($userId)->select('COUNT(e.id)');
+        $this->restrictToMembers($qb, $userId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countMembers(int $userId): int
+    {
+        $qb = $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->setParameter('user', $userId);
+        $this->restrictToMembers($qb, $userId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     private function restrictToMembers(QueryBuilder $qb, int $userId): void

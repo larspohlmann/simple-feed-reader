@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ForYouStreamEntry;
 use App\Entity\InclusionChange;
+use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -168,6 +172,37 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertIsArray($counts['unreadTotals']);
         self::assertSame(2, $counts['unreadTotals']['allItems']);
         self::assertSame(0, $counts['unreadTotals']['forYou']);
+    }
+
+    public function testTheCountsPayloadCarriesTheStreamTally(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('stream-counter@example.com');
+        $entityManager = $this->entityManager();
+        $at = new \DateTimeImmutable('2026-11-27T08:00:00Z');
+        $feed = new Feed('https://example.com/stream-counts.xml');
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, $at));
+        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entries = [];
+        foreach (['one', 'two', 'three'] as $guid) {
+            $entry = new Entry($feed, $guid, null, $guid, $at, $at);
+            $entityManager->persist($entry);
+            $matchedAt = new \DateTimeImmutable('2026-11-27 12:00:00');
+            $entityManager->persist(new ForYouStreamEntry($user, $entry, $matchedAt, 1.0, 'stem'));
+            $entries[] = $entry;
+        }
+        $state = new EntryState($user, $entries[0]);
+        $state->hide($at);
+        $entityManager->persist($state);
+        $entityManager->flush();
+
+        $client->request('GET', '/api/subscriptions/counts', server: $this->bearerFor($user));
+
+        self::assertResponseIsSuccessful();
+        $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($counts);
+        self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['forYouStream']);
     }
 
     public function testCountsRejectsAnonymous(): void
