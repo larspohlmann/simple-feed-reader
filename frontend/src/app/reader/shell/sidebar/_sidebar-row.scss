@@ -56,8 +56,7 @@
   border-left: 1px solid var(--airy-rule);
 }
 
-// A section's rows under its head: a network's feeds, Favorites' and Kept's labels, saved searches, followed
-// stories. The airy sidebar hangs them --space-5 in on a hairline under the head's lead.
+// The airy sidebar hangs a section's rows --space-5 in on a hairline under the head's lead.
 @mixin sublist {
   .sublist {
     --row-h: var(--sidebar-sub-row-h);
@@ -506,7 +505,6 @@
   }
 }
 
-// A section head led by a glyph: Favorites' star, Kept's bookmark, Saved searches, Followed stories.
 @mixin section-head-glyph {
   .section-head .favicon-slot {
     --icon-lead-self: var(--icon-dense);
