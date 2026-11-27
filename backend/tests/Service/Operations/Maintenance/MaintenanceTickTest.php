@@ -16,6 +16,7 @@ use App\Service\Curation\Recommendation\Run\ForYouSweep;
 use App\Service\Curation\StoryAi\StoryAiSweep;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Logging\Loki\LokiClient;
 use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
@@ -163,7 +164,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
-            $this->registry(),
+            new ManagerReopener($this->registry()),
             self::TICK_WINDOW_SECONDS,
         );
 
@@ -239,7 +240,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
-            $this->registry(),
+            new ManagerReopener($this->registry()),
             self::TICK_WINDOW_SECONDS,
         );
     }
@@ -550,7 +551,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
-            $this->registry(),
+            new ManagerReopener($this->registry()),
             $overrides->windowSeconds,
         );
     }

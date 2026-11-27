@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Maintenance;
 
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
 use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -31,7 +30,7 @@ final readonly class MaintenanceTick
         private iterable $sweeps,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
-        private ManagerRegistry $registry,
+        private ManagerReopener $managerReopener,
         private int $tickWindowSeconds,
     ) {
     }
@@ -49,20 +48,13 @@ final readonly class MaintenanceTick
     {
         $reports = [];
         foreach ($this->sweeps as $name => $sweep) {
-            $this->ensureManagerOpen();
+            $this->managerReopener->ensureManagerOpen();
             $reports[$name] = $sweep->run($deadline);
         }
 
         return MaintenanceSweepsModel::ran($reports);
     }
 
-    private function ensureManagerOpen(): void
-    {
-        $manager = $this->registry->getManager();
-        if ($manager instanceof EntityManagerInterface && !$manager->isOpen()) {
-            $this->registry->resetManager();
-        }
-    }
 
     private function skippedSweeps(): MaintenanceSweepsModel
     {

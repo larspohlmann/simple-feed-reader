@@ -27,6 +27,7 @@ use App\Service\Curation\Trending\StoryMatching;
 use App\Service\Curation\Trending\TrendingGrouping;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use Doctrine\ORM\EntityManagerInterface;
@@ -67,7 +68,7 @@ final class TrendingWiring
             $entityManager->getRepository(User::class),
             $naiveClock,
             new NullLogger(),
-            $registry,
+            new ManagerReopener($registry),
         );
     }
 
