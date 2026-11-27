@@ -11,6 +11,7 @@ use App\Service\Outbound\Image\ImageResizer\ImageResizerInterface;
 use App\Service\Outbound\Image\Model\DownloadedImageModel;
 use App\Service\Outbound\Mail\Digest\DigestImageEmbedder\DigestImageEmbedder;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
@@ -30,7 +31,16 @@ final class DigestImageEmbedderTest extends TestCase
     {
         $list = array_values($cards);
 
-        return new DigestPageModel([new DigestPageGroupModel('t', \count($list), $list, 0, '')], \count($list));
+        $group = new DigestPageGroupModel(
+            't',
+            \count($list),
+            $list,
+            0,
+            '',
+            DigestGroupSource::SavedSearch,
+        );
+
+        return new DigestPageModel([$group], \count($list));
     }
 
     private function embeddedFor(DigestImageSetModel $set, string $url): EmbeddedImageModel

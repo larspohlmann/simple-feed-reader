@@ -63,6 +63,7 @@ final class MeJson
                 'format' => $settings->digest->getFormat()->value,
                 'sendHour' => $settings->digest->getSendHour(),
                 'weekday' => $settings->digest->getWeekday(),
+                'includeForYouStream' => $settings->digest->isForYouStreamIncluded(),
                 'timezone' => $instanceTimezone,
             ],
         ];

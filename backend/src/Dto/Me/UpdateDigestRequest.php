@@ -23,6 +23,7 @@ final readonly class UpdateDigestRequest
         #[Assert\Range(min: 1, max: 7)]
         public int $weekday,
         public DigestFormat $format,
+        public bool $includeForYouStream,
     ) {
     }
 
@@ -34,6 +35,7 @@ final readonly class UpdateDigestRequest
             sendHour: $this->sendHour,
             weekday: $this->weekday,
             format: $this->format,
+            includeForYouStream: $this->includeForYouStream,
         );
     }
 }

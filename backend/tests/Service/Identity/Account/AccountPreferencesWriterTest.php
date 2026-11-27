@@ -94,7 +94,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->changeDigest(
             $user,
-            new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
+            new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text, true),
         );
 
         $settings = StoredUserSettings::digest($this->entityManager, $this->reload($user));
@@ -103,6 +103,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertSame(7, $settings->getSendHour());
         self::assertSame(3, $settings->getWeekday());
         self::assertSame(DigestFormat::Text, $settings->getFormat());
+        self::assertTrue($settings->isForYouStreamIncluded());
     }
 
     public function testAnswerPasskeyOfferPersistsTheAnswer(): void

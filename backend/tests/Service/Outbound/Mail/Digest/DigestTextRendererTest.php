@@ -7,6 +7,7 @@ namespace App\Tests\Service\Outbound\Mail\Digest;
 use App\Service\Outbound\Mail\Digest\DigestTextRenderer;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
@@ -39,7 +40,7 @@ final class DigestTextRendererTest extends TestCase
 
         self::assertStringContainsString('7', $rendered->subject);
 
-        self::assertStringStartsWith('These are new entries matching your saved searches', $rendered->body);
+        self::assertStringStartsWith('New entries from what you follow', $rendered->body);
 
         self::assertStringContainsString('rust (5)', $rendered->body);
         self::assertStringContainsString('golang (2)', $rendered->body);
@@ -62,7 +63,7 @@ final class DigestTextRendererTest extends TestCase
 
         $rendered = $this->renderer->render($model, 'de');
 
-        self::assertStringStartsWith('Das sind neue Einträge', $rendered->body);
+        self::assertStringStartsWith('Neue Einträge aus dem, was Sie verfolgen', $rendered->body);
         self::assertStringContainsString('Einstellungen', $rendered->body);
     }
 
@@ -76,12 +77,35 @@ final class DigestTextRendererTest extends TestCase
     public function testUntitledEntryIsListedByItsFeedName(): void
     {
         $entry = new DigestEntryModel('', 'Rust Blog', '', 'https://example.com/1', null, null, null);
-        $group = new DigestGroupModel('rust', 1, [$entry], false, '');
+        $group = new DigestGroupModel('rust', 1, [$entry], false, '', DigestGroupSource::SavedSearch);
 
         $rendered = $this->renderer->render(new DigestModel([$group], 1), 'en');
 
         self::assertStringContainsString("• Rust Blog\n", $rendered->body);
         self::assertStringNotContainsString('—', $rendered->body);
+    }
+
+    public function testTheStreamGroupHasItsOwnHeadingInEachLocale(): void
+    {
+        $entries = [new DigestEntryModel('Post', 'Blog', '', 'https://example.com/1', null, null, null)];
+        $stream = new DigestGroupModel(
+            '',
+            5,
+            $entries,
+            true,
+            'https://reader.example/?view=for-you-stream',
+            DigestGroupSource::ForYouStream,
+        );
+        $model = new DigestModel([$stream], 5);
+
+        $english = $this->renderer->render($model, 'en')->body;
+        $german = $this->renderer->render($model, 'de')->body;
+
+        self::assertStringContainsString('For you stream (5)', $english);
+        self::assertStringContainsString('+4 more in your For you stream', $english);
+        self::assertStringContainsString('https://reader.example/?view=for-you-stream', $english);
+        self::assertStringContainsString('Für-dich-Stream (5)', $german);
+        self::assertStringContainsString('+4 weitere in Ihrem Für-dich-Stream', $german);
     }
 
     private function twoGroupModel(): DigestModel
@@ -98,12 +122,19 @@ final class DigestTextRendererTest extends TestCase
             ),
             new DigestEntryModel('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null),
         ];
-        $rust = new DigestGroupModel('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
+        $rust = new DigestGroupModel(
+            'rust',
+            5,
+            $rustEntries,
+            true,
+            'https://reader.example/digest?q=rust',
+            DigestGroupSource::SavedSearch,
+        );
 
         $golangEntries = [
             new DigestEntryModel('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null),
         ];
-        $golang = new DigestGroupModel('golang', 2, $golangEntries, false, '');
+        $golang = new DigestGroupModel('golang', 2, $golangEntries, false, '', DigestGroupSource::SavedSearch);
 
         return new DigestModel([$rust, $golang], 7);
     }

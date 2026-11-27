@@ -28,6 +28,7 @@ final readonly class DigestEnablement
         $settings->setSendHour($configuration->sendHour);
         $settings->setWeekday($configuration->weekday);
         $settings->setFormat($configuration->format);
+        $settings->setForYouStreamIncluded($configuration->includeForYouStream);
 
         if ($this->isFirstEnable($wasEnabled, $configuration->enabled, $settings)) {
             $settings->setLastSentAt($this->clock->now());

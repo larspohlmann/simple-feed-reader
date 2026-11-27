@@ -33,6 +33,7 @@ final readonly class DigestPageFactory
                 $cards,
                 $group->totalCount - \count($cards),
                 $group->moreUrl,
+                $group->source,
             );
         }
 

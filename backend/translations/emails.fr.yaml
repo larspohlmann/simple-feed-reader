@@ -15,7 +15,7 @@ admin_pending_approval:
     method_email_password: 'e-mail et mot de passe'
 digest:
     subject: 'Du nouveau dans vos flux : %count% articles'
-    intro: "Voici les nouveaux articles correspondant à vos recherches enregistrées, regroupés par recherche."
+    intro: "Nouveaux articles de ce que vous suivez, regroupés par rubrique."
     group_heading: '%term% (%count%)'
     more: 'Voir plus → %url%'
     footer: 'Gérez votre récapitulatif dans Paramètres → E-mail.'
@@ -24,3 +24,5 @@ digest:
     manage_html: 'Gérez votre récapitulatif dans %link%.'
     manage_link_label: 'Paramètres → E-mail'
     more_link: '+%count% autres dans « %term% »'
+    for_you_stream_heading: 'Flux Pour vous (%count%)'
+    for_you_stream_more_link: '+%count% de plus dans votre flux Pour vous'

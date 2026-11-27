@@ -7,6 +7,7 @@ namespace App\Tests\Service\Outbound\Mail\Digest;
 use App\Service\Outbound\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
@@ -57,6 +58,7 @@ final class DigestHtmlRendererTest extends TestCase
             [$this->card('Thailand-Urlaub', 'https://cdn/1.jpg')],
             7,
             'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
         );
         $page = new DigestPageModel([$group], 10);
         $images = new DigestImageSetModel(
@@ -83,6 +85,7 @@ final class DigestHtmlRendererTest extends TestCase
             [$this->card('No image here', null)],
             0,
             'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
         );
         $page = new DigestPageModel([$group], 1);
         $images = new DigestImageSetModel([], ['https://site/favicon.ico' => 'imgFAV']);
@@ -95,7 +98,14 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testOverflowGroupRendersHeadingAndMoreLinkOnly(): void
     {
-        $group = new DigestPageGroupModel('Bundesliga', 12, [], 12, 'https://reader.example/?q=Bundesliga');
+        $group = new DigestPageGroupModel(
+            'Bundesliga',
+            12,
+            [],
+            12,
+            'https://reader.example/?q=Bundesliga',
+            DigestGroupSource::SavedSearch,
+        );
         $page = new DigestPageModel([$group], 12);
 
         $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
@@ -104,9 +114,39 @@ final class DigestHtmlRendererTest extends TestCase
         self::assertStringContainsString('+12 more in "Bundesliga"', $html);
     }
 
+    public function testTheStreamGroupHasItsOwnHeadingInEachLocale(): void
+    {
+        $group = new DigestPageGroupModel(
+            '',
+            3,
+            [],
+            3,
+            'https://reader.example/?view=for-you-stream',
+            DigestGroupSource::ForYouStream,
+        );
+        $page = new DigestPageModel([$group], 3);
+        $images = new DigestImageSetModel([], []);
+
+        $english = $this->renderer()->render($page, $images, 'en');
+        $german = $this->renderer()->render($page, $images, 'de');
+
+        self::assertStringContainsString('For you stream (3)', $english);
+        self::assertStringContainsString('+3 more in your For you stream', $english);
+        self::assertStringContainsString('href="https://reader.example/?view=for-you-stream"', $english);
+        self::assertStringContainsString('Für-dich-Stream (3)', $german);
+        self::assertStringContainsString('+3 weitere in Ihrem Für-dich-Stream', $german);
+    }
+
     public function testZeroRemainingRendersNoMoreLink(): void
     {
-        $group = new DigestPageGroupModel('Thailand', 1, [], 0, 'https://reader.example/?q=Thailand');
+        $group = new DigestPageGroupModel(
+            'Thailand',
+            1,
+            [],
+            0,
+            'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
+        );
         $page = new DigestPageModel([$group], 1);
 
         $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
@@ -133,7 +173,14 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testGroupHeadingShowsTermAndItsCount(): void
     {
-        $group = new DigestPageGroupModel('Thailand', 10, [], 0, 'https://reader.example/?q=Thailand');
+        $group = new DigestPageGroupModel(
+            'Thailand',
+            10,
+            [],
+            0,
+            'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
+        );
 
         $html = $this->renderer()->render(new DigestPageModel([$group], 10), new DigestImageSetModel([], []), 'en');
 
@@ -158,6 +205,7 @@ final class DigestHtmlRendererTest extends TestCase
             [$this->card('Thailand-Urlaub', 'https://cdn/1.jpg')],
             7,
             'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
         );
         $page = new DigestPageModel([$group], 10);
         $images = new DigestImageSetModel(
@@ -168,7 +216,7 @@ final class DigestHtmlRendererTest extends TestCase
         $html = $this->renderer()->render($page, $images, 'en');
 
         $headerPosition = strpos($html, 'simple feed reader');
-        $introPosition = strpos($html, 'saved searches');
+        $introPosition = strpos($html, 'New entries from what you follow');
         $groupPosition = strpos($html, 'Thailand-Urlaub');
         $footerPosition = strpos($html, 'https://reader.example/settings/email');
 
@@ -219,6 +267,7 @@ final class DigestHtmlRendererTest extends TestCase
             [$this->card('Thailand-Urlaub', null)],
             0,
             'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
         );
         $page = new DigestPageModel([$group], 1);
 
@@ -238,6 +287,7 @@ final class DigestHtmlRendererTest extends TestCase
             [$this->card('<script>alert(1)</script>', null)],
             0,
             'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
         );
         $page = new DigestPageModel([$group], 1);
 
@@ -258,7 +308,14 @@ final class DigestHtmlRendererTest extends TestCase
             null,
             null,
         );
-        $group = new DigestPageGroupModel('Thailand', 1, [$card], 0, 'https://reader.example/?q=Thailand');
+        $group = new DigestPageGroupModel(
+            'Thailand',
+            1,
+            [$card],
+            0,
+            'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
+        );
         $page = new DigestPageModel([$group], 1);
 
         $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
@@ -269,7 +326,14 @@ final class DigestHtmlRendererTest extends TestCase
     public function testUntitledEntryLinksWithTheFeedName(): void
     {
         $cards = [$this->card('', null)];
-        $group = new DigestPageGroupModel('Thailand', 1, $cards, 0, 'https://reader.example/?q=Thailand');
+        $group = new DigestPageGroupModel(
+            'Thailand',
+            1,
+            $cards,
+            0,
+            'https://reader.example/?q=Thailand',
+            DigestGroupSource::SavedSearch,
+        );
         $page = new DigestPageModel([$group], 1);
 
         $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');

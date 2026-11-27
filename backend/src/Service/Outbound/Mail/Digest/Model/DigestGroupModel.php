@@ -13,6 +13,7 @@ final readonly class DigestGroupModel
         public array $entries,
         public bool $hasMore,
         public string $moreUrl,
+        public DigestGroupSource $source,
     ) {
     }
 }

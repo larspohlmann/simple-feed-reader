@@ -33,6 +33,11 @@ final readonly class DigestLinkBuilder
         return $this->base() . '?view=saved-searches';
     }
 
+    public function forYouStreamUrl(): string
+    {
+        return $this->base() . '?view=for-you-stream';
+    }
+
     public function settingsEmailUrl(): string
     {
         return $this->base() . 'settings/email';

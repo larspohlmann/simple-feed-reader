@@ -11,16 +11,17 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
-use App\Repository\SavedSearchEntryRepository;
 use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BuildsDigestComposers;
 use App\Tests\Support\SavedSearchMatchFixture;
 
 /** The "+N more" count stays the pre-cap total, and the newest-first order comes straight from the membership table. */
 final class DigestEntryFinderTest extends DbTestCase
 {
+    use BuildsDigestComposers;
+
     private User $user;
     private Feed $feed;
     private SavedSearch $search;
@@ -130,11 +131,6 @@ final class DigestEntryFinderTest extends DbTestCase
 
     private function finder(): DigestEntryFinder
     {
-        $members = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $members);
-        $entries = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $entries);
-
-        return new DigestEntryFinder($members, $entries);
+        return $this->digestEntryFinder();
     }
 }

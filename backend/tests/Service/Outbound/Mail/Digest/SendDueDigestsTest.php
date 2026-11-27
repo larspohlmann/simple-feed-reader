@@ -8,11 +8,6 @@ use App\Entity\DigestSettings;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestCadence;
-use App\Repository\EntryListRepository;
-use App\Repository\SavedSearchEntryRepository;
-use App\Service\Outbound\Mail\Digest\DigestComposer;
-use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
-use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
@@ -22,7 +17,7 @@ use App\Service\Outbound\Mail\Digest\SendDueDigests;
 use App\Service\Outbound\Mail\MailCapability;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
-use App\Tests\Support\FixedPublicBaseUrl;
+use App\Tests\Support\BuildsDigestComposers;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
@@ -41,6 +36,7 @@ use Symfony\Component\Mailer\Exception\TransportException;
  */
 final class SendDueDigestsTest extends DbTestCase
 {
+    use BuildsDigestComposers;
     use SeedsDigestReaders;
 
     private const string NOW = '2026-08-28T09:30:00Z';
@@ -295,11 +291,7 @@ final class SendDueDigestsTest extends DbTestCase
         return new SendDueDigests(
             $recipients ?? $this->recipients,
             new DigestSchedule('UTC'),
-            new DigestComposer(
-                $this->savedSearches,
-                new DigestEntryFinder($this->members(), $this->entries()),
-                new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
-            ),
+            $this->digestComposer($this->savedSearches),
             $this->mailer,
             $this->mailCapability($mailEnabled),
             new MockClock(self::NOW),
@@ -332,21 +324,5 @@ final class SendDueDigestsTest extends DbTestCase
     private function givenOneMatch(User $user, \DateTimeImmutable $effectiveDate): SavedSearch
     {
         return (new SavedSearchMatchFixture($this->entityManager))->oneMatch($user, 'rust', $effectiveDate);
-    }
-
-    private function members(): SavedSearchEntryRepository
-    {
-        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
-
-        return $repository;
-    }
-
-    private function entries(): EntryListRepository
-    {
-        $repository = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repository);
-
-        return $repository;
     }
 }
