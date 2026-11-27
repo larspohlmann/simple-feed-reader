@@ -41,19 +41,17 @@
   color: var(--accent);
 }
 
-.rename {
+.label-row .rename {
   flex: 1;
-  align-self: center;
   min-width: 0;
-  padding: 0 var(--space-1);
-  border: 1px solid var(--border-strong);
-  border-radius: calc(var(--radius) - var(--space-0));
-  background: var(--surface-0);
-  color: var(--text-primary);
-  font: inherit;
+  height: calc(var(--row-box) - 2 * var(--space-1));
+  margin-block: var(--space-1);
+  padding: 0 var(--space-2);
 }
 
-.rename:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+/* On touch a label row's ⋯ takes the 44px chevron column, so its count lines up with Unlabeled's and the head's. */
+@media (pointer: coarse) {
+  .label-row .dots + .trail {
+    display: none;
+  }
 }

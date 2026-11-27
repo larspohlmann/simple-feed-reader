@@ -1908,10 +1908,10 @@
       "rename": "Umbenennen",
       "delete": "Löschen",
       "deleteTitle": "Label löschen",
-      "deleteConfirmOne": "„{{name}}“ löschen? Es hängt an 1 Artikel.",
-      "deleteConfirmOther": "„{{name}}“ löschen? Es hängt an {{count}} Artikeln.",
-      "toggleFavorites": "Labels in Favoriten ein- oder ausklappen",
-      "toggleKept": "Labels in Gemerkt ein- oder ausklappen",
+      "deleteConfirmOne": "„{{name}}“ löschen? Es ist 1 Artikel zugeordnet.",
+      "deleteConfirmOther": "„{{name}}“ löschen? Es ist {{count}} Artikeln zugeordnet.",
+      "toggleFavorites": "Labels in „Favoriten“ ein- oder ausklappen",
+      "toggleKept": "Labels in „Gemerkt“ ein- oder ausklappen",
       "nameField": "Name des Labels"
     }
   },

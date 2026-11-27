@@ -398,6 +398,33 @@ describe('SidebarCollectionComponent (#2581)', () => {
 
       expect(router.url).toBe('/?view=kept');
     });
+
+    it('shows a failed delete as a toast, keeps the row and stays on the list', async () => {
+      ask.mockReturnValue(of(true));
+      remove.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 500,
+              error: { type: 'server_error', title: 'Broken', status: 500 },
+            }),
+        ),
+      );
+      labels.set([tally(1, 'Home')]);
+      const fixture = mount('favorites', { kind: 'favorites', label: 1 });
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/?view=favorites&label=1');
+      toggle(fixture);
+      openMenu(fixture, 1);
+
+      menuItem(fixture, 'Delete').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }));
+      expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
+      expect(router.url).toBe('/?view=favorites&label=1');
+    });
   });
 
   describe('on a coarse pointer', () => {
@@ -424,6 +451,23 @@ describe('SidebarCollectionComponent (#2581)', () => {
       expect(root(fixture).querySelector<HTMLInputElement>('.label-row .rename')?.value).toBe(
         'Home',
       );
+    });
+
+    it('confirms a delete chosen from the sheet', () => {
+      coarse.set(true);
+      openSheet.mockReturnValue(of('delete'));
+      ask.mockReturnValue(of(true));
+      remove.mockReturnValue(of(undefined));
+      labels.set([tally(1, 'Home', { articleCount: 3 })]);
+      const fixture = mount('favorites');
+      toggle(fixture);
+
+      root(fixture).querySelector<HTMLButtonElement>('.label-row .dots')!.click();
+
+      expect(ask).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Delete “Home”? It's on 3 articles." }),
+      );
+      expect(remove).toHaveBeenCalledWith(1);
     });
   });
 });

@@ -133,16 +133,16 @@ export class SidebarCollectionComponent {
     return `label-${this.collection()}-${label.id}`;
   }
 
-  startRename(label: LabelTally): void {
+  protected startRename(label: LabelTally): void {
     this.rows.closeMenu();
     this.renamingId.set(label.id);
   }
 
-  cancelRename(): void {
+  protected cancelRename(): void {
     this.renamingId.set(null);
   }
 
-  saveRename(label: LabelTally, typed: string): void {
+  protected saveRename(label: LabelTally, typed: string): void {
     const name = typed.trim();
     if (name === '' || name === label.name) {
       this.cancelRename();
@@ -154,7 +154,7 @@ export class SidebarCollectionComponent {
     });
   }
 
-  confirmDelete(label: LabelTally): void {
+  protected confirmDelete(label: LabelTally): void {
     this.rows.closeMenu();
     this.confirm
       .ask({
@@ -171,7 +171,7 @@ export class SidebarCollectionComponent {
       });
   }
 
-  openLabelSheet(label: LabelTally): void {
+  protected openLabelSheet(label: LabelTally): void {
     this.sheet
       .open({
         title: label.name,
