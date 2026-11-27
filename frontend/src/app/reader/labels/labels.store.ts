@@ -3,6 +3,7 @@ import { Observable, map, tap } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { EntryRowCache } from '../state/entry-row-cache';
 import { StaleGatedLoad } from '../state/stale-gated-load';
+import { byLabelName } from './label-order';
 import { LabelsApi } from './labels.api';
 import { LabelPill, LabelTally, UnlabeledTally } from './labels.models';
 
@@ -32,9 +33,14 @@ export class LabelsStore {
 
   reload(): void {
     this.loads.run(this.api.tallies(), (response) => {
-      this.storedLabels.set(response.labels);
+      this.storedLabels.set([...response.labels].sort(byLabelName));
       this.storedUnlabeled.set(response.unlabeled);
     });
+  }
+
+  /** The counts poll's reload (#708), inside the freshness window and with nothing out a no-op. */
+  reloadIfStale(): void {
+    if (this.loads.isStale()) this.reload();
   }
 
   create(name: string): Observable<LabelPill> {

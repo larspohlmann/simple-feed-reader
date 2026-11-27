@@ -13,6 +13,7 @@ import { TagsStore } from '../../state/tags.store';
 import { RefreshService } from '../../state/refresh.service';
 import { EntriesStore } from '../../state/entries.store';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { LabelsStore } from '../../labels/labels.store';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
@@ -45,6 +46,7 @@ describe('ManageActions', () => {
   let closed: unknown;
   let savedSearchesLoad: jest.SpyInstance;
   let loadFollowedStories: jest.SpyInstance;
+  let reloadLabels: jest.SpyInstance;
   const open = jest.fn(() => ({ closed: of(closed) }));
 
   beforeEach(() => {
@@ -64,6 +66,9 @@ describe('ManageActions', () => {
       .mockImplementation(() => undefined);
     loadFollowedStories = jest
       .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
+      .mockImplementation(() => undefined);
+    reloadLabels = jest
+      .spyOn(TestBed.inject(LabelsStore), 'reload')
       .mockImplementation(() => undefined);
     open.mockClear();
   });
@@ -173,6 +178,7 @@ describe('ManageActions', () => {
     service.unsubscribe(sub);
     http.expectOne('https://api.test/api/subscriptions/5').flush(null);
     expect(spy).toHaveBeenCalled();
+    expect(reloadLabels).toHaveBeenCalledTimes(1);
   });
 
   it("unsubscribe: names an unrenamed Home by the Home's label", () => {
@@ -386,6 +392,7 @@ describe('ManageActions', () => {
 
     expect(open).toHaveBeenCalled();
     expect(spy).toHaveBeenCalled();
+    expect(reloadLabels).toHaveBeenCalledTimes(1);
   });
 
   describe('retryFeed', () => {

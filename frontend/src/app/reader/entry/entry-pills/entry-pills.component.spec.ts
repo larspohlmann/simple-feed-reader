@@ -216,13 +216,13 @@ describe('EntryPillsComponent', () => {
 
     const labelPills = (element: HTMLElement) => [...element.querySelectorAll('a.pill.label')];
 
-    it('shows the first three labels and a +1 button for a fourth', () => {
+    it('shows the first three labels by name and a +1 button for a fourth', () => {
       const { element } = mountLabelled(anEntry({ isFavorite: true, labels: labels(4) }));
 
       expect(labelPills(element).map((pill) => pill.querySelector('.name')?.textContent)).toEqual([
         'Alpha',
         'Beta',
-        'Gamma',
+        'Delta',
       ]);
       expect(element.querySelector('button.more')?.textContent?.trim()).toBe('+1');
     });
@@ -233,20 +233,20 @@ describe('EntryPillsComponent', () => {
       expect(element.querySelector('button.more')).toBeNull();
     });
 
-    it('keeps the order the entry delivers', () => {
+    it('orders the labels as the sidebar does, accents aside, whatever order the entry delivers', () => {
       const entry = anEntry({
         isFavorite: true,
         labels: [
-          { id: 9, name: 'Zed' },
-          { id: 2, name: 'Alpha' },
+          { id: 9, name: 'Work' },
+          { id: 2, name: 'À lire plus tard' },
         ],
       });
 
       const { element } = mountLabelled(entry);
 
       expect(labelPills(element).map((pill) => pill.querySelector('.name')?.textContent)).toEqual([
-        'Zed',
-        'Alpha',
+        'À lire plus tard',
+        'Work',
       ]);
     });
 

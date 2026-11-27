@@ -9,7 +9,7 @@ import { AddFeedDialogComponent } from '../../reader/feeds/add-feed/add-feed-dia
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
-import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { SubscriptionReload } from '../../reader/feeds/manage/subscription-reload.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { ActionSheetData } from '../../shared/action-sheet/action-sheet.component';
 import {
@@ -60,7 +60,7 @@ describe('FeedDirectorySubscriber', () => {
   let closed: Subject<SubscriptionDto | undefined>;
   let dialogOpen: jest.Mock;
   let sheetOpen: jest.Mock<Observable<string | undefined>, [ActionSheetData]>;
-  let reloadQuietly: jest.Mock;
+  let afterMembershipChange: jest.Mock;
   let editSubscription: jest.Mock;
   let subscriber: FeedDirectorySubscriber;
   let anchor: HTMLElement;
@@ -72,7 +72,7 @@ describe('FeedDirectorySubscriber', () => {
     closed = new Subject();
     dialogOpen = jest.fn(() => ({ closed }));
     sheetOpen = jest.fn<Observable<string | undefined>, [ActionSheetData]>(() => of(undefined));
-    reloadQuietly = jest.fn();
+    afterMembershipChange = jest.fn();
     editSubscription = jest.fn();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -90,7 +90,7 @@ describe('FeedDirectorySubscriber', () => {
           },
         },
         { provide: ManageActions, useValue: { editSubscription } },
-        { provide: SubscriptionsStore, useValue: { reloadQuietly } },
+        { provide: SubscriptionReload, useValue: { afterMembershipChange } },
       ],
     });
     subscriber = TestBed.inject(FeedDirectorySubscriber);
@@ -138,18 +138,18 @@ describe('FeedDirectorySubscriber', () => {
     expect(sheetOpen).not.toHaveBeenCalled();
   });
 
-  it('reloads the subscriptions once the dialog subscribes', () => {
+  it('reloads the subscriptions and label tallies once the dialog subscribes', () => {
     subscriber.open({ row: ONE, anchor });
     closed.next({ id: 7 } as SubscriptionDto);
 
-    expect(reloadQuietly).toHaveBeenCalledTimes(1);
+    expect(afterMembershipChange).toHaveBeenCalledTimes(1);
   });
 
   it('changes nothing when the dialog is dismissed', () => {
     subscriber.open({ row: ONE, anchor });
     closed.next(undefined);
 
-    expect(reloadQuietly).not.toHaveBeenCalled();
+    expect(afterMembershipChange).not.toHaveBeenCalled();
   });
 
   it('opens the edit dialog for a chosen feed you subscribe to', () => {

@@ -5,6 +5,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+import { byLabelName } from '../../labels/label-order';
 import { LabelMenu } from '../../labels/label-menu.service';
 import { LabelPill } from '../../labels/labels.models';
 import { EntryDto, SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
@@ -54,8 +55,8 @@ export class EntryPillsComponent {
     const entry = this.labelled();
     return entry !== null && (entry.isFavorite || entry.isKept) ? entry : null;
   });
-  protected readonly labelPills = computed<LabelPill[]>(
-    () => this.labelledEntry()?.labels.slice(0, LABELS_SHOWN) ?? [],
+  protected readonly labelPills = computed<LabelPill[]>(() =>
+    [...(this.labelledEntry()?.labels ?? [])].sort(byLabelName).slice(0, LABELS_SHOWN),
   );
   protected readonly hiddenLabelCount = computed(() =>
     Math.max(0, (this.labelledEntry()?.labels.length ?? 0) - LABELS_SHOWN),

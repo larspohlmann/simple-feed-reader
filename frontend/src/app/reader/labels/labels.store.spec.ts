@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../core/api';
 import { LabelsStore } from './labels.store';
 import { LabelTally } from './labels.models';
 import { EntryRowCache } from '../state/entry-row-cache';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 
 const work: LabelTally = { id: 3, name: 'Work', favoriteCount: 2, keptCount: 1, articleCount: 3 };
 const LABELS_URL = 'https://api.test/api/labels';
@@ -38,6 +39,33 @@ describe('LabelsStore (#2581)', () => {
 
     expect(store.labels()).toEqual([work]);
     expect(store.unlabeled()).toEqual({ favoriteCount: 4, keptCount: 5 });
+  });
+
+  it('orders the tallies by name, accents aside, not in the server’s binary order', () => {
+    const later: LabelTally = { ...work, id: 4, name: 'À lire plus tard' };
+    store.reload();
+    answerTallies([work, later]);
+
+    expect(store.labels().map((label) => label.name)).toEqual(['À lire plus tard', 'Work']);
+  });
+
+  it('reloads on a stale tick, not inside the freshness window nor while a load is out', () => {
+    jest.useFakeTimers({ now: new Date('2026-11-27T12:00:00Z') });
+    try {
+      store.reloadIfStale();
+      store.reloadIfStale();
+      answerTallies([work]);
+
+      store.reloadIfStale();
+      ctrl.expectNone(LABELS_URL);
+
+      jest.setSystemTime(Date.now() + SIDEBAR_RELOAD_INTERVAL_MS);
+      store.reloadIfStale();
+      answerTallies([]);
+      expect(store.labels()).toEqual([]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('keeps the last tallies when a reload fails', () => {

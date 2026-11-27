@@ -12,7 +12,7 @@ import {
 import { LayoutService } from '../../reader/layout.service';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionDto } from '../../reader/models';
-import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { SubscriptionReload } from '../../reader/feeds/manage/subscription-reload.service';
 import { ActionSheetItem } from '../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { MENU_VIEWPORT_MARGIN, TOOLBAR_MENU_POSITIONS } from '../../shared/menu-keys';
@@ -29,7 +29,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
   private readonly sheet = inject(ActionSheet);
   private readonly layout = inject(LayoutService);
   private readonly store = inject(FeedDirectoryStore);
-  private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly subscriptionReload = inject(SubscriptionReload);
   private readonly manage = inject(ManageActions);
   private readonly injector = inject(Injector);
   private readonly i18n = inject(TranslocoService);
@@ -64,7 +64,7 @@ export class FeedDirectorySubscriber implements OnDestroy {
       })
       .closed.subscribe((subscription) => {
         if (!subscription) return;
-        this.subscriptions.reloadQuietly();
+        this.subscriptionReload.afterMembershipChange();
       });
   }
 
