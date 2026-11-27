@@ -1,7 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { DestroyRef, Signal, signal } from '@angular/core';
+import { DestroyRef, Signal, inject, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { API_BASE_URL } from '../../core/api';
+import { TokenStore } from '../../core/auth/token.store';
 import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
@@ -1096,11 +1103,88 @@ describe('EntryStateActions moving an entry into and out of each mark (#2587)', 
     expect(isLeaving(9)).toBe(false);
   });
 
+  it("runs the caller's own start along with the move's", () => {
+    const onStarted = jest.fn();
+    const mover = actions as unknown as {
+      buildMarkMove: (
+        entry: EntryDto,
+        patch: EntryStatePatch,
+        outcome: StateSaveOutcome,
+      ) => MoveHooks;
+    };
+
+    mover.buildMarkMove(anEntry({ id: 9 }), { isFavorite: true }, { onStarted }).onStarted?.();
+
+    expect(bumpCount).toHaveBeenCalledWith('favorites', 1);
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
   it.each(cases)('$action stays in a view of another kind', ({ leaves }) => {
     leaves(actions);
 
     lastMove().onStarted?.();
 
     expect(isLeaving(9)).toBe(false);
+  });
+});
+
+describe('EntryStateActions retrying a failed favorite from the banner (#2587)', () => {
+  const bumpCount = jest.fn();
+  let store: EntriesStore;
+  let ctrl: HttpTestingController;
+  let actions: EntryStateActions;
+
+  const failWith500 = (request: TestRequest) =>
+    request.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+  const netFavorites = () =>
+    bumpCount.mock.calls
+      .filter(([mark]) => mark === 'favorites')
+      .reduce((net, [, by]) => net + (by as number), 0);
+
+  beforeEach(() => {
+    bumpCount.mockReset();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        EntryStateActions,
+        provideRouter([]),
+        ListCover,
+        { provide: ListContext, useFactory: () => new TestListContext(inject(EntriesStore)) },
+        { provide: SubscriptionsStore, useValue: { bumpCount } },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: { reload: jest.fn() } },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null) },
+        },
+        { provide: ToastService, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
+      ],
+    });
+    TestBed.inject(TokenStore).set('account-a.jwt');
+    store = TestBed.inject(EntriesStore);
+    ctrl = TestBed.inject(HttpTestingController);
+    actions = TestBed.inject(EntryStateActions);
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [anEntry({ id: 1 })], nextCursor: null });
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('counts the favorite once net when the retry succeeds', () => {
+    actions.favorite(store.entries()[0]);
+    failWith500(ctrl.expectOne('https://api.test/api/entries/1/state'));
+    expect(netFavorites()).toBe(0);
+
+    store.retry();
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({ state: {} });
+
+    expect(netFavorites()).toBe(1);
+    expect(store.entries()[0].isFavorite).toBe(true);
   });
 });
