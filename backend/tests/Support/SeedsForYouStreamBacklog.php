@@ -20,8 +20,8 @@ use App\Service\Curation\Recommendation\Stream\Factory\EntryStemmingFactory;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamScorer;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamSweep;
-use App\Service\Curation\Recommendation\Stream\StreamCeiling;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use Psr\Clock\ClockInterface;
 
 /** One account with one settled entry the For you stream has not yet walked, and a container sweep on a given clock. */
@@ -66,7 +66,7 @@ trait SeedsForYouStreamBacklog
             $sets,
             $terms,
             $entries,
-            new StreamCeiling($entries, $clock),
+            new SettledCeiling($entries, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
             new ForYouStreamChunkMatcher(
                 new ForYouStreamSourceRepository($this->entityManager),

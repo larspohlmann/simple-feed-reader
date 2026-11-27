@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Recommendation\Stream;
+namespace App\Service\Library\Search\Membership;
 
 use App\Repository\EntryMembershipSweepRepository;
 use Psr\Clock\ClockInterface;
 
-final readonly class StreamCeiling
+final readonly class SettledCeiling
 {
+    /** How old an entry must be before it is matched, so an engine's async indexing has landed. */
     public const int SETTLE_SECONDS = 60;
 
     public function __construct(private EntryMembershipSweepRepository $entries, private ClockInterface $clock)

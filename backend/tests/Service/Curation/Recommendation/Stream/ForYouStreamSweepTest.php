@@ -26,10 +26,10 @@ use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamMembershipWriter\ForYouStreamMembershipWriterInterface;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamScorer;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamSweep;
-use App\Service\Curation\Recommendation\Stream\StreamCeiling;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StemmingWiring;
@@ -348,7 +348,7 @@ final class ForYouStreamSweepTest extends DbTestCase
             $sets,
             $terms,
             $entries,
-            new StreamCeiling($entries, $clock),
+            new SettledCeiling($entries, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
             new ForYouStreamChunkMatcher(
                 new ForYouStreamSourceRepository($this->entityManager),

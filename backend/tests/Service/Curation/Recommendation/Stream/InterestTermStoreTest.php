@@ -16,7 +16,7 @@ use App\Service\Curation\Recommendation\Stream\InterestTermStems;
 use App\Service\Curation\Recommendation\Stream\InterestTermStore;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
-use App\Service\Curation\Recommendation\Stream\StreamCeiling;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StemmingWiring;
 use Symfony\Component\Clock\MockClock;
@@ -46,7 +46,7 @@ final class InterestTermStoreTest extends DbTestCase
             $this->entityManager,
             $this->termSets,
             $this->storedTerms,
-            new StreamCeiling($entries, $clock),
+            new SettledCeiling($entries, $clock),
             $clock,
         );
     }

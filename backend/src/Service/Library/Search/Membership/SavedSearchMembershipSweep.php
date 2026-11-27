@@ -27,12 +27,10 @@ final readonly class SavedSearchMembershipSweep
 {
     public const int CHUNK = 500;
 
-    /** How old an entry must be before it is matched, so an engine's async indexing has landed. */
-    public const int SETTLE_SECONDS = 60;
-
     public function __construct(
         private SavedSearchRepository $searches,
         private EntryMembershipSweepRepository $entries,
+        private SettledCeiling $settledCeiling,
         private SavedSearchMembershipWriterInterface $memberships,
         private SavedSearchMatcherInterface $matcher,
         private EntityManagerInterface $entityManager,
@@ -43,24 +41,17 @@ final readonly class SavedSearchMembershipSweep
 
     public function sweep(SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
     {
-        $ceiling = $this->ceiling();
+        $ceiling = $this->settledCeiling->readSettledCeiling();
 
         return $this->walkGroups(self::groupedByMark($this->searches->findBelowMark($ceiling)), $ceiling, $budget);
     }
 
     public function sweepOne(SavedSearch $search, SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
     {
-        $ceiling = $this->ceiling();
+        $ceiling = $this->settledCeiling->readSettledCeiling();
         $mark = $search->matchedUpToEntryId();
 
         return $this->walkGroups($mark < $ceiling ? [$mark => [$search]] : [], $ceiling, $budget);
-    }
-
-    private function ceiling(): int
-    {
-        return $this->entries->settledCeilingId(
-            $this->clock->now()->modify(\sprintf('-%d seconds', self::SETTLE_SECONDS)),
-        );
     }
 
     /**

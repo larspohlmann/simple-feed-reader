@@ -18,8 +18,8 @@ use App\Service\Curation\Recommendation\Stream\InterestTermStore;
 use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
-use App\Service\Curation\Recommendation\Stream\StreamCeiling;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsProfiledAccounts;
@@ -66,7 +66,7 @@ final class InterestTermRefreshStoreFailureTest extends DbTestCase
             $this->entityManager,
             $this->requireFromContainer(InterestTermSetRepository::class),
             $this->requireFromContainer(InterestTermRepository::class),
-            new StreamCeiling($this->requireFromContainer(EntryMembershipSweepRepository::class), $clock),
+            new SettledCeiling($this->requireFromContainer(EntryMembershipSweepRepository::class), $clock),
             $clock,
         ));
     }

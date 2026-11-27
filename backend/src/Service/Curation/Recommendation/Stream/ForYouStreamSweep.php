@@ -14,6 +14,7 @@ use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamSweepReportMode
 use App\Service\Curation\Recommendation\Stream\Pass\StreamSweepPass;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -30,7 +31,7 @@ final readonly class ForYouStreamSweep
         private InterestTermSetRepository $sets,
         private InterestTermRepository $storedTerms,
         private EntryMembershipSweepRepository $entries,
-        private StreamCeiling $ceiling,
+        private SettledCeiling $ceiling,
         private EntryStemmingFactory $stemmingFactory,
         private ForYouStreamChunkMatcher $matcher,
         private ForYouStreamMembershipWriterInterface $memberships,

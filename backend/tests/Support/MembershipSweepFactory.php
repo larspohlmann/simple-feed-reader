@@ -10,6 +10,7 @@ use App\Repository\SavedSearchRepository;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
@@ -34,6 +35,7 @@ final class MembershipSweepFactory
         return new SavedSearchMembershipSweep(
             self::service($container, SavedSearchRepository::class),
             self::service($container, EntryMembershipSweepRepository::class),
+            new SettledCeiling(self::service($container, EntryMembershipSweepRepository::class), $clock),
             $memberships ?? self::service($container, SavedSearchEntryMembershipRepository::class),
             $matcher,
             $entityManager,

@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
+use App\Service\Library\Search\Membership\SettledCeiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -19,7 +20,7 @@ final readonly class InterestTermStore
         private EntityManagerInterface $entityManager,
         private InterestTermSetRepository $termSets,
         private InterestTermRepository $storedTerms,
-        private StreamCeiling $ceiling,
+        private SettledCeiling $ceiling,
         private ClockInterface $clock,
     ) {
     }
