@@ -8,6 +8,7 @@ use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryAuthor;
+use App\Entity\EntryLabel;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryShare;
@@ -16,6 +17,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\InclusionChange;
+use App\Entity\Label;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\NetworkExclusion;
@@ -92,6 +94,9 @@ final readonly class FullyPopulatedAccount
         $entry = $this->entryFor($feed);
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
+        $work = new Label($user, 'Work');
+        $this->entityManager->persist($work);
+        $this->entityManager->persist(new EntryLabel($work, $entry));
         $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-06T10:00:00Z')));
         $this->entityManager->persist(new LinkCard($entry, 0, SharedLinks::of($this->entityManager, new LinkCardContent(
             'https://shared.example/story',

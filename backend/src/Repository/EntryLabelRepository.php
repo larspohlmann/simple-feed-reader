@@ -69,4 +69,79 @@ final class EntryLabelRepository extends ServiceEntityRepository
 
         return $byEntry;
     }
+
+    /**
+     * Moves this user's labels from each source entry onto its target; other users' labels on a source stay put.
+     *
+     * @param array<int, int> $targetByEntryId
+     */
+    public function moveToEntries(int $userId, array $targetByEntryId): void
+    {
+        if ($targetByEntryId === []) {
+            return;
+        }
+
+        $sourceIds = array_keys($targetByEntryId);
+        $labelIdsByTargetId = [];
+        foreach ($this->labelIdPairsOn($userId, $sourceIds) as ['entryId' => $entryId, 'labelId' => $labelId]) {
+            $labelIdsByTargetId[$targetByEntryId[$entryId]][] = $labelId;
+        }
+        $this->addMissing($labelIdsByTargetId);
+
+        $this->getEntityManager()->createQuery(sprintf(
+            'DELETE FROM %s entryLabel WHERE entryLabel.entry IN (:entryIds) '
+            . 'AND entryLabel.label IN (SELECT label.id FROM %s label WHERE label.user = :user)',
+            EntryLabel::class,
+            Label::class,
+        ))
+            ->setParameter('entryIds', $sourceIds)
+            ->setParameter('user', $userId)
+            ->execute();
+    }
+
+    /**
+     * Attaches each label to its entry, skipping a pair already stored or repeated.
+     *
+     * @param array<int, list<int>> $labelIdsByEntryId
+     */
+    public function addMissing(array $labelIdsByEntryId): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $statement = sprintf(
+            'INSERT %s INTO entry_label (label_id, entry_id) VALUES (?, ?)',
+            DatabasePlatform::insertIgnoreClause($connection),
+        );
+        $connection->transactional(static function () use ($connection, $statement, $labelIdsByEntryId): void {
+            foreach ($labelIdsByEntryId as $entryId => $labelIds) {
+                foreach (array_unique($labelIds) as $labelId) {
+                    $connection->executeStatement($statement, [$labelId, $entryId]);
+                }
+            }
+        });
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<array{entryId: int, labelId: int}>
+     */
+    private function labelIdPairsOn(int $userId, array $entryIds): array
+    {
+        /** @var list<array{entryId: int|string, labelId: int|string}> $rows */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(entryLabel.entry) AS entryId', 'label.id AS labelId')
+            ->from(EntryLabel::class, 'entryLabel')
+            ->join('entryLabel.label', 'label')
+            ->where('entryLabel.entry IN (:entryIds)')
+            ->andWhere('label.user = :user')
+            ->setParameter('entryIds', $entryIds)
+            ->setParameter('user', $userId)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(
+            static fn (array $row): array => ['entryId' => (int) $row['entryId'], 'labelId' => (int) $row['labelId']],
+            $rows,
+        );
+    }
 }

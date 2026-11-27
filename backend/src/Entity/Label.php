@@ -14,6 +14,8 @@ final class Label
 {
     use PersistedId;
 
+    public const int NAME_MAX_LENGTH = 60;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -24,7 +26,7 @@ final class Label
     private User $user;
 
     /** `utf8mb4_0900_bin`: byte-exact and NO PAD, like tag names. */
-    #[ORM\Column(length: 60, options: ['collation' => 'utf8mb4_0900_bin'])]
+    #[ORM\Column(length: self::NAME_MAX_LENGTH, options: ['collation' => 'utf8mb4_0900_bin'])]
     private string $name;
 
     public function __construct(User $user, string $name)

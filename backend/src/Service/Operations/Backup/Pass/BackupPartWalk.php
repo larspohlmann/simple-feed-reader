@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Operations\Backup\Pass;
 
 use App\Entity\Entry;
+use App\Repository\EntryLabelRepository;
 use App\Repository\EntryRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
@@ -40,6 +41,7 @@ final class BackupPartWalk
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
         private readonly EntryShareRepository $entryShares,
+        private readonly EntryLabelRepository $entryLabels,
         private readonly LinkCardRepository $linkCards,
         private readonly SavedEntryOriginRepository $savedOrigins,
         private readonly BackupProvenanceModel $provenance,
@@ -99,6 +101,7 @@ final class BackupPartWalk
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
         $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
         $sharedAtByEntryId = $this->entryShares->sharedAtByEntryIds($this->userId, $entryIds);
+        $labelsByEntryId = $this->entryLabels->labelsByEntryIds($this->userId, $entryIds);
         $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
         $originsByEntryId = $this->savedOrigins->originsByEntryIds($entryIds);
 
@@ -113,7 +116,11 @@ final class BackupPartWalk
                     $cardsByEntryId[$entry->requireId()] ?? [],
                     $originsByEntryId[$entry->requireId()] ?? null,
                 ))->toBackupLine(),
-                null !== $state ? EntryStateLine::fromState($state, $feedUrl)->toBackupLine() : null,
+                null !== $state ? EntryStateLine::fromState(
+                    $state,
+                    $feedUrl,
+                    array_column($labelsByEntryId[$entry->requireId()] ?? [], 'name'),
+                )->toBackupLine() : null,
             );
         }
     }

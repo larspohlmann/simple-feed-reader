@@ -22,6 +22,7 @@ use App\Entity\FeedDirectoryScope;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
+use App\Entity\Label;
 use App\Entity\LemmyPost;
 use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
@@ -351,6 +352,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         EntryShare::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+        ],
+        Label::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
     ];

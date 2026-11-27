@@ -6,6 +6,8 @@ namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
+use App\Repository\EntryLabelRepository;
+use App\Repository\LabelRepository;
 use App\Repository\SharedLinkRepository;
 use App\Repository\SharedLinkResolutionRepository;
 use App\Service\Content\LinkCard\SharedLinkWriter;
@@ -14,6 +16,8 @@ use App\Service\Foundation\Url\UrlNormalizer;
 use App\Service\Ingestion\Language\Factory\LanguageDetectionFactory;
 use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\PreviewLanguage;
+use App\Service\Library\Label\EntryLabeling;
+use App\Service\Library\Label\LabelEditor;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -96,6 +100,7 @@ final class RestoreEntryLoaderTest extends TestCase
             null,
             false,
             null,
+            [],
         );
 
         $this->expectException(InvalidBackupException::class);
@@ -120,6 +125,14 @@ final class RestoreEntryLoaderTest extends TestCase
                 new UrlNormalizer(),
                 new PreviewLanguage(new LanguageGuess(new LanguageDetectionFactory()->createForFeedLanguages())),
                 new NaiveUtcClock(new MockClock('2026-08-01 00:00:00', 'UTC')),
+            ),
+            new EntryLabeling(
+                new EntryLabelRepository($this->createStub(ManagerRegistry::class)),
+                new LabelEditor(
+                    new LabelRepository($this->createStub(ManagerRegistry::class)),
+                    $this->createStub(EntityManagerInterface::class),
+                ),
+                $this->createStub(EntityManagerInterface::class),
             ),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
