@@ -584,6 +584,28 @@ final class EntryListTest extends DbTestCase
         self::assertSame(1, $this->repository()->countLikedForUser($this->user->requireId()));
     }
 
+    public function testAReaderWithManyUnlikedEntriesAndTwoLikesCountsTwo(): void
+    {
+        foreach (range(1, 30) as $day) {
+            $this->entryIn($this->feed, 'unliked-' . $day, \sprintf('2026-06-%02dT00:00:00Z', $day));
+        }
+        $this->likeLocally($this->user, $this->entry('locally-liked', '2026-07-05T00:00:00Z'));
+        $this->upvote($this->entry('upvoted', '2026-07-06T00:00:00Z'));
+        $this->entityManager->flush();
+
+        self::assertSame(2, $this->repository()->countLikedForUser($this->user->requireId()));
+    }
+
+    public function testALocallyLikedCopyOfANetworkLikedPostCountsOnce(): void
+    {
+        $post = $this->entry('post', '2026-07-05T00:00:00Z');
+        $this->likeOnTheNetwork($this->user, $post);
+        $this->likeLocally($this->user, $post);
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->repository()->countLikedForUser($this->user->requireId()));
+    }
+
     public function testTheLikedCountLeavesOutALikeInAFeedTheReaderLeft(): void
     {
         $unfollowed = new Feed('https://unfollowed.example.com/feed.xml');
