@@ -140,8 +140,6 @@ function inputDefaults() {
     untagged: [] as SubscriptionDto[],
     socialSections: [] as SocialSection[],
     totalUnread: 0,
-    favoritesCount: 0,
-    keptCount: 0,
     sharedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
@@ -174,8 +172,6 @@ function mount(
     untagged: SubscriptionDto[];
     socialSections: SocialSection[];
     totalUnread: number;
-    favoritesCount: number;
-    keptCount: number;
     sharedCount: number;
     trendingUnopened: TrendingUnopened;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
@@ -248,13 +244,23 @@ describe('SidebarComponent', () => {
     expect(all.classList).toContain('active');
   });
 
-  it('shows favourite and kept totals on their nav items, omitting a zero', () => {
-    const element = mount({ favoritesCount: 5, keptCount: 0 }).nativeElement as HTMLElement;
-    const navs = [...element.querySelectorAll('.nav')];
-    const fav = navs.find((nav) => nav.textContent?.includes('Favorites'))!;
-    const kept = navs.find((nav) => nav.textContent?.includes('Kept'))!;
-    expect(fav.querySelector('.count')?.textContent).toContain('5');
-    expect(kept.querySelector('.count')).toBeNull();
+  it('leaves Favorites and Kept to their own blocks, ahead of the followed stories (#2581)', () => {
+    const fixture = mount();
+    fixture.componentRef.setInput('followedStories', [
+      { id: 1, headline: 'Story', newCount: 0, quiet: false, lastJoinedAt: 'x' },
+    ]);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const viewNames = [...element.querySelectorAll('app-sidebar-views .nav .name')].map((name) =>
+      name.textContent?.trim(),
+    );
+    expect(viewNames).not.toContain('Favorites');
+    expect(viewNames).not.toContain('Kept');
+    const blocks = [
+      ...element.querySelectorAll('app-sidebar-collection, app-sidebar-followed-stories'),
+    ].map((block) => block.querySelector('.label')?.textContent?.trim());
+    expect(blocks).toEqual(['Favorites', 'Kept', 'Followed stories']);
   });
 
   describe('the Shared item (#2007)', () => {
@@ -266,10 +272,10 @@ describe('SidebarComponent', () => {
       expect(navLabels(element)).not.toContain('Shared');
     });
 
-    it('sits right below Kept with its count once something is shared', () => {
+    it('sits right below All items with its count once something is shared', () => {
       const element = mount({ sharedCount: 2 }).nativeElement as HTMLElement;
       const labels = navLabels(element);
-      expect(labels[labels.indexOf('Kept') + 1]).toBe('Shared');
+      expect(labels[labels.indexOf('All items') + 1]).toBe('Shared');
       const shared = [...element.querySelectorAll('.nav')].find((nav) =>
         nav.querySelector('.name')?.textContent?.includes('Shared'),
       )!;

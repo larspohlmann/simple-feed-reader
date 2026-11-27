@@ -1,0 +1,59 @@
+@use 'sidebar-row' as row;
+@include row.card;
+@include row.row-parts;
+@include row.section-head;
+@include row.chevron('.chevzone');
+@include row.dots;
+
+:host {
+  display: contents;
+}
+
+.section-head .favicon-slot {
+  --icon-lead-self: var(--icon-dense);
+}
+
+.section-head:not(.current) .favicon-slot app-icon {
+  color: var(--text-muted);
+}
+
+.label-list {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+}
+
+.label-row {
+  @include row.row-geometry;
+}
+
+@include row.row-link('.nav');
+@include row.row-states('.label-row', '.label-row.active');
+
+.label-row:not(.active) app-icon {
+  color: var(--text-muted);
+}
+
+.label-row.active .nav {
+  color: var(--accent);
+}
+
+.rename {
+  flex: 1;
+  align-self: center;
+  min-width: 0;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius) - var(--space-0));
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.rename:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}

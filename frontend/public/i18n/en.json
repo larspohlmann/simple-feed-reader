@@ -1902,6 +1902,17 @@
     "compose": {
       "button": "New post on {{network}}",
       "reconnect": "Reconnect your {{network}} account to post"
+    },
+    "labels": {
+      "unlabeled": "Unlabeled",
+      "rename": "Rename",
+      "delete": "Delete",
+      "deleteTitle": "Delete label",
+      "deleteConfirmOne": "Delete “{{name}}”? It's on 1 article.",
+      "deleteConfirmOther": "Delete “{{name}}”? It's on {{count}} articles.",
+      "toggleFavorites": "Show or hide the labels in Favorites",
+      "toggleKept": "Show or hide the labels in Kept",
+      "nameField": "Label name"
     }
   },
   "social": {

@@ -1902,6 +1902,17 @@
     "compose": {
       "button": "Nueva publicación en {{network}}",
       "reconnect": "Vuelve a conectar tu cuenta de {{network}} para publicar"
+    },
+    "labels": {
+      "unlabeled": "Sin etiqueta",
+      "rename": "Cambiar nombre",
+      "delete": "Eliminar",
+      "deleteTitle": "Eliminar etiqueta",
+      "deleteConfirmOne": "¿Eliminar “{{name}}”? Está en 1 artículo.",
+      "deleteConfirmOther": "¿Eliminar “{{name}}”? Está en {{count}} artículos.",
+      "toggleFavorites": "Mostrar u ocultar las etiquetas de Favoritos",
+      "toggleKept": "Mostrar u ocultar las etiquetas de Conservados",
+      "nameField": "Nombre de la etiqueta"
     }
   },
   "social": {

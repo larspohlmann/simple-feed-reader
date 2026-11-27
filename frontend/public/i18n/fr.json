@@ -1902,6 +1902,17 @@
     "compose": {
       "button": "Nouvelle publication sur {{network}}",
       "reconnect": "Reconnectez votre compte {{network}} pour publier"
+    },
+    "labels": {
+      "unlabeled": "Sans étiquette",
+      "rename": "Renommer",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer l'étiquette",
+      "deleteConfirmOne": "Supprimer « {{name}} » ? Elle figure sur 1 article.",
+      "deleteConfirmOther": "Supprimer « {{name}} » ? Elle figure sur {{count}} articles.",
+      "toggleFavorites": "Afficher ou masquer les étiquettes des favoris",
+      "toggleKept": "Afficher ou masquer les étiquettes de Mis de côté",
+      "nameField": "Nom de l'étiquette"
     }
   },
   "social": {
