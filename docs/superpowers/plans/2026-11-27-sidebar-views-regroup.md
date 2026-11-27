@@ -135,3 +135,23 @@
 ---
 
 After Task 3 (controller, not a task): screenshots of the real page — desktop and phone, boxed and airy, a list row and magazine cards (including a grouped compact entry) with a liked entry and a count — sent to Lars for sign-off before the final review, `/simplify`, the pre-PR gate run and the PR.
+
+---
+
+### Task 4: The thumb flips without a spinner when no count waits
+
+Lars, 2026-11-27: "When there is no counter to update, the thumbs up button can switch optimistically when clicked, not spinner". The row's `isLiked` is already patched before the request (`EntryRowCache.runLikeAct` → `optimistic`); only `EntryLikeComponent` swaps the icon for `app-pending-dots` while `liking.pending()`.
+
+**Files:**
+- Modify: `frontend/src/app/reader/entry/entry-like/entry-like.component.{ts,html}`
+- Test: `frontend/src/app/reader/entry/entry-like/entry-like.component.spec.ts`
+
+**Interfaces:** none new; `EntryLikeComponent` gains a protected computed deciding whether the pending dots show (`pending() && likes() !== null`).
+
+- [ ] **Step 1: Failing tests**
+  - `it('flips the thumb at once and shows no dots when the entry has no like count')` — local-like entry with `likeCount: null`, handler `like` returning a `Subject` that has not emitted: after the click, no `app-pending-dots`; the `thumb_up` icon is rendered; `aria-busy` is absent. (The fill flip itself comes from the row patch; drive it by setting the entry input to `isLiked: true` and assert `fill`.)
+  - `it('shows the dots while a like count waits for the answer')` — same with `likeCount: 12`: `app-pending-dots` present and `aria-busy="true"` until the subject completes, then the icon returns.
+- [ ] **Step 2: Run** `docker compose exec -T frontend npx jest src/app/reader/entry/entry-like --forceExit`, expect FAIL.
+- [ ] **Step 3: Implement** the computed; the template's `@if` and `[attr.aria-busy]` use it. The click still goes through `liking.run` so a second click during the request stays ignored.
+- [ ] **Step 4: Run**, expect PASS; tsc app+spec, prettier, eslint on the changed files.
+- [ ] **Step 5: Commit** — `feat(#2593): the thumb flips at once when no like count waits for the answer`
