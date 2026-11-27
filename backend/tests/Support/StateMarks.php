@@ -35,9 +35,7 @@ final class StateMarks
 
     public static function markLiked(EntryState $state, \DateTimeImmutable $likedAt): EntryState
     {
-        $marks = $state->marks();
-
-        return self::replaceMarks($state, new EntryMarks($marks->isFavorite, $marks->isKept, $likedAt));
+        return self::replaceMarks($state, $state->marks()->withLikedAt($likedAt));
     }
 
     private static function replaceMarks(EntryState $state, EntryMarks $marks): EntryState
