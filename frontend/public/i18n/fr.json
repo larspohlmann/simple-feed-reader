@@ -1916,7 +1916,9 @@
       "menu": "Libellés",
       "newLabel": "Nouveau libellé…",
       "newLabelTitle": "Nouveau libellé",
-      "filter": "Filtrer les libellés"
+      "filter": "Filtrer les libellés",
+      "filterBy": "Filtrer par le libellé « {{name}} »",
+      "more": "+{{count}} autres libellés"
     }
   },
   "social": {

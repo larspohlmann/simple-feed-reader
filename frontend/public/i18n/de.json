@@ -1916,7 +1916,9 @@
       "menu": "Labels",
       "newLabel": "Neues Label…",
       "newLabelTitle": "Neues Label",
-      "filter": "Labels filtern"
+      "filter": "Labels filtern",
+      "filterBy": "Nach Label „{{name}}“ filtern",
+      "more": "+{{count}} weitere Labels"
     }
   },
   "social": {

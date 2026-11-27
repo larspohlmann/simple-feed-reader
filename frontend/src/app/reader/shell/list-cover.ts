@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Selection } from '../query/query';
 import { ListContext } from '../state/list-context';
 import { ListHeading } from './list-heading.service';
 
@@ -43,4 +44,14 @@ export function onScreen<T>(route: T, pick: (list: CoveringList) => T): Signal<T
  *  route's. */
 export function injectListOnScreen(): Signal<ListContext> {
   return onScreen(inject(ListContext), (list) => list.context);
+}
+
+/** What the list the reader sees lists, or null where no reader shell provides a list (a host mounted on its own). */
+export function injectSelectionOnScreen(): Signal<Selection | null> {
+  const route = inject(ListContext, { optional: true });
+  const cover = inject(ListCover, { optional: true });
+  return computed(() => {
+    const context = cover?.list()?.context ?? route;
+    return context === null ? null : context.selection();
+  });
 }

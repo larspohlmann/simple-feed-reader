@@ -28,11 +28,19 @@
   text-decoration: none;
 }
 
-a.pill {
+button.pill {
+  font: inherit;
+  font-size: var(--fs-xs, 0.72rem);
+  line-height: 1.5;
+}
+
+a.pill,
+button.pill {
   cursor: pointer;
 }
 
-a.pill:hover {
+a.pill:hover,
+button.pill:hover {
   --rim-base: var(--border-strong);
 
   color: var(--text-primary);

@@ -1916,7 +1916,9 @@
       "menu": "Rótulos",
       "newLabel": "Nuevo rótulo…",
       "newLabelTitle": "Nuevo rótulo",
-      "filter": "Filtrar rótulos"
+      "filter": "Filtrar rótulos",
+      "filterBy": "Filtrar por el rótulo «{{name}}»",
+      "more": "+{{count}} rótulos más"
     }
   },
   "social": {
