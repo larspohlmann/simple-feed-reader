@@ -30,8 +30,15 @@ final readonly class RecommendationAnswerBudget
     /** One `{"title": "...", "synopsis": "..."}` reply: a ~90-character title and a ~350-character synopsis. */
     private const int STORY_TITLE_ANSWER_TOKENS = 220;
 
-    /** A full reply is 4 languages x 60 terms at ~18 tokens a `{"language":..,"term":..,"weight":..}` object, ~4300. */
-    private const int INTEREST_TERMS_ANSWER_TOKENS = 5000;
+    private const int INTEREST_TERM_LANGUAGES = 4;
+
+    /** A `{"language":..,"term":..,"weight":..}` object is ~18 tokens; the rest is headroom for a long phrase. */
+    private const int TOKENS_PER_INTEREST_TERM = 21;
+
+    /** A full reply: every language at the per-language term cap, ~5000 tokens. */
+    private const int INTEREST_TERMS_ANSWER_TOKENS = self::INTEREST_TERM_LANGUAGES
+        * RecommendationPromptText::MAX_TERMS_PER_LANGUAGE
+        * self::TOKENS_PER_INTEREST_TERM;
 
     /** The distillation reply: one profile string at the cap DISTILL_ROLE sets. */
     public const int PROFILE_ANSWER_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP

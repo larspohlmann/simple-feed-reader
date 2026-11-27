@@ -32,7 +32,6 @@ final class InterestTermRepositoryTest extends DbTestCase
         self::assertEqualsWithDelta(2.0, $terms->findStrength(FeedLanguage::English, 'solar'), 1e-9);
         self::assertEqualsWithDelta(0.6, $terms->findStrength(null, 'solar'), 1e-9);
         self::assertNull($terms->findStrength(FeedLanguage::German, 'solar'));
-        self::assertTrue($models[$bare->requireId()]->isEmpty());
-        self::assertFalse($terms->isEmpty());
+        self::assertNull($models[$bare->requireId()]->findStrength(FeedLanguage::English, 'solar'));
     }
 }

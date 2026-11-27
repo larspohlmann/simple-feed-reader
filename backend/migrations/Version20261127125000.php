@@ -66,13 +66,13 @@ final class Version20261127125000 extends AbstractMigration
 
     private function upSqlite(): void
     {
-        // INT, not INTEGER: a lone INTEGER primary key is a rowid alias, which Doctrine reads back as auto-increment.
         $this->addSql('CREATE TABLE interest_term (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
             . ' stem VARCHAR(64) NOT NULL, language VARCHAR(2) DEFAULT NULL, weight DOUBLE PRECISION NOT NULL,'
             . ' rarity DOUBLE PRECISION DEFAULT 1 NOT NULL, user_id INTEGER NOT NULL,'
             . ' CONSTRAINT FK_B216701A76ED395 FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE'
             . ' NOT DEFERRABLE INITIALLY IMMEDIATE)');
         $this->addSql('CREATE INDEX idx_interest_term_user ON interest_term (user_id)');
+        // INT, not INTEGER: a lone INTEGER primary key is a rowid alias, which Doctrine reads back as auto-increment.
         $this->addSql('CREATE TABLE interest_term_set (profile_generated_at DATETIME NOT NULL,'
             . ' stored_at DATETIME NOT NULL, rarities_refreshed_at DATETIME DEFAULT NULL,'
             . ' matched_up_to_entry_id INTEGER DEFAULT 0 NOT NULL, user_id INT NOT NULL,'

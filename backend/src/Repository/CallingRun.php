@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** The run a recorded call's liveness, usage and adjustments land on: a recommendation, profile, interest-term or story AI run. */
+/**
+ * The run a recorded call's liveness, usage and adjustments land on: a recommendation, profile, interest-term or
+ * story AI run.
+ */
 final readonly class CallingRun
 {
     private function __construct(public string $table, public string $logOwnerColumn, public int $id)

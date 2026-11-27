@@ -28,9 +28,4 @@ final readonly class InterestTermsModel
     {
         return $this->strengthsByLanguageKey[self::languageKey($language)][$stem] ?? null;
     }
-
-    public function isEmpty(): bool
-    {
-        return array_all($this->strengthsByLanguageKey, static fn (array $strengths): bool => $strengths === []);
-    }
 }
