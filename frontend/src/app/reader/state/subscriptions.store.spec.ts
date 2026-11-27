@@ -30,7 +30,7 @@ import {
   TagDto,
   UnreadTotalsDto,
 } from '../models';
-import { ForYouStreamTallyDto } from '../sidebar-totals';
+import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../sidebar-totals';
 import { TrendingUnopened } from '../trending/trending.models';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
@@ -426,6 +426,24 @@ describe('SubscriptionsStore', () => {
       .flush({ ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }]), forYouStream: tally });
 
     expect(store.forYouStream()).toEqual(tally);
+  });
+
+  it('treats a counts answer without a For you stream tally as unavailable and still applies the rest', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(
+        counts([sub(1, 3)], { forYouStream: { available: true, unreadCount: 3, entryCount: 8 } }),
+      );
+
+    store.reloadCountsQuietly();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+      ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }], { favorites: 9 }),
+      forYouStream: undefined,
+    });
+
+    expect(store.forYouStream()).toEqual(NO_FOR_YOU_STREAM_TALLY);
+    expect(store.favoritesCount()).toBe(9);
   });
 
   it('keeps the same For you stream tally across a counts poll that changed nothing', () => {

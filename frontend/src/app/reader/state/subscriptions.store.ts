@@ -266,7 +266,7 @@ export class SubscriptionsStore {
       // so even an overtaken answer carries the latest.
       this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
       this.trendingUnopened.set(response.trending);
-      this.forYouStream.set(response.forYouStream);
+      this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
       this.storedNotificationCounts.set(notificationCountsFrom(response.notifications));
       // The user changed a feed count while this was on the wire. The server
       // counted before that, so adopting those counts now would put the badge back up.
@@ -285,7 +285,7 @@ export class SubscriptionsStore {
     this.sharedCount.set(response.sharedCount);
     this.viewedCount.set(response.viewedCount);
     this.trendingUnopened.set(response.trending);
-    this.forYouStream.set(response.forYouStream);
+    this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set(response.socialAccounts);
     this.lemmyHosts.set(response.lemmyHosts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
