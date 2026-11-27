@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\ForYouStreamEntry;
 use App\Enum\InclusionSurface;
+use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -66,20 +68,19 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
         return $this->projection->scalarIds($qb);
     }
 
-    public function countUnreadMembers(int $userId): int
+    public function countMembersAndUnread(int $userId): ForYouStreamTallyModel
     {
-        $qb = $this->projection->unreadEntriesQueryBuilder($userId)->select('COUNT(e.id)');
+        $qb = $this->projection->subscribedEntriesQueryBuilder($userId)
+            ->select('COUNT(e.id) AS entryCount')
+            ->addSelect(\sprintf('SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS unreadCount', UnreadDql::predicate()))
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('notHidden', false, Types::BOOLEAN);
         $this->restrictToMembers($qb, $userId);
 
-        return (int) $qb->getQuery()->getSingleScalarResult();
-    }
+        /** @var array{entryCount: int|string, unreadCount: int|string|null} $row */
+        $row = $qb->getQuery()->getSingleResult();
 
-    public function countMembers(int $userId): int
-    {
-        $qb = $this->projection->subscribedEntriesQueryBuilder($userId)->select('COUNT(e.id)');
-        $this->restrictToMembers($qb, $userId);
-
-        return (int) $qb->getQuery()->getSingleScalarResult();
+        return new ForYouStreamTallyModel(true, (int) $row['unreadCount'], (int) $row['entryCount']);
     }
 
     private function restrictToMembers(QueryBuilder $qb, int $userId): void

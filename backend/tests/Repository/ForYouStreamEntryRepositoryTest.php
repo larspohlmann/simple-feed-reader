@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouStreamEntry;
 use App\Entity\Subscription;
@@ -53,8 +54,38 @@ final class ForYouStreamEntryRepositoryTest extends DbTestCase
 
         sort($listed);
         self::assertSame([$memberCopy->requireId(), $earlierMember->requireId()], $listed);
-        self::assertSame(2, $this->streamEntries->countMembers($this->user->requireId()));
-        self::assertSame(2, $this->streamEntries->countUnreadMembers($this->user->requireId()));
+        $tally = $this->streamEntries->countMembersAndUnread($this->user->requireId());
+        self::assertSame([2, 2], [$tally->unreadCount, $tally->entryCount]);
+    }
+
+    public function testTheTallyPicksOneSurvivorPerCopyGroupWhateverItsReadStateAndCountsItsUnreadOnly(): void
+    {
+        $readEarlier = $this->member($this->firstFeed, 'https://example.com/read-first');
+        $this->member($this->secondFeed, 'https://example.com/read-first');
+        $this->member($this->firstFeed, 'https://example.com/unread-first');
+        $readLater = $this->member($this->secondFeed, 'https://example.com/unread-first');
+        $hidden = $this->member($this->firstFeed, 'https://example.com/hidden');
+        $this->member($this->secondFeed, 'https://example.com/unread');
+        foreach ([$readEarlier, $readLater, $hidden] as $read) {
+            $state = new EntryState($this->user, $read);
+            $state->hide(new \DateTimeImmutable('2026-11-27 09:30:00'));
+            $this->entityManager->persist($state);
+        }
+        $this->entityManager->flush();
+
+        $tally = $this->streamEntries->countMembersAndUnread($this->user->requireId());
+
+        self::assertSame([2, 4], [$tally->unreadCount, $tally->entryCount]);
+    }
+
+    private function member(Feed $feed, string $url): Entry
+    {
+        $entry = $this->entry($feed, $url);
+        $this->entityManager->persist(
+            new ForYouStreamEntry($this->user, $entry, new \DateTimeImmutable('2026-11-27 09:00:00'), 1.0, 'stem'),
+        );
+
+        return $entry;
     }
 
     private function subscribedFeed(string $name): Feed

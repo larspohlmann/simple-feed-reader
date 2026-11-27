@@ -59,11 +59,7 @@ final readonly class SubscriptionTallyReader
             return ForYouStreamTallyModel::unavailable();
         }
 
-        return new ForYouStreamTallyModel(
-            true,
-            $this->streamEntries->countUnreadMembers($userId),
-            $this->streamEntries->countMembers($userId),
-        );
+        return $this->streamEntries->countMembersAndUnread($userId);
     }
 
     /** @return array{favorites: int, kept: int, shared: int, viewed: int} */
