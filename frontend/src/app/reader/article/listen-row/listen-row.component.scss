@@ -12,8 +12,9 @@
   );
 
   display: flex;
-  flex: 1;
-  min-width: 0;
+
+  // Against the queue's 1: sharing a line, Listen takes the spare room; wrapped, the queue fills its own.
+  flex: 999 1 auto;
   border-radius: var(--radius);
   color: var(--accent);
   cursor: pointer;
@@ -23,12 +24,13 @@
 
 :host {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 
 .listen.queue {
-  flex: none;
+  flex: 1 1 auto;
 }
 
 .listen.queue.queued {
@@ -47,5 +49,6 @@
 .listen-duration {
   margin-inline-start: auto;
   color: var(--text-secondary);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
