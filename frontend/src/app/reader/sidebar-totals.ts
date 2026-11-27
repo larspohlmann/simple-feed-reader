@@ -1,3 +1,4 @@
+import { WritableSignal, signal } from '@angular/core';
 import { FeedGroupName } from '../core/feed-group';
 import { SocialNetworkName } from '../core/social-network';
 import { TrendingUnopened } from './trending/trending.models';
@@ -36,6 +37,11 @@ export function sameForYouStreamTally(
     left.unreadCount === right.unreadCount &&
     left.entryCount === right.entryCount
   );
+}
+
+/** A signal that notifies only when the tally changed, so a poll that found the same counts redraws nothing. */
+export function createForYouStreamSignal(): WritableSignal<ForYouStreamTallyDto> {
+  return signal(NO_FOR_YOU_STREAM_TALLY, { equal: sameForYouStreamTally });
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed

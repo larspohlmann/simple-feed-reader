@@ -27,11 +27,7 @@ import {
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
-import {
-  ForYouStreamTallyDto,
-  NO_FOR_YOU_STREAM_TALLY,
-  sameForYouStreamTally,
-} from '../sidebar-totals';
+import { NO_FOR_YOU_STREAM_TALLY, createForYouStreamSignal } from '../sidebar-totals';
 import { TrendingUnopened } from '../trending/trending.models';
 import { NO_TRENDING_UNOPENED, sameTrendingUnopened } from '../trending/trending-window';
 import { TrendingWindowService } from '../trending/trending-window.service';
@@ -76,9 +72,7 @@ export class SubscriptionsStore {
   readonly trendingUnopened = signal<TrendingUnopened>(NO_TRENDING_UNOPENED, {
     equal: sameTrendingUnopened,
   });
-  readonly forYouStream = signal<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY, {
-    equal: sameForYouStreamTally,
-  });
+  readonly forYouStream = createForYouStreamSignal();
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly lemmyHosts = signal<readonly string[]>([]);
   readonly loading = signal(false);
