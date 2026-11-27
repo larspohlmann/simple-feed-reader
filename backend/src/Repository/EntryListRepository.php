@@ -12,7 +12,6 @@ use App\Entity\EntryState;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Enum\EntryView;
-use App\Enum\VoteScore;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
@@ -116,16 +115,16 @@ final class EntryListRepository extends ServiceEntityRepository
     private function findLikedEntryIds(int $userId): array
     {
         $likeRows = [
-            $this->buildLikedEntryQuery(EntryState::class, 'liked.entry = e')->andWhere('liked.likedAt IS NOT NULL'),
+            $this->buildLikedEntryQuery(EntryState::class, 'liked.entry = e')
+                ->andWhere(EntryLikeDql::buildLocalLikeCondition('liked')),
             $this->buildLikedEntryQuery(SocialLike::class, 'e.canonicalItem = liked.canonicalItem'),
             $this->buildLikedEntryQuery(DiscussionVote::class, 'e.canonicalItem = liked.canonicalItem')
-                ->andWhere('liked.score = :up')
-                ->setParameter('up', VoteScore::Up->value),
+                ->andWhere(EntryLikeDql::buildUpvoteCondition('liked')),
         ];
-        $entryIds = [];
-        foreach ($likeRows as $qb) {
-            $entryIds = [...$entryIds, ...$this->projection->scalarIds($qb->setParameter('user', $userId))];
-        }
+        $entryIds = array_merge(...array_map(
+            fn (QueryBuilder $qb): array => $this->projection->scalarIds($qb->setParameter('user', $userId)),
+            $likeRows,
+        ));
 
         return array_values(array_unique($entryIds));
     }

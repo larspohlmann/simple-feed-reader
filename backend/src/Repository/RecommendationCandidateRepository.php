@@ -94,7 +94,7 @@ final readonly class RecommendationCandidateRepository
             . ' AND NOT %2$s AND NOT %3$s',
             $aliases->state,
             EntryShareDql::exists($aliases),
-            EntryLikeDql::exists($aliases),
+            EntryLikeDql::existsOnJoinedState($aliases),
         ));
         $inner->andWhere(\sprintf('%s.dates.effectiveDate >= :since', $aliases->entry));
     }
