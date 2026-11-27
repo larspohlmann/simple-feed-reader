@@ -180,6 +180,7 @@ export class EntryStateActions implements EntryActionHandler {
       onStarted: () => {
         bump(1);
         if (leaves) list.markLeaving(entry.id);
+        outcome.onStarted?.();
       },
       onSaved: outcome.onSaved,
       onFailed: (problem) => {
