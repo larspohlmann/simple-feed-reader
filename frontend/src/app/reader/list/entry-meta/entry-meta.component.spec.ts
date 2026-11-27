@@ -155,6 +155,23 @@ describe('EntryMetaComponent', () => {
     expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
+  describe('label pills (#2581)', () => {
+    const favorite = anEntry({ isFavorite: true, labels: [{ id: 3, name: 'Work' }] });
+
+    it('shows the labels of a favorite', () => {
+      const element = mount([], favorite).nativeElement as HTMLElement;
+      expect(element.querySelector('a.pill.label')?.textContent).toContain('Work');
+    });
+
+    it('shows none when its host turns them off', () => {
+      const fixture = mount([], favorite);
+      fixture.componentRef.setInput('labelsShown', false);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('a.pill.label')).toBeNull();
+    });
+  });
+
   it('still renders the actions when the entry has no tags', () => {
     const element = mount([]).nativeElement as HTMLElement;
     expect(element.querySelector('.pill')).toBeNull();

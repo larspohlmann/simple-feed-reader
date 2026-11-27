@@ -15,7 +15,7 @@
       <p class="dek">{{ snippet() }}</p>
     }
     @if (showSource()) {
-      <app-entry-meta [entry]="entry()" [tags]="tags()" />
+      <app-entry-meta [entry]="entry()" [tags]="tags()" [labelsShown]="false" />
       <app-more-sources [entry]="entry()" />
     }
   </div>

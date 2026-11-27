@@ -81,6 +81,14 @@ describe('EntryCompactComponent', () => {
     expect(mountInDigest(entry).querySelector('.pill.short')).toBeNull();
   });
 
+  it('carries no label pills, even on a labelled favorite (#2581)', () => {
+    const labelled = { ...entry, isFavorite: true, labels: [{ id: 3, name: 'Work' }] };
+    const element = mount(labelled).nativeElement as HTMLElement;
+
+    expect(element.querySelector('app-entry-meta')).not.toBeNull();
+    expect(element.querySelector('a.pill.label')).toBeNull();
+  });
+
   it('renders the source and title', () => {
     const element = mount().nativeElement as HTMLElement;
     expect(element.textContent).toContain('One-liner headline');

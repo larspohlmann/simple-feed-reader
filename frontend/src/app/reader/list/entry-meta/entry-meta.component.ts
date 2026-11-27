@@ -40,6 +40,7 @@ export class EntryMetaComponent {
   readonly tags = input<SubscriptionTagDto[]>([]);
   readonly imageShown = input(false);
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
+  readonly labelsShown = input(true);
   protected readonly actions = inject(EntryActionHandler);
   protected readonly voteOnEntry = (to: VoteValue): Observable<void> =>
     this.actions.vote(this.entry(), to);
