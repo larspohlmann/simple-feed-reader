@@ -166,9 +166,9 @@ final class SearchFeedEditorTest extends DbTestCase
         $gone = $this->post($subscription, 'gone', '<p>An rss gazette</p>', null)->requireId();
         $alsoGone = $this->post($subscription, 'also-gone', '<p>rss and atom</p>', null)->requireId();
         $favourite = $this->state($this->post($subscription, 'favourite', '<p>rss gazette</p>', null));
-        StateMarks::favorite($favourite);
+        StateMarks::markFavorite($favourite);
         $kept = $this->state($this->post($subscription, 'kept', '<p>rss gazette</p>', null));
-        StateMarks::kept($kept);
+        StateMarks::markKept($kept);
         $this->entityManager->flush();
 
         $this->editor()->requery($subscription, '"rss reader" -gazette');

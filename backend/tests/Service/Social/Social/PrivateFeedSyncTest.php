@@ -443,7 +443,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         $this->stampAnHourAgo();
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
-        StateMarks::unfavorite($state);
+        StateMarks::clearFavorite($state);
         $logger = new RecordingLogger();
         $network = new StubSocialCandidates(self::noCandidates(), new \LogicException('Unexpected answer shape.'));
 
@@ -549,7 +549,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     private function favouriteIn(Feed $feed, string $guid): Entry
     {
         $entry = SavedPostFixtures::entry($this->entityManager, $feed, $guid, null);
-        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         $this->entityManager->flush();
 
         return $entry;

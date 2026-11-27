@@ -45,7 +45,7 @@ final class AccountBackupControllerTest extends ApiTestCase
         );
         $entityManager->persist($entry);
         $state = new EntryState($user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $entityManager->persist($state);
         $entityManager->flush();
     }

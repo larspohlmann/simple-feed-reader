@@ -74,13 +74,13 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entryE = $this->entry('E', '2026-07-14T00:00:00Z');
 
         $stateA = new EntryState($this->user, $entryA);
-        StateMarks::favorite($stateA);
-        StateMarks::kept($stateA);
+        StateMarks::markFavorite($stateA);
+        StateMarks::markKept($stateA);
         $stateA->markViewed(new \DateTimeImmutable('2026-07-10T09:00:00Z'));
         $this->entityManager->persist($stateA);
 
         $stateB = new EntryState($this->user, $entryB);
-        StateMarks::kept($stateB);
+        StateMarks::markKept($stateB);
         $stateB->markViewed(new \DateTimeImmutable('2026-07-11T09:00:00Z'));
         $this->entityManager->persist($stateB);
 
@@ -89,7 +89,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->entityManager->persist($stateC);
 
         $stateE = new EntryState($this->user, $entryE);
-        StateMarks::favorite($stateE);
+        StateMarks::markFavorite($stateE);
         $this->entityManager->persist($stateE);
 
         $this->entityManager->flush();
@@ -118,7 +118,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     public function testAFavoriteThatIsAlsoSharedAppearsInFavoritesOnly(): void
     {
         $state = $this->sharedState('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -131,7 +131,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     public function testASharedAndKeptEntryAppearsInSharedNotKept(): void
     {
         $state = $this->sharedState('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z');
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -182,7 +182,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     public function testALikedAndKeptEntryAppearsInLikedNotKept(): void
     {
         $state = new EntryState($this->user, $this->likeEntry('Both', '2026-07-10T00:00:00Z', '2026-07-12T00:00:00Z'));
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -215,7 +215,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->entityManager->persist($stateC);
 
         $stateB = new EntryState($this->user, $entryB);
-        StateMarks::kept($stateB);
+        StateMarks::markKept($stateB);
         $stateB->markViewed(new \DateTimeImmutable('2026-07-15T11:00:00Z'));
         $this->entityManager->persist($stateB);
 
@@ -234,9 +234,9 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     {
         foreach (['A', 'B', 'C'] as $index => $guid) {
             $favorite = new EntryState($this->user, $this->entry('F' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
-            StateMarks::favorite($favorite);
+            StateMarks::markFavorite($favorite);
             $kept = new EntryState($this->user, $this->entry('K' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
-            StateMarks::kept($kept);
+            StateMarks::markKept($kept);
             $viewed = new EntryState($this->user, $this->entry('V' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
             $viewed->markViewed(new \DateTimeImmutable('2026-07-15T1' . $index . ':00:00Z'));
             $this->entityManager->persist($favorite);
@@ -278,7 +278,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->subscription->setCustomTitle('My Custom Feed');
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -293,7 +293,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry->recordText($entry->getText()->withSummary('Summary text'));
         $entry->recordText($entry->getText()->withContentHtml('<p>Content text</p>'));
         $state = new EntryState($this->user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -306,7 +306,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     {
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -320,7 +320,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->feed->setTitle('');
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -338,7 +338,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         self::assertInstanceOf(LinkCardRepository::class, $cards);
         $cards->append($post, [SharedLinks::of($this->entityManager, $content)]);
         $state = new EntryState($this->user, $post);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

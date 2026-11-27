@@ -43,16 +43,16 @@ final class StateCountsTest extends DbTestCase
         $this->entityManager->persist(new Subscription($user, $feed, $when));
 
         $favorite = new EntryState($user, $this->entry($feed, 'fav'));
-        StateMarks::favorite($favorite);
+        StateMarks::markFavorite($favorite);
         $this->entityManager->persist($favorite);
 
         $kept = new EntryState($user, $this->entry($feed, 'kept'));
-        StateMarks::kept($kept);
+        StateMarks::markKept($kept);
         $this->entityManager->persist($kept);
 
         $both = new EntryState($user, $this->entry($feed, 'both'));
-        StateMarks::favorite($both);
-        StateMarks::kept($both);
+        StateMarks::markFavorite($both);
+        StateMarks::markKept($both);
         $this->entityManager->persist($both);
 
         // Opened, so it counts as viewed but neither favourite nor kept.
@@ -108,8 +108,8 @@ final class StateCountsTest extends DbTestCase
         $feed = new Feed('https://example.com/unsub.xml');
         $this->entityManager->persist($feed);
         $orphan = new EntryState($user, $this->entry($feed, 'orphan'));
-        StateMarks::favorite($orphan);
-        StateMarks::kept($orphan);
+        StateMarks::markFavorite($orphan);
+        StateMarks::markKept($orphan);
         $orphan->markViewed($when);
         $this->entityManager->persist($orphan);
         $this->entityManager->flush();
@@ -134,7 +134,7 @@ final class StateCountsTest extends DbTestCase
 
         $entry = $this->entry($feed, 'shared');
         $theirs = new EntryState($other, $entry);
-        StateMarks::favorite($theirs);
+        StateMarks::markFavorite($theirs);
         $theirs->markViewed($when);
         $this->entityManager->persist($theirs);
         $this->entityManager->flush();
@@ -157,7 +157,7 @@ final class StateCountsTest extends DbTestCase
             $this->entityManager->persist(new Subscription($user, $feed, $when));
             $state = new EntryState($user, $this->entry($feed, 'opened-favorite-' . $feed->getUrl()));
             $state->markViewed($when);
-            StateMarks::favorite($state);
+            StateMarks::markFavorite($state);
             $this->entityManager->persist($state);
         }
         $this->entityManager->flush();

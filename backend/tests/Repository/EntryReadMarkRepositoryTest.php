@@ -97,8 +97,8 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         $first = $this->persistCopy($this->swept, 'first', $item);
         $second = $this->persistCopy($this->other, 'second', $item);
         $marked = new EntryState($this->user, $second);
-        StateMarks::favorite($marked);
-        StateMarks::kept($marked);
+        StateMarks::markFavorite($marked);
+        StateMarks::markKept($marked);
         $this->entityManager->persist($marked);
         $this->entityManager->flush();
 

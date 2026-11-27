@@ -58,8 +58,8 @@ final class SavedPostRepositoryTest extends DbTestCase
         $favourite = $this->entry($feed, 'fav', 'https://flagged.example/1');
         $kept = $this->entry($feed, 'kept', null);
         $readOnly = $this->entry($feed, 'read', 'https://flagged.example/3');
-        StateMarks::favorite($this->state($favourite));
-        StateMarks::kept($this->state($kept));
+        StateMarks::markFavorite($this->state($favourite));
+        StateMarks::markKept($this->state($kept));
         $this->state($readOnly)->hide(new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
 
@@ -396,12 +396,12 @@ final class SavedPostRepositoryTest extends DbTestCase
         $feed = $this->subscribedFeed('https://shared-feed.example/feed.xml');
         $mine = $this->entry($feed, 'mine', 'https://shared-feed.example/1');
         $theirs = $this->entry($feed, 'theirs', 'https://shared-feed.example/2');
-        StateMarks::favorite($this->state($mine));
+        StateMarks::markFavorite($this->state($mine));
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $other = (new UserFactory($this->entityManager, $hasher))->create('saved-posts-other@example.test');
         $otherState = new EntryState($other, $theirs);
-        StateMarks::kept($otherState);
+        StateMarks::markKept($otherState);
         $this->entityManager->persist($otherState);
         $this->entityManager->flush();
 

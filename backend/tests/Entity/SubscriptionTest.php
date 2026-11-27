@@ -149,8 +149,8 @@ final class SubscriptionTest extends DbTestCase
         $this->entityManager->flush();
 
         $state = new EntryState($user, $entry);
-        StateMarks::favorite($state);
-        StateMarks::kept($state);
+        StateMarks::markFavorite($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
         $this->entityManager->clear();

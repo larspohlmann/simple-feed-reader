@@ -89,7 +89,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $favorited);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -102,7 +102,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $kept);
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -138,7 +138,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $liked = $this->entry('locally-liked', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $liked);
-        StateMarks::liked($state, new \DateTimeImmutable('2026-07-11T00:00:00Z'));
+        StateMarks::markLiked($state, new \DateTimeImmutable('2026-07-11T00:00:00Z'));
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -214,8 +214,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $untouched);
-        StateMarks::unfavorite($state);
-        StateMarks::unkept($state);
+        StateMarks::clearFavorite($state);
+        StateMarks::clearKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

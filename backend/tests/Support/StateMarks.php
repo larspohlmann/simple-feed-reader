@@ -11,41 +11,38 @@ final class StateMarks
 {
     private function __construct()
     {
-        // Static helpers only; never instantiated.
     }
 
-    public static function favorite(EntryState $state): EntryState
+    public static function markFavorite(EntryState $state): EntryState
     {
-        $state->replaceMarks($state->marks()->withFavorite(true));
-
-        return $state;
+        return self::replaceMarks($state, $state->marks()->withFavorite(true));
     }
 
-    public static function unfavorite(EntryState $state): EntryState
+    public static function clearFavorite(EntryState $state): EntryState
     {
-        $state->replaceMarks($state->marks()->withFavorite(false));
-
-        return $state;
+        return self::replaceMarks($state, $state->marks()->withFavorite(false));
     }
 
-    public static function kept(EntryState $state): EntryState
+    public static function markKept(EntryState $state): EntryState
     {
-        $state->replaceMarks($state->marks()->withKept(true));
-
-        return $state;
+        return self::replaceMarks($state, $state->marks()->withKept(true));
     }
 
-    public static function unkept(EntryState $state): EntryState
+    public static function clearKept(EntryState $state): EntryState
     {
-        $state->replaceMarks($state->marks()->withKept(false));
-
-        return $state;
+        return self::replaceMarks($state, $state->marks()->withKept(false));
     }
 
-    public static function liked(EntryState $state, \DateTimeImmutable $when): EntryState
+    public static function markLiked(EntryState $state, \DateTimeImmutable $likedAt): EntryState
     {
         $marks = $state->marks();
-        $state->replaceMarks(new EntryMarks($marks->isFavorite, $marks->isKept, $when));
+
+        return self::replaceMarks($state, new EntryMarks($marks->isFavorite, $marks->isKept, $likedAt));
+    }
+
+    private static function replaceMarks(EntryState $state, EntryMarks $marks): EntryState
+    {
+        $state->replaceMarks($marks);
 
         return $state;
     }

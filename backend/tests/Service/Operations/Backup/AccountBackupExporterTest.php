@@ -137,7 +137,7 @@ final class AccountBackupExporterTest extends DbTestCase
         $entry->recordText($entry->getText()->withContentHtml('<p>body</p>'));
         $this->entityManager->persist($entry);
         $state = new EntryState($user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
         $this->entityManager->persist($state);
         $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-04T00:00:00Z')));
@@ -248,7 +248,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->entityManager->persist($subscribedEntry);
         $subscribedState = new EntryState($user, $subscribedEntry);
-        StateMarks::favorite($subscribedState);
+        StateMarks::markFavorite($subscribedState);
         $this->entityManager->persist($subscribedState);
 
         // No subscription for this feed: the state SubscriptionService::unsubscribe() leaves, which keeps entry_state.
@@ -264,7 +264,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->entityManager->persist($orphanEntry);
         $orphanState = new EntryState($user, $orphanEntry);
-        StateMarks::favorite($orphanState);
+        StateMarks::markFavorite($orphanState);
         $this->entityManager->persist($orphanState);
 
         $this->entityManager->flush();

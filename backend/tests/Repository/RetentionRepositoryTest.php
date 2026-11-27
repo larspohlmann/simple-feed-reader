@@ -43,8 +43,8 @@ final class RetentionRepositoryTest extends DbTestCase
         $readIds = $this->idsOf([$plain, $read, $favourite, $kept, $shared]);
         $now = new \DateTimeImmutable(self::FETCHED_AT);
         $this->state($read)->hide($now);
-        StateMarks::favorite($this->state($favourite));
-        StateMarks::kept($this->state($kept));
+        StateMarks::markFavorite($this->state($favourite));
+        StateMarks::markKept($this->state($kept));
         $this->entityManager->persist(new EntryShare($this->user, $shared, $now));
         $this->entityManager->flush();
 

@@ -284,10 +284,10 @@ final class AccountRestorerTest extends DbTestCase
 
         $read = new EntryState($user, $entryA);
         $read->hide(new \DateTimeImmutable('2026-08-05 10:00:00'));
-        StateMarks::favorite($read);
+        StateMarks::markFavorite($read);
         $this->entityManager->persist($read);
         $viewed = new EntryState($user, $entryC);
-        StateMarks::kept($viewed);
+        StateMarks::markKept($viewed);
         $viewed->markViewed(new \DateTimeImmutable('2026-08-06 11:00:00'));
         $this->entityManager->persist($viewed);
 
@@ -1134,7 +1134,7 @@ final class AccountRestorerTest extends DbTestCase
         for ($index = 0; $index < $entryCount; ++$index) {
             $entry = $this->makeEntry($feed, 'wide-guid-' . $index, 'Wide ' . $index, '2026-08-02');
             $state = new EntryState($user, $entry);
-            StateMarks::favorite($state);
+            StateMarks::markFavorite($state);
             $this->entityManager->persist($state);
         }
         $this->entityManager->flush();

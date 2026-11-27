@@ -117,7 +117,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
 
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
 
         self::assertTrue($state->isFavorite());
         self::assertFalse($state->isKept());
@@ -127,9 +127,9 @@ final class EntryStateTest extends TestCase
     public function testClearingAFavoriteUndoesIt(): void
     {
         $state = $this->makeState();
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
 
-        StateMarks::unfavorite($state);
+        StateMarks::clearFavorite($state);
 
         self::assertFalse($state->isFavorite());
     }
@@ -138,7 +138,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
 
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
 
         self::assertTrue($state->isKept());
         self::assertFalse($state->isFavorite());
@@ -148,9 +148,9 @@ final class EntryStateTest extends TestCase
     public function testClearingKeptUndoesIt(): void
     {
         $state = $this->makeState();
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
 
-        StateMarks::unkept($state);
+        StateMarks::clearKept($state);
 
         self::assertFalse($state->isKept());
     }
@@ -179,7 +179,7 @@ final class EntryStateTest extends TestCase
     public function testRestoringAReadMarkLeavesTheOtherFlagsAlone(): void
     {
         $state = $this->makeState();
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
 
         $readAt = new \DateTimeImmutable('2026-08-02T00:00:00Z');
 

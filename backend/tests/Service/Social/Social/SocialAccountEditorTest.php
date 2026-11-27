@@ -157,7 +157,7 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertNotNull($home);
         $guid = 'at://did:plc:x/app.bsky.feed.post/1';
         $post = SavedPostFixtures::entry($this->entityManager, $home->getFeed(), $guid, null);
-        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $post));
+        StateMarks::markKept(SavedPostFixtures::state($this->entityManager, $this->user, $post));
         $this->entityManager->flush();
 
         $this->editor()->disconnect($account);

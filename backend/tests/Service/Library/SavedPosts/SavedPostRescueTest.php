@@ -58,7 +58,7 @@ final class SavedPostRescueTest extends DbTestCase
         $subscription = $this->subscribe($this->user, $feed);
         $favourite = $this->entry($feed, 'fav', 'https://heise.example/1');
         $this->entry($feed, 'plain', 'https://heise.example/2');
-        StateMarks::favorite($this->state($this->user, $favourite));
+        StateMarks::markFavorite($this->state($this->user, $favourite));
         $this->entityManager->flush();
 
         $this->service()->unsubscribe($subscription);
@@ -85,7 +85,7 @@ final class SavedPostRescueTest extends DbTestCase
             'at://did:plc:bob/app.bsky.feed.post/1',
             'https://bsky.app/profile/did:plc:bob/post/1',
         );
-        StateMarks::kept($this->state($this->user, $kept));
+        StateMarks::markKept($this->state($this->user, $kept));
         $item = CanonicalItems::buildItem(CanonicalItemKind::Bluesky, 'at://did:plc:bob/app.bsky.feed.post/1');
         $this->entityManager->persist($item);
         $kept->linkTo($item);
@@ -133,7 +133,7 @@ final class SavedPostRescueTest extends DbTestCase
         $feed = $this->feed('https://bsky.app/profile/did:plc:long/rss', str_repeat('é', 300));
         $subscription = $this->subscribe($this->user, $feed);
         $longPost = $this->entry($feed, 'at://did:plc:long/app.bsky.feed.post/1', null);
-        StateMarks::kept($this->state($this->user, $longPost));
+        StateMarks::markKept($this->state($this->user, $longPost));
         $this->entityManager->flush();
 
         $this->service()->unsubscribe($subscription);
@@ -147,7 +147,7 @@ final class SavedPostRescueTest extends DbTestCase
     {
         $feed = $this->feed('https://long.example/feed.xml', str_repeat('ü', 300));
         $subscription = $this->subscribe($this->user, $feed);
-        StateMarks::favorite($this->state($this->user, $this->entry($feed, 'long', null)));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($feed, 'long', null)));
         $this->entityManager->flush();
 
         $this->service()->unsubscribe($subscription);
@@ -163,8 +163,8 @@ final class SavedPostRescueTest extends DbTestCase
         $list = $this->feed('https://second.example/feed.xml', 'Second');
         $first = $this->subscribe($this->user, $home);
         $second = $this->subscribe($this->user, $list);
-        StateMarks::favorite($this->state($this->user, $this->entry($home, 'same-guid', null)));
-        StateMarks::kept($this->state($this->user, $this->entry($list, 'same-guid', null)));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($home, 'same-guid', null)));
+        StateMarks::markKept($this->state($this->user, $this->entry($list, 'same-guid', null)));
         $this->entityManager->flush();
 
         $this->service()->unsubscribeAll([$first, $second]);
@@ -184,7 +184,7 @@ final class SavedPostRescueTest extends DbTestCase
         $this->subscribe($this->user, $kept);
         $original = $this->entry($leaving, 'a', 'https://news.example/story');
         $twin = $this->entry($kept, 'b', 'https://news.example/story');
-        StateMarks::favorite($this->state($this->user, $original));
+        StateMarks::markFavorite($this->state($this->user, $original));
         $this->entityManager->flush();
         $twinId = $twin->requireId();
 
@@ -204,7 +204,7 @@ final class SavedPostRescueTest extends DbTestCase
         $original = $this->entry($leaving, 'a', 'https://news.example/read');
         $twin = $this->entry($kept, 'b', 'https://news.example/read');
         $state = $this->state($this->user, $original);
-        StateMarks::kept($state);
+        StateMarks::markKept($state);
         $state->hide(new \DateTimeImmutable(self::AT));
         $this->state($this->user, $twin);
         $this->entityManager->flush();
@@ -224,7 +224,7 @@ final class SavedPostRescueTest extends DbTestCase
         $feed = $this->feed('https://legacy.example/feed.xml', 'Legacy');
         $subscription = $this->subscribe($this->user, $feed);
         $state = $this->state($this->user, $this->entry($feed, 'legacy', null));
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $state->restoreReadMark(new BackedUpReadMark(true, null));
         $this->entityManager->flush();
 
@@ -269,7 +269,7 @@ final class SavedPostRescueTest extends DbTestCase
         $this->subscribe($other, $shared);
         $original = $this->entry($shared, 'shared', 'https://shared.example/1');
         $state = $this->state($this->user, $original);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $state->hide(new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
         $originalId = $original->requireId();
@@ -289,7 +289,7 @@ final class SavedPostRescueTest extends DbTestCase
     {
         $feed = $this->feed('https://gone.example/feed.xml', 'Gone');
         $subscription = $this->subscribe($this->user, $feed);
-        StateMarks::favorite($this->state($this->user, $this->entry($feed, 'fav', null)));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($feed, 'fav', null)));
         $this->entityManager->flush();
         $this->service()->unsubscribe($subscription);
         $this->entityManager->clear();
@@ -310,8 +310,10 @@ final class SavedPostRescueTest extends DbTestCase
         $second = $this->feed('https://second-blog.example/feed.xml', 'Second blog');
         $firstSubscription = $this->subscribe($this->user, $first);
         $secondSubscription = $this->subscribe($this->user, $second);
-        StateMarks::favorite($this->state($this->user, $this->entry($first, '1', 'https://first-blog.example/hello')));
-        StateMarks::kept($this->state($this->user, $this->entry($second, '1', 'https://second-blog.example/other')));
+        $hello = $this->entry($first, '1', 'https://first-blog.example/hello');
+        StateMarks::markFavorite($this->state($this->user, $hello));
+        $other = $this->entry($second, '1', 'https://second-blog.example/other');
+        StateMarks::markKept($this->state($this->user, $other));
         $this->entityManager->flush();
         $secondId = $second->requireId();
 
@@ -330,14 +332,15 @@ final class SavedPostRescueTest extends DbTestCase
     {
         $earlier = $this->feed('https://earlier.example/feed.xml', 'Earlier');
         $earlierSubscription = $this->subscribe($this->user, $earlier);
-        StateMarks::favorite($this->state($this->user, $this->entry($earlier, 'a', 'https://earlier.example/a')));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($earlier, 'a', 'https://earlier.example/a')));
         $this->entityManager->flush();
         $this->service()->unsubscribe($earlierSubscription);
         $feed = $this->feed('https://later.example/feed.xml', 'Later');
         $subscription = $this->subscribe($this->user, $feed);
         $renamedGuid = 'a#' . $feed->requireId();
-        StateMarks::favorite($this->state($this->user, $this->entry($feed, $renamedGuid, 'https://later.example/a')));
-        StateMarks::kept($this->state($this->user, $this->entry($feed, 'a', 'https://later.example/a')));
+        $renamed = $this->entry($feed, $renamedGuid, 'https://later.example/a');
+        StateMarks::markFavorite($this->state($this->user, $renamed));
+        StateMarks::markKept($this->state($this->user, $this->entry($feed, 'a', 'https://later.example/a')));
         $this->entityManager->flush();
 
         $this->service()->unsubscribe($subscription);
@@ -354,14 +357,14 @@ final class SavedPostRescueTest extends DbTestCase
     {
         $old = $this->feed('https://old.example/feed.xml', 'Old');
         $oldSubscription = $this->subscribe($this->user, $old);
-        StateMarks::favorite($this->state($this->user, $this->entry($old, 'old-fav', null)));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($old, 'old-fav', null)));
         $this->entityManager->flush();
         $this->service()->unsubscribe($oldSubscription);
         $saved = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($saved);
         $feed = $this->feed('https://new.example/feed.xml', 'New');
         $subscription = $this->subscribe($this->user, $feed);
-        StateMarks::favorite($this->state($this->user, $this->entry($feed, 'new-fav', null)));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($feed, 'new-fav', null)));
         $this->entityManager->flush();
 
         $this->service()->unsubscribeAll([$saved, $subscription]);
@@ -376,8 +379,8 @@ final class SavedPostRescueTest extends DbTestCase
     {
         $feed = $this->feed('https://indexed.example/feed.xml', 'Indexed');
         $subscription = $this->subscribe($this->user, $feed);
-        StateMarks::favorite($this->state($this->user, $this->entry($feed, 'one', 'https://indexed.example/1')));
-        StateMarks::kept($this->state($this->user, $this->entry($feed, 'two', 'https://indexed.example/2')));
+        StateMarks::markFavorite($this->state($this->user, $this->entry($feed, 'one', 'https://indexed.example/1')));
+        StateMarks::markKept($this->state($this->user, $this->entry($feed, 'two', 'https://indexed.example/2')));
         $this->entry($feed, 'plain', 'https://indexed.example/3');
         $this->entityManager->flush();
         $writer = new RecordingSearchIndexWriter();
@@ -419,7 +422,7 @@ final class SavedPostRescueTest extends DbTestCase
         $original = $this->entry($leaving, 'a', 'https://news.example/twin');
         $twin = $this->entry($kept, 'b', 'https://news.example/twin');
         $originalState = $this->state($this->user, $original);
-        StateMarks::kept($originalState);
+        StateMarks::markKept($originalState);
         $originalState->restoreReadMark($originalRead);
         $this->state($this->user, $twin)->restoreReadMark($twinRead);
         $this->entityManager->flush();

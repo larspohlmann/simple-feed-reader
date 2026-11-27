@@ -188,10 +188,10 @@ final class EntryLabelScopeTest extends ApiTestCase
     {
         $state = new EntryState($user, $entry);
         if ($favorite) {
-            StateMarks::favorite($state);
+            StateMarks::markFavorite($state);
         }
         if ($kept) {
-            StateMarks::kept($state);
+            StateMarks::markKept($state);
         }
         $this->entityManager()->persist($state);
         $this->entityManager()->flush();

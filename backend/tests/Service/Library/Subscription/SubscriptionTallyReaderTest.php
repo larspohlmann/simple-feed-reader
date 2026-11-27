@@ -35,7 +35,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $this->entry($feed, 'unread');
         $state = new EntryState($user, $read);
         $state->hide($when);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

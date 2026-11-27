@@ -158,7 +158,7 @@ final class SavedFeedBackupTest extends DbTestCase
         $origin = new EntryOrigin('Heise', 'https://heise.example/favicon.ico');
         $this->entityManager->persist(new SavedEntryOrigin($entry, $origin));
         $state = SavedPostFixtures::state($this->entityManager, $user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager->flush();
     }
 

@@ -197,7 +197,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
-        StateMarks::unfavorite($state);
+        StateMarks::clearFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -407,7 +407,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->makeEntry($feed, 'b', 'B');
         $this->entityManager->flush();
         $existingState = new EntryState($user, $entryA);
-        StateMarks::unfavorite($existingState);
+        StateMarks::clearFavorite($existingState);
         $this->entityManager->persist($existingState);
         $this->entityManager->flush();
 

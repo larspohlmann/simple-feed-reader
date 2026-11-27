@@ -398,7 +398,7 @@ final class SocialImporterTest extends DbTestCase
         self::assertNotNull($feed);
         $guid = 'at://did:plc:carol/app.bsky.feed.post/1';
         $post = SavedPostFixtures::entry($this->entityManager, $feed, $guid, null);
-        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $post));
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $post));
         $this->entityManager->flush();
 
         $result = $this->importer()->import(

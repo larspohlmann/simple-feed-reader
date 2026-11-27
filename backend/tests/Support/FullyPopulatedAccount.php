@@ -245,11 +245,11 @@ final readonly class FullyPopulatedAccount
     private function stateFor(User $user, Entry $entry): EntryState
     {
         $state = new EntryState($user, $entry);
-        StateMarks::favorite($state);
-        StateMarks::kept($state);
+        StateMarks::markFavorite($state);
+        StateMarks::markKept($state);
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00Z'));
         $state->markViewed(new \DateTimeImmutable('2026-08-05T10:00:00Z'));
-        StateMarks::liked($state, new \DateTimeImmutable('2026-08-06T10:00:00Z'));
+        StateMarks::markLiked($state, new \DateTimeImmutable('2026-08-06T10:00:00Z'));
 
         return $state;
     }

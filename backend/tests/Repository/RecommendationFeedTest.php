@@ -205,9 +205,9 @@ final class RecommendationFeedTest extends DbTestCase
         $this->entityManager->flush();
 
         $favoriteState = new EntryState($this->user, $favoriteEntry);
-        StateMarks::favorite($favoriteState);
+        StateMarks::markFavorite($favoriteState);
         $keptState = new EntryState($this->user, $entryKept);
-        StateMarks::kept($keptState);
+        StateMarks::markKept($keptState);
         $viewedState = new EntryState($this->user, $entryViewed);
         $viewedState->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
         $this->entityManager->persist($favoriteState);
@@ -257,7 +257,7 @@ final class RecommendationFeedTest extends DbTestCase
         $likedEntry = $this->entry('liked');
         $plainEntry = $this->entry('plain');
         $likedState = new EntryState($this->user, $likedEntry);
-        StateMarks::liked($likedState, new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        StateMarks::markLiked($likedState, new \DateTimeImmutable('2026-11-27T10:00:00Z'));
         $this->entityManager->persist($likedState);
         $this->entityManager->flush();
         $run = $this->seedRun($this->user, RunStatus::Completed);

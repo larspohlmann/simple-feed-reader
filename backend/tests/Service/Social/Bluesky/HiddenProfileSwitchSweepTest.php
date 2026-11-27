@@ -115,7 +115,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $rssId = $rss->requireId();
         $rssFeedId = $rss->getFeed()->requireId();
         $saved = new EntryState($user, $this->entry($rss->getFeed()));
-        StateMarks::favorite($saved);
+        StateMarks::markFavorite($saved);
         $saved->hide(new \DateTimeImmutable(self::NOW));
         $this->entityManager->persist($saved);
         $this->entityManager->flush();
@@ -148,7 +148,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $older = new Entry($rss->getFeed(), self::RUSTY_OLDER_POST, null, 'Older than the first page', $at, $at);
         $this->entityManager->persist($older);
         $favourite = new EntryState($user, $older);
-        StateMarks::favorite($favourite);
+        StateMarks::markFavorite($favourite);
         $this->entityManager->persist($favourite);
         $this->entityManager->flush();
         $this->sweep(1);

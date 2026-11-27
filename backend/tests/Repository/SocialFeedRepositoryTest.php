@@ -318,9 +318,9 @@ final class SocialFeedRepositoryTest extends DbTestCase
     {
         $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
         $favourite = new EntryState($this->user, $this->post($search->getFeed(), 'favourite', null, null));
-        StateMarks::favorite($favourite);
+        StateMarks::markFavorite($favourite);
         $kept = new EntryState($this->user, $this->post($search->getFeed(), 'kept', null, null));
-        StateMarks::kept($kept);
+        StateMarks::markKept($kept);
         $this->entityManager->persist($favourite);
         $this->entityManager->persist($kept);
         $shared = $this->post($search->getFeed(), 'shared', null, null);

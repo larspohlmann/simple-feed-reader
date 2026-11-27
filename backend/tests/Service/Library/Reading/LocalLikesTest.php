@@ -56,7 +56,7 @@ final class LocalLikesTest extends DbTestCase
     public function testALikeKeepsTheOtherMarks(): void
     {
         $row = $this->articleRow();
-        $this->entityManager->persist(StateMarks::kept(new EntryState($this->reader, $row->entry)));
+        $this->entityManager->persist(StateMarks::markKept(new EntryState($this->reader, $row->entry)));
         $this->entityManager->flush();
 
         $this->likes()->like($this->reader, $row);
@@ -69,8 +69,8 @@ final class LocalLikesTest extends DbTestCase
     public function testAnUnlikeTakesTheLikeBackAndKeepsTheOtherMarks(): void
     {
         $row = $this->articleRow();
-        $state = StateMarks::favorite(new EntryState($this->reader, $row->entry));
-        $this->entityManager->persist(StateMarks::liked($state, $this->clock->now()));
+        $state = StateMarks::markFavorite(new EntryState($this->reader, $row->entry));
+        $this->entityManager->persist(StateMarks::markLiked($state, $this->clock->now()));
         $this->entityManager->flush();
 
         $this->likes()->unlike($this->reader, $row);

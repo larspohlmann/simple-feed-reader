@@ -87,7 +87,7 @@ final class EntryLabelControllerTest extends ApiTestCase
         $user = $this->factory()->create('entry-label-survive@example.com');
         $entry = $this->subscribedEntry($user);
         $state = new EntryState($user, $entry);
-        StateMarks::favorite($state);
+        StateMarks::markFavorite($state);
         $this->entityManager()->persist($state);
         $this->entityManager()->flush();
         $label = $this->readLater($user);

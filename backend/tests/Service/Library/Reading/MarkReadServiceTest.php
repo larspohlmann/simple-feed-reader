@@ -137,8 +137,8 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, , $old] = $this->seed();
         $state = new EntryState($user, $old);
         $state->markUnread();
-        StateMarks::favorite($state);
-        StateMarks::kept($state);
+        StateMarks::markFavorite($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
