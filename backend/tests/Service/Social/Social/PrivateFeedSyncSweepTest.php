@@ -179,14 +179,15 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
         $second = $this->accountOf($this->user, 'did:plc:sweep-2');
         $this->entityManager->flush();
         $freshManager = $this->createStub(ObjectManager::class);
+        $closed = new ClosedEntityManager($this->entityManager);
+        $closed->close();
         $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManager')->willReturn($closed);
         $registry->expects($this->atLeastOnce())->method('resetManager')->willReturn($freshManager);
         $network = new StubSocialCandidates(
             new NetworkCandidatesModel([], [], [], false),
             new \ValueError('broken answer'),
         );
-        $closed = new ClosedEntityManager($this->entityManager);
-        $closed->close();
 
         $report = $this->sweepOver(
             $network,
@@ -208,6 +209,7 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
         $closed->close();
         $resets = 0;
         $registry = $this->createStub(ManagerRegistry::class);
+        $registry->method('getManager')->willReturn($closed);
         $registry->method('resetManager')->willReturnCallback(
             function () use ($closed, &$resets): ObjectManager {
                 if (++$resets > 1) {

@@ -8,10 +8,10 @@ use App\Entity\SocialAccount;
 use App\Repository\SocialAccountSyncRepository;
 use App\Repository\SocialNotificationPollRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Social\Notification\Model\NotificationPollBudgetModel;
 use App\Service\Social\Notification\Model\NotificationPollReportModel;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 final readonly class NotificationPollSweep
@@ -22,7 +22,7 @@ final readonly class NotificationPollSweep
         private NotificationPoll $notificationPoll,
         private NotificationStore $store,
         private EntityManagerInterface $entityManager,
-        private ManagerRegistry $registry,
+        private ManagerReopener $managerReopener,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
@@ -39,7 +39,7 @@ final readonly class NotificationPollSweep
             if (null !== $account) {
                 $report = $this->pollIsolated($account, $accountId, $report);
             }
-            if (!$this->ensureManagerOpen()) {
+            if (!$this->isManagerOpenAfterReopening()) {
                 return $report;
             }
         }
@@ -59,7 +59,7 @@ final readonly class NotificationPollSweep
                 'socialAccountId' => $accountId,
                 'exception' => $exception,
             ]);
-            if ($this->ensureManagerOpen()) {
+            if ($this->isManagerOpenAfterReopening()) {
                 $this->entityManager->clear();
             }
             $this->stampFailed($accountId);
@@ -85,11 +85,9 @@ final readonly class NotificationPollSweep
         }
     }
 
-    private function ensureManagerOpen(): bool
+    private function isManagerOpenAfterReopening(): bool
     {
-        if (!$this->entityManager->isOpen()) {
-            $this->registry->resetManager();
-        }
+        $this->managerReopener->ensureManagerOpen();
 
         return $this->entityManager->isOpen();
     }

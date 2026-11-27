@@ -10,6 +10,7 @@ use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountSyncRepository;
 use App\Repository\SocialNotificationPollRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Outbound\Fetch\HostThrottle;
 use App\Service\Social\Notification\NotificationContextLookup;
 use App\Service\Social\Notification\NotificationContextSource\NotificationContextSourceInterface;
@@ -54,7 +55,7 @@ final class NotificationPollWiring
             self::poll($entityManager, $clock, $hostThrottle, $sources, $contextSource),
             self::store($entityManager, $naiveClock),
             $entityManager,
-            $doctrine,
+            new ManagerReopener($doctrine),
             $naiveClock,
             $logger,
         );

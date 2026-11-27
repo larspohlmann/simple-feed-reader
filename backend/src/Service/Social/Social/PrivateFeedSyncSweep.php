@@ -8,11 +8,11 @@ use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Repository\SocialAccountSyncRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Social\Social\Model\PrivateFeedSyncBudgetModel;
 use App\Service\Social\Social\Model\PrivateFeedSyncOutcomeModel;
 use App\Service\Social\Social\Model\PrivateFeedSyncReportModel;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 final readonly class PrivateFeedSyncSweep
@@ -21,7 +21,7 @@ final readonly class PrivateFeedSyncSweep
         private SocialAccountSyncRepository $socialAccounts,
         private PrivateFeedSync $privateFeedSync,
         private EntityManagerInterface $entityManager,
-        private ManagerRegistry $registry,
+        private ManagerReopener $managerReopener,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
@@ -38,7 +38,7 @@ final readonly class PrivateFeedSyncSweep
             if (null !== $account) {
                 $report = $report->adding($this->syncIsolated($account));
             }
-            if (!$this->reopenedEntityManagerIsOpen()) {
+            if (!$this->isManagerOpenAfterReopening()) {
                 break;
             }
         }
@@ -77,11 +77,9 @@ final readonly class PrivateFeedSyncSweep
         }
     }
 
-    private function reopenedEntityManagerIsOpen(): bool
+    private function isManagerOpenAfterReopening(): bool
     {
-        if (!$this->entityManager->isOpen()) {
-            $this->registry->resetManager();
-        }
+        $this->managerReopener->ensureManagerOpen();
 
         return $this->entityManager->isOpen();
     }
