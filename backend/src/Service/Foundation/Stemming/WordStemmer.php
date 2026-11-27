@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending;
+namespace App\Service\Foundation\Stemming;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Factory\SnowballStemmerFactory;
+use App\Service\Foundation\Stemming\Support\WordStems;
 use Wamania\Snowball\Stemmer\Stemmer;
 
 /** A word with a language gets that language's Snowball stem; one without keeps the six-character cut (#2227). */
-final readonly class HeadlineStemmer
+final readonly class WordStemmer
 {
     /** @var array<string, Stemmer> language => its stemmer */
     private array $stemmers;
@@ -27,9 +27,9 @@ final readonly class HeadlineStemmer
     public function stem(string $word, ?FeedLanguage $language): string
     {
         if ($language === null) {
-            return HeadlineStems::cut($word);
+            return WordStems::cut($word);
         }
 
-        return HeadlineStems::bare($this->stemmers[$language->value]->stem($word));
+        return WordStems::bare($this->stemmers[$language->value]->stem($word));
     }
 }

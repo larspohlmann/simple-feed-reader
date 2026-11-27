@@ -11,6 +11,7 @@ use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Pass\SharedArticles;
 use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Stemming\WordEquivalents;
 
 /** Reads one window's entries and groups them into stories, in memory; writing them is the builder's (#2017). */
 final readonly class TrendingGrouping
@@ -18,7 +19,7 @@ final readonly class TrendingGrouping
     public function __construct(
         private TrendingEntryRepository $windowEntries,
         private HeadlineFiller $filler,
-        private HeadlineEquivalents $equivalents,
+        private WordEquivalents $equivalents,
         private StoryLinks $storyLinks,
         private StoryGrouping $storyGrouping,
         private NaiveUtcClock $clock,

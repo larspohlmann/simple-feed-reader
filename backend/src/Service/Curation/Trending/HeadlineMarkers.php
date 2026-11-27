@@ -6,7 +6,7 @@ namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\Model\CleanedHeadlineModel;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Support\WordStems;
 
 final readonly class HeadlineMarkers
 {
@@ -91,7 +91,7 @@ final readonly class HeadlineMarkers
         $tailWords = $this->bareWords($tail);
         $outletWords = $this->bareWords($feedTitle);
 
-        return [] !== array_filter($tailWords, HeadlineStems::isKept(...))
+        return [] !== array_filter($tailWords, WordStems::isKept(...))
             && [] === array_diff($tailWords, $outletWords);
     }
 
@@ -100,6 +100,6 @@ final readonly class HeadlineMarkers
     {
         $words = preg_split('/[^\p{L}\p{N}]+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
 
-        return array_map(HeadlineStems::bare(...), $words === false ? [] : $words);
+        return array_map(WordStems::bare(...), $words === false ? [] : $words);
     }
 }

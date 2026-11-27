@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\Model;
+namespace App\Service\Foundation\Stemming\Model;
 
 final readonly class GermanLexiconModel
 {

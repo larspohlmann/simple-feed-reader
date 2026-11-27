@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending;
+namespace App\Tests\Service\Foundation\Stemming;
 
-use App\Service\Curation\Trending\GermanCompoundSplitter;
-use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
-use App\Tests\Support\TrendingWiring;
+use App\Service\Foundation\Stemming\GermanCompoundSplitter;
+use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
+use App\Tests\Support\StemmingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +18,7 @@ final class GermanCompoundSplitterTest extends TestCase
     #[DataProvider('fixtureCompounds')]
     public function testSplitsAWordIntoItsLexiconParts(string $word, array $expectedParts): void
     {
-        $splitter = new GermanCompoundSplitter(TrendingWiring::germanLexicon());
+        $splitter = StemmingWiring::compoundSplitter();
 
         $this->assertSame($expectedParts, $splitter->splitParts($word));
     }

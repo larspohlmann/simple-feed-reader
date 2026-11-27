@@ -12,15 +12,10 @@ use App\Repository\TrendingSnapshotRepository;
 use App\Repository\TrendingStoryFollowRepository;
 use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Curation\Trending\CardLanguage;
-use App\Service\Curation\Trending\Factory\SnowballStemmerFactory;
 use App\Service\Curation\Trending\FallbackChoice;
 use App\Service\Curation\Trending\FallbackTitles;
-use App\Service\Curation\Trending\GermanCompoundSplitter;
-use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
-use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineMarkers;
-use App\Service\Curation\Trending\HeadlineStemmer;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
 use App\Service\Curation\Trending\StoryBuildPolicy\WeekStoryBuildPolicy;
@@ -105,7 +100,7 @@ final class TrendingWiring
         return new TrendingGrouping(
             new TrendingEntryRepository($entityManager),
             self::filler(),
-            self::equivalents(),
+            StemmingWiring::equivalents(),
             self::storyLinks(),
             new StoryGrouping(),
             new NaiveUtcClock($clock),
@@ -118,24 +113,9 @@ final class TrendingWiring
         return new CardLanguage(new LanguageGuess((new LanguageDetectionFactory())->createForFeedLanguages()));
     }
 
-    public static function stemmer(): HeadlineStemmer
-    {
-        return new HeadlineStemmer(new SnowballStemmerFactory());
-    }
-
     public static function filler(): HeadlineFiller
     {
-        return new HeadlineFiller(self::stemmer(), LanguageWiring::stopWords());
-    }
-
-    public static function equivalents(): HeadlineEquivalents
-    {
-        return new HeadlineEquivalents(self::stemmer(), new GermanCompoundSplitter(self::germanLexicon()));
-    }
-
-    public static function germanLexicon(): BundledGermanLexicon
-    {
-        return new BundledGermanLexicon(dirname(__DIR__) . '/Fixtures/german-lexicon');
+        return new HeadlineFiller(StemmingWiring::stopWordStems());
     }
 
     public static function storyLinks(): StoryLinks

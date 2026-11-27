@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending\GermanLexicon;
+namespace App\Tests\Service\Foundation\Stemming\GermanLexicon;
 
-use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
-use App\Tests\Support\TrendingWiring;
+use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
+use App\Tests\Support\StemmingWiring;
 use PHPUnit\Framework\TestCase;
 
 final class BundledGermanLexiconTest extends TestCase
@@ -67,7 +67,7 @@ final class BundledGermanLexiconTest extends TestCase
 
     private function fixtureLexicon(): BundledGermanLexicon
     {
-        return TrendingWiring::germanLexicon();
+        return StemmingWiring::germanLexicon();
     }
 
     private function writeLexicon(string $noun): void

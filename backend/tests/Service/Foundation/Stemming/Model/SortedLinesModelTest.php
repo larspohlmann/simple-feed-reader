@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending\Model;
+namespace App\Tests\Service\Foundation\Stemming\Model;
 
-use App\Service\Curation\Trending\Model\SortedLinesModel;
+use App\Service\Foundation\Stemming\Model\SortedLinesModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
