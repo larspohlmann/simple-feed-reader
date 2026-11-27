@@ -60,12 +60,14 @@ final class InterestTermRepository extends ServiceEntityRepository
      */
     public function findTermsForUsers(array $userIds): array
     {
+        if ([] === $userIds) {
+            return [];
+        }
+
         $strengths = array_fill_keys($userIds, []);
-        if ($userIds !== []) {
-            foreach ($this->readStrengthRows($userIds) as $row) {
-                $key = InterestTermsModel::languageKey($row['language']);
-                $strengths[(int) $row['userId']][$key][$row['stem']] = (float) $row['weight'] * (float) $row['rarity'];
-            }
+        foreach ($this->readStrengthRows($userIds) as $row) {
+            $key = InterestTermsModel::languageKey($row['language']);
+            $strengths[(int) $row['userId']][$key][$row['stem']] = (float) $row['weight'] * (float) $row['rarity'];
         }
 
         return array_map(InterestTermsModel::fromStrengths(...), $strengths);

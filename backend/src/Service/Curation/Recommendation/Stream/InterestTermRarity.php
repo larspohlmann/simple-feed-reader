@@ -89,10 +89,11 @@ final readonly class InterestTermRarity
                 $tally->count($stemming->collectStems($entry));
                 $afterId = $entry->id;
             }
-            if (\count($entries) === self::CHUNK && null !== $deadline && $this->clock->now() >= $deadline) {
+            $isFullChunk = \count($entries) === self::CHUNK;
+            if ($isFullChunk && null !== $deadline && $this->clock->now() >= $deadline) {
                 return null;
             }
-        } while (\count($entries) === self::CHUNK);
+        } while ($isFullChunk);
 
         return $tally;
     }
