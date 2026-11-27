@@ -127,7 +127,6 @@ final readonly class TrendingRebuild
             && $this->entries->hasEntriesCreatedAfter($userId, $builtAt);
     }
 
-
     private function remainingMilliseconds(\DateTimeImmutable $deadline): int
     {
         return intdiv((int) $deadline->format('Uu') - (int) $this->clock->now()->format('Uu'), 1_000);
