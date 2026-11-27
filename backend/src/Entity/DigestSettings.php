@@ -34,9 +34,6 @@ final class DigestSettings
     #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
     private int $weekday = 1;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $includeForYouStream = false;
-
     /** Naive UTC. Null until the digest is first enabled; the "since" marker. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSentAt = null;
@@ -89,16 +86,6 @@ final class DigestSettings
     public function setWeekday(int $weekday): void
     {
         $this->weekday = $weekday;
-    }
-
-    public function isForYouStreamIncluded(): bool
-    {
-        return $this->includeForYouStream;
-    }
-
-    public function setForYouStreamIncluded(bool $includeForYouStream): void
-    {
-        $this->includeForYouStream = $includeForYouStream;
     }
 
     public function getLastSentAt(): ?\DateTimeImmutable

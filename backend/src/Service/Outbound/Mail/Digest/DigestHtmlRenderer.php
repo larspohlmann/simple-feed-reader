@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Outbound\Mail\Digest;
 
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageGroupModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestPageModel;
@@ -53,7 +52,6 @@ final readonly class DigestHtmlRenderer
             'totalCount' => $group->totalCount,
             'remaining' => $group->remaining,
             'moreUrl' => $group->moreUrl,
-            'isForYouStream' => DigestGroupSource::ForYouStream === $group->source,
             'cards' => array_map($card, $group->cards),
         ];
     }

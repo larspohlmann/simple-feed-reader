@@ -62,18 +62,6 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
         return $this->projection->scalarIds($qb);
     }
 
-    /** @return list<int> */
-    public function findUnreadMemberIdsSince(int $userId, \DateTimeImmutable $since): array
-    {
-        $qb = $this->projection->unreadEntriesQueryBuilder($userId)
-            ->select('e.id')
-            ->andWhere('e.dates.effectiveDate > :since')
-            ->setParameter('since', $since);
-        $this->restrictToMembers($qb, $userId);
-
-        return $this->projection->scalarIds($this->projection->newestFirst($qb));
-    }
-
     public function countUnreadMembers(int $userId): int
     {
         $qb = $this->projection->unreadEntriesQueryBuilder($userId)->select('COUNT(e.id)');

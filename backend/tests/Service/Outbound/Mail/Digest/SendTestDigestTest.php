@@ -7,7 +7,11 @@ namespace App\Tests\Service\Outbound\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestFormat;
+use App\Repository\EntryListRepository;
+use App\Repository\SavedSearchEntryRepository;
 use App\Service\Outbound\Mail\Digest\DigestBrandLogo;
+use App\Service\Outbound\Mail\Digest\DigestComposer;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
 use App\Service\Outbound\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Outbound\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
@@ -23,7 +27,6 @@ use App\Service\Outbound\Mail\Digest\SendTestDigest;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Outbound\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\DbTestCase;
-use App\Tests\Support\BuildsDigestComposers;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
@@ -42,8 +45,6 @@ use Symfony\Component\Translation\Translator;
  */
 final class SendTestDigestTest extends DbTestCase
 {
-    use BuildsDigestComposers;
-
     private DigestSavedSearchesInterface&Stub $savedSearches;
     private DigestMailerInterface&Stub $mailer;
     private User $user;
@@ -66,7 +67,11 @@ final class SendTestDigestTest extends DbTestCase
     private function sendTestDigest(MockClock $clock, ?DigestMailerInterface $mailer = null): SendTestDigest
     {
         return new SendTestDigest(
-            $this->digestComposer($this->savedSearches),
+            new DigestComposer(
+                $this->savedSearches,
+                new DigestEntryFinder($this->members(), $this->entries()),
+                new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
+            ),
             $mailer ?? $this->mailer,
             StoredUserSettings::digestRepository($this->entityManager),
             $clock,
@@ -206,5 +211,21 @@ final class SendTestDigestTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
 
         return $search;
+    }
+
+    private function members(): SavedSearchEntryRepository
+    {
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function entries(): EntryListRepository
+    {
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+
+        return $repository;
     }
 }

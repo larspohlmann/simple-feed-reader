@@ -95,7 +95,6 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
                     'format' => 'html',
                     'sendHour' => 8,
                     'weekday' => 1,
-                    'includeForYouStream' => false,
                     'timezone' => 'UTC',
                 ],
             ],

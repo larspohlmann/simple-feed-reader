@@ -15,7 +15,6 @@ final readonly class DigestConfigurationModel
         public int $sendHour,
         public int $weekday,
         public DigestFormat $format,
-        public bool $includeForYouStream,
     ) {
     }
 }

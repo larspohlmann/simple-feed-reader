@@ -39,7 +39,6 @@ final class MeJsonTest extends TestCase
                 'format' => 'html',
                 'sendHour' => 9,
                 'weekday' => 3,
-                'includeForYouStream' => false,
                 'timezone' => 'Europe/Berlin',
             ],
             $preferencesJson['digest'],

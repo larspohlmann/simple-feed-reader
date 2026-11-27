@@ -15,7 +15,7 @@ admin_pending_approval:
     method_email_password: 'E-Mail und Passwort'
 digest:
     subject: 'Neu in deinen Feeds: %count% Einträge'
-    intro: "Neue Einträge aus dem, was Sie verfolgen, nach Bereich gruppiert."
+    intro: "Das sind neue Einträge, die zu deinen gespeicherten Suchen passen, nach Suche gruppiert."
     group_heading: '%term% (%count%)'
     more: '+ mehr → %url%'
     footer: 'Verwalte deinen Digest unter Einstellungen → E-Mail.'
@@ -24,5 +24,3 @@ digest:
     manage_html: 'Verwalte deinen Digest unter %link%.'
     manage_link_label: 'Einstellungen → E-Mail'
     more_link: '+%count% weitere in „%term%“'
-    for_you_stream_heading: 'Für-dich-Stream (%count%)'
-    for_you_stream_more_link: '+%count% weitere in Ihrem Für-dich-Stream'

@@ -7,7 +7,6 @@ namespace App\Tests\Service\Outbound\Mail\Digest\Factory;
 use App\Service\Outbound\Mail\Digest\Factory\DigestPageFactory;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +27,6 @@ final class DigestPageFactoryTest extends TestCase
             $entries,
             $totalCount > $count,
             "https://example.com/?q={$term}",
-            DigestGroupSource::SavedSearch,
         );
     }
 

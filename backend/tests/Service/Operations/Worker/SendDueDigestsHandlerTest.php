@@ -7,8 +7,13 @@ namespace App\Tests\Service\Operations\Worker;
 use App\Entity\DigestSettings;
 use App\Entity\User;
 use App\Enum\DigestCadence;
+use App\Repository\EntryListRepository;
+use App\Repository\SavedSearchEntryRepository;
 use App\Service\Operations\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Operations\Worker\Message\SendDueDigests;
+use App\Service\Outbound\Mail\Digest\DigestComposer;
+use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Service\Outbound\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Outbound\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
@@ -18,7 +23,7 @@ use App\Service\Outbound\Mail\Digest\SendDueDigests as SendDueDigestsService;
 use App\Service\Outbound\Mail\MailCapability;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
-use App\Tests\Support\BuildsDigestComposers;
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
@@ -32,7 +37,6 @@ use Symfony\Component\Clock\MockClock;
 /** SendDueDigests and SavedSearchEntryRepository are final: the service is built for real over stubs. */
 final class SendDueDigestsHandlerTest extends DbTestCase
 {
-    use BuildsDigestComposers;
     use SeedsDigestReaders;
 
     private const string NOW = '2026-08-28T09:30:00Z';
@@ -100,7 +104,11 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         return new SendDueDigestsService(
             $recipients,
             new DigestSchedule('UTC'),
-            $this->digestComposer($savedSearches ?? $this->createStub(DigestSavedSearchesInterface::class)),
+            new DigestComposer(
+                $savedSearches ?? $this->createStub(DigestSavedSearchesInterface::class),
+                new DigestEntryFinder($this->members(), $this->entries()),
+                new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
+            ),
             $mailer,
             $this->mailCapabilityEnabled(),
             new MockClock(self::NOW),
@@ -128,5 +136,21 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         $dueSettings->setLastSentAt(null);
 
         return $dueSettings;
+    }
+
+    private function members(): SavedSearchEntryRepository
+    {
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function entries(): EntryListRepository
+    {
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+
+        return $repository;
     }
 }

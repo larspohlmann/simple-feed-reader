@@ -197,7 +197,6 @@ final class MeControllerTest extends ApiTestCase
                     'format' => 'html',
                     'sendHour' => 8,
                     'weekday' => 1,
-                    'includeForYouStream' => false,
                     'timezone' => 'UTC',
                 ],
             ],
@@ -229,22 +228,14 @@ final class MeControllerTest extends ApiTestCase
         $this->patch(
             $client,
             '/api/me/digest',
-            [
-                'enabled' => true,
-                'cadence' => 'weekly',
-                'sendHour' => 9,
-                'weekday' => 3,
-                'format' => 'text',
-                'includeForYouStream' => false,
-            ],
+            ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
         $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","sidebarStyle":"boxed","theme":"classic",'
             . '"handedness":"left",'
             . '"passkeyOfferAnswered":true,"trendingEnabled":false,'
             . '"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'
-            . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,'
-            . '"includeForYouStream":false,"timezone":"UTC"}}';
+            . '"digest":{"enabled":true,"cadence":"weekly","format":"text","sendHour":9,"weekday":3,"timezone":"UTC"}}';
         self::assertSame($expected, json_encode($this->payload($client)['preferences'], \JSON_THROW_ON_ERROR));
 
         $client->request('GET', '/api/me');

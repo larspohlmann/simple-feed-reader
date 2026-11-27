@@ -13,7 +13,6 @@ final readonly class DigestPageGroupModel
         public array $cards,
         public int $remaining,
         public string $moreUrl,
-        public DigestGroupSource $source,
     ) {
     }
 }

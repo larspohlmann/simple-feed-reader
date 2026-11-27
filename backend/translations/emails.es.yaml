@@ -15,7 +15,7 @@ admin_pending_approval:
     method_email_password: 'correo electrónico y contraseña'
 digest:
     subject: 'Novedades en tus feeds: %count% entradas'
-    intro: "Nuevas entradas de lo que sigues, agrupadas por sección."
+    intro: "Estas son las entradas nuevas que coinciden con tus búsquedas guardadas, agrupadas por búsqueda."
     group_heading: '%term% (%count%)'
     more: 'Ver más → %url%'
     footer: 'Gestiona tu resumen en Configuración → Correo electrónico.'
@@ -24,5 +24,3 @@ digest:
     manage_html: 'Gestiona tu resumen en %link%.'
     manage_link_label: 'Configuración → Correo electrónico'
     more_link: '+%count% más en “%term%”'
-    for_you_stream_heading: 'Flujo Para ti (%count%)'
-    for_you_stream_more_link: '+%count% más en tu flujo Para ti'

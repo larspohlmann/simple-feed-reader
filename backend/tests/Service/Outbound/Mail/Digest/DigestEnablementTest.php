@@ -26,31 +26,12 @@ final class DigestEnablementTest extends TestCase
             sendHour: 9,
             weekday: 3,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertTrue($settings->isEnabled());
         self::assertSame(DigestCadence::Weekly, $settings->getCadence());
         self::assertSame(9, $settings->getSendHour());
         self::assertSame(3, $settings->getWeekday());
-    }
-
-    public function testItAppliesTheStreamFlag(): void
-    {
-        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $settings = UnsavedUserSettings::digest();
-        self::assertFalse($settings->isForYouStreamIncluded());
-
-        $enablement->applyTo($settings, new DigestConfigurationModel(
-            enabled: false,
-            cadence: DigestCadence::Daily,
-            sendHour: 8,
-            weekday: 1,
-            format: DigestFormat::Html,
-            includeForYouStream: true,
-        ));
-
-        self::assertTrue($settings->isForYouStreamIncluded());
     }
 
     public function testFirstOffToOnTransitionSeedsDigestLastSentAtToNow(): void
@@ -67,7 +48,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertEquals($now, $settings->getLastSentAt());
@@ -87,7 +67,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 10,
             weekday: 5,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertEquals($seededAt, $settings->getLastSentAt());
@@ -106,7 +85,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertFalse($settings->isEnabled());
@@ -127,7 +105,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertFalse($settings->isEnabled());
@@ -151,7 +128,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         self::assertEquals($seededAt, $settings->getLastSentAt());
@@ -169,7 +145,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Html,
-            includeForYouStream: false,
         ));
 
         $seededAt = $settings->getLastSentAt();
@@ -189,7 +164,6 @@ final class DigestEnablementTest extends TestCase
             sendHour: 8,
             weekday: 1,
             format: DigestFormat::Text,
-            includeForYouStream: false,
         ));
 
         self::assertSame(DigestFormat::Text, $settings->getFormat());

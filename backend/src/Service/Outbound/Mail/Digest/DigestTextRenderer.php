@@ -6,7 +6,6 @@ namespace App\Service\Outbound\Mail\Digest;
 
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestRenderedMailModel;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -33,50 +32,26 @@ final readonly class DigestTextRenderer
 
     private function group(DigestGroupModel $group, string $locale): string
     {
+        $heading = $this->translator->trans(
+            'digest.group_heading',
+            ['%term%' => $group->term, '%count%' => $group->totalCount],
+            'emails',
+            $locale,
+        );
+
         $lines = array_map(fn (DigestEntryModel $entry): string => $this->entry($entry), $group->entries);
-        $block = $this->heading($group, $locale) . "\n" . implode("\n", $lines);
+        $block = $heading . "\n" . implode("\n", $lines);
 
         if (!$group->hasMore) {
             return $block;
         }
 
-        return $block . "\n" . $this->moreLine($group, $locale);
-    }
-
-    private function heading(DigestGroupModel $group, string $locale): string
-    {
-        return match ($group->source) {
-            DigestGroupSource::SavedSearch => $this->translator->trans(
-                'digest.group_heading',
-                ['%term%' => $group->term, '%count%' => $group->totalCount],
-                'emails',
-                $locale,
-            ),
-            DigestGroupSource::ForYouStream => $this->translator->trans(
-                'digest.for_you_stream_heading',
-                ['%count%' => $group->totalCount],
-                'emails',
-                $locale,
-            ),
-        };
-    }
-
-    private function moreLine(DigestGroupModel $group, string $locale): string
-    {
-        return match ($group->source) {
-            DigestGroupSource::SavedSearch => $this->translator->trans(
-                'digest.more',
-                ['%url%' => $group->moreUrl],
-                'emails',
-                $locale,
-            ),
-            DigestGroupSource::ForYouStream => $this->translator->trans(
-                'digest.for_you_stream_more_link',
-                ['%count%' => $group->totalCount - \count($group->entries)],
-                'emails',
-                $locale,
-            ) . ' → ' . $group->moreUrl,
-        };
+        return $block . "\n" . $this->translator->trans(
+            'digest.more',
+            ['%url%' => $group->moreUrl],
+            'emails',
+            $locale,
+        );
     }
 
     private function entry(DigestEntryModel $entry): string

@@ -6,7 +6,6 @@ namespace App\Tests\Service\Outbound\Mail\Digest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
 use App\Entity\InclusionChange;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
@@ -14,20 +13,19 @@ use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Repository\DigestSettingsRepository;
+use App\Repository\EntryListRepository;
+use App\Repository\SavedSearchEntryRepository;
 use App\Service\Outbound\Mail\Digest\DigestComposer;
 use App\Service\Outbound\Mail\Digest\DigestEntryFinder;
+use App\Service\Outbound\Mail\Digest\DigestLinkBuilder;
 use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Tests\DbTestCase;
-use App\Tests\Support\BuildsDigestComposers;
+use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\MockObject\Stub;
 
 /** A search with no matches contributes no group, and a user with nothing to report gets no digest at all. */
 final class DigestComposerTest extends DbTestCase
 {
-    use BuildsDigestComposers;
-
     private DigestSavedSearchesInterface&Stub $savedSearches;
     private User $user;
     private \DateTimeImmutable $since;
@@ -186,132 +184,6 @@ final class DigestComposerTest extends DbTestCase
         self::assertNotNull($this->composer()->compose($this->user, $this->since));
     }
 
-    public function testTheStreamIsTheLastGroupWhenIncluded(): void
-    {
-        $rust = $this->search('rust');
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
-        $this->member($rust, 'Hit', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
-        $this->streamMember('Streamed', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-        $this->includeStream();
-
-        $model = $this->composer()->compose($this->user, $this->since);
-
-        self::assertNotNull($model);
-        self::assertCount(2, $model->groups);
-        self::assertSame(DigestGroupSource::SavedSearch, $model->groups[0]->source);
-        $last = array_last($model->groups);
-        self::assertNotNull($last);
-        self::assertSame(DigestGroupSource::ForYouStream, $last->source);
-        self::assertSame('', $last->term);
-        self::assertSame('https://reader.example/?view=for-you-stream', $last->moreUrl);
-        self::assertSame(2, $model->totalCount);
-    }
-
-    public function testTheStreamIsLeftOutWhenNotIncluded(): void
-    {
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $this->streamMember('Streamed', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-
-        self::assertNull($this->composer()->compose($this->user, $this->since));
-    }
-
-    public function testADigestWithOnlyStreamMatchesIsSent(): void
-    {
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $this->streamMember('Streamed', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-        $this->includeStream();
-
-        $model = $this->composer()->compose($this->user, $this->since);
-
-        self::assertNotNull($model);
-        self::assertCount(1, $model->groups);
-        self::assertSame('Streamed', $model->groups[0]->entries[0]->title);
-    }
-
-    public function testTheStreamContributesAtMostTenEntriesAndCountsTheRest(): void
-    {
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        for ($index = 1; $index <= 14; ++$index) {
-            $this->streamMember(
-                'Streamed ' . $index,
-                (new \DateTimeImmutable('2026-08-15T12:00:00Z'))->modify('-' . $index . ' minutes'),
-            );
-        }
-        $this->includeStream();
-
-        $model = $this->composer()->compose($this->user, $this->since);
-
-        self::assertNotNull($model);
-        $group = $model->groups[0];
-        self::assertCount(DigestEntryFinder::PER_SEARCH, $group->entries);
-        self::assertSame(14, $group->totalCount);
-        self::assertTrue($group->hasMore);
-        self::assertSame('Streamed 1', $group->entries[0]->title);
-    }
-
-    public function testReadAndOlderStreamMatchesAreLeftOut(): void
-    {
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $this->streamMember('Kept', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
-        $this->streamMember('Older', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
-        $read = $this->streamMember('Read', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-        $this->subscriptionOf($read)->setMarkedReadUntil(new \DateTimeImmutable('2026-08-20T00:00:00Z'));
-        $this->entityManager->flush();
-        $this->includeStream();
-
-        $model = $this->composer()->compose($this->user, $this->since);
-
-        self::assertNotNull($model);
-        self::assertSame(
-            ['Kept'],
-            array_map(static fn ($entry): string => $entry->title, $model->groups[0]->entries),
-        );
-    }
-
-    public function testAFeedSwitchedOutOfForYouLeavesTheDigest(): void
-    {
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $dropped = $this->streamMember('Dropped', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
-        $this->subscriptionOf($dropped)->changeInclusions(new InclusionChange(forYou: false));
-        $this->entityManager->flush();
-        $this->includeStream();
-
-        self::assertNull($this->composer()->compose($this->user, $this->since));
-    }
-
-    private function includeStream(): void
-    {
-        $repository = self::getContainer()->get(DigestSettingsRepository::class);
-        self::assertInstanceOf(DigestSettingsRepository::class, $repository);
-        $repository->forUser($this->user)->setForYouStreamIncluded(true);
-        $this->entityManager->flush();
-    }
-
-    private function streamMember(string $title, \DateTimeImmutable $effectiveDate): Entry
-    {
-        $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
-        $feed->setTitle('Stream feed');
-        $this->entityManager->persist($feed);
-        $this->entityManager->persist(
-            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
-        );
-        $entry = new Entry(
-            $feed,
-            'guid-' . uniqid('', true),
-            'https://example.com/' . uniqid('', true),
-            $title,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            $effectiveDate,
-        );
-        $this->entityManager->persist($entry);
-        $this->entityManager->persist(
-            new ForYouStreamEntry($this->user, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z'), 1.0, 'stem'),
-        );
-        $this->entityManager->flush();
-
-        return $entry;
-    }
-
     private function subscriptionOf(Entry $entry): Subscription
     {
         $subscription = $this->entityManager->getRepository(Subscription::class)
@@ -363,6 +235,26 @@ final class DigestComposerTest extends DbTestCase
 
     private function composer(): DigestComposer
     {
-        return $this->digestComposer($this->savedSearches);
+        return new DigestComposer(
+            $this->savedSearches,
+            new DigestEntryFinder($this->members(), $this->entryListRepository()),
+            new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
+        );
+    }
+
+    private function members(): SavedSearchEntryRepository
+    {
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function entryListRepository(): EntryListRepository
+    {
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+
+        return $repository;
     }
 }

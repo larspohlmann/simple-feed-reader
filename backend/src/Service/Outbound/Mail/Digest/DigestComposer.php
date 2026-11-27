@@ -4,22 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Outbound\Mail\Digest;
 
+use App\Entity\SavedSearch;
 use App\Entity\User;
-use App\Repository\DigestSettingsRepository;
 use App\Repository\EntryListRow;
 use App\Service\Foundation\Text\Support\ClippedText;
 use App\Service\Foundation\Text\Support\PlainText;
 use App\Service\Outbound\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestSearchMatchesModel;
 
 /**
- * One group per `includeInDigest` saved search with new matches, in the user's saved-search order, then the For you
- * stream when the user opted in. A user with nothing to report gets null, not an empty digest, so the mailer never
- * sends a blank email.
+ * One group per `includeInDigest` saved search with new matches, in the user's saved-search order. A user with nothing
+ * to report gets null, not an empty digest, so the mailer never sends a blank email.
  */
 final readonly class DigestComposer
 {
@@ -29,7 +27,6 @@ final readonly class DigestComposer
         private DigestSavedSearchesInterface $savedSearches,
         private DigestEntryFinder $finder,
         private DigestLinkBuilder $links,
-        private DigestSettingsRepository $settings,
     ) {
     }
 
@@ -45,53 +42,23 @@ final readonly class DigestComposer
                 continue;
             }
 
-            $groups[] = $this->group(
-                $matches,
-                $search->getTerm(),
-                $this->links->savedSearchUrl($search->getTerm(), $search->isWholeWord()),
-                DigestGroupSource::SavedSearch,
-            );
+            $groups[] = $this->group($search, $matches);
             $total += $matches->totalCount;
-        }
-
-        $streamMatches = $this->streamMatches($user, $since);
-        if ($streamMatches->totalCount > 0) {
-            $groups[] = $this->group(
-                $streamMatches,
-                '',
-                $this->links->forYouStreamUrl(),
-                DigestGroupSource::ForYouStream,
-            );
-            $total += $streamMatches->totalCount;
         }
 
         return $groups === [] ? null : new DigestModel($groups, $total);
     }
 
-    private function streamMatches(User $user, \DateTimeImmutable $since): DigestSearchMatchesModel
+    private function group(SavedSearch $search, DigestSearchMatchesModel $matches): DigestGroupModel
     {
-        if (!$this->settings->forUser($user)->isForYouStreamIncluded()) {
-            return new DigestSearchMatchesModel([], 0);
-        }
-
-        return $this->finder->findStreamMatchesSince($user->requireId(), $since);
-    }
-
-    private function group(
-        DigestSearchMatchesModel $matches,
-        string $term,
-        string $moreUrl,
-        DigestGroupSource $source,
-    ): DigestGroupModel {
         $entries = array_map(fn (EntryListRow $row): DigestEntryModel => $this->entry($row), $matches->entries);
 
         return new DigestGroupModel(
-            $term,
+            $search->getTerm(),
             $matches->totalCount,
             $entries,
             $matches->totalCount > \count($entries),
-            $moreUrl,
-            $source,
+            $this->links->savedSearchUrl($search->getTerm(), $search->isWholeWord()),
         );
     }
 

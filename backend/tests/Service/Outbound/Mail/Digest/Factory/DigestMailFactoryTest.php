@@ -15,7 +15,6 @@ use App\Service\Outbound\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Outbound\Mail\Digest\Factory\DigestPageFactory;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use App\Service\Outbound\Mail\Digest\Model\EmbeddedImageModel;
@@ -70,16 +69,7 @@ final class DigestMailFactoryTest extends TestCase
             null,
         );
 
-        $group = new DigestGroupModel(
-            'rust',
-            1,
-            [$entry],
-            false,
-            'https://reader.example/?q=rust',
-            DigestGroupSource::SavedSearch,
-        );
-
-        return new DigestModel([$group], 1);
+        return new DigestModel([new DigestGroupModel('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
     }
 
     private function settings(DigestFormat $format): DigestSettings

@@ -16,7 +16,6 @@ use App\Service\Outbound\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Outbound\Mail\Digest\Factory\DigestPageFactory;
 use App\Service\Outbound\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestGroupModel;
-use App\Service\Outbound\Mail\Digest\Model\DigestGroupSource;
 use App\Service\Outbound\Mail\Digest\Model\DigestImageSetModel;
 use App\Service\Outbound\Mail\Digest\Model\DigestModel;
 use App\Service\Outbound\Mail\MailSendingSettings\MailSendingSettingsInterface;
@@ -87,7 +86,7 @@ final class DigestMailerTest extends TestCase
                 null,
             ),
         ];
-        $group = new DigestGroupModel('rust', 1, $entries, false, '', DigestGroupSource::SavedSearch);
+        $group = new DigestGroupModel('rust', 1, $entries, false, '');
 
         return new DigestModel([$group], 1);
     }
