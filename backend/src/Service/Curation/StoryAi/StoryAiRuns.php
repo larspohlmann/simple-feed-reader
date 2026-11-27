@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\StoryAi;
 
 use App\Entity\StoryAiRun;
+use App\Enum\RunLogOwner;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\StoryAiRunRepository;
 use App\Service\Curation\Ai\Support\ProviderHost;
@@ -37,8 +38,9 @@ final readonly class StoryAiRuns
         $this->entityManager->persist($run);
         $this->entityManager->flush();
         $pass->billTo($run);
-        $this->logs->deleteForUserOutsideStoryAiRuns(
+        $this->logs->deleteForUserOutside(
             $pass->user,
+            RunLogOwner::StoryAiRun,
             $this->storyAiRuns->findNewestIdsForUser($pass->user, RunLogRetention::RUNS),
         );
 

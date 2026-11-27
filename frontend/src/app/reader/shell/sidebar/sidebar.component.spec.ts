@@ -21,6 +21,7 @@ import { SocialSection, socialFeedGroup } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -143,6 +144,7 @@ function inputDefaults() {
     sharedCount: 0,
     likedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
+    forYouStream: NO_FOR_YOU_STREAM_TALLY,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', unread: true } satisfies Selection,
     loading: false,
@@ -176,6 +178,7 @@ function mount(
     sharedCount: number;
     likedCount: number;
     trendingUnopened: TrendingUnopened;
+    forYouStream: ForYouStreamTallyDto;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -332,6 +335,48 @@ describe('SidebarComponent', () => {
       const liked = likedNav(mount({ selection: { kind: 'liked' } }).nativeElement as HTMLElement);
 
       expect(liked.classList).toContain('active');
+    });
+  });
+
+  describe('the For you stream item (#2582)', () => {
+    const streamNav = (element: HTMLElement) =>
+      element.querySelector<HTMLAnchorElement>('.nav.for-you-stream');
+
+    it('is hidden while the stream is unavailable', () => {
+      const element = mount({
+        forYouStream: { available: false, unreadCount: 4, entryCount: 4 },
+      }).nativeElement as HTMLElement;
+      expect(streamNav(element)).toBeNull();
+    });
+
+    it('shows its unread count and links to the stream once available', () => {
+      const element = mount({
+        forYouStream: { available: true, unreadCount: 4, entryCount: 9 },
+      }).nativeElement as HTMLElement;
+      expect(streamNav(element)?.querySelector('.count')?.textContent?.trim()).toBe('4');
+      expect(streamNav(element)?.getAttribute('href')).toContain('view=for-you-stream');
+    });
+
+    it('keeps the discover card when only the stream is available', () => {
+      const fixture = mount({
+        forYouStream: { available: true, unreadCount: 2, entryCount: 9 },
+      });
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(TestBed.inject(AiAvailabilityService).ready()).toBe(false);
+      expect(element.querySelector('.nav.trending')).toBeNull();
+      expect(streamNav(element)).not.toBeNull();
+    });
+
+    it('is active on the stream selection and shows no count at zero', () => {
+      const element = mount({
+        forYouStream: { available: true, unreadCount: 0, entryCount: 9 },
+        selection: { kind: 'for-you-stream', unread: false },
+      }).nativeElement as HTMLElement;
+      expect(streamNav(element)?.classList).toContain('active');
+      expect(streamNav(element)?.querySelector('.count')).toBeNull();
     });
   });
 

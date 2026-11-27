@@ -8,6 +8,7 @@ use App\Enum\TrendingWindow;
 use App\Http\SubscriptionCountsJson;
 use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
 use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
+use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
 use PHPUnit\Framework\TestCase;
@@ -23,6 +24,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41, 'liked' => 3],
                 new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
                 [],
+                ForYouStreamTallyModel::available(4, 9),
             ),
             new TrendingUnopenedModel(TrendingWindow::Week, 7),
         ));
@@ -46,6 +48,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 'groups' => ['tags' => 0, 'feeds' => 0],
             ],
             'notifications' => [],
+            'forYouStream' => ['available' => true, 'unreadCount' => 4, 'entryCount' => 9],
         ], $payload);
     }
 
@@ -59,6 +62,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                     ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
+                    ForYouStreamTallyModel::unavailable(),
                 ),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
@@ -69,6 +73,7 @@ final class SubscriptionCountsJsonTest extends TestCase
         self::assertSame(['window' => 'day', 'unopened' => 0], $payload['trending']);
         self::assertSame(0, $payload['unreadTotals']['allItems']);
         self::assertSame(0, $payload['unreadTotals']['forYou']);
+        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $payload['forYouStream']);
     }
 
     public function testCarriesNotificationCounts(): void
@@ -80,6 +85,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 ['mastodon' => 2, 'bluesky' => 1],
+                ForYouStreamTallyModel::unavailable(),
             ),
             new TrendingUnopenedModel(TrendingWindow::Day, 0),
         ));

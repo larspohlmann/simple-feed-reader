@@ -6,6 +6,7 @@ namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunLogOwner;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
@@ -61,8 +62,9 @@ final readonly class RecommendationRunStarter
      */
     private function trimRunLog(User $user): void
     {
-        $this->logs->deleteForUserOutsideRuns(
+        $this->logs->deleteForUserOutside(
             $user,
+            RunLogOwner::Run,
             $this->runs->findNewestIdsForUser($user, RunLogRetention::RUNS),
         );
     }

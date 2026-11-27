@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** The run a recorded call's liveness, usage and adjustments land on: a recommendation, profile or story AI run. */
+/**
+ * The run a recorded call's liveness, usage and adjustments land on: a recommendation, profile, interest-term or
+ * story AI run.
+ */
 final readonly class CallingRun
 {
     private function __construct(public string $table, public string $logOwnerColumn, public int $id)
@@ -19,6 +22,11 @@ final readonly class CallingRun
     public static function profileRun(int $id): self
     {
         return new self('profile_run', 'profile_run_id', $id);
+    }
+
+    public static function interestTermRun(int $id): self
+    {
+        return new self('interest_term_run', 'interest_term_run_id', $id);
     }
 
     public static function storyAiRun(int $id): self

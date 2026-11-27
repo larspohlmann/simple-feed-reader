@@ -11,7 +11,7 @@ use App\Enum\InclusionSurface;
 /** Holds back a feed whose network the user has switched out of a surface. */
 final class NetworkExclusionDql
 {
-    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
+    /** Binds no parameter: the exclusion is matched to the subscription's own user, so one query can span users. */
     public static function notExcluded(string $feedOwner, InclusionSurface $surface): string
     {
         $feed = 'excludedFeed' . ucfirst($feedOwner);
@@ -19,7 +19,7 @@ final class NetworkExclusionDql
 
         return \sprintf(
             'NOT EXISTS (SELECT 1 FROM %1$s %2$s WHERE %2$s = %3$s.feed AND '
-            . 'EXISTS (SELECT 1 FROM %4$s %5$s WHERE %5$s.user = :user AND %5$s.network = %2$s.network '
+            . 'EXISTS (SELECT 1 FROM %4$s %5$s WHERE %5$s.user = %3$s.user AND %5$s.network = %2$s.network '
             . 'AND %5$s.surface = \'%6$s\'))',
             Feed::class,
             $feed,

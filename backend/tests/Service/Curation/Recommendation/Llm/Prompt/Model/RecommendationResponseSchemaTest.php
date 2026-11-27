@@ -71,4 +71,31 @@ final class RecommendationResponseSchemaTest extends TestCase
             'additionalProperties' => false,
         ], $schema->schema);
     }
+
+    public function testInterestTermsSchemaRequiresLanguageTermAndWeightPerTerm(): void
+    {
+        $schema = RecommendationResponseSchema::InterestTerms->toJsonSchema();
+
+        self::assertSame('interest_terms', $schema->name);
+        self::assertSame([
+            'type' => 'object',
+            'properties' => [
+                'terms' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'language' => ['type' => 'string'],
+                            'term' => ['type' => 'string'],
+                            'weight' => ['type' => 'integer'],
+                        ],
+                        'required' => ['language', 'term', 'weight'],
+                        'additionalProperties' => false,
+                    ],
+                ],
+            ],
+            'required' => ['terms'],
+            'additionalProperties' => false,
+        ], $schema->schema);
+    }
 }

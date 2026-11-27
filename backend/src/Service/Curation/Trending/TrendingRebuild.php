@@ -15,9 +15,8 @@ use App\Service\Curation\Trending\Model\TrendingLastBuildsModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use Doctrine\DBAL\Exception\RetryableException;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -34,7 +33,7 @@ final readonly class TrendingRebuild
         private UserRepository $users,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
-        private ManagerRegistry $registry,
+        private ManagerReopener $managerReopener,
     ) {
     }
 
@@ -111,7 +110,7 @@ final readonly class TrendingRebuild
                 ['user' => $userId, 'window' => $window->value, 'exception' => $exception],
             );
             // The failed transaction closed the entity manager; every later build would fail on it.
-            $this->ensureManagerOpen();
+            $this->managerReopener->ensureManagerOpen();
 
             return null;
         }
@@ -126,14 +125,6 @@ final readonly class TrendingRebuild
 
         return $this->clock->now()->getTimestamp() >= $builtAt->getTimestamp() + $window->rebuildIntervalSeconds()
             && $this->entries->hasEntriesCreatedAfter($userId, $builtAt);
-    }
-
-    private function ensureManagerOpen(): void
-    {
-        $manager = $this->registry->getManager();
-        if ($manager instanceof EntityManagerInterface && !$manager->isOpen()) {
-            $this->registry->resetManager();
-        }
     }
 
     private function remainingMilliseconds(\DateTimeImmutable $deadline): int

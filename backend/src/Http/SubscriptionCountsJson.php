@@ -19,6 +19,7 @@ final class SubscriptionCountsJson
      *   favoritesCount: int, keptCount: int, sharedCount: int, likedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
      *   notifications: list<array{network: string, unseenCount: int}>,
+     *   forYouStream: array{available: bool, unreadCount: int, entryCount: int},
      *   unreadTotals: array{
      *     allItems: int,
      *     forYou: int,
@@ -46,6 +47,7 @@ final class SubscriptionCountsJson
      *   favoritesCount: int, keptCount: int, sharedCount: int, likedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
      *   notifications: list<array{network: string, unseenCount: int}>,
+     *   forYouStream: array{available: bool, unreadCount: int, entryCount: int},
      *   unreadTotals: array{
      *     allItems: int,
      *     forYou: int,
@@ -65,6 +67,11 @@ final class SubscriptionCountsJson
             'trending' => TrendingUnopenedJson::from($tallies->trending),
             'unreadTotals' => UnreadTotalsJson::from($tallies->subscriptions->unreadTotals),
             'notifications' => self::notificationCounts($tallies->subscriptions->notificationsUnseen),
+            'forYouStream' => [
+                'available' => $tallies->subscriptions->forYouStream->available,
+                'unreadCount' => $tallies->subscriptions->forYouStream->unreadCount,
+                'entryCount' => $tallies->subscriptions->forYouStream->entryCount,
+            ],
         ];
     }
 

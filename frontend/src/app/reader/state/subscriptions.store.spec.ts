@@ -30,6 +30,7 @@ import {
   TagDto,
   UnreadTotalsDto,
 } from '../models';
+import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../sidebar-totals';
 import { TrendingUnopened } from '../trending/trending.models';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { anEntry } from '../../../testing/entry-testing';
@@ -85,6 +86,7 @@ interface CountTotals {
   liked?: number;
   viewed?: number;
   trending?: TrendingUnopened;
+  forYouStream?: ForYouStreamTallyDto;
   unreadTotals?: Partial<UnreadTotalsDto>;
   notifications?: NotificationCountDto[];
 }
@@ -106,6 +108,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   likedCount: totals.liked ?? 0,
   viewedCount: totals.viewed ?? 0,
   trending: totals.trending ?? { window: 'day', unopened: 0 },
+  forYouStream: totals.forYouStream ?? { available: false, unreadCount: 0, entryCount: 0 },
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
   notifications: totals.notifications ?? [],
 });
@@ -402,6 +405,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 2,
       sharedCount: 3,
       trending: { window: 'day', unopened: 2 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 2 });
     expect(store.totalUnread()).toBe(4);
@@ -410,6 +414,74 @@ describe('SubscriptionsStore', () => {
     expect(store.keptCount()).toBe(2);
     expect(store.sharedCount()).toBe(3);
     expect(store.loading()).toBe(false);
+  });
+
+  it('takes the For you stream tally from a counts reload', () => {
+    const tally = { available: true, unreadCount: 3, entryCount: 8 };
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 3)]));
+    expect(store.forYouStream().available).toBe(false);
+
+    store.reloadCountsQuietly();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions/counts')
+      .flush({ ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }]), forYouStream: tally });
+
+    expect(store.forYouStream()).toEqual(tally);
+  });
+
+  it('treats a full load without a For you stream tally as unavailable', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(
+        counts([sub(1, 3)], { forYouStream: { available: true, unreadCount: 3, entryCount: 8 } }),
+      );
+
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      ...counts([sub(1, 3)], { favorites: 4 }),
+      forYouStream: undefined,
+    });
+
+    expect(store.forYouStream()).toEqual(NO_FOR_YOU_STREAM_TALLY);
+    expect(store.favoritesCount()).toBe(4);
+  });
+
+  it('treats a counts answer without a For you stream tally as unavailable and still applies the rest', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(
+        counts([sub(1, 3)], { forYouStream: { available: true, unreadCount: 3, entryCount: 8 } }),
+      );
+
+    store.reloadCountsQuietly();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+      ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }], { favorites: 9 }),
+      forYouStream: undefined,
+    });
+
+    expect(store.forYouStream()).toEqual(NO_FOR_YOU_STREAM_TALLY);
+    expect(store.favoritesCount()).toBe(9);
+  });
+
+  it('keeps the same For you stream tally across a counts poll that changed nothing', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(
+        counts([sub(1, 3)], { forYouStream: { available: true, unreadCount: 3, entryCount: 8 } }),
+      );
+    const held = store.forYouStream();
+
+    store.reloadCountsQuietly();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+      ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }]),
+      forYouStream: { available: true, unreadCount: 3, entryCount: 8 },
+    });
+
+    expect(store.forYouStream()).toBe(held);
   });
 
   it('holds the notification counts the full load carries', () => {
@@ -434,6 +506,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto({ allItems: 5 }),
       notifications: [],
     });
@@ -453,6 +526,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -473,6 +547,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       viewedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.resolved()).toBe(true);
 
@@ -488,6 +563,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       viewedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.resolved()).toBe(true);
   });
@@ -504,6 +580,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 2,
         viewedCount: 4,
         trending: { window: 'day', unopened: 2 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
 
       tokens.clear();
@@ -554,6 +631,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
 
       tokens.clear();
@@ -570,6 +648,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
       expect(store.subscriptions().map((subscription) => subscription.id)).toEqual([2]);
       jest.useRealTimers();
@@ -588,6 +667,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.loadIfStale();
     ctrl.expectNone('https://api.test/api/subscriptions');
@@ -606,6 +686,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
 
     jest.useRealTimers();
@@ -619,6 +700,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -638,6 +720,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -678,6 +761,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
@@ -743,6 +827,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.patchLocal(1, { includeInAllItems: false });
     expect(
@@ -1123,6 +1208,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     sharedCount: 0,
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
+    forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
   });
 
   it('keeps ticking after a response that never left the process', () => {

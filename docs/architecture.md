@@ -253,7 +253,7 @@ may run either way (`Ingest → Reader` and `LinkCard → Ingest` both cross `In
 
 | Group | Modules |
 |---|---|
-| `Foundation` | Clock, Crypto, Html, Json, Text, Stemming, Url, Sanitize, Ordering, RateLimit, Process |
+| `Foundation` | Clock, Crypto, Html, Json, Text, Stemming, Url, Sanitize, Ordering, RateLimit, Process, Persistence |
 | `Outbound` | Fetch, Proxy, Image, Mail |
 | `Sourcing` (finding feeds) | Discovery, Preview, Catalog, FeedDirectory |
 | `Ingestion` (feed to entries) | Feed, Parser, Category, Scraper, Ingest, Refresh, Retention |

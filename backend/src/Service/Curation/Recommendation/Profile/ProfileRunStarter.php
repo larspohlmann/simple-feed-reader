@@ -7,6 +7,7 @@ namespace App\Service\Curation\Recommendation\Profile;
 use App\Entity\ProfileRun;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\RunLogOwner;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Curation\Recommendation\Profile\Exception\ProfileConnectionMissingException;
@@ -64,8 +65,9 @@ final readonly class ProfileRunStarter
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();
 
-        $this->logs->deleteForUserOutsideProfileRuns(
+        $this->logs->deleteForUserOutside(
             $user,
+            RunLogOwner::ProfileRun,
             $this->profileRuns->findNewestIdsForUser($user, RunLogRetention::RUNS),
         );
 

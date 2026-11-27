@@ -406,6 +406,26 @@ describe('ListHeading for a child tag (#1736)', () => {
   });
 });
 
+describe('ListHeading for the For you stream (#2582)', () => {
+  const streamHeading = (unread: boolean) =>
+    headingWith(
+      { kind: 'for-you-stream', unread },
+      { forYouStream: signal({ available: true, unreadCount: 2, entryCount: 9 }) },
+    );
+
+  it('is titled For you stream', () => {
+    expect(streamHeading(false).title()).toBe('For you stream');
+  });
+
+  it('counts the unread entries behind the unread switch', () => {
+    expect(streamHeading(true).titleCount()).toEqual({ value: 2, counts: 'unread' });
+  });
+
+  it('counts every entry with the switch off', () => {
+    expect(streamHeading(false).titleCount()).toEqual({ value: 9, counts: 'items' });
+  });
+});
+
 describe('ListHeading for the Shared list (#2007)', () => {
   const sharedHeading = () => headingWith({ kind: 'shared' }, { sharedCount: signal(3) });
 

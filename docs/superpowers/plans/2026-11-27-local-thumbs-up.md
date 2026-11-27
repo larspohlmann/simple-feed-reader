@@ -34,7 +34,7 @@
 
 **Files:**
 - Modify: `backend/src/Entity/EntryState.php`
-- Create: `backend/migrations/Version20261127130000.php` (both platforms, like the neighbouring migrations)
+- Create: `backend/migrations/Version20261127150000.php` (both platforms, like the neighbouring migrations)
 - Modify: `backend/src/Repository/EntryListRowMarks.php`, `EntryListRowHydrator.php`, `EntryProjection.php`
 - Modify: `backend/src/Http/EntryJson.php` (row shape docblock + `'isLiked' => $row->marks->isLiked`)
 - Modify: `backend/src/Service/Library/SavedPosts/SavedStateMover.php::moveFlags`

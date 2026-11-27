@@ -12,6 +12,7 @@ use App\Repository\PrivateFeedSyncChangeRepository;
 use App\Repository\SocialAccountSyncRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Social\Social\ActingAccountGuard;
 use App\Service\Social\Social\PrivateFeedSync;
@@ -65,7 +66,7 @@ final class PrivateFeedSyncWiring
             $socialAccounts,
             self::sync($container, $entityManager, $clock, $network, $logger, $registry),
             $entityManager,
-            $registry,
+            new ManagerReopener($registry),
             new NaiveUtcClock($clock),
             $logger,
         );

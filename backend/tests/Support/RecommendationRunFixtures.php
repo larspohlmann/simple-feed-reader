@@ -185,8 +185,13 @@ final readonly class RecommendationRunFixtures
 
     public function storeProfile(User $user, string $text): void
     {
+        $this->storeProfileGeneratedAt($user, $text, '2026-10-03 06:00:00');
+    }
+
+    public function storeProfileGeneratedAt(User $user, string $text, string $generatedAt): void
+    {
         $this->settingsRowOf($user)->storeProfile(
-            new StoredProfile($text, new \DateTimeImmutable('2026-10-03 06:00:00'), 'api.example.test', 'm'),
+            new StoredProfile($text, new \DateTimeImmutable($generatedAt), 'api.example.test', 'm'),
         );
         $this->entityManager->flush();
     }
@@ -285,7 +290,7 @@ final readonly class RecommendationRunFixtures
         return $log;
     }
 
-    /** Settles the row the way RecordedCall does, through the DBAL writer, then re-reads the managed entity. */
+    /** Settles the row the way RecordedCall does, through the DBAL writer, then lets the next read hydrate it afresh. */
     public function settleLog(RecommendationRunLog $log, string $responseText, CallOutcome $outcome): void
     {
         $this->entityManager->flush();
@@ -293,7 +298,7 @@ final readonly class RecommendationRunFixtures
             new CallSettlement($log->requireId(), $outcome),
             $responseText,
         );
-        $this->entityManager->refresh($log);
+        $this->entityManager->detach($log);
     }
 
     /** Default settings with debug on, which drives only the per-run call log and nothing in the feed payload. */

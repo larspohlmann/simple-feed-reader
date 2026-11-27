@@ -14,6 +14,11 @@ final readonly class SavedSearchMembershipSweepReportModel
     ) {
     }
 
+    public static function fromWalk(MarkGroupWalkReportModel $report): self
+    {
+        return new self($report->membersSwept, $report->entriesScanned, $report->matchesInserted, $report->caughtUp);
+    }
+
     public static function none(): self
     {
         return new self(0, 0, 0, false);

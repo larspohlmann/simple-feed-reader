@@ -10,6 +10,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Service\Library\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
@@ -112,7 +113,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $search = $this->search('climate');
         $ids = array_map(
             static fn (Entry $entry): int => $entry->requireId(),
-            $this->entries(SavedSearchMembershipSweep::CHUNK + 1),
+            $this->entries(MarkGroupWalker::CHUNK + 1),
         );
         // Every reading moves the clock 6 s: the deadline is read once, then
         // once per chunk, so a 10 s budget allows exactly one chunk.
@@ -122,8 +123,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $first = $this->sweep($matcher, $clock)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertFalse($first->caughtUp);
-        self::assertSame(SavedSearchMembershipSweep::CHUNK, $first->entriesScanned);
-        self::assertSame($ids[SavedSearchMembershipSweep::CHUNK - 1], $this->markOf($search));
+        self::assertSame(MarkGroupWalker::CHUNK, $first->entriesScanned);
+        self::assertSame($ids[MarkGroupWalker::CHUNK - 1], $this->markOf($search));
 
         $second = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
@@ -135,14 +136,14 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void
     {
         $this->search('climate');
-        $this->entries(SavedSearchMembershipSweep::CHUNK + 1);
+        $this->entries(MarkGroupWalker::CHUNK + 1);
         $matcher = new RecordingSavedSearchMatcher();
 
         $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(1000));
 
         self::assertTrue($report->caughtUp);
         self::assertCount(2, $matcher->calls);
-        self::assertSame(SavedSearchMembershipSweep::CHUNK + 1, $report->entriesScanned);
+        self::assertSame(MarkGroupWalker::CHUNK + 1, $report->entriesScanned);
     }
 
     public function testMatchesInsertedSumsAcrossEveryMemberOfTheGroup(): void

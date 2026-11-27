@@ -12,6 +12,7 @@ use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RequestAdjustment;
+use App\Enum\RunLogOwner;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -29,10 +30,6 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunLogRepository extends ServiceEntityRepository
 {
-    private const string OWNER_RUN = 'run';
-    private const string OWNER_PROFILE_RUN = 'profileRun';
-    private const string OWNER_STORY_AI_RUN = 'storyAiRun';
-
     public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
         parent::__construct($registry, RecommendationRunLog::class);
@@ -44,22 +41,17 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $this->findListRows($user, self::resolveOwner($kind), $runId);
     }
 
-    /** @return self::OWNER_* */
-    private static function resolveOwner(AiRunKind $kind): string
+    private static function resolveOwner(AiRunKind $kind): RunLogOwner
     {
         return match ($kind) {
-            AiRunKind::ForYou => self::OWNER_RUN,
-            AiRunKind::Profile => self::OWNER_PROFILE_RUN,
-            AiRunKind::Story => self::OWNER_STORY_AI_RUN,
+            AiRunKind::ForYou => RunLogOwner::Run,
+            AiRunKind::Profile => RunLogOwner::ProfileRun,
+            AiRunKind::Story => RunLogOwner::StoryAiRun,
         };
     }
 
-    /**
-     * @param self::OWNER_* $owner
-     *
-     * @return list<DebugLogRow>
-     */
-    private function findListRows(User $user, string $owner, int $ownerId): array
+    /** @return list<DebugLogRow> */
+    private function findListRows(User $user, RunLogOwner $owner, int $ownerId): array
     {
         /** @var list<array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
          *     verdict: ?CallVerdict, requestBytes: int|string, responseBytes: int|string,
@@ -69,22 +61,22 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
-                \sprintf('IDENTITY(l.%s) AS runId', $owner),
+                \sprintf('IDENTITY(l.%s) AS runId', $owner->value),
                 'l.phase AS phase',
                 'l.batchNumber AS batchNumber',
                 'l.attempt AS attempt',
-                'l.verdict AS verdict',
+                'l.outcome.verdict AS verdict',
                 'LENGTH(l.requestBody) AS requestBytes',
                 'LENGTH(l.responseText) AS responseBytes',
-                'l.wireBytes AS wireBytes',
+                'l.outcome.wireBytes AS wireBytes',
                 'l.createdAt AS createdAt',
-                'l.finishedAt AS finishedAt',
+                'l.outcome.finishedAt AS finishedAt',
                 'l.failure.errorDetail AS errorDetail',
-                'l.receipt.finishReason AS finishReason',
+                'l.outcome.finishReason AS finishReason',
                 'l.failure.adjustedSetting AS adjustedSetting',
                 'l.failure.adjustedValue AS adjustedValue',
             )
-            ->join('l.' . $owner, 'r')
+            ->join('l.' . $owner->value, 'r')
             ->where('r.user = :user')
             ->andWhere('r.id = :owner')
             ->setParameter('user', $user)
@@ -165,20 +157,16 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $this->findStreamingTexts($user, self::resolveOwner($kind), $runId);
     }
 
-    /**
-     * @param self::OWNER_* $owner
-     *
-     * @return array<int, string>
-     */
-    private function findStreamingTexts(User $user, string $owner, int $ownerId): array
+    /** @return array<int, string> */
+    private function findStreamingTexts(User $user, RunLogOwner $owner, int $ownerId): array
     {
         /** @var list<array{id: int, responseText: string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select('l.id AS id', 'l.responseText AS responseText')
-            ->join('l.' . $owner, 'r')
+            ->join('l.' . $owner->value, 'r')
             ->where('r.user = :user')
             ->andWhere('r.id = :owner')
-            ->andWhere('l.verdict IS NULL')
+            ->andWhere('l.outcome.verdict IS NULL')
             ->setParameter('user', $user)
             ->setParameter('owner', $ownerId)
             ->getQuery()
@@ -199,8 +187,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             ->leftJoin('l.run', 'r')
             ->leftJoin('l.profileRun', 'p')
             ->leftJoin('l.storyAiRun', 's')
+            ->leftJoin('l.interestTermRun', 't')
             ->where('l.id = :id')
-            ->andWhere('r.user = :user OR p.user = :user OR s.user = :user')
+            ->andWhere('r.user = :user OR p.user = :user OR s.user = :user OR t.user = :user')
             ->setParameter('id', $logId)
             ->setParameter('user', $user)
             ->getQuery()
@@ -210,52 +199,25 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     }
 
     /**
-     * Drops the account's recommendation-run rows except those of the named runs, the retention window at the start
-     * of a run; an empty keep list drops them all. Profile and story AI run rows stay.
+     * Drops the account's log rows of one kind of run except those of the named runs, the retention window at the start
+     * of a run; an empty keep list drops them all. The other kinds' rows stay.
      *
-     * @param list<int> $keptRunIds
+     * @param list<int> $keptOwnerIds
      */
-    public function deleteForUserOutsideRuns(User $user, array $keptRunIds): void
+    public function deleteForUserOutside(User $user, RunLogOwner $owner, array $keptOwnerIds): void
     {
-        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, self::OWNER_RUN, $keptRunIds));
+        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, $owner, $keptOwnerIds));
     }
 
     /**
-     * Drops the account's profile-run rows except those of the named profile runs; recommendation-run rows stay.
-     *
-     * @param list<int> $keptProfileRunIds
-     */
-    public function deleteForUserOutsideProfileRuns(User $user, array $keptProfileRunIds): void
-    {
-        $this->rowIds->delete(
-            RecommendationRunLog::class,
-            $this->idsForUser($user, self::OWNER_PROFILE_RUN, $keptProfileRunIds),
-        );
-    }
-
-    /**
-     * Drops the account's story AI run rows except those of the named runs; an empty keep list drops them all.
-     *
-     * @param list<int> $keptStoryAiRunIds
-     */
-    public function deleteForUserOutsideStoryAiRuns(User $user, array $keptStoryAiRunIds): void
-    {
-        $this->rowIds->delete(
-            RecommendationRunLog::class,
-            $this->idsForUser($user, self::OWNER_STORY_AI_RUN, $keptStoryAiRunIds),
-        );
-    }
-
-    /**
-     * @param self::OWNER_* $owner
      * @param list<int> $keptOwnerIds
      *
      * @return list<int>
      */
-    private function idsForUser(User $user, string $owner, array $keptOwnerIds): array
+    private function idsForUser(User $user, RunLogOwner $owner, array $keptOwnerIds): array
     {
         $query = $this->createQueryBuilder('l')
-            ->join('l.' . $owner, 'r')
+            ->join('l.' . $owner->value, 'r')
             ->where('r.user = :user')
             ->setParameter('user', $user);
 

@@ -16,6 +16,7 @@ use App\Service\Curation\Recommendation\Run\ForYouSweep;
 use App\Service\Curation\StoryAi\StoryAiSweep;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Logging\Loki\LokiClient;
 use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
@@ -76,6 +77,7 @@ use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\TaggedItemOf;
 use App\Tests\Support\TickingClock;
 use App\Tests\Support\TrendingWiring;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -112,6 +114,66 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertSame([], $sweep->deadlines);
         self::assertEquals(['recording' => RecordingMaintenanceSweep::idle()], $report->sweeps->reports);
         self::assertEquals(new LokiSpoolReportModel(0, 0), $report->logShipping);
+    }
+
+    public function testASweepThatClosesTheManagerLeavesTheNextOneAnOpenManager(): void
+    {
+        $entityManager = $this->entityManager;
+        $closing = new class ($entityManager) implements MaintenanceSweepInterface {
+            public function __construct(private readonly EntityManagerInterface $entityManager)
+            {
+            }
+
+            public function run(\DateTimeImmutable $deadline): object
+            {
+                $this->entityManager->close();
+
+                return RecordingMaintenanceSweep::ran();
+            }
+
+            public function idleReport(): object
+            {
+                return RecordingMaintenanceSweep::idle();
+            }
+        };
+        $flushing = new class ($entityManager) implements MaintenanceSweepInterface {
+            public function __construct(private readonly EntityManagerInterface $entityManager)
+            {
+            }
+
+            public function run(\DateTimeImmutable $deadline): object
+            {
+                $this->entityManager->persist(new Feed('https://example.com/after-a-closed-manager.xml'));
+                $this->entityManager->flush();
+
+                return RecordingMaintenanceSweep::ran();
+            }
+
+            public function idleReport(): object
+            {
+                return RecordingMaintenanceSweep::idle();
+            }
+        };
+        $clock = new MockClock('2026-11-27 10:00:00');
+        $tick = new MaintenanceTick(
+            RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+                ->build(new StubPassFetcher(), new StubFeedFetcher()),
+            ['closing' => $closing, 'flushing' => $flushing],
+            new LokiSpoolShipper(
+                new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
+                sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
+            ),
+            $clock,
+            new ManagerReopener($this->registry()),
+            self::TICK_WINDOW_SECONDS,
+        );
+
+        $tick->run();
+
+        self::assertTrue($this->entityManager->isOpen());
+        $feeds = self::getContainer()->get(FeedRepository::class);
+        self::assertInstanceOf(FeedRepository::class, $feeds);
+        self::assertNotNull($feeds->findOneBy(['url' => 'https://example.com/after-a-closed-manager.xml']));
     }
 
     public function testRunsEverySweepUpToTheEndOfTheTickWindowCountedFromItsStart(): void
@@ -178,6 +240,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
+            new ManagerReopener($this->registry()),
             self::TICK_WINDOW_SECONDS,
         );
     }
@@ -488,6 +551,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
+            new ManagerReopener($this->registry()),
             $overrides->windowSeconds,
         );
     }
