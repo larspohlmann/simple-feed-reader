@@ -48,7 +48,7 @@ final class LocalLikesTest extends DbTestCase
         $this->likes()->like($this->reader, $row);
         $this->clock->modify('+1 day');
 
-        $this->likes()->like($this->reader, $row);
+        $this->likes()->like($this->reader, $this->rowOf($row));
 
         self::assertEquals(new \DateTimeImmutable('2026-11-27 09:30:00'), $this->requireState($row)->getLikedAt());
     }
@@ -73,7 +73,7 @@ final class LocalLikesTest extends DbTestCase
         $this->entityManager->persist(StateMarks::markLiked($state, $this->clock->now()));
         $this->entityManager->flush();
 
-        $this->likes()->unlike($this->reader, $row);
+        $this->likes()->unlike($this->reader, $this->rowOf($row));
 
         $state = $this->requireState($row);
         self::assertFalse($state->isLiked());
@@ -97,7 +97,7 @@ final class LocalLikesTest extends DbTestCase
 
         $clock = new NaiveUtcClock($this->clock);
 
-        return new LocalLikes($resolver, $this->stateRepository(), $this->entityManager, $clock);
+        return new LocalLikes($resolver, $this->entityManager, $clock);
     }
 
     private function articleRow(): EntryListRow

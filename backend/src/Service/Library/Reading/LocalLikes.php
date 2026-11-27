@@ -6,7 +6,6 @@ namespace App\Service\Library\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryListRow;
-use App\Repository\EntryStateRepository;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -15,7 +14,6 @@ final readonly class LocalLikes
 {
     public function __construct(
         private EntryStateResolver $stateResolver,
-        private EntryStateRepository $states,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
     ) {
@@ -23,6 +21,9 @@ final readonly class LocalLikes
 
     public function like(User $user, EntryListRow $row): void
     {
+        if ($row->marks->isLiked) {
+            return;
+        }
         $state = $this->stateResolver->resolve($user, $row);
         $state->replaceMarks($state->marks()->withLikedAt($this->clock->now()));
         $this->entityManager->flush();
@@ -30,10 +31,10 @@ final readonly class LocalLikes
 
     public function unlike(User $user, EntryListRow $row): void
     {
-        $state = $this->states->findOneForUserEntry($user->requireId(), $row->entry->requireId());
-        if (null === $state || !$state->isLiked()) {
+        if (!$row->marks->isLiked) {
             return;
         }
+        $state = $this->stateResolver->resolve($user, $row);
         $state->replaceMarks($state->marks()->withoutLike());
         $this->entityManager->flush();
     }

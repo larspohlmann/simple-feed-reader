@@ -91,7 +91,7 @@ final class EntryLikingTest extends DbTestCase
         $row = $this->rowOf($this->persistMastodonPost());
         $this->liking()->like($this->reader, $row);
 
-        self::assertNull($this->liking()->unlike($this->reader, $row));
+        self::assertNull($this->liking()->unlike($this->reader, $this->rowOf($row->entry)));
 
         self::assertFalse($this->requireState($row)->isLiked());
         self::assertSame([], $this->http->requests);
