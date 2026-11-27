@@ -88,17 +88,23 @@ describe('LabelsStore (#2581)', () => {
     expect(store.labels()).toEqual([work]);
   });
 
-  it('creates a label and reloads the tallies', () => {
+  it('creates a label and lists it at once, uncounted, without reloading the tallies', () => {
+    const home: LabelTally = { ...work, id: 1, name: 'Home' };
+    store.reload();
+    answerTallies([home]);
     let created: unknown = null;
 
     store.create('Work').subscribe((label) => (created = label));
     const request = ctrl.expectOne({ method: 'POST', url: LABELS_URL });
     expect(request.request.body).toEqual({ name: 'Work' });
     request.flush({ label: { id: 3, name: 'Work' } }, { status: 201, statusText: 'Created' });
-    answerTallies([work]);
 
+    ctrl.expectNone(LABELS_URL);
     expect(created).toEqual({ id: 3, name: 'Work' });
-    expect(store.labels()).toEqual([work]);
+    expect(store.labels()).toEqual([
+      home,
+      { id: 3, name: 'Work', favoriteCount: 0, keptCount: 0, articleCount: 0 },
+    ]);
   });
 
   it('renames a label and reloads the tallies', () => {

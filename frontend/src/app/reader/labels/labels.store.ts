@@ -10,8 +10,8 @@ import { LabelPill, LabelTally, UnlabeledTally } from './labels.models';
 const NO_UNLABELED: UnlabeledTally = { favoriteCount: 0, keptCount: 0 };
 
 /** The reader's labels, alphabetical, with how many favorites and kept posts each sorts, and how many carry none.
- *  Every change to a label reloads the tallies and reaches the rows on screen; a row's own labels change through
- *  `EntryActionHandler`. */
+ *  Every change to a label reloads the tallies (a new one through the attach that follows it) and reaches the rows
+ *  on screen; a row's own labels change through `EntryActionHandler`. */
 @Injectable({ providedIn: 'root' })
 export class LabelsStore {
   private readonly api = inject(LabelsApi);
@@ -48,8 +48,9 @@ export class LabelsStore {
     if (this.loads.isStale()) this.reload();
   }
 
+  /** Lists the new label at once with no posts counted; the attach that follows reloads the tallies. */
   create(name: string): Observable<LabelPill> {
-    return this.api.create(name).pipe(tap(() => this.reload()));
+    return this.api.create(name).pipe(tap((label) => this.listUncounted(label)));
   }
 
   rename(id: number, name: string): Observable<void> {
@@ -68,6 +69,11 @@ export class LabelsStore {
 
   detach(entryId: number, labelId: number): Observable<void> {
     return this.api.detach(entryId, labelId);
+  }
+
+  private listUncounted({ id, name }: LabelPill): void {
+    const label: LabelTally = { id, name, favoriteCount: 0, keptCount: 0, articleCount: 0 };
+    this.storedLabels.update((labels) => [...labels, label].sort(byLabelName));
   }
 
   private reloadAfter(write: Observable<unknown>): Observable<void> {
