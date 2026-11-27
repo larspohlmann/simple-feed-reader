@@ -21,7 +21,7 @@ final readonly class EntryLiking
     ) {
     }
 
-    /** @return int|null the post's like count on its network, null after a local like */
+    /** @return int|null the post's like count on its network when known */
     public function like(User $user, EntryListRow $row): ?int
     {
         if ($this->allowsNetworkLike($user, $row->entry)) {
