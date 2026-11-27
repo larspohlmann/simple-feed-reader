@@ -45,6 +45,7 @@
               [attr.aria-label]="'reader.labels.nameField' | transloco"
               (keydown.enter)="saveRename(label, renameField.value)"
               (keydown.escape)="cancelRename()"
+              (blur)="cancelRename()"
             />
           } @else {
             <a

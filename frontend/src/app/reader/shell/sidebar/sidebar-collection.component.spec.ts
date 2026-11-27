@@ -303,6 +303,17 @@ describe('SidebarCollectionComponent (#2581)', () => {
       expect(input(fixture)).toBeNull();
     });
 
+    it('cancels when the field loses focus', () => {
+      const fixture = startRename();
+
+      input(fixture)!.value = 'House';
+      input(fixture)!.dispatchEvent(new FocusEvent('blur'));
+      fixture.detectChanges();
+
+      expect(rename).not.toHaveBeenCalled();
+      expect(input(fixture)).toBeNull();
+    });
+
     it('shows a taken name as a toast and keeps editing', () => {
       rename.mockReturnValue(
         throwError(

@@ -75,7 +75,7 @@ export class SidebarCollectionComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
   protected readonly open = persistedToggle(
-    () => `sidebar.collection.${this.collection()}.open`,
+    () => `sfr.sidebar.${this.collection()}.collapsed`,
     'collapsed',
   );
   protected readonly icon = computed(() => COLLECTION_ICON[this.collection()]);
