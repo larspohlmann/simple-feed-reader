@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Support\WordStems;
+use App\Service\Foundation\Stemming\WordStemmer;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 
 final readonly class HeadlineFiller
@@ -18,10 +19,10 @@ final readonly class HeadlineFiller
     /** @var array<string, array<string, true>> language => its seed stems */
     private array $seedStemsByLanguage;
 
-    /** @var array<string, true> the seeds of a feed without a language, in HeadlineStems' cut form */
+    /** @var array<string, true> the seeds of a feed without a language, in WordStems' cut form */
     private array $cutSeedStems;
 
-    public function __construct(HeadlineStemmer $stemmer, StopWordsInterface $stopWords)
+    public function __construct(WordStemmer $stemmer, StopWordsInterface $stopWords)
     {
         $this->seedStemsByLanguage = self::seedStemsByLanguage($stemmer, $stopWords);
         $this->cutSeedStems = self::cutSeedStems($stopWords);
@@ -51,7 +52,7 @@ final readonly class HeadlineFiller
     }
 
     /** @return array<string, array<string, true>> */
-    private static function seedStemsByLanguage(HeadlineStemmer $stemmer, StopWordsInterface $stopWords): array
+    private static function seedStemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
     {
         $seedStems = [];
         foreach (FeedLanguage::cases() as $language) {
@@ -71,8 +72,8 @@ final readonly class HeadlineFiller
         $cutStems = [];
         foreach (FeedLanguage::cases() as $language) {
             foreach ($stopWords->listWords($language) as $word) {
-                if (HeadlineStems::isKept(HeadlineStems::bare($word))) {
-                    $cutStems[HeadlineStems::cut($word)] = true;
+                if (WordStems::isKept(WordStems::bare($word))) {
+                    $cutStems[WordStems::cut($word)] = true;
                 }
             }
         }

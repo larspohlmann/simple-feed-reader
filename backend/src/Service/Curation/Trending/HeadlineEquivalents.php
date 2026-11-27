@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Support\WordStems;
+use App\Service\Foundation\Stemming\WordStemmer;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
 
 /** Spellings of one institution share one stem in all four languages; never a person, event or country (#2231). */
@@ -53,7 +54,7 @@ final readonly class HeadlineEquivalents
     /** @var array<string, true> */
     private array $canonicals;
 
-    public function __construct(private HeadlineStemmer $stemmer, private GermanCompoundSplitter $splitter)
+    public function __construct(private WordStemmer $stemmer, private GermanCompoundSplitter $splitter)
     {
         $this->exactWordPattern = self::exactWordPattern();
         $this->phrasesByFirstWord = self::phrasesByFirstWord();
@@ -65,7 +66,7 @@ final readonly class HeadlineEquivalents
     {
         return array_values(array_filter(
             $this->collapsePhrases(CasefoldedWords::splitWords($this->replaceExactWords($text))),
-            static fn (array $word): bool => HeadlineStems::isKept($word[1]),
+            static fn (array $word): bool => WordStems::isKept($word[1]),
         ));
     }
 
@@ -75,7 +76,7 @@ final readonly class HeadlineEquivalents
         $stems = [$this->stemWord($word, $bare, $language)];
         if ($language === FeedLanguage::German && !isset($this->canonicals[$bare])) {
             foreach ($this->splitter->splitParts($word) as $part) {
-                $stems[] = $this->stemWord($part, HeadlineStems::bare($part), $language);
+                $stems[] = $this->stemWord($part, WordStems::bare($part), $language);
             }
         }
 
@@ -139,7 +140,7 @@ final readonly class HeadlineEquivalents
      */
     private function collapsePhrases(array $words): array
     {
-        $bareWords = array_map(HeadlineStems::bare(...), $words);
+        $bareWords = array_map(WordStems::bare(...), $words);
         $collapsed = [];
         $index = 0;
         while ($index < \count($words)) {

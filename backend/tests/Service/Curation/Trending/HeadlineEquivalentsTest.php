@@ -6,8 +6,9 @@ namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineEquivalents;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -183,7 +184,7 @@ final class HeadlineEquivalentsTest extends TestCase
         $stemKeys = self::allStemKeys();
         foreach (self::canonicalsByTable() as $label => $canonical) {
             self::assertGreaterThanOrEqual(3, mb_strlen($canonical), $label);
-            self::assertSame($canonical, HeadlineStems::cut($canonical), $label);
+            self::assertSame($canonical, WordStems::cut($canonical), $label);
             self::assertArrayNotHasKey($canonical, $stemKeys, $label);
             foreach ([null, ...FeedLanguage::cases()] as $language) {
                 self::assertFalse($filler->isSeed($canonical, $language), $label);
@@ -196,7 +197,7 @@ final class HeadlineEquivalentsTest extends TestCase
         $filler = TrendingWiring::filler();
         foreach (FeedLanguage::cases() as $language) {
             foreach (array_keys(self::stemsByLanguage()[$language->value]) as $stem) {
-                self::assertSame(HeadlineStems::bare($stem), $stem, $stem);
+                self::assertSame(WordStems::bare($stem), $stem, $stem);
                 self::assertFalse($filler->isSeed($stem, $language), $language->value . ' ' . $stem);
             }
         }
@@ -204,7 +205,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testEveryStemKeyIsItsOwnStemInItsLanguage(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
         foreach (FeedLanguage::cases() as $language) {
             foreach (array_keys(self::stemsByLanguage()[$language->value]) as $stem) {
                 self::assertSame($stem, $stemmer->stem($stem, $language), $language->value . ' ' . $stem);
@@ -257,7 +258,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testAGermanWordIsStemmedWithTheGermanStemmer(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
 
         self::assertSame(
             array_map(
@@ -270,7 +271,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testAGermanCompoundAddsTheStemsOfItsParts(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
 
         self::assertEqualsCanonicalizing(
             array_map(
@@ -308,7 +309,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testTheWholeStemComesBeforeThePartStems(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
 
         self::assertSame(
             array_map(
@@ -321,7 +322,7 @@ final class HeadlineEquivalentsTest extends TestCase
 
     public function testARepeatedPartCountsOnce(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
 
         self::assertSame(
             [$stemmer->stem('tagtagbus', FeedLanguage::German), 'tag', 'bus'],
@@ -364,7 +365,7 @@ final class HeadlineEquivalentsTest extends TestCase
         foreach (array_keys(self::table('PHRASES')) as $phrase) {
             $words = CasefoldedWords::splitWords($phrase);
             self::assertSame(implode(' ', $words), $phrase);
-            self::assertSame(HeadlineStems::bare($phrase), $phrase);
+            self::assertSame(WordStems::bare($phrase), $phrase);
             self::assertGreaterThanOrEqual(2, \count($words), $phrase);
         }
     }
@@ -372,7 +373,7 @@ final class HeadlineEquivalentsTest extends TestCase
     public function testEveryCutStemKeyIsACut(): void
     {
         foreach (array_keys(self::table('CUT_STEMS')) as $stem) {
-            self::assertSame($stem, HeadlineStems::cut($stem), $stem);
+            self::assertSame($stem, WordStems::cut($stem), $stem);
         }
     }
 

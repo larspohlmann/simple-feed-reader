@@ -6,8 +6,9 @@ namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Trending\HeadlineFiller;
-use App\Service\Curation\Trending\Support\HeadlineStems;
+use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Tests\Support\LanguageWiring;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -63,7 +64,7 @@ final class HeadlineFillerTest extends TestCase
     #[DataProvider('languages')]
     public function testEveryStopWordIsASeedThroughItsLanguagesStemmer(FeedLanguage $language): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
         $words = LanguageWiring::stopWords()->listWords($language);
 
         self::assertNotEmpty($words);
@@ -77,12 +78,12 @@ final class HeadlineFillerTest extends TestCase
     {
         $keptWords = array_filter(
             LanguageWiring::stopWords()->listWords($language),
-            static fn (string $word): bool => HeadlineStems::isKept(HeadlineStems::bare($word)),
+            static fn (string $word): bool => WordStems::isKept(WordStems::bare($word)),
         );
 
         self::assertNotEmpty($keptWords);
         foreach ($keptWords as $word) {
-            self::assertTrue($this->filler->isSeed(HeadlineStems::cut($word), null), $word);
+            self::assertTrue($this->filler->isSeed(WordStems::cut($word), null), $word);
         }
     }
 
@@ -95,7 +96,7 @@ final class HeadlineFillerTest extends TestCase
 
     public function testASeedOfOneLanguageIsNoSeedInAnotherUnlessItsListHasIt(): void
     {
-        $stemmer = TrendingWiring::stemmer();
+        $stemmer = StemmingWiring::stemmer();
 
         self::assertTrue($this->filler->isSeed($stemmer->stem('con', FeedLanguage::Spanish), FeedLanguage::Spanish));
         self::assertFalse($this->filler->isSeed($stemmer->stem('con', FeedLanguage::English), FeedLanguage::English));
@@ -104,7 +105,7 @@ final class HeadlineFillerTest extends TestCase
     #[DataProvider('contentWordsByLanguage')]
     public function testAContentWordIsNoSeedInItsLanguage(FeedLanguage $language, string $word): void
     {
-        self::assertFalse($this->filler->isSeed(TrendingWiring::stemmer()->stem($word, $language), $language));
+        self::assertFalse($this->filler->isSeed(StemmingWiring::stemmer()->stem($word, $language), $language));
     }
 
     /** @return iterable<string, array{FeedLanguage, string}> */
