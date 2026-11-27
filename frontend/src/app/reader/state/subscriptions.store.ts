@@ -53,7 +53,7 @@ import {
   sameUnreadTotals,
   unreadTotalsFrom,
 } from './unread-totals';
-import { MARK_NAMES, Mark, formatCountField } from './marks';
+import { MARK_NAMES, Mark, toCountField } from './marks';
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -280,7 +280,7 @@ export class SubscriptionsStore {
 
   private applyCounts(response: SubscriptionsResponse): void {
     this.storedSubscriptions.set(response.subscriptions);
-    MARK_NAMES.forEach((mark) => this.markCounts[mark].set(response[formatCountField(mark)]));
+    MARK_NAMES.forEach((mark) => this.markCounts[mark].set(response[toCountField(mark)]));
     this.trendingUnopened.set(response.trending);
     this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set(response.socialAccounts);
@@ -306,7 +306,7 @@ export class SubscriptionsStore {
 
     MARK_NAMES.forEach((mark) => {
       const count = this.markCounts[mark];
-      const value = response[formatCountField(mark)];
+      const value = response[toCountField(mark)];
       if (count() !== value) count.set(value);
     });
   }

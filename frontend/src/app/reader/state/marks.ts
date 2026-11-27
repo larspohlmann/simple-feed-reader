@@ -19,6 +19,6 @@ export function isMark(kind: string): kind is Mark {
 }
 
 /** The field of the sidebar totals that counts `mark`. */
-export function formatCountField(mark: Mark): `${Mark}Count` {
+export function toCountField(mark: Mark): `${Mark}Count` {
   return `${mark}Count`;
 }
