@@ -10,20 +10,21 @@ use App\Entity\EntryLabel;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\Label;
 use App\Entity\User;
 use App\Repository\EntryLabelRepository;
 use App\Repository\EntryShareRepository;
-use App\Repository\LabelRepository;
 use App\Service\Library\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
+use App\Tests\Support\NamesLabels;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SavedStateMoverTest extends DbTestCase
 {
+    use NamesLabels;
+
     private const string READ_AT = '2026-10-16 08:00:00';
     private const string VIEWED_AT = '2026-10-16 08:05:00';
 
@@ -307,20 +308,6 @@ final class SavedStateMoverTest extends DbTestCase
         $shares = $this->entityManager->getRepository(EntryShare::class);
 
         return $shares->findSharedAt($this->user->requireId(), $entryId);
-    }
-
-    private function labelNamed(User $user, string $name): Label
-    {
-        /** @var LabelRepository $labels */
-        $labels = $this->entityManager->getRepository(Label::class);
-        $label = $labels->findForUserByName($user->requireId(), $name);
-        if (null !== $label) {
-            return $label;
-        }
-        $label = new Label($user, $name);
-        $this->entityManager->persist($label);
-
-        return $label;
     }
 
     /** @return list<string> */

@@ -11,17 +11,20 @@ use App\Entity\Label;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\NamesLabels;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
 final class EntryLabelControllerTest extends ApiTestCase
 {
+    use NamesLabels;
+
     public function testAttachTwiceKeepsOneRow(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('entry-label-twice@example.com');
         $entry = $this->subscribedEntry($user);
-        $label = $this->label($user, 'Work');
+        $label = $this->labelNamed($user, 'Work');
 
         $this->put($client, $user, $entry, $label);
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
@@ -36,7 +39,7 @@ final class EntryLabelControllerTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('entry-label-absent@example.com');
         $entry = $this->subscribedEntry($user);
-        $label = $this->label($user, 'Work');
+        $label = $this->labelNamed($user, 'Work');
 
         $this->put($client, $user, $entry, $label);
         $this->delete($client, $user, $entry, $label);
@@ -52,7 +55,7 @@ final class EntryLabelControllerTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('entry-label-foreign@example.com');
         $entry = $this->subscribedEntry($user);
-        $foreignLabel = $this->label($this->factory()->create('entry-label-owner@example.com'), 'Theirs');
+        $foreignLabel = $this->labelNamed($this->factory()->create('entry-label-owner@example.com'), 'Theirs');
 
         $this->put($client, $user, $entry, $foreignLabel);
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
@@ -66,7 +69,7 @@ final class EntryLabelControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('entry-label-outside@example.com');
-        $label = $this->label($user, 'Work');
+        $label = $this->labelNamed($user, 'Work');
         $strangerEntry = $this->subscribedEntry($this->factory()->create('entry-label-stranger@example.com'));
 
         $this->put($client, $user, $strangerEntry, $label);
@@ -163,15 +166,6 @@ final class EntryLabelControllerTest extends ApiTestCase
         $label = $this->entityManager()->getRepository(Label::class)
             ->findOneBy(['user' => $user, 'name' => 'Read later']);
         self::assertInstanceOf(Label::class, $label);
-
-        return $label;
-    }
-
-    private function label(User $user, string $name): Label
-    {
-        $label = new Label($user, $name);
-        $this->entityManager()->persist($label);
-        $this->entityManager()->flush();
 
         return $label;
     }

@@ -31,6 +31,7 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\NamesLabels;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\SharedLinks;
@@ -41,6 +42,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class EntryControllerTest extends ApiTestCase
 {
+    use NamesLabels;
     use SeedsFeedEntries;
     use SignsReaderUrls;
 
@@ -1568,19 +1570,6 @@ final class EntryControllerTest extends ApiTestCase
         self::assertIsArray($decoded);
         self::assertIsArray($decoded['entry']);
         self::assertSame([['id' => $label->requireId(), 'name' => 'Read later']], $decoded['entry']['labels']);
-    }
-
-    private function labelNamed(User $user, string $name): Label
-    {
-        $existing = $this->entityManager()->getRepository(Label::class)->findOneBy(['user' => $user, 'name' => $name]);
-        if ($existing instanceof Label) {
-            return $existing;
-        }
-        $label = new Label($user, $name);
-        $this->entityManager()->persist($label);
-        $this->entityManager()->flush();
-
-        return $label;
     }
 
     private function attachLabel(Entry $entry, Label $label): void

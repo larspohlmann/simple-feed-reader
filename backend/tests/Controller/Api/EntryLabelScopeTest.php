@@ -12,11 +12,14 @@ use App\Entity\Label;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\NamesLabels;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
 final class EntryLabelScopeTest extends ApiTestCase
 {
+    use NamesLabels;
+
     private KernelBrowser $client;
 
     protected function setUp(): void
@@ -76,7 +79,7 @@ final class EntryLabelScopeTest extends ApiTestCase
     {
         [$headers, , $entryB] = $this->seedThreeEntries('label-scope-shared-feed@example.com');
         $stranger = $this->factory()->create('label-scope-shared-stranger@example.com');
-        $strangerLabel = $this->label($stranger, 'Theirs');
+        $strangerLabel = $this->labelNamed($stranger, 'Theirs');
         $this->entityManager()->persist(new EntryLabel($strangerLabel, $entryB));
         $this->entityManager()->flush();
 
@@ -86,7 +89,7 @@ final class EntryLabelScopeTest extends ApiTestCase
     public function testCursorPagingWalksEveryLabeledFavorite(): void
     {
         [$headers, $user] = $this->bearerAndUser('label-scope-paging@example.com');
-        $work = $this->label($user, 'Work');
+        $work = $this->labelNamed($user, 'Work');
         $feed = $this->subscribe($user);
         foreach (['p1' => '03', 'p2' => '02', 'p3' => '01'] as $title => $day) {
             $entry = $this->entry($feed, $title, $day);
@@ -113,7 +116,7 @@ final class EntryLabelScopeTest extends ApiTestCase
     private function seedThreeEntries(string $email): array
     {
         [$headers, $user] = $this->bearerAndUser($email);
-        $work = $this->label($user, 'Work');
+        $work = $this->labelNamed($user, 'Work');
         $feed = $this->subscribe($user);
         $entryA = $this->entry($feed, 'a', '03');
         $entryB = $this->entry($feed, 'b', '02');
@@ -157,15 +160,6 @@ final class EntryLabelScopeTest extends ApiTestCase
 
             return $entry['title'];
         }, array_values($entries));
-    }
-
-    private function label(User $user, string $name): Label
-    {
-        $label = new Label($user, $name);
-        $this->entityManager()->persist($label);
-        $this->entityManager()->flush();
-
-        return $label;
     }
 
     private function subscribe(User $user): Feed
