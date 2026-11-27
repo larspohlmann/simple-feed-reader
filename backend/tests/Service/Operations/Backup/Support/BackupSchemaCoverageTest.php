@@ -19,6 +19,7 @@ use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
+use App\Entity\ForYouStreamEntry;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\InterestTerm;
@@ -225,6 +226,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'profile, which a backup drops, and extracted again by the term refresh.',
         InterestTermSet::class => 'The stream\'s sweep mark and term stamp (#2582); derived, and rebuilt by the term '
             . 'refresh after a restore.',
+        ForYouStreamEntry::class => 'A derived For you stream match (#2582); a restore replaces the entries it '
+            . 'points at, and the sweep matches the new ones again.',
         InterestTermRun::class => 'The history of the term extraction calls (#2582); meaningless without its '
             . 'provider calls.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',

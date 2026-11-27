@@ -33,6 +33,21 @@ final class InterestTermSetRepository extends ServiceEntityRepository
             ->getOneOrNullResult() !== null;
     }
 
+    /** @return list<InterestTermSet> of active accounts whose mark is below the ceiling */
+    public function findBelowMark(int $ceiling, \DateTimeImmutable $now): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->join('s.user', 'owner')
+            ->andWhere('s.matchedUpToEntryId < :ceiling')
+            ->setParameter('ceiling', $ceiling);
+        ActiveAccountDql::restrict($qb, 'owner', $now);
+
+        /** @var list<InterestTermSet> $sets */
+        $sets = $qb->getQuery()->getResult();
+
+        return $sets;
+    }
+
     /** @param list<int> $userIds */
     public function advanceMarks(array $userIds, int $entryId): void
     {

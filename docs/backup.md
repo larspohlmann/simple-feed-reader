@@ -248,6 +248,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `ProfileRun` | The history of your interest-profile generations. Run it again to get a new profile. It has no meaning without the entries it was built from, which the restore replaces. |
 | `InterestTerm` | The weighted terms the "For you" stream matches articles on. They are derived from your interest profile, which the file leaves out, and the term refresh extracts them again once a profile exists. |
 | `InterestTermSet` | When your terms were last extracted, and how far the stream has matched them against articles. It is derived, and the term refresh rebuilds it after a restore. |
+| `ForYouStreamEntry` | The articles the "For you" stream matched for you. It is derived, and it points at articles the restore replaces, so the sweep matches the restored ones again. |
 | `InterestTermRun` | The history of your term extractions. It has no meaning without the provider calls it records, and the file leaves those out. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |

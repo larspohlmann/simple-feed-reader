@@ -7,6 +7,7 @@ namespace App\Tests\Service\Identity\Account;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ForYouStreamEntry;
 use App\Entity\InterestTerm;
 use App\Entity\InterestTermRun;
 use App\Entity\InterestTermSet;
@@ -273,7 +274,7 @@ final class AccountResetTest extends DbTestCase
         );
     }
 
-    public function testAResetForgetsTheInterestTermsTheirRunsAndTheirCalls(): void
+    public function testAResetForgetsTheInterestTermsTheirRunsTheirCallsAndTheStreamMatches(): void
     {
         $user = $this->user('reset-terms@example.com');
         $bystander = $this->user('reset-terms-bystander@example.com');
@@ -291,6 +292,9 @@ final class AccountResetTest extends DbTestCase
         self::assertNull($this->entityManager->find(InterestTermRun::class, $userRunId));
         self::assertSame([], $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $userId]));
         self::assertNull($this->entityManager->find(InterestTermSet::class, $userId));
+        $streamEntries = $this->entityManager->getRepository(ForYouStreamEntry::class);
+        self::assertSame([], $streamEntries->findBy(['user' => $userId]));
+        self::assertCount(1, $streamEntries->findBy(['user' => $bystanderId]));
         self::assertCount(1, $logs->findBy(['interestTermRun' => $bystanderRunId]));
         self::assertNotNull($this->entityManager->find(InterestTermRun::class, $bystanderRunId));
         $bystanderTerms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $bystanderId]);
@@ -306,6 +310,11 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->persist(RecommendationRunLog::forInterestTermRun($run, 1, '{}', $profileAt));
         $this->entityManager->persist(new InterestTerm($user, 'solar', FeedLanguage::English, 0.8));
         $this->entityManager->persist(new InterestTermSet($user, $profileAt, $profileAt, 0));
+        $feed = new Feed('https://example.com/stream-' . $user->getEmail() . '.xml');
+        $this->entityManager->persist($feed);
+        $entry = new Entry($feed, 'stream', null, 'Solar', $profileAt, $profileAt);
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new ForYouStreamEntry($user, $entry, $profileAt, 2.0, 'solar'));
         $this->entityManager->flush();
 
         return $run;
