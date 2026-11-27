@@ -1,7 +1,6 @@
 @use 'sidebar-row' as row;
 @include row.row-parts;
-@include row.section-head;
-@include row.section-head-glyph;
+@include row.folder-head;
 @include row.chevron('.chevzone');
 @include row.sublist;
 
@@ -10,6 +9,7 @@
 }
 
 .followed-toggle {
+  padding: 0;
   border: 0;
   background: none;
   font: inherit;
@@ -37,4 +37,15 @@
   padding: 0 var(--space-1);
   color: var(--text-muted);
   font-size: var(--fs-2xs);
+}
+
+/* On touch a story's ⋯ takes the 44px chevron column, so its count lines up with the head's. */
+@media (pointer: coarse) {
+  .followed-row app-sidebar-row-menu {
+    margin-right: 0;
+  }
+
+  .followed-row app-sidebar-row-menu + .trail {
+    display: none;
+  }
 }

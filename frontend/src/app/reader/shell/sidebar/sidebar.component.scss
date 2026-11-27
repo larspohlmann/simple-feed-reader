@@ -117,23 +117,14 @@
   }
 }
 
-// Favorites, Kept, Followed stories and Saved searches read as consecutive rows at the views list's
-// pitch: no card padding, and the card's borders stand in for the rows' gap
-// (the boxed head is shorter, so it adds --space-1). Under the airy style only the first keeps its rule.
-.collections {
-  --collections-pad-y: 0px;
-
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.views-group:not(:has(.nav, .folder-head)) {
+  display: none;
 }
 
-:host-context(.sidebar-airy) .collections {
-  gap: 0;
-}
-
-:host-context(.sidebar-airy) .collections > :not(:first-child) {
-  --airy-hrule: transparent;
+/* The airy sheet's first group: no rule under the search band or the drawer's title. */
+:host-context(.sidebar-airy) .views-group:nth-child(1 of .views-group) {
+  padding-top: var(--space-1);
+  border-top-color: transparent;
 }
 
 .feeds-card:not(.card) {

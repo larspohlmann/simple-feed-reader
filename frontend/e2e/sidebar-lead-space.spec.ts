@@ -87,7 +87,7 @@ async function openSidebar(
   await page.goto('/');
   await expectTheme(page, theme);
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  await expect(sidebar.getByRole('link', { name: /All items/ })).toBeVisible();
+  await expect(sidebar.getByRole('link', { name: /^All items/ })).toBeVisible();
   await sidebar.getByRole('button', { name: 'Toggle saved searches' }).click();
   await sidebar.getByRole('button', { name: 'Toggle News' }).click();
   await sidebar.getByRole('button', { name: 'Toggle World' }).click();
@@ -155,10 +155,15 @@ const groupRow = (row: string): Lead => ({ row, lead: `${row} .lead`, label: `${
 
 /** Rows on their own surface: the lead starts one lead space in, and its gap is one lead space. */
 const OWN_SURFACE: Record<string, Lead> = {
-  'a view': {
-    row: 'app-sidebar-views .nav.all',
-    lead: 'app-sidebar-views .nav.all > app-icon',
-    label: 'app-sidebar-views .nav.all .name',
+  'a view head': {
+    row: '.all-head',
+    lead: '.all-head > .section-link > app-icon',
+    label: '.all-head .label',
+  },
+  'the saved searches head': {
+    row: '.savedsearch-head',
+    lead: '.savedsearch-head > .section-link > app-icon',
+    label: '.savedsearch-head .label',
   },
   'a saved search': {
     row: '.savedsearch-item',
@@ -175,11 +180,6 @@ const OWN_SURFACE: Record<string, Lead> = {
 /** Section heads: their label (or the social head's lead) follows the head's own formula; a head
  *  with a lead gaps it by the same lead space. */
 const HEADS: Record<string, Lead> = {
-  'the saved searches head': {
-    row: '.savedsearch-head',
-    lead: null,
-    label: '.savedsearch-head .label',
-  },
   'the tags head': { row: '.tags-head', lead: null, label: '.tags-head .label' },
   'the feeds head': { row: '.feeds-head', lead: null, label: '.feeds-head .label' },
   'the social head': {
