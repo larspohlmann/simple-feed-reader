@@ -194,12 +194,13 @@ describe('EntryRowCache', () => {
       expect(readShownEntry(1).isLiked).toBe(true);
     });
 
-    it('likes every copy of the post', () => {
+    it('likes the entry alone, not its copies', () => {
       holdEntries(buildArticle(1, { canonicalItemId: 7 }), buildArticle(2, { canonicalItemId: 7 }));
 
       cache.setLiked(readShownEntry(1), true, jest.fn());
 
-      expect(readShownEntry(2).isLiked).toBe(true);
+      expect(readShownEntry(1).isLiked).toBe(true);
+      expect(readShownEntry(2).isLiked).toBe(false);
     });
   });
 

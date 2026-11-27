@@ -326,9 +326,9 @@ export class EntryRowCache {
   }
 }
 
-const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score', 'isLiked'] as const;
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
 
-/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
+/** What of `patch` the copies of one item share: the read flags, the score and vote, and a network like. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
   const shared: RowPatch = {};
   for (const key of SHARED_KEYS) {
