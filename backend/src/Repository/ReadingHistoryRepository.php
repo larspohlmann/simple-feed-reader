@@ -10,7 +10,6 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
-use App\Enum\VoteScore;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -59,8 +58,7 @@ final readonly class ReadingHistoryRepository
     {
         $likes = $this->likedEntriesQueryBuilder($userId, SocialLike::class, 'likedAt')->setMaxResults($cap);
         $upvotes = $this->likedEntriesQueryBuilder($userId, DiscussionVote::class, 'votedAt')
-            ->andWhere('liking.score = :upvote')
-            ->setParameter('upvote', VoteScore::Up)
+            ->andWhere(EntryLikeDql::buildUpvoteCondition('liking'))
             ->setMaxResults($cap);
         $rows = [
             ...$this->readLikedRows($likes),
@@ -68,7 +66,12 @@ final readonly class ReadingHistoryRepository
             ...$this->readLikedRows($this->locallyLikedEntriesQueryBuilder($userId)->setMaxResults($cap)),
         ];
 
-        $newestFirst = self::sortNewestLikeFirst(self::keepNewestLikePerPost($rows));
+        $newestFirst = self::keepNewestLikePerPost($rows);
+        usort(
+            $newestFirst,
+            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
+                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
+        );
 
         return array_column(array_slice($newestFirst, 0, $cap), 'titled');
     }
@@ -79,7 +82,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isKept = :true AND es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->andWhere('NOT ' . EntryLikeDql::exists(EntryAliases::primary()))
+            ->andWhere('NOT ' . EntryLikeDql::existsOnJoinedState(EntryAliases::primary()))
             ->orderBy('e.dates.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($cap)
@@ -95,7 +98,7 @@ final readonly class ReadingHistoryRepository
         $qb = $this->historyQueryBuilder($userId)
             ->andWhere('es.isViewed = :true AND es.isFavorite = :false AND es.isKept = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->andWhere('NOT ' . EntryLikeDql::exists(EntryAliases::primary()))
+            ->andWhere('NOT ' . EntryLikeDql::existsOnJoinedState(EntryAliases::primary()))
             ->andWhere('NOT ' . self::buildFollowedCopyCondition(
                 'sibling',
                 'e.canonicalItem',
@@ -133,17 +136,6 @@ final readonly class ReadingHistoryRepository
             ->setParameter('user', $userId);
     }
 
-    private function candidateEntriesQueryBuilder(int $userId): QueryBuilder
-    {
-        return $this->entityManager->createQueryBuilder()
-            ->select('e', 'f')
-            ->addSelect('s.customTitle AS customTitle')
-            ->from(Entry::class, 'e')
-            ->join('e.feed', 'f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->setParameter('user', $userId);
-    }
-
     /** @param class-string<SocialLike|DiscussionVote> $rootClass */
     private function likedEntriesQueryBuilder(int $userId, string $rootClass, string $instantField): QueryBuilder
     {
@@ -175,10 +167,10 @@ final readonly class ReadingHistoryRepository
 
     private function locallyLikedEntriesQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->candidateEntriesQueryBuilder($userId)
-            ->join(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+        return $this->historyQueryBuilder($userId)
             ->addSelect('es.likedAt AS likedAt')
-            ->andWhere('es.likedAt IS NOT NULL AND es.isFavorite = :false')
+            ->andWhere(EntryLikeDql::buildLocalLikeCondition('es'))
+            ->andWhere('es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
             ->andWhere('NOT ' . self::buildFollowedCopyCondition(
                 'copy',
@@ -210,21 +202,6 @@ final readonly class ReadingHistoryRepository
         }
 
         return array_values($newest);
-    }
-
-    /**
-     * @param list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> $rows
-     * @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}>
-     */
-    private static function sortNewestLikeFirst(array $rows): array
-    {
-        usort(
-            $rows,
-            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
-                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
-        );
-
-        return $rows;
     }
 
     /** A copy of the item, in a feed the reader follows, that meets $copyCondition. */
@@ -262,12 +239,15 @@ final readonly class ReadingHistoryRepository
     /** @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> */
     private function readLikedRows(QueryBuilder $qb): array
     {
-        /** @var list<array{0: Entry, customTitle: ?string, likedAt: \DateTimeImmutable}> $rows feed folds into row 0's graph */
+        /** @var list<array{0: Entry|EntryState, customTitle: ?string, likedAt: \DateTimeImmutable}> $rows */
         $rows = $qb->getQuery()->getResult();
 
         return array_map(
             static fn (array $row): array => [
-                'titled' => TitledEntry::fromEntry($row[0], $row['customTitle']),
+                'titled' => TitledEntry::fromEntry(
+                    $row[0] instanceof EntryState ? $row[0]->getEntry() : $row[0],
+                    $row['customTitle'],
+                ),
                 'likedAt' => $row['likedAt'],
             ],
             $rows,
