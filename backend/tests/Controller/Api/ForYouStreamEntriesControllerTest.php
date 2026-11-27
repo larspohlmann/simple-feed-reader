@@ -122,6 +122,18 @@ final class ForYouStreamEntriesControllerTest extends ApiTestCase
         self::assertFalse($this->isRead($nonMember));
     }
 
+    public function testMarkReadLeavesAMatchTheSweepStoredAfterUntilUnread(): void
+    {
+        $matchedBefore = $this->member('2026-11-27T08:00:00', matchedAt: '2026-11-27 08:55:00');
+        $matchedAfter = $this->member('2026-11-27T07:00:00', matchedAt: '2026-11-27 09:05:00');
+
+        $this->post('/api/entries/for-you-stream/mark-read', ['until' => '2026-11-27T09:00:00Z']);
+
+        $this->entityManager()->clear();
+        self::assertTrue($this->isRead($matchedBefore));
+        self::assertFalse($this->isRead($matchedAfter));
+    }
+
     public function testMarkReadWithoutUntilIsUnprocessable(): void
     {
         $this->post('/api/entries/for-you-stream/mark-read', []);
@@ -183,13 +195,17 @@ final class ForYouStreamEntriesControllerTest extends ApiTestCase
         return $entry;
     }
 
-    private function member(string $publishedAt, ?User $user = null, ?Feed $feed = null): Entry
-    {
+    private function member(
+        string $publishedAt,
+        ?User $user = null,
+        ?Feed $feed = null,
+        string $matchedAt = '2026-11-27 08:30:00',
+    ): Entry {
         $entry = $this->nonMember($publishedAt, $feed);
         $this->entityManager()->persist(new ForYouStreamEntry(
             $user ?? $this->user,
             $entry,
-            new \DateTimeImmutable('2026-11-27 12:00:00'),
+            new \DateTimeImmutable($matchedAt),
             1.0,
             'stem',
         ));

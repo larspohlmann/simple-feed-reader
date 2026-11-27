@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\ForYouStreamEntry;
-use App\Entity\Subscription;
 use App\Enum\InclusionSurface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -56,6 +55,11 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
         $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
             ->andWhere('e.dates.effectiveDate <= :until')
+            ->andWhere(\sprintf(
+                'EXISTS (SELECT 1 FROM %s matchedMember WHERE matchedMember.entry = e AND matchedMember.user = :user'
+                . ' AND matchedMember.matchedAt <= :until)',
+                ForYouStreamEntry::class,
+            ))
             ->setParameter('until', $until);
         $this->restrictToMembers($qb, $userId);
 
@@ -72,10 +76,7 @@ final class ForYouStreamEntryRepository extends ServiceEntityRepository
 
     public function countMembers(int $userId): int
     {
-        $qb = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->setParameter('user', $userId);
+        $qb = $this->projection->subscribedEntriesQueryBuilder($userId)->select('COUNT(e.id)');
         $this->restrictToMembers($qb, $userId);
 
         return (int) $qb->getQuery()->getSingleScalarResult();
