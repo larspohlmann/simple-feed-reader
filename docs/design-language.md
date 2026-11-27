@@ -1750,7 +1750,7 @@ child to choke on where the component lands inside a `<p>`.
 |---|---|---|
 | `entry` | `EntryDto` (required) | — |
 | `size` | `'sm' \| 'md'` | `'sm'` |
-| `labelMenu` | `'list' \| 'article'` | `'list'` — where the label button goes (#2581) |
+| `labelMenu` | `'list' \| 'article'` | `'list'` — where the label button goes |
 | `audio` | `boolean` | `true` — off where the host has its own listen controls |
 | `like` | `boolean` | `true` — off where another row carries the like |
 
@@ -1763,20 +1763,21 @@ It has no outputs: every button calls the `EntryActionHandler` in its injector
 ```
 
 Clicks stop propagating: the card around the buttons is itself clickable, and
-would otherwise open the entry instead of toggling the flag. Each button is a
-`button[appFlagToggle]`: muted while off, accent while on, with the look owned
-by `frontend/src/styles/_flag-toggle.scss`. Favourite and keep also fill their
-glyph while on; the tick has no hollow form. The reader view's article row is
-this component at `size="md"`, and its toolbar Keep/Favorite reuse the same
-directive, so every keep and favourite toggle in the app looks the same.
+would otherwise open the entry instead of toggling the flag. Each flag toggle
+(favourite, keep, read) is a `button[appFlagToggle]`: muted while off, accent
+while on, with the look owned by `frontend/src/styles/_flag-toggle.scss`.
+Favourite and keep also fill their glyph while on; the tick has no hollow
+form. The reader view's article row is this component at `size="md"`, and its
+toolbar Keep/Favorite reuse the same directive, so every keep and favourite toggle in the app looks the same.
 
 The label button (glyph `label`, accent and filled while the entry carries a
-label) opens the label menu through the `LabelMenu` service. It is a menu
-button, not a toggle: it carries the `flag-toggle` look as a plain class, with
-`aria-haspopup="menu"` and `aria-expanded`, never `aria-pressed`. It has two placements: with
-`labelMenu="list"` (list rows and compact magazine tiles) it leads the star, and
-only in Favorites or Kept; with `labelMenu="article"` (the reader view's action
-row) it follows the tick whenever the entry is a favorite or kept.
+label) shows on every favorite or kept entry, in any list, from the moment the
+star or bookmark is set, and goes when neither is. It opens the label menu
+through the `LabelMenu` service. It is a menu button, not a toggle: it carries
+the `flag-toggle` look as a plain class, with `aria-haspopup="menu"` and
+`aria-expanded`, never `aria-pressed`. With `labelMenu="list"` (list rows and
+compact magazine tiles) it leads the star; with `labelMenu="article"` (the
+reader view's action row) it follows the tick.
 
 On a coarse pointer the buttons grow to `--tap-target` height on negative
 margins alone, so a card never gets taller on a phone, and the gap between

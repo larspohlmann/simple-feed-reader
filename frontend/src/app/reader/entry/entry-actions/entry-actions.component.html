@@ -30,7 +30,7 @@
     />
   </button>
 }
-@if (labelsLeadStar()) {
+@if (labelsShown() && labelMenu() === 'list') {
   <ng-container [ngTemplateOutlet]="labelButton" />
 }
 <button
@@ -89,7 +89,7 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
-@if (labelsFollowTick()) {
+@if (labelsShown() && labelMenu() === 'article') {
   <ng-container [ngTemplateOutlet]="labelButton" />
 }
 @if (entry().social?.isOwn) {
