@@ -30,7 +30,7 @@ final readonly class InterestTermStems
         $stems = [];
         foreach ($terms as $term) {
             foreach ([$term->language, null] as $language) {
-                $stems = [...$stems, ...$this->readStems($term, $language)];
+                array_push($stems, ...$this->readStems($term, $language));
             }
         }
 

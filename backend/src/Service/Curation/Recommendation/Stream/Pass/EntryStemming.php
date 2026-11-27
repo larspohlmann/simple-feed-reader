@@ -46,7 +46,7 @@ final class EntryStemming
     {
         $stems = [];
         foreach ($this->equivalents->canonicalizeWords($text) as [$word, $bare]) {
-            $stems = [...$stems, ...$this->findWordStems($word, $bare, $language)];
+            array_push($stems, ...$this->findWordStems($word, $bare, $language));
         }
 
         return $stems;
