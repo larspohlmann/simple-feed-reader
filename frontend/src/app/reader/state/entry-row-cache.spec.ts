@@ -198,6 +198,18 @@ describe('EntryRowCache', () => {
       expect(readShownEntry(1).isLiked).toBe(true);
     });
 
+    it('drops a network like while a local one is on the wire, though the post turned likeable', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false } }));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+      const likeable = { ...readShownEntry(1), social: { ...social, canLike: true } };
+      cache.setLiked(likeable, true, { onFailed: jest.fn() });
+
+      expect(socialPosts.like).toHaveBeenCalledTimes(1);
+      expect(readShownEntry(1).social?.isLiked).toBe(false);
+    });
+
     it('says it started only for the like that goes on the wire', () => {
       socialPosts.like.mockReturnValue(new Subject());
       holdEntries(buildArticle(1));

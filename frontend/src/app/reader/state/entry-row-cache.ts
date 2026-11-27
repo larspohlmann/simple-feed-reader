@@ -92,11 +92,10 @@ export class EntryRowCache {
     });
   }
 
-  /** Optimistic like apart from `saveState`, on the network where the reader can like there, else here; dropped while a like is on the wire. */
   setLiked(entry: EntryDto, isLiked: boolean, outcome: SocialActOutcome): Observable<void> {
+    if (this.inFlight.onTheWire(entry.id, 'social', 'isLiked')) return EMPTY;
     const social = likeableSocial(entry);
     const patch: RowPatch = social ? { social: { ...social, isLiked } } : { isLiked };
-    if (this.inFlight.onTheWire(entry.id, social ? 'social' : 'isLiked')) return EMPTY;
     outcome.onStarted?.();
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
     return subscribeUntilSettled(this.optimistic(entry, patch, request$), {
