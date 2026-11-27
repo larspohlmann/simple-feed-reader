@@ -10,9 +10,12 @@ use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
+use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedLanguage;
+use App\Enum\InclusionSurface;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\ForYouStreamMembershipRepository;
 use App\Repository\ForYouStreamSourceRepository;
@@ -63,8 +66,8 @@ final class ForYouStreamSweepTest extends DbTestCase
             ['usersSwept' => 1, 'entriesScanned' => 1, 'matchesInserted' => 1, 'caughtUp' => true],
             $report->toLogContext(),
         );
-        self::assertSame($hit->requireId(), $this->markOf($user));
-        [$row] = $this->rowsOf($user);
+        self::assertSame($hit->requireId(), $this->readMark($user));
+        [$row] = $this->readRows($user);
         self::assertSame($hit->requireId(), $row['entryId']);
         self::assertEqualsWithDelta(2.0, $row['score'], 1e-6);
         self::assertSame($this->stem('solar'), $row['stems']);
@@ -80,8 +83,8 @@ final class ForYouStreamSweepTest extends DbTestCase
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
         self::assertSame(0, $report->matchesInserted);
-        self::assertSame($entry->requireId(), $this->markOf($user));
-        self::assertSame([], $this->rowsOf($user));
+        self::assertSame($entry->requireId(), $this->readMark($user));
+        self::assertSame([], $this->readRows($user));
     }
 
     public function testAnEntryInAFeedOutsideForYouIsNotACandidate(): void
@@ -96,19 +99,59 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame([], $this->rowsOf($user));
-        self::assertSame($entry->requireId(), $this->markOf($user));
+        self::assertSame([], $this->readRows($user));
+        self::assertSame($entry->requireId(), $this->readMark($user));
     }
 
     public function testAnEntryInAnUnsubscribedFeedIsNotACandidate(): void
     {
-        $user = $this->account('unsubscribed@example.com');
+        $user = $this->subscriber('unsubscribed@example.com');
         $this->term($user, 'solar', 2.0);
-        $this->entry('Solar panels');
+        $otherFeed = new Feed('https://example.com/unsubscribed.xml');
+        $this->entityManager->persist($otherFeed);
+        $this->entityManager->flush();
+        $entry = $this->entry('Solar panels', feed: $otherFeed);
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame([], $this->rowsOf($user));
+        self::assertSame([], $this->readRows($user));
+        self::assertSame($entry->requireId(), $this->readMark($user));
+    }
+
+    public function testAnInactiveAccountIsNotSweptAndKeepsItsMark(): void
+    {
+        $user = $this->subscriber('pending@example.com', active: false);
+        $this->term($user, 'solar', 2.0);
+        $this->entry('Solar panels');
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(0, $report->usersSwept);
+        self::assertSame([], $this->readRows($user));
+        self::assertSame(0, $this->readMark($user));
+    }
+
+    public function testAUserWhoExcludedTheFeedsNetworkGetsNoRowWhileTheOtherAtTheSameMarkDoes(): void
+    {
+        $excluding = $this->subscriber('excluding@example.com');
+        $keeping = $this->subscriber('keeping@example.com');
+        $this->term($excluding, 'solar', 2.0);
+        $this->term($keeping, 'solar', 2.0);
+        $bluesky = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
+        $this->entityManager->persist($bluesky);
+        foreach ([$excluding, $keeping] as $user) {
+            $this->entityManager->persist(new Subscription($user, $bluesky, new \DateTimeImmutable('2026-07-01')));
+        }
+        $this->entityManager->persist(
+            new NetworkExclusion($excluding, SocialNetwork::Bluesky, InclusionSurface::ForYou),
+        );
+        $this->entry('Solar panels', feed: $bluesky);
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(1, $report->matchesInserted);
+        self::assertSame([], $this->readRows($excluding));
+        self::assertCount(1, $this->readRows($keeping));
     }
 
     public function testAnEntryPublishedMoreThan48HoursBeforeTheSweepIsSkippedAndPassed(): void
@@ -120,8 +163,8 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame([$fresh->requireId()], $this->entryIdsOf($user));
-        self::assertSame($fresh->requireId(), $this->markOf($user));
+        self::assertSame([$fresh->requireId()], $this->readEntryIds($user));
+        self::assertSame($fresh->requireId(), $this->readMark($user));
         self::assertLessThan($fresh->requireId(), $stale->requireId());
     }
 
@@ -134,9 +177,9 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame($settled->requireId(), $this->markOf($user));
-        self::assertLessThan($young->requireId(), $this->markOf($user));
-        self::assertCount(1, $this->rowsOf($user));
+        self::assertSame($settled->requireId(), $this->readMark($user));
+        self::assertLessThan($young->requireId(), $this->readMark($user));
+        self::assertCount(1, $this->readRows($user));
     }
 
     public function testAnEntryWithoutALanguageMatchesThroughTheCutForm(): void
@@ -148,7 +191,7 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertCount(1, $this->rowsOf($user));
+        self::assertCount(1, $this->readRows($user));
     }
 
     public function testTwoUsersAtOneMarkShareOneStemmingOfEachEntry(): void
@@ -164,8 +207,8 @@ final class ForYouStreamSweepTest extends DbTestCase
         self::assertSame(2, $report->usersSwept);
         self::assertSame(1, $report->entriesScanned);
         self::assertSame(2, $report->matchesInserted);
-        self::assertCount(1, $this->rowsOf($first));
-        self::assertCount(1, $this->rowsOf($second));
+        self::assertCount(1, $this->readRows($first));
+        self::assertCount(1, $this->readRows($second));
     }
 
     public function testAUserBehindCatchesUpToTheOthersMarkThenJoinsThem(): void
@@ -183,15 +226,15 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         self::assertSame(3, $report->entriesScanned);
         self::assertSame(4, $report->matchesInserted);
-        self::assertSame($third->requireId(), $this->markOf($behind));
-        self::assertSame($third->requireId(), $this->markOf($ahead));
+        self::assertSame($third->requireId(), $this->readMark($behind));
+        self::assertSame($third->requireId(), $this->readMark($ahead));
         self::assertSame(
             [$first->requireId(), $second->requireId(), $third->requireId()],
-            $this->entryIdsOf($behind),
+            $this->readEntryIds($behind),
         );
         self::assertSame(
             [$third->requireId()],
-            $this->entryIdsOf($ahead),
+            $this->readEntryIds($ahead),
         );
     }
 
@@ -208,14 +251,14 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         self::assertFalse($first->caughtUp);
         self::assertSame(ForYouStreamSweep::CHUNK, $first->entriesScanned);
-        self::assertSame($ids[ForYouStreamSweep::CHUNK - 1], $this->markOf($user));
+        self::assertSame($ids[ForYouStreamSweep::CHUNK - 1], $this->readMark($user));
         $this->entityManager->clear();
 
         $second = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
         self::assertTrue($second->caughtUp);
         self::assertSame(1, $second->entriesScanned);
-        self::assertSame(array_last($ids), $this->markOf($user));
+        self::assertSame(array_last($ids), $this->readMark($user));
     }
 
     public function testAFailingChunkStopsTheRunAndLeavesTheMark(): void
@@ -244,8 +287,8 @@ final class ForYouStreamSweepTest extends DbTestCase
         self::assertFalse($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
         self::assertSame(0, $report->entriesScanned);
-        self::assertSame(0, $this->markOf($user));
-        self::assertSame([], $this->rowsOf($user));
+        self::assertSame(0, $this->readMark($user));
+        self::assertSame([], $this->readRows($user));
         self::assertCount(1, $logger->records);
         self::assertSame('error', $logger->records[0]['level']);
         $logged = $logger->records[0]['context']['exception'] ?? null;
@@ -266,7 +309,7 @@ final class ForYouStreamSweepTest extends DbTestCase
         self::assertTrue($report->caughtUp);
         self::assertSame(1, $report->entriesScanned);
         self::assertSame(0, $report->matchesInserted);
-        self::assertCount(1, $this->rowsOf($user));
+        self::assertCount(1, $this->readRows($user));
     }
 
     public function testAnAccountWithoutAnythingBelowTheCeilingIsNotWalked(): void
@@ -326,9 +369,12 @@ final class ForYouStreamSweepTest extends DbTestCase
         return $user;
     }
 
-    private function subscriber(string $email, ?int $mark = 0): User
+    private function subscriber(string $email, ?int $mark = 0, bool $active = true): User
     {
         $user = $this->account($email);
+        if (!$active) {
+            $user->suspend();
+        }
         $this->entityManager->persist(new Subscription($user, $this->feed, new \DateTimeImmutable('2026-07-01')));
         $at = new \DateTimeImmutable('2026-11-01 00:00:00');
         $this->entityManager->persist(new InterestTermSet($user, $at, $at, $mark ?? 0));
@@ -355,8 +401,9 @@ final class ForYouStreamSweepTest extends DbTestCase
         string $createdAt = self::SETTLED,
         string $effectiveAt = self::RECENT,
         ?FeedLanguage $language = FeedLanguage::English,
+        ?Feed $feed = null,
     ): Entry {
-        $entry = $this->unsavedEntry($title, $createdAt, $effectiveAt, $language);
+        $entry = $this->unsavedEntry($title, $createdAt, $effectiveAt, $language, $feed);
         $this->entityManager->flush();
 
         return $entry;
@@ -379,9 +426,10 @@ final class ForYouStreamSweepTest extends DbTestCase
         string $createdAt,
         string $effectiveAt,
         ?FeedLanguage $language,
+        ?Feed $feed = null,
     ): Entry {
         $entry = new Entry(
-            $this->feed,
+            $feed ?? $this->feed,
             'guid-' . $this->nextEntry++,
             null,
             $title,
@@ -403,7 +451,7 @@ final class ForYouStreamSweepTest extends DbTestCase
         $this->entityManager->clear();
     }
 
-    private function markOf(User $user): int
+    private function readMark(User $user): int
     {
         $mark = $this->entityManager->getConnection()->fetchOne(
             'SELECT matched_up_to_entry_id FROM interest_term_set WHERE user_id = ?',
@@ -415,7 +463,7 @@ final class ForYouStreamSweepTest extends DbTestCase
     }
 
     /** @return list<array{entryId: int, score: float, stems: string, matchedAt: string}> */
-    private function rowsOf(User $user): array
+    private function readRows(User $user): array
     {
         /** @var list<array{entry_id: int|string, score: float|string, matched_stems: string, matched_at: string}> $rows */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
@@ -433,8 +481,8 @@ final class ForYouStreamSweepTest extends DbTestCase
     }
 
     /** @return list<int> */
-    private function entryIdsOf(User $user): array
+    private function readEntryIds(User $user): array
     {
-        return array_column($this->rowsOf($user), 'entryId');
+        return array_column($this->readRows($user), 'entryId');
     }
 }
