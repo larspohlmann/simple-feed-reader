@@ -125,10 +125,6 @@ final class SavedSearchRepository extends ServiceEntityRepository implements Dig
      */
     public function advanceMarks(array $savedSearchIds, int $entryId): void
     {
-        if ($savedSearchIds === []) {
-            return;
-        }
-
         $this->getEntityManager()->createQuery(
             'UPDATE ' . SavedSearch::class . ' s SET s.matchedUpToEntryId = :entryId'
             . ' WHERE s.id IN (:ids) AND s.matchedUpToEntryId < :entryId',
