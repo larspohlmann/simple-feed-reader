@@ -4,32 +4,37 @@ declare(strict_types=1);
 
 namespace App\Service\Library\Search\Membership\Pass;
 
-use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Library\Search\Membership\Model\MarkGroupWalkReportModel;
 
-/** The counters one sweep run accumulates; the report is their read-only end state. */
+/** The deadline of one walk and the counters it accumulates; the report is their read-only end state. */
 final class SweepTally
 {
-    public int $searchesSwept = 0;
-    public int $entriesScanned = 0;
-    public int $matchesInserted = 0;
+    private int $membersSwept = 0;
+    private int $entriesScanned = 0;
+    private int $matchesInserted = 0;
 
-    public function caughtUp(): SavedSearchMembershipSweepReportModel
+    public function __construct(public readonly \DateTimeImmutable $deadline)
     {
-        return $this->report(true);
     }
 
-    public function stoppedShort(): SavedSearchMembershipSweepReportModel
+    public function recordGroup(int $members): void
     {
-        return $this->report(false);
+        $this->membersSwept += $members;
     }
 
-    private function report(bool $caughtUp): SavedSearchMembershipSweepReportModel
+    public function recordChunk(int $scanned, int $inserted): void
     {
-        return new SavedSearchMembershipSweepReportModel(
-            $this->searchesSwept,
-            $this->entriesScanned,
-            $this->matchesInserted,
-            $caughtUp,
-        );
+        $this->entriesScanned += $scanned;
+        $this->matchesInserted += $inserted;
+    }
+
+    public function caughtUp(): MarkGroupWalkReportModel
+    {
+        return new MarkGroupWalkReportModel($this->membersSwept, $this->entriesScanned, $this->matchesInserted, true);
+    }
+
+    public function stoppedShort(): MarkGroupWalkReportModel
+    {
+        return new MarkGroupWalkReportModel($this->membersSwept, $this->entriesScanned, $this->matchesInserted, false);
     }
 }

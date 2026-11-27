@@ -13,7 +13,7 @@ interests lands in it, soon after it arrives. Volume matters more than precision
 - A second per-user list, the **For you stream**, filled continuously from newly ingested entries.
 - Matching is cheap and local: stems of the entry against a weighted term list derived from the user's
   AI profile, using the stemming already used by Trending. No AI call per entry.
-- It reads like a saved search: newest first, unread badge, mark read / mark all read, and a digest section.
+- It reads like a saved search: newest first, unread badge, mark read / mark all read.
 
 ## Non-goals
 
@@ -22,6 +22,7 @@ interests lands in it, soon after it arrives. Volume matters more than precision
 - No backfill when the feature first runs, and none when a user gets their first profile.
 - No user-visible or editable term list; no tuning UI.
 - No dedup against the AI picks: an entry may be in both.
+- No email digest section: it is a stream, read in the reader (Lars).
 
 ## Anti-goals
 
@@ -87,9 +88,9 @@ pure refactor with no behaviour change.
   as Trending does. Entries without a language are stemmed with the six-character cut, so each term is also
   stored in cut form and those entries still match (my call: unsharp is fine).
 - Score: sum over matched distinct stems of `AI weight × rarity × position weight`. Rarity is the term's
-  inverse frequency over the last 30 days of entries in the user's For-you-included feeds, per language (my
-  call), computed for the user's terms only when a term set is
-  stored and refreshed daily (cheap: one pass per term set, not per entry).
+  inverse frequency over the newest N entries of the last 30 days in the user's For-you-included feeds, per
+  language (my call), computed for the user's terms only when a term set is stored and refreshed daily (cheap:
+  one pass per term set, not per entry).
 - An entry enters when its score clears a deliberately low threshold, a constant. Ship a loose first value and
   adjust it later from the scores stored on the rows (my call; no dry-run command).
 - Store the score and the matched stems on the membership row for debugging. Nothing shows them in the UI.
@@ -102,8 +103,6 @@ pure refactor with no behaviour change.
 - Its own mark-read and mark-all-read endpoints over the membership, writing per-entry read state (the generic
   per-subscription watermark is wrong for a cross-feed list, per the saved-search ruling on `isRead`).
 - Unread count in the sidebar totals.
-- Digest: an opt-in section, off by default like a saved search's `include_in_digest`, with a toggle in the
-  digest settings and its own SPA link; capped like `DigestEntryFinder::PER_SEARCH` (my call).
 - Sidebar entry next to For you; shown only once the user has a term set.
 - Client contract stays iOS-viable (bearer auth, JSON, problem+json) — run the §6 checklist.
 

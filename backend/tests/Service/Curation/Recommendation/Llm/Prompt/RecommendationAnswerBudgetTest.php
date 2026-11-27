@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationAnswerBudgetTest extends TestCase
@@ -61,5 +63,15 @@ final class RecommendationAnswerBudgetTest extends TestCase
     private function consolidationOutputBound(OutputLimitModel $limit): int
     {
         return $this->answerBudget->outputBoundTokens(100, RecommendationResponseSchema::Consolidation, $limit);
+    }
+
+    public function testInterestTermsReserveEveryLanguagesFullTermCapPlusTheBound(): void
+    {
+        $fullReply = \count(FeedLanguage::cases()) * RecommendationPromptText::MAX_TERMS_PER_LANGUAGE * 21;
+
+        self::assertSame(
+            intdiv($fullReply * 150, 100),
+            $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::InterestTerms),
+        );
     }
 }

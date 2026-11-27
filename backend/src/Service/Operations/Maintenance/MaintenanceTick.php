@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Maintenance;
 
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Service\Ingestion\Refresh\Model\RefreshRequestModel;
 use App\Service\Ingestion\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Operations\Logging\Loki\LokiSpoolShipper;
@@ -14,8 +15,9 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Refresh first, then the sweeps, then the log spool. An aborted refresh closed the shared
- * EntityManager, so the sweeps must not run that tick; the spool touches no EntityManager and ships anyway.
+ * Refresh first, then the sweeps, then the log spool. A refresh that aborted on a persistence failure skips the
+ * sweeps that tick: the database just failed, so they wait for the next one; the spool touches no EntityManager and
+ * ships anyway. A sweep that closes the manager has it reset before the next one runs.
  */
 final readonly class MaintenanceTick
 {
@@ -28,6 +30,7 @@ final readonly class MaintenanceTick
         private iterable $sweeps,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
+        private ManagerReopener $managerReopener,
         private int $tickWindowSeconds,
     ) {
     }
@@ -45,11 +48,13 @@ final readonly class MaintenanceTick
     {
         $reports = [];
         foreach ($this->sweeps as $name => $sweep) {
+            $this->managerReopener->ensureManagerOpen();
             $reports[$name] = $sweep->run($deadline);
         }
 
         return MaintenanceSweepsModel::ran($reports);
     }
+
 
     private function skippedSweeps(): MaintenanceSweepsModel
     {

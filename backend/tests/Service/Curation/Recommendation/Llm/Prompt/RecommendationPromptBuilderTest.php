@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
+use App\Enum\FeedLanguage;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Content\LinkCard\Model\StoryLinkModel;
 use App\Service\Curation\Recommendation\Llm\Completion\Model\Reasoning;
@@ -1167,6 +1168,23 @@ final class RecommendationPromptBuilderTest extends TestCase
             debugEnabled: false,
             autoGenerateIntervalHours: null,
             showScoreAndReasons: false,
+        );
+    }
+
+    public function testInterestTermMessagesNameTheLanguagesThenTheProfile(): void
+    {
+        $messages = $this->builder->interestTermMessages('self-hosting', [FeedLanguage::English, FeedLanguage::French]);
+
+        self::assertSame(
+            [
+                [
+                    'role' => 'system',
+                    'content' => RecommendationPromptText::INTEREST_TERMS_ROLE
+                        . "\n\n" . RecommendationPromptText::INTEREST_TERMS_OUTPUT_CONTRACT,
+                ],
+                ['role' => 'user', 'content' => "LANGUAGES: en (English), fr (French)\n\nPROFILE:\nself-hosting"],
+            ],
+            $messages,
         );
     }
 }

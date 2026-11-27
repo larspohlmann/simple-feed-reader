@@ -16,6 +16,7 @@ enum RecommendationResponseSchema
     case BatchScore;
     case Consolidation;
     case StoryTitle;
+    case InterestTerms;
 
     /** @var array<string, mixed> */
     private const array DISTILLATION_SCHEMA = [
@@ -85,6 +86,28 @@ enum RecommendationResponseSchema
         'additionalProperties' => false,
     ];
 
+    /** @var array<string, mixed> */
+    private const array INTEREST_TERMS_SCHEMA = [
+        'type' => 'object',
+        'properties' => [
+            'terms' => [
+                'type' => 'array',
+                'items' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'language' => ['type' => 'string'],
+                        'term' => ['type' => 'string'],
+                        'weight' => ['type' => 'integer'],
+                    ],
+                    'required' => ['language', 'term', 'weight'],
+                    'additionalProperties' => false,
+                ],
+            ],
+        ],
+        'required' => ['terms'],
+        'additionalProperties' => false,
+    ];
+
     public function toJsonSchema(): JsonSchemaModel
     {
         return match ($this) {
@@ -92,6 +115,7 @@ enum RecommendationResponseSchema
             self::BatchScore => new JsonSchemaModel('recommendations', self::BATCH_SCORE_SCHEMA),
             self::Consolidation => new JsonSchemaModel('recommendations', self::CONSOLIDATION_SCHEMA),
             self::StoryTitle => new JsonSchemaModel('story_title', self::STORY_TITLE_SCHEMA),
+            self::InterestTerms => new JsonSchemaModel('interest_terms', self::INTEREST_TERMS_SCHEMA),
         };
     }
 }

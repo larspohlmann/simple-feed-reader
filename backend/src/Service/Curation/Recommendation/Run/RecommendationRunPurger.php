@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
+use App\Enum\RunLogOwner;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
@@ -31,7 +32,7 @@ final readonly class RecommendationRunPurger
             throw new RecommendationRunActiveException();
         }
 
-        $this->logs->deleteForUserOutsideRuns($user, []);
+        $this->logs->deleteForUserOutside($user, RunLogOwner::Run, []);
         $this->items->deleteForUser($user);
         $this->runs->deleteForUser($user);
     }

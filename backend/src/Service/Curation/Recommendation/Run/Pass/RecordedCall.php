@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Run\Pass;
 
+use App\Entity\CallFailure;
 use App\Entity\CallOutcome;
+use App\Entity\CallReceipt;
 use App\Enum\CallVerdict;
 use App\Repository\CallingRun;
 use App\Repository\CallSettlement;
@@ -34,7 +36,7 @@ final class RecordedCall
     /** Sticky: the usage arrives in one late message, so a later report without it must not erase it. */
     private ?ProviderCallUsageModel $usage = null;
 
-    private ?ProviderCallReceiptModel $receipt = null;
+    private ?CallReceipt $receipt = null;
 
     /** Billed once across every settle path; set only when bankUsage() writes, so a later path can still bank. */
     private bool $usageBanked = false;
@@ -68,7 +70,11 @@ final class RecordedCall
     /** A reply that arrives whole rather than streamed. */
     public function received(ProviderCallReceiptModel $receipt, int $wireBytes): void
     {
-        $this->receipt = $receipt;
+        $this->receipt = new CallReceipt(
+            $receipt->requestId,
+            $receipt->answeringModel,
+            $receipt->usage?->costNanoCredits,
+        );
         $this->wireBytes = $wireBytes;
         $this->usage = $receipt->usage ?? $this->usage;
     }
@@ -97,7 +103,7 @@ final class RecordedCall
 
         $this->calls->settleTransportFailure(
             $this->settlement(CallVerdict::TransportFailed),
-            $errorDetail,
+            new CallFailure($errorDetail),
         );
     }
 

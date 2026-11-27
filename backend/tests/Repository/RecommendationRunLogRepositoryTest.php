@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\CallOutcome;
+use App\Entity\InterestTermRun;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -14,6 +15,7 @@ use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\RunLogOwner;
 use App\Enum\StoryAiTask;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
@@ -215,7 +217,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $keptId = $kept->getId();
         self::assertNotNull($keptId);
 
-        $this->logs->deleteForUserOutsideRuns($this->user, []);
+        $this->logs->deleteForUserOutside($this->user, RunLogOwner::Run, []);
 
         // Bulk DQL bypasses the identity map: clear before asserting survival, or find() serves the stale in-memory
         // row.
@@ -271,7 +273,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         [$owner, $run, $kept] = $this->ownerWithARunAndAProfileRun();
         $dropped = $this->profileRunWithOneRow($owner);
 
-        $this->logs->deleteForUserOutsideProfileRuns($owner, [$kept->requireId()]);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::ProfileRun, [$kept->requireId()]);
 
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $kept->requireId()));
         self::assertSame([], $this->logs->listForRun($owner, AiRunKind::Profile, $dropped->requireId()));
@@ -282,7 +284,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUserOutsideRuns($owner, []);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::Run, []);
 
         self::assertSame([], $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
@@ -292,7 +294,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUserOutsideRuns($owner, [$run->requireId()]);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::Run, [$run->requireId()]);
 
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
@@ -347,6 +349,43 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $storyRun;
+    }
+
+    public function testDeleteOutsideInterestTermRunsKeepsTheNamedRunsAndOtherOwners(): void
+    {
+        $kept = $this->interestTermRunWithOneRow($this->user);
+        $dropped = $this->interestTermRunWithOneRow($this->user);
+        $otherOwners = $this->interestTermRunWithOneRow($this->otherUser);
+        [, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        $this->logs->deleteForUserOutside($this->user, RunLogOwner::InterestTermRun, [$kept->requireId()]);
+
+        self::assertSame(1, $this->logs->count(['interestTermRun' => $kept]));
+        self::assertSame(0, $this->logs->count(['interestTermRun' => $dropped]));
+        self::assertSame(1, $this->logs->count(['interestTermRun' => $otherOwners]));
+        self::assertCount(1, $this->logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()));
+        self::assertCount(1, $this->logs->listForRun($this->user, AiRunKind::Profile, $profileRun->requireId()));
+    }
+
+    private function interestTermRunWithOneRow(User $owner): InterestTermRun
+    {
+        $termRun = new InterestTermRun(
+            $owner,
+            new \DateTimeImmutable('2026-10-03T08:00:00Z'),
+            new \DateTimeImmutable('2026-10-03T09:00:00Z'),
+            null,
+            null,
+        );
+        $this->entityManager->persist($termRun);
+        $this->entityManager->persist(RecommendationRunLog::forInterestTermRun(
+            $termRun,
+            1,
+            '{"term-request":1}',
+            new \DateTimeImmutable('2026-10-03T09:00:05Z'),
+        ));
+        $this->entityManager->flush();
+
+        return $termRun;
     }
 
     /** @return array{User, RecommendationRun, ProfileRun} */

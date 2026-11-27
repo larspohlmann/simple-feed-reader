@@ -9,23 +9,26 @@ use PHPUnit\Framework\TestCase;
 
 final class SweepTallyTest extends TestCase
 {
-    public function testACaughtUpTallyBecomesAReportWithStableKeys(): void
+    public function testACaughtUpTallyReportsEveryCounterSummed(): void
     {
-        $tally = new SweepTally();
-        $tally->searchesSwept = 2;
-        $tally->entriesScanned = 1000;
-        $tally->matchesInserted = 7;
+        $tally = new SweepTally(new \DateTimeImmutable('2026-11-27 10:00:00'));
+        $tally->recordGroup(1);
+        $tally->recordGroup(1);
+        $tally->recordChunk(500, 3);
+        $tally->recordChunk(500, 4);
+
+        $report = $tally->caughtUp();
 
         self::assertSame(
-            ['searchesSwept' => 2, 'entriesScanned' => 1000, 'matchesInserted' => 7, 'caughtUp' => true],
-            $tally->caughtUp()->toLogContext(),
+            [2, 1000, 7, true],
+            [$report->membersSwept, $report->entriesScanned, $report->matchesInserted, $report->caughtUp],
         );
     }
 
     public function testAStoppedShortTallyReportsNotCaughtUp(): void
     {
-        $tally = new SweepTally();
-        $tally->entriesScanned = 500;
+        $tally = new SweepTally(new \DateTimeImmutable('2026-11-27 10:00:00'));
+        $tally->recordChunk(500, 0);
 
         $report = $tally->stoppedShort();
 

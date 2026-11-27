@@ -37,6 +37,7 @@ interface SelectionFields {
   shared: OrderedList;
   viewed: OrderedList;
   'for-you': Pick<FilteredList, 'unread'>;
+  'for-you-stream': FilteredList;
   trending: { window: TrendingWindow };
   notifications: { network: SocialNetworkName };
   'saved-searches': FilteredList;
@@ -109,6 +110,7 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   shared: () => '',
   viewed: () => '',
   'for-you': () => '',
+  'for-you-stream': () => '',
   trending: (selection) => selection.window,
   notifications: (selection) => selection.network,
   'saved-searches': () => '',
@@ -333,7 +335,7 @@ const STATE_VIEWS = ['favorites', 'kept', 'shared', 'viewed'] as const;
 const LABELLED_VIEWS = ['favorites', 'kept'] as const;
 
 /** The views that name no feed but take the unread switch. */
-const FILTERED_VIEWS = ['for-you', 'saved-searches'] as const;
+const FILTERED_VIEWS = ['for-you', 'for-you-stream', 'saved-searches'] as const;
 
 function isViewIn<View extends string>(views: readonly View[], view: string | null): view is View {
   return (views as readonly (string | null)[]).includes(view);

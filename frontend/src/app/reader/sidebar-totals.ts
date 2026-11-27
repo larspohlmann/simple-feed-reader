@@ -1,3 +1,4 @@
+import { WritableSignal, signal } from '@angular/core';
 import { FeedGroupName } from '../core/feed-group';
 import { SocialNetworkName } from '../core/social-network';
 import { TrendingUnopened } from './trending/trending.models';
@@ -10,7 +11,37 @@ export interface SidebarTotalsDto {
   unreadTotals: UnreadTotalsDto;
   /** Unopened Trending stories in the window the request asked for (#2017). */
   trending: TrendingUnopened;
+  forYouStream: ForYouStreamTallyDto;
   notifications: NotificationCountDto[];
+}
+
+/** The For you stream's tally; the sidebar row shows only while it is available. */
+export interface ForYouStreamTallyDto {
+  available: boolean;
+  unreadCount: number;
+  entryCount: number;
+}
+
+export const NO_FOR_YOU_STREAM_TALLY: ForYouStreamTallyDto = {
+  available: false,
+  unreadCount: 0,
+  entryCount: 0,
+};
+
+export function sameForYouStreamTally(
+  left: ForYouStreamTallyDto,
+  right: ForYouStreamTallyDto,
+): boolean {
+  return (
+    left.available === right.available &&
+    left.unreadCount === right.unreadCount &&
+    left.entryCount === right.entryCount
+  );
+}
+
+/** A signal that notifies only when the tally changed, so a poll that found the same counts redraws nothing. */
+export function createForYouStreamSignal(): WritableSignal<ForYouStreamTallyDto> {
+  return signal(NO_FOR_YOU_STREAM_TALLY, { equal: sameForYouStreamTally });
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed

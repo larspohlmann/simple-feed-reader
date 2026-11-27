@@ -27,6 +27,7 @@ import {
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
+import { NO_FOR_YOU_STREAM_TALLY, createForYouStreamSignal } from '../sidebar-totals';
 import { TrendingUnopened } from '../trending/trending.models';
 import { NO_TRENDING_UNOPENED, sameTrendingUnopened } from '../trending/trending-window';
 import { TrendingWindowService } from '../trending/trending-window.service';
@@ -71,6 +72,7 @@ export class SubscriptionsStore {
   readonly trendingUnopened = signal<TrendingUnopened>(NO_TRENDING_UNOPENED, {
     equal: sameTrendingUnopened,
   });
+  readonly forYouStream = createForYouStreamSignal();
   readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly lemmyHosts = signal<readonly string[]>([]);
   readonly loading = signal(false);
@@ -170,6 +172,7 @@ export class SubscriptionsStore {
     this.sharedCount.set(0);
     this.viewedCount.set(0);
     this.trendingUnopened.set(NO_TRENDING_UNOPENED);
+    this.forYouStream.set(NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set([]);
     this.lemmyHosts.set([]);
     this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
@@ -263,6 +266,7 @@ export class SubscriptionsStore {
       // so even an overtaken answer carries the latest.
       this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
       this.trendingUnopened.set(response.trending);
+      this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
       this.storedNotificationCounts.set(notificationCountsFrom(response.notifications));
       // The user changed a feed count while this was on the wire. The server
       // counted before that, so adopting those counts now would put the badge back up.
@@ -281,6 +285,7 @@ export class SubscriptionsStore {
     this.sharedCount.set(response.sharedCount);
     this.viewedCount.set(response.viewedCount);
     this.trendingUnopened.set(response.trending);
+    this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set(response.socialAccounts);
     this.lemmyHosts.set(response.lemmyHosts);
     this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));

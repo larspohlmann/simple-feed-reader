@@ -148,6 +148,13 @@ describe('selectionFromParams', () => {
     });
   });
 
+  it('reads for-you-stream with the unread switch off', () => {
+    expect(selectionFromParams(pm({ view: 'for-you-stream' }), ON).selection).toEqual({
+      kind: 'for-you-stream',
+      unread: false,
+    });
+  });
+
   it('rejects non-positive/garbage ids', () => {
     expect(selectionFromParams(pm({ subscription: '0' }), ON).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ tag: 'x' }), ON).selection.kind).toBe('all');

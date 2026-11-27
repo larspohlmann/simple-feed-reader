@@ -38,6 +38,13 @@ final readonly class EntryProjection
             ->addOrderBy('e.id', $direction);
     }
 
+    public function subscribedEntriesQueryBuilder(int $userId): QueryBuilder
+    {
+        return $this->entries()
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->setParameter('user', $userId);
+    }
+
     /**
      * The caller's unread entries, left for the reader to narrow and project.
      * Deliberately not rowQueryBuilder: every caller reduces to a scalar, and
@@ -45,10 +52,8 @@ final readonly class EntryProjection
      */
     public function unreadEntriesQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->entries()
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+        return $this->subscribedEntriesQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->setParameter('user', $userId)
             ->andWhere(UnreadDql::predicate())
             ->setParameter('notHidden', false, Types::BOOLEAN);
     }

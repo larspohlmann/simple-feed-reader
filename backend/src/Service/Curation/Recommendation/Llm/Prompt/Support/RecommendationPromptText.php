@@ -62,6 +62,23 @@ final class RecommendationPromptText
     public const string DISTILL_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
         . 'exactly in the required shape: {"profile": "<the preference profile>"}.';
 
+    public const int MAX_TERMS_PER_LANGUAGE = 60;
+
+    public const string INTEREST_TERMS_ROLE = 'You turn one reader\'s interest profile from an RSS reader into search '
+        . 'terms. The user message holds LANGUAGES, the languages the reader reads, and PROFILE, the reader\'s '
+        . 'interests in prose. For each language, list the specific interests and named things in the profile — '
+        . 'subjects, places, people, companies, products, technologies — as the words a headline in that language '
+        . 'would use. A term is one word or a short phrase of at most three words, never a broad category such as '
+        . '"news" or "technology". Weigh each term from 1 to 10 by how central it is to the reader. At most '
+        . self::MAX_TERMS_PER_LANGUAGE . ' terms per language.';
+
+    public const string INTEREST_TERMS_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: {"terms": [{"language": '
+        . '"<language code>", "term": "<term>", "weight": <1-10>}]}. Use only the language codes listed in LANGUAGES.';
+
+    public const string INTEREST_TERMS_CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, '
+        . 'exactly in the required shape: {"terms": [{"language": "<language code>", "term": "<term>", '
+        . '"weight": <1-10>}]}.';
+
     public const string CONSOLIDATION_ROLE = 'You rank a candidate list of unread posts for one reader of an RSS '
         . 'reader and remove duplicates. The user message holds a PROFILE describing the reader, a FAVORITES section '
         . 'listing the posts the reader liked most (newest first), and a CANDIDATES section listing candidate posts, '

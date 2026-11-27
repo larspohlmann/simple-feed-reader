@@ -54,6 +54,15 @@ describe('queryFromSelection', () => {
       unread: true,
     });
   });
+  it('asks the For you stream by its own view, the unread switch as a flag', () => {
+    expect(queryFromSelection({ kind: 'for-you-stream', unread: false })).toEqual({
+      view: 'for-you-stream',
+    });
+    expect(queryFromSelection({ kind: 'for-you-stream', unread: true })).toEqual({
+      view: 'for-you-stream',
+      unread: true,
+    });
+  });
   it('maps a search selection to view=all with q', () => {
     expect(queryFromSelection({ kind: 'search', unread: false, term: 'angular' })).toEqual({
       view: 'all',

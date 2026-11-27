@@ -17,6 +17,7 @@ use App\Service\Curation\Trending\SnapshotBuilder\SnapshotBuilderInterface;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Foundation\Persistence\ManagerReopener;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TrendingFixtures;
@@ -89,7 +90,7 @@ final class TrendingRebuildTest extends DbTestCase
             $this->users(),
             $clock,
             $logger,
-            $this->registry(),
+            new ManagerReopener($this->registry()),
         );
 
         self::assertSame([TrendingWindow::Week], self::windowsOf($rebuild->rebuildDue()));
@@ -424,7 +425,7 @@ final class TrendingRebuildTest extends DbTestCase
             $this->users(),
             new NaiveUtcClock(new MockClock('2031-05-14 12:00:00', 'UTC')),
             $logger,
-            $this->registry(),
+            new ManagerReopener($this->registry()),
         );
     }
 
@@ -474,7 +475,7 @@ final class TrendingRebuildTest extends DbTestCase
             $this->users(),
             $naiveClock,
             new NullLogger(),
-            $this->registry(),
+            new ManagerReopener($this->registry()),
         );
     }
 

@@ -4,6 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
@@ -25,7 +26,7 @@ export class SidebarViewsComponent {
 
   readonly section = input<'primary' | 'discover'>('primary');
   protected readonly showsDiscover = computed(
-    () => this.preferences.trendingEnabled() || this.ai.ready(),
+    () => this.preferences.trendingEnabled() || this.ai.ready() || this.forYouStream().available,
   );
   readonly selection = input.required<Selection>();
   readonly totalUnread = input.required<number>();
@@ -34,4 +35,5 @@ export class SidebarViewsComponent {
   readonly forYouUnread = input(0);
   /** Unopened stories in the window the Trending link opens (#2017, decision 8). */
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
+  readonly forYouStream = input<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY);
 }

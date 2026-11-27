@@ -361,6 +361,7 @@ export type EntryView =
   | 'shared'
   | 'viewed'
   | 'for-you'
+  | 'for-you-stream'
   | 'saved-searches'
   | 'trending';
 

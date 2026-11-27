@@ -11,16 +11,17 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a run, recommendation, profile or story AI: the request as sent, the response as it
- * streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest RunLogRetention::RUNS
- * runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a large context window
- * passes MySQL TEXT's 64 KB.
+ * One provider-call attempt of a run, recommendation, profile, interest-term or story AI: the request as sent, the
+ * response as it streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest
+ * RunLogRetention::RUNS runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a
+ * large context window passes MySQL TEXT's 64 KB.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunLogRepository::class)]
 #[ORM\Table(name: 'recommendation_run_log')]
 #[ORM\Index(name: 'idx_recommendation_run_log_run', columns: ['run_id'])]
 #[ORM\Index(name: 'idx_recommendation_run_log_profile_run', columns: ['profile_run_id'])]
 #[ORM\Index(name: 'idx_recommendation_run_log_story_ai_run', columns: ['story_ai_run_id'])]
+#[ORM\Index(name: 'idx_recommendation_run_log_interest_term_run', columns: ['interest_term_run_id'])]
 final class RecommendationRunLog
 {
     use PersistedId;
@@ -44,6 +45,10 @@ final class RecommendationRunLog
     #[ORM\JoinColumn(name: 'story_ai_run_id', nullable: true, onDelete: 'CASCADE')]
     private ?StoryAiRun $storyAiRun;
 
+    #[ORM\ManyToOne(targetEntity: InterestTermRun::class)]
+    #[ORM\JoinColumn(name: 'interest_term_run_id', nullable: true, onDelete: 'CASCADE')]
+    private ?InterestTermRun $interestTermRun;
+
     #[ORM\Column(length: 16, enumType: CallPhase::class)]
     private CallPhase $phase;
 
@@ -59,21 +64,12 @@ final class RecommendationRunLog
     #[ORM\Column(type: Types::TEXT, length: self::LONGTEXT_LENGTH)]
     private string $responseText = '';
 
-    /** Null while the call is still streaming. */
-    #[ORM\Column(length: 24, nullable: true, enumType: CallVerdict::class)]
-    private ?CallVerdict $verdict = null;
-
-    /** Every byte the provider sent: a reasoning model can send megabytes while $responseText stays empty. */
-    #[ORM\Column(options: ['default' => 0])]
-    private int $wireBytes = 0;
-
     /** When the request went out. */
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
-    /** When the call settled (any verdict). Null while streaming. */
-    #[ORM\Column(nullable: true)]
-    private ?\DateTimeImmutable $finishedAt = null;
+    #[ORM\Embedded(class: CallOutcome::class, columnPrefix: false)]
+    private CallOutcome $outcome;
 
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
@@ -86,6 +82,7 @@ final class RecommendationRunLog
         ?RecommendationRun $run,
         ?ProfileRun $profileRun,
         ?StoryAiRun $storyAiRun,
+        ?InterestTermRun $interestTermRun,
         CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
@@ -95,13 +92,15 @@ final class RecommendationRunLog
         $this->run = $run;
         $this->profileRun = $profileRun;
         $this->storyAiRun = $storyAiRun;
+        $this->interestTermRun = $interestTermRun;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
         $this->requestBody = $requestBody;
         $this->createdAt = $createdAt;
-        $this->receipt = new CallReceipt();
-        $this->failure = new CallFailure();
+        $this->outcome = CallOutcome::pending();
+        $this->receipt = CallReceipt::none();
+        $this->failure = new CallFailure(null);
     }
 
     public static function forRun(
@@ -112,7 +111,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self($run, null, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
+        return new self($run, null, null, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
     }
 
     public static function forProfileRun(
@@ -121,7 +120,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self(null, $profileRun, null, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
+        return new self(null, $profileRun, null, null, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
     }
 
     public static function forStoryAiRun(
@@ -129,7 +128,16 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self(null, null, $run, $run->getTask()->phase(), null, 1, $requestBody, $createdAt);
+        return new self(null, null, $run, null, $run->getTask()->phase(), null, 1, $requestBody, $createdAt);
+    }
+
+    public static function forInterestTermRun(
+        InterestTermRun $run,
+        int $attempt,
+        string $requestBody,
+        \DateTimeImmutable $createdAt,
+    ): self {
+        return new self(null, null, null, $run, CallPhase::InterestTerms, null, $attempt, $requestBody, $createdAt);
     }
 
     public function getId(): ?int
@@ -174,12 +182,12 @@ final class RecommendationRunLog
 
     public function getVerdict(): ?CallVerdict
     {
-        return $this->verdict;
+        return $this->outcome->getVerdict();
     }
 
     public function getWireBytes(): int
     {
-        return $this->wireBytes;
+        return $this->outcome->getWireBytes();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
@@ -189,7 +197,7 @@ final class RecommendationRunLog
 
     public function getFinishedAt(): ?\DateTimeImmutable
     {
-        return $this->finishedAt;
+        return $this->outcome->getFinishedAt();
     }
 
     public function getErrorDetail(): ?string
@@ -199,7 +207,7 @@ final class RecommendationRunLog
 
     public function getFinishReason(): ?string
     {
-        return $this->receipt->getFinishReason();
+        return $this->outcome->getFinishReason();
     }
 
     public function getRequestId(): ?string

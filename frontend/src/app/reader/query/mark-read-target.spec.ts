@@ -22,6 +22,12 @@ describe('markReadTarget', () => {
     });
   });
 
+  it('maps the For you stream selection to its own scope', () => {
+    expect(markReadTarget({ kind: 'for-you-stream', unread: false })).toEqual({
+      scope: 'for-you-stream',
+    });
+  });
+
   it('maps a search selection to a search scope, term verbatim', () => {
     expect(markReadTarget({ kind: 'search', unread: false, term: 'climate' })).toEqual({
       scope: 'search',
