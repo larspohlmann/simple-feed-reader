@@ -30,6 +30,7 @@ use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
+use App\Enum\RunLogOwner;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Bulk DELETEs of everything a user owns; they bypass the identity map, so the caller must clear() it. */
@@ -52,8 +53,8 @@ final readonly class AccountWipeRepository
                 RecommendationRun::class,
             ))->setParameter('user', $user)->execute();
         }
-        $this->logs->deleteForUserOutsideStoryAiRuns($user, []);
-        $this->logs->deleteForUserOutsideInterestTermRuns($user, []);
+        $this->logs->deleteForUserOutside($user, RunLogOwner::StoryAiRun, []);
+        $this->logs->deleteForUserOutside($user, RunLogOwner::InterestTermRun, []);
         $this->deleteByUser(RecommendationRun::class, $user);
         $this->deleteByUser(StoryAiRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);

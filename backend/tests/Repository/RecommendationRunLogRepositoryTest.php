@@ -15,6 +15,7 @@ use App\Enum\AiRunKind;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\RunLogOwner;
 use App\Enum\StoryAiTask;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
@@ -216,7 +217,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $keptId = $kept->getId();
         self::assertNotNull($keptId);
 
-        $this->logs->deleteForUserOutsideRuns($this->user, []);
+        $this->logs->deleteForUserOutside($this->user, RunLogOwner::Run, []);
 
         // Bulk DQL bypasses the identity map: clear before asserting survival, or find() serves the stale in-memory
         // row.
@@ -272,7 +273,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         [$owner, $run, $kept] = $this->ownerWithARunAndAProfileRun();
         $dropped = $this->profileRunWithOneRow($owner);
 
-        $this->logs->deleteForUserOutsideProfileRuns($owner, [$kept->requireId()]);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::ProfileRun, [$kept->requireId()]);
 
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $kept->requireId()));
         self::assertSame([], $this->logs->listForRun($owner, AiRunKind::Profile, $dropped->requireId()));
@@ -283,7 +284,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUserOutsideRuns($owner, []);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::Run, []);
 
         self::assertSame([], $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
@@ -293,7 +294,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUserOutsideRuns($owner, [$run->requireId()]);
+        $this->logs->deleteForUserOutside($owner, RunLogOwner::Run, [$run->requireId()]);
 
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::ForYou, $run->requireId()));
         self::assertCount(1, $this->logs->listForRun($owner, AiRunKind::Profile, $profileRun->requireId()));
@@ -357,7 +358,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $otherOwners = $this->interestTermRunWithOneRow($this->otherUser);
         [, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
 
-        $this->logs->deleteForUserOutsideInterestTermRuns($this->user, [$kept->requireId()]);
+        $this->logs->deleteForUserOutside($this->user, RunLogOwner::InterestTermRun, [$kept->requireId()]);
 
         self::assertSame(1, $this->logs->count(['interestTermRun' => $kept]));
         self::assertSame(0, $this->logs->count(['interestTermRun' => $dropped]));

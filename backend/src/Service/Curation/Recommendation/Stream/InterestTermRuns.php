@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Stream;
 
 use App\Entity\InterestTermRun;
+use App\Enum\RunLogOwner;
 use App\Enum\RunStatus;
 use App\Repository\InterestTermRunRepository;
 use App\Repository\RecommendationRunLogRepository;
@@ -46,8 +47,9 @@ final readonly class InterestTermRuns
         );
         $this->entityManager->persist($run);
         $this->entityManager->flush();
-        $this->logs->deleteForUserOutsideInterestTermRuns(
+        $this->logs->deleteForUserOutside(
             $due->user,
+            RunLogOwner::InterestTermRun,
             $this->runs->findNewestIdsForUser($due->user, RunLogRetention::RUNS),
         );
 
