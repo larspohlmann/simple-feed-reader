@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending\Pass;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\Model\EntryStemIdsModel;
 use App\Service\Curation\Trending\Model\LanguageCoverageModel;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Support\PartWeightCaps;
+use App\Service\Foundation\Stemming\WordEquivalents;
 
 /** Lookups cache per feed and entry: add every entry before asking for a weight. */
 final class HeadlineWindow
@@ -65,7 +65,7 @@ final class HeadlineWindow
 
     public function __construct(
         private readonly HeadlineFiller $filler,
-        private readonly HeadlineEquivalents $equivalents,
+        private readonly WordEquivalents $equivalents,
     ) {
         $this->compoundParts = new CompoundParts();
     }

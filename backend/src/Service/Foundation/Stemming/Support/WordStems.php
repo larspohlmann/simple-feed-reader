@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\Support;
+namespace App\Service\Foundation\Stemming\Support;
 
 use App\Service\Foundation\Text\Support\CaseFold;
 
-final class HeadlineStems
+final class WordStems
 {
     private const int CUT_LENGTH = 6;
     private const int MIN_WORD_LENGTH = 3;

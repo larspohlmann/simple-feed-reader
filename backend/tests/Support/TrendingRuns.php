@@ -21,7 +21,7 @@ final class TrendingRuns
         return new TrendingRun(
             $window,
             new \DateTimeImmutable('2031-05-07 12:00:00', new \DateTimeZone('UTC')),
-            new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents()),
+            new HeadlineWindow(TrendingWiring::filler(), StemmingWiring::equivalents()),
         );
     }
 

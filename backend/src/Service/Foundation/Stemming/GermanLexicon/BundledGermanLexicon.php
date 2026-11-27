@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\GermanLexicon;
+namespace App\Service\Foundation\Stemming\GermanLexicon;
 
-use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
-use App\Service\Curation\Trending\Model\GermanLexiconModel;
+use App\Service\Foundation\Stemming\Model\GermanLexiconEntryModel;
+use App\Service\Foundation\Stemming\Model\GermanLexiconModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Service\ResetInterface;
 

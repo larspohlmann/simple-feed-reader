@@ -14,6 +14,7 @@ use App\Service\Curation\Trending\Pass\TrendingRun;
 use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
 use App\Service\Curation\Trending\StoryMatching;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingFixtures;
 use App\Tests\Support\TrendingWiring;
 
@@ -59,7 +60,7 @@ final class DayStoryBuildPolicyTest extends DbTestCase
         return new TrendingRun(
             TrendingWindow::Day,
             new \DateTimeImmutable('2031-05-13 12:00:00', new \DateTimeZone('UTC')),
-            new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents()),
+            new HeadlineWindow(TrendingWiring::filler(), StemmingWiring::equivalents()),
         );
     }
 }

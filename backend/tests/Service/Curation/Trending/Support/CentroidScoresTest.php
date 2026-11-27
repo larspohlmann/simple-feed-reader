@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
 use App\Service\Curation\Trending\Support\CentroidScores;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +22,7 @@ final class CentroidScoresTest extends TestCase
 
     public function testTheMemberSharingMostWithTheOthersScoresHighest(): void
     {
-        $headlines = new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents());
+        $headlines = new HeadlineWindow(TrendingWiring::filler(), StemmingWiring::equivalents());
         $this->add($headlines, self::OUTSIDER, 'Hafenstreik Hamburg Container');
         $this->add($headlines, self::FIRST, 'Hafenstreik Hamburg Container');
         $this->add($headlines, self::SECOND, 'Hafenstreik Hamburg');

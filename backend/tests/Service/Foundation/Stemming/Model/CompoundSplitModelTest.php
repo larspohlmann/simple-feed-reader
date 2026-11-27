@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending\Model;
+namespace App\Tests\Service\Foundation\Stemming\Model;
 
-use App\Service\Curation\Trending\Model\CompoundSplitModel;
+use App\Service\Foundation\Stemming\Model\CompoundSplitModel;
 use PHPUnit\Framework\TestCase;
 
 final class CompoundSplitModelTest extends TestCase

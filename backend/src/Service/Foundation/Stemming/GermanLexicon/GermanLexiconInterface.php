@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending\GermanLexicon;
+namespace App\Service\Foundation\Stemming\GermanLexicon;
 
-use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
+use App\Service\Foundation\Stemming\Model\GermanLexiconEntryModel;
 
 interface GermanLexiconInterface
 {
