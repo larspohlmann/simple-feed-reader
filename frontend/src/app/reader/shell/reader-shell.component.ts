@@ -33,18 +33,14 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { flattenTagTree } from '../state/subscription-derivations';
-import { TagsStore } from '../state/tags.store';
 import { StoryLayerComponent } from './story-layer/story-layer.component';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
-import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
-import { LabelsStore } from '../labels/labels.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
 import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
-import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
@@ -67,6 +63,7 @@ import { TagActions } from '../feeds/manage/tag-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
+import { ReaderBootLoads } from './reader-boot-loads.service';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { holdReaderPage } from './reader-page';
@@ -114,6 +111,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
   styleUrl: './reader-shell.component.scss',
   // Per-reader state: provided here so none of it outlives the reader.
   providers: [
+    ReaderBootLoads,
     SidebarCountsPoll,
     CompletedEntriesMerge,
     SightedPreviews,
@@ -147,16 +145,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly manage = inject(ManageActions);
   readonly tagActions = inject(TagActions);
   readonly subs = inject(SubscriptionsStore);
-  readonly tags = inject(TagsStore);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly followedStoriesStore = inject(FollowedStoriesStore);
-  private readonly labelsStore = inject(LabelsStore);
-  private readonly networkSwitches = inject(NetworkSurfaceSwitches);
+  private readonly bootLoads = inject(ReaderBootLoads);
   readonly ai = inject(AiAvailabilityService);
   readonly digest = inject(DigestService);
-  private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   readonly sidebarVisibility = inject(SidebarVisibilityService);
@@ -291,15 +286,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   ngOnInit(): void {
-    this.savedSearchesStore.load();
-    this.followedStoriesStore.load();
-    this.labelsStore.reload();
-    this.networkSwitches.loadExclusions();
-    this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
-    // Reopening the app resumes a for-you run left in flight by an earlier session.
-    this.recs.resume();
-    // The service re-checks on its own when the tab returns to the foreground.
-    this.versions.load();
+    this.bootLoads.start();
   }
 
   ngAfterViewInit(): void {
