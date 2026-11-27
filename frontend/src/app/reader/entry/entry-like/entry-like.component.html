@@ -2,11 +2,10 @@
 @let likeCountLabel =
   likeCount === null ? null : (likeCount.labelKey | transloco: { count: likeCount.count });
 @if (toggle(); as thumb) {
-  @let likeKey = (thumb.isLiked ? 'unlike' : 'like') + '.' + thumb.target;
-  @let likeLabel = 'reader.' + likeKey | transloco;
+  @let likeLabel = 'reader.' + likeKey() | transloco;
   <button
     type="button"
-    [attr.title]="'reader.actionHint.' + likeKey | transloco"
+    [attr.title]="'reader.actionHint.' + likeKey() | transloco"
     [attr.aria-label]="likeCountLabel === null ? likeLabel : likeLabel + ', ' + likeCountLabel"
     [appFlagToggle]="thumb.isLiked"
     [attr.aria-busy]="liking.pending() || null"

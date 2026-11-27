@@ -7,7 +7,7 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../../models';
-import { likeableSocial, takesLocalLike } from '../../entry-social';
+import { formatLikeKey, likeToggle } from '../../entry-social';
 import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 
 /**
@@ -24,11 +24,10 @@ import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 export class EntryLikeComponent {
   readonly entry = input.required<EntryDto>();
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
-  protected readonly toggle = computed(() => {
-    const entry = this.entry();
-    const social = likeableSocial(entry);
-    if (social) return { isLiked: social.isLiked, target: social.network };
-    return takesLocalLike(entry) ? { isLiked: entry.isLiked, target: 'local' } : null;
+  protected readonly toggle = computed(() => likeToggle(this.entry()));
+  protected readonly likeKey = computed(() => {
+    const toggle = this.toggle();
+    return toggle === null ? null : formatLikeKey(toggle.isLiked, toggle.target);
   });
   private readonly compactCount = inject(CompactCount);
   protected readonly likes = computed(() =>

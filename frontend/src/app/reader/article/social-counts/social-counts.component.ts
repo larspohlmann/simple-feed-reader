@@ -10,7 +10,7 @@ import {
   untracked,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { SocialCountsDto, likeableSocial } from '../../entry-social';
+import { SocialCountsDto, likeToggle } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsRowComponent } from './social-counts-row.component';
 import { SocialNetworkName } from '../../../core/social-network';
@@ -38,7 +38,7 @@ export class SocialCountsComponent {
     return state.status === 'ok' ? state : null;
   });
 
-  protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
+  protected readonly thumb = computed(() => likeToggle(this.entry()));
   protected readonly viewer = computed(() => this.loaded()?.actions ?? null);
   /** The loaded counts with the likes moved by a like given or taken back since they loaded. */
   protected readonly counts = computed<SocialCountsDto | null>(() => {
