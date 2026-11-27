@@ -82,7 +82,7 @@ request per part. The browser does these steps, in this order:
    restore. The server deletes the account's tags, saved searches,
    subscriptions, read marks, "For you" runs and "For you" settings, sets the
    scrape fallback preference back to off, and loads the foundation part.
-   Your labels stay.
+   Your labels stay, but come off every article; the file puts back the labels it holds.
 5. The browser sends each entry part in turn, one request at a time, and adds
    up what each request loaded. Section 4 tells you what happens when one of
    these requests fails.

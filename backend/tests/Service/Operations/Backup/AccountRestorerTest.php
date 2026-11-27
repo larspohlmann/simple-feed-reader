@@ -775,6 +775,35 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame([], $this->entryLabels()->labelsByEntryIds($target->requireId(), [$entryId]));
     }
 
+    public function testAReplaceRestoreDropsTheAccountsOldEntryLabelsAndKeepsItsLabels(): void
+    {
+        $account = $this->fullyPopulatedAccount()->create('relabel@example.com');
+        $entryId = $this->fixtureRowsOf($account)['entry']->requireId();
+        $accountId = $account->requireId();
+        $this->entityManager->getConnection()->executeStatement(
+            'DELETE FROM entry_label WHERE entry_id = ?',
+            [$entryId],
+        );
+        $this->entityManager->clear();
+        $foundation = $this->backupOf($this->reload($account));
+        $entryParts = $this->entryPartsOf($this->reload($account));
+        $this->entityManager->getConnection()->executeStatement(
+            'INSERT INTO entry_label (label_id, entry_id) SELECT id, ? FROM label WHERE user_id = ? AND name = ?',
+            [$entryId, $accountId, 'Work'],
+        );
+
+        $this->restorer()->start($this->reload($account), $foundation, 'REPLACE');
+        foreach ($entryParts as $entryPart) {
+            $this->entryPartRestorer()->load($this->reload($account), $entryPart);
+        }
+
+        self::assertSame([], $this->entryLabels()->labelsByEntryIds($accountId, [$entryId]));
+        self::assertSame(
+            1,
+            $this->scalarInt('SELECT COUNT(*) FROM label WHERE user_id = ? AND name = ?', [$accountId, 'Work']),
+        );
+    }
+
     private function entryLabels(): EntryLabelRepository
     {
         $entryLabels = self::getContainer()->get(EntryLabelRepository::class);
