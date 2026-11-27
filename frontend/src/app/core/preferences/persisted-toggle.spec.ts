@@ -46,19 +46,6 @@ describe('persistedToggle', () => {
     expect(toggle.expanded()).toBe(true);
   });
 
-  it('reveals a collapsed section for now without storing it, so a toggle still collapses it', () => {
-    localStorage.setItem('sfr.test.collapsed', 'true');
-    const toggle = persistedToggle(() => 'sfr.test.collapsed');
-
-    toggle.reveal();
-
-    expect(toggle.expanded()).toBe(true);
-    expect(localStorage.getItem('sfr.test.collapsed')).toBe('true');
-    expect(persistedToggle(() => 'sfr.test.collapsed').expanded()).toBe(false);
-    toggle.toggle();
-    expect(toggle.expanded()).toBe(false);
-  });
-
   it('follows a key that changes', () => {
     localStorage.setItem('sfr.mastodon.collapsed', 'true');
     const network = signal('bluesky');

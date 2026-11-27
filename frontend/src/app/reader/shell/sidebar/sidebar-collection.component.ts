@@ -8,8 +8,8 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -24,6 +24,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { LayoutService } from '../../layout.service';
 import {
+  COLLECTIONS,
   LABEL_NAME_MAX,
   LabelCollection,
   LabelFilter,
@@ -47,13 +48,6 @@ type CollectionSelection = SelectionOf<LabelCollection>;
 
 const isCollectionSelection = (selection: Selection): selection is CollectionSelection =>
   selection.kind === 'favorites' || selection.kind === 'kept';
-
-const COLLECTION_ICON: Record<LabelCollection, string> = { favorites: 'star', kept: 'bookmark' };
-
-const COLLECTION_TOGGLE_KEY: Record<LabelCollection, string> = {
-  favorites: 'reader.labels.toggleFavorites',
-  kept: 'reader.labels.toggleKept',
-};
 
 /** The sidebar's Favorites or Kept block (#2581): the collection's head, with a subfolder per label it holds. */
 @Component({
@@ -84,8 +78,8 @@ export class SidebarCollectionComponent {
     () => `sfr.sidebar.${this.collection()}.collapsed`,
     'collapsed',
   );
-  protected readonly icon = computed(() => COLLECTION_ICON[this.collection()]);
-  protected readonly toggleLabel = computed(() => COLLECTION_TOGGLE_KEY[this.collection()]);
+  protected readonly icon = computed(() => COLLECTIONS[this.collection()].icon);
+  protected readonly toggleLabel = computed(() => COLLECTIONS[this.collection()].toggleKey);
 
   protected readonly total = computed(() =>
     this.collection() === 'favorites'
@@ -95,7 +89,7 @@ export class SidebarCollectionComponent {
 
   protected readonly folders = computed((): CollectionFolder[] => {
     const view = this.collection();
-    const countIn = view === 'favorites' ? 'favoriteCount' : 'keptCount';
+    const countIn = COLLECTIONS[view].countField;
     const folder = (
       filter: LabelFilter,
       count: number,
@@ -122,10 +116,16 @@ export class SidebarCollectionComponent {
     return selection.label ?? null;
   });
 
-  /** Following a pill into a subfolder opens its block for this visit; the stored collapse stays. */
-  private readonly revealActiveFolder = effect(() => {
-    if (this.activeFilter() !== null) untracked(() => this.open.reveal());
+  /** Set by the chevron, cleared by the next subfolder: a block opened only by its active subfolder still closes. */
+  private readonly collapsedHere = linkedSignal({
+    source: this.activeFilter,
+    computation: () => false,
   });
+
+  /** Following a pill into a subfolder opens its block; the stored collapse stays. */
+  protected readonly expanded = computed(
+    () => !this.collapsedHere() && (this.open.expanded() || this.activeFilter() !== null),
+  );
 
   protected readonly headCurrent = computed(
     () => this.selection().kind === this.collection() && this.activeFilter() === null,
@@ -139,6 +139,16 @@ export class SidebarCollectionComponent {
     field?.focus();
     field?.select();
   });
+
+  protected toggleExpanded(): void {
+    if (this.expanded()) {
+      if (this.open.expanded()) this.open.toggle();
+      this.collapsedHere.set(true);
+      return;
+    }
+    this.collapsedHere.set(false);
+    this.open.open();
+  }
 
   protected menuKey(label: LabelTally): string {
     return `label-${this.collection()}-${label.id}`;
@@ -161,8 +171,7 @@ export class SidebarCollectionComponent {
     }
     this.labels.rename(label.id, name).subscribe({
       next: () => this.cancelRename(),
-      error: (error: HttpErrorResponse) =>
-        this.toast.showTranslatedProblem(parseProblem(error), this.transloco),
+      error: (error: HttpErrorResponse) => this.showFailure(error),
     });
   }
 
@@ -212,9 +221,12 @@ export class SidebarCollectionComponent {
           this.openWholeCollection(selection.kind);
         }
       },
-      error: (error: HttpErrorResponse) =>
-        this.toast.showTranslatedProblem(parseProblem(error), this.transloco),
+      error: (error: HttpErrorResponse) => this.showFailure(error),
     });
+  }
+
+  private showFailure(error: HttpErrorResponse): void {
+    this.toast.showProblem(parseProblem(error));
   }
 
   private openWholeCollection(collection: LabelCollection): void {

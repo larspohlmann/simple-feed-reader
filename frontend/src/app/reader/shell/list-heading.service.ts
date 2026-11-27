@@ -28,15 +28,13 @@ import { TrendingWindowService } from '../trending/trending-window.service';
 import { ListContext } from '../state/list-context';
 import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
 import { LabelsStore } from '../labels/labels.store';
-import { LabelCollection } from '../labels/labels.models';
+import { COLLECTIONS, LabelCollection } from '../labels/labels.models';
 
 /** The label subfolder a Favorites or Kept list is narrowed to, as the heading names and counts it. */
 interface LabelFolder {
   name: string;
   count: number;
 }
-
-const COLLECTION_COUNT_FIELD = { favorites: 'favoriteCount', kept: 'keptCount' } as const;
 
 /** The title, counts and refresh times heading one host's list (#2329). */
 @Injectable()
@@ -177,7 +175,7 @@ export class ListHeading {
   /** Null for the whole collection, before the tallies first load, and for a label that no longer exists. */
   private labelFolder(selection: SelectionOf<LabelCollection>): LabelFolder | null {
     if (!this.labels.loaded()) return null;
-    const countIn = COLLECTION_COUNT_FIELD[selection.kind];
+    const countIn = COLLECTIONS[selection.kind].countField;
     if (selection.label === 'unlabeled') {
       return {
         name: this.i18n.translate('reader.labels.unlabeled'),

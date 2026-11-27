@@ -5,8 +5,6 @@ export interface PersistedToggle {
   readonly expanded: Signal<boolean>;
   toggle(): void;
   open(): void;
-  /** Expands for now without storing it, so the next visit starts as stored. */
-  reveal(): void;
 }
 
 export type ToggleStart = 'expanded' | 'collapsed';
@@ -31,7 +29,6 @@ export function persistedToggle(
     open: () => {
       if (!expanded()) toggle();
     },
-    reveal: () => expanded.set(true),
   };
 }
 

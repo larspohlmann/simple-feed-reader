@@ -26,6 +26,19 @@ export type LabelFilter = number | 'unlabeled';
 /** The saved collections a label sorts. */
 export type LabelCollection = 'favorites' | 'kept';
 
+/** Each collection's sidebar icon, chevron label key, and the tally field counting its posts. */
+export const COLLECTIONS: Record<
+  LabelCollection,
+  { icon: string; toggleKey: string; countField: 'favoriteCount' | 'keptCount' }
+> = {
+  favorites: {
+    icon: 'star',
+    toggleKey: 'reader.labels.toggleFavorites',
+    countField: 'favoriteCount',
+  },
+  kept: { icon: 'bookmark', toggleKey: 'reader.labels.toggleKept', countField: 'keptCount' },
+};
+
 export interface LabelTalliesResponse {
   labels: LabelTally[];
   unlabeled: UnlabeledTally;

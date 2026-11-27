@@ -1,5 +1,4 @@
 import { signal } from '@angular/core';
-import { TranslocoService } from '@jsverse/transloco';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
@@ -31,7 +30,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
   const rename = jest.fn();
   const remove = jest.fn();
   const ask = jest.fn();
-  const showTranslatedProblem = jest.fn();
+  const showProblem = jest.fn();
   const openSheet = jest.fn();
   const menuFor = signal<string | null>(null);
   const coarse = signal(false);
@@ -51,7 +50,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
           useValue: { favoritesCount: signal(7), keptCount: signal(0) },
         },
         { provide: ConfirmService, useValue: { ask } },
-        { provide: ToastService, useValue: { showTranslatedProblem } },
+        { provide: ToastService, useValue: { showProblem } },
         { provide: ActionSheet, useValue: { open: openSheet } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },
         {
@@ -291,6 +290,49 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
   });
 
+  it('closes a block its subfolder opened on the chevron, without storing it', () => {
+    labels.set([tally(1, 'Home')]);
+    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
+
+    toggle(fixture);
+
+    expect(root(fixture).querySelector('.label-row')).toBeNull();
+    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBeNull();
+  });
+
+  it('closes a stored-open block on the chevron while one of its subfolders is listed', () => {
+    labels.set([tally(1, 'Home')]);
+    localStorage.setItem('sfr.sidebar.favorites.collapsed', 'false');
+    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
+
+    toggle(fixture);
+
+    expect(root(fixture).querySelector('.label-row')).toBeNull();
+    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('true');
+  });
+
+  it('reopens a block closed inside a subfolder on the chevron, storing it open', () => {
+    labels.set([tally(1, 'Home')]);
+    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
+    toggle(fixture);
+
+    toggle(fixture);
+
+    expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
+    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('false');
+  });
+
+  it('opens a block closed inside one subfolder again on the next', () => {
+    labels.set([tally(1, 'Home'), tally(2, 'Work')]);
+    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
+    toggle(fixture);
+
+    fixture.componentRef.setInput('selection', { kind: 'favorites', label: 2 });
+    fixture.detectChanges();
+
+    expect(rowNames(fixture)).toEqual(['Home', 'Work', 'Unlabeled']);
+  });
+
   it('offers Rename and Delete on a label row, and nothing on Unlabeled', () => {
     labels.set([tally(1, 'Home')]);
     const fixture = mount('favorites');
@@ -375,9 +417,8 @@ describe('SidebarCollectionComponent (#2581)', () => {
 
       press(fixture, 'Enter', 'Work');
 
-      expect(showTranslatedProblem).toHaveBeenCalledWith(
+      expect(showProblem).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'label_name_taken' }),
-        TestBed.inject(TranslocoService),
       );
       expect(input(fixture)).not.toBeNull();
     });
@@ -469,10 +510,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(showTranslatedProblem).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 500 }),
-        TestBed.inject(TranslocoService),
-      );
+      expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }));
       expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
       expect(router.url).toBe('/?view=favorites&label=1');
     });

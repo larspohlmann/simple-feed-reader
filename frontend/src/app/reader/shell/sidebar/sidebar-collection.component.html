@@ -1,5 +1,5 @@
 @let hasFolders = folders().length > 0;
-@let expanded = hasFolders && open.expanded();
+@let shown = hasFolders && expanded();
 <div class="card">
   <div class="section-head collection-head" [class.current]="headCurrent()">
     <a
@@ -19,17 +19,17 @@
       <button
         class="chevzone"
         type="button"
-        [attr.aria-expanded]="expanded"
+        [attr.aria-expanded]="shown"
         [attr.aria-label]="toggleLabel() | transloco"
-        (click)="open.toggle()"
+        (click)="toggleExpanded()"
       >
-        <app-icon [name]="expanded ? 'expand_more' : 'chevron_right'" size="dense" />
+        <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
       </button>
     } @else {
       <span class="trail" aria-hidden="true"></span>
     }
   </div>
-  @if (expanded) {
+  @if (shown) {
     <div class="sublist">
       @for (folder of folders(); track folder.filter) {
         @let label = folder.label;
