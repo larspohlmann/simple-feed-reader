@@ -7,36 +7,29 @@ namespace App\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** What the provider said about one call besides its answer; RecommendationCallRepository writes it in SQL. */
+/** What the provider said about one call besides its answer; RecordedCall builds it, the repository's SQL writes it. */
 #[ORM\Embeddable]
 final class CallReceipt
 {
-    #[ORM\Column(length: 255, nullable: true)]
-    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
-    private ?string $requestId = null;
+    public function __construct(
+        #[ORM\Column(length: 255, nullable: true)]
+        private ?string $requestId,
+        /** The model version that answered, which an alias like `jev-latest` stands for; null when the reply named none. */
+        #[ORM\Column(length: 255, nullable: true)]
+        private ?string $answeringModel,
+        #[ORM\Column(type: Types::BIGINT, nullable: true)]
+        private ?int $costNanoCredits,
+    ) {
+    }
 
-    /** The model version that answered, which an alias like `jev-latest` stands for; null when the reply named none. */
-    #[ORM\Column(length: 255, nullable: true)]
-    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
-    private ?string $answeringModel = null;
-
-    #[ORM\Column(type: Types::BIGINT, nullable: true)]
-    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
-    private ?int $costNanoCredits = null;
-
-    /** Why the provider stopped: `length` when max_tokens truncated the answer, `stop` at a natural end. */
-    #[ORM\Column(length: 32, nullable: true)]
-    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
-    private ?string $finishReason = null;
+    public static function none(): self
+    {
+        return new self(null, null, null);
+    }
 
     public function getRequestId(): ?string
     {
         return $this->requestId;
-    }
-
-    public function getFinishReason(): ?string
-    {
-        return $this->finishReason;
     }
 
     public function getAnsweringModel(): ?string

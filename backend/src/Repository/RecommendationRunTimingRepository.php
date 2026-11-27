@@ -40,10 +40,10 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
          *     batchCount: int|string}> $rows */
         $rows = $this->getEntityManager()->createQuery(
             'SELECT IDENTITY(l.run) AS runId, l.phase AS phase,'
-            . ' MIN(l.createdAt) AS startedAt, MAX(l.answer.finishedAt) AS finishedAt,'
+            . ' MIN(l.createdAt) AS startedAt, MAX(l.outcome.finishedAt) AS finishedAt,'
             . ' COUNT(DISTINCT l.batchNumber) AS batchCount'
             . ' FROM ' . RecommendationRunLog::class . ' l'
-            . ' WHERE IDENTITY(l.run) IN (:runIds) AND l.answer.finishedAt IS NOT NULL'
+            . ' WHERE IDENTITY(l.run) IN (:runIds) AND l.outcome.finishedAt IS NOT NULL'
             . ' GROUP BY l.run, l.phase',
         )->setParameter('runIds', array_keys($runSeconds))->getArrayResult();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CallFailure;
 use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -17,7 +18,6 @@ use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
-use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -58,8 +58,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            RequestAdjustmentModel::outputCap(32_768),
-            self::REJECTION,
+            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run);
@@ -76,8 +75,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            RequestAdjustmentModel::outputCap(32_768),
-            self::REJECTION,
+            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run);
@@ -95,8 +93,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            RequestAdjustmentModel::outputCap(32_768),
-            self::REJECTION,
+            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run) + $this->adjustmentsByLog($otherRun);
@@ -114,7 +111,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
         $log = $this->newLog($run, $attempt);
         $this->calls->settleTransportFailure(
             new CallSettlement($log->requireId(), $this->outcome($verdict)),
-            $errorDetail,
+            new CallFailure($errorDetail),
         );
 
         return $log;

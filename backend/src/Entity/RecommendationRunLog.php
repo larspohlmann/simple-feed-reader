@@ -26,6 +26,8 @@ final class RecommendationRunLog
 {
     use PersistedId;
 
+    private const int LONGTEXT_LENGTH = 4_294_967_295;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -56,15 +58,18 @@ final class RecommendationRunLog
     #[ORM\Column]
     private int $attempt;
 
-    #[ORM\Column(type: Types::TEXT, length: CallAnswer::LONGTEXT_LENGTH)]
+    #[ORM\Column(type: Types::TEXT, length: self::LONGTEXT_LENGTH)]
     private string $requestBody;
+
+    #[ORM\Column(type: Types::TEXT, length: self::LONGTEXT_LENGTH)]
+    private string $responseText = '';
 
     /** When the request went out. */
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Embedded(class: CallAnswer::class, columnPrefix: false)]
-    private CallAnswer $answer;
+    #[ORM\Embedded(class: CallOutcome::class, columnPrefix: false)]
+    private CallOutcome $outcome;
 
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
@@ -93,9 +98,9 @@ final class RecommendationRunLog
         $this->attempt = $attempt;
         $this->requestBody = $requestBody;
         $this->createdAt = $createdAt;
-        $this->answer = new CallAnswer();
-        $this->receipt = new CallReceipt();
-        $this->failure = new CallFailure();
+        $this->outcome = CallOutcome::pending();
+        $this->receipt = CallReceipt::none();
+        $this->failure = new CallFailure(null);
     }
 
     public static function forRun(
@@ -172,17 +177,17 @@ final class RecommendationRunLog
 
     public function getResponseText(): string
     {
-        return $this->answer->getResponseText();
+        return $this->responseText;
     }
 
     public function getVerdict(): ?CallVerdict
     {
-        return $this->answer->getVerdict();
+        return $this->outcome->getVerdict();
     }
 
     public function getWireBytes(): int
     {
-        return $this->answer->getWireBytes();
+        return $this->outcome->getWireBytes();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
@@ -192,7 +197,7 @@ final class RecommendationRunLog
 
     public function getFinishedAt(): ?\DateTimeImmutable
     {
-        return $this->answer->getFinishedAt();
+        return $this->outcome->getFinishedAt();
     }
 
     public function getErrorDetail(): ?string
@@ -202,7 +207,7 @@ final class RecommendationRunLog
 
     public function getFinishReason(): ?string
     {
-        return $this->receipt->getFinishReason();
+        return $this->outcome->getFinishReason();
     }
 
     public function getRequestId(): ?string
