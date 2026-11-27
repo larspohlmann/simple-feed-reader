@@ -60,6 +60,9 @@ final readonly class InterestTermSweep
     private function refreshStaleRarities(\DateTimeImmutable $deadline): int
     {
         $now = $this->clock->now();
+        if ($now >= $deadline) {
+            return 0;
+        }
         $cutoff = $now->modify(\sprintf('-%d hours', InterestTermRarity::REFRESH_HOURS));
         $stale = $this->termSets->findWithStaleRarities($cutoff, $now);
         if ([] === $stale) {

@@ -17,6 +17,7 @@ use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsProfiledAccounts;
 use App\Tests\Support\SeedsUsers;
@@ -24,6 +25,7 @@ use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TickingClock;
 use Psr\Clock\ClockInterface;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
@@ -101,6 +103,24 @@ final class InterestTermSweepTest extends DbTestCase
         self::assertSame(0, $atDeadline->raritiesRefreshed);
         self::assertEquals(new \DateTimeImmutable('2026-11-26 07:00:00'), $first->getRaritiesRefreshedAt());
         self::assertEquals(new \DateTimeImmutable('2026-11-26 08:00:00'), $second->getRaritiesRefreshedAt());
+    }
+
+    public function testASpentBudgetDoesNotEvenReadTheRarityWindow(): void
+    {
+        $this->staleSet('terms-sweep-spent@example.test', '2026-11-26 07:00:00');
+        $logger = new RecordingLogger();
+        $windowUnreadable = new class implements ClockInterface {
+            public function now(): \DateTimeImmutable
+            {
+                throw new \RuntimeException('the rarity window was read');
+            }
+        };
+
+        $report = $this->sweepOnClock(new MockClock(self::EDGE_NOW), $windowUnreadable, $logger)
+            ->sweep(SweepBudgetModel::seconds(0));
+
+        self::assertSame(0, $report->raritiesRefreshed);
+        self::assertSame([], $logger->records);
     }
 
     public function testASecondStaleSetBeforeTheDeadlineIsRefreshedToo(): void
@@ -233,8 +253,11 @@ final class InterestTermSweepTest extends DbTestCase
         return $this->sweepOnClock(new MockClock($now));
     }
 
-    private function sweepOnClock(ClockInterface $wallClock): InterestTermSweep
-    {
+    private function sweepOnClock(
+        ClockInterface $wallClock,
+        ?ClockInterface $rarityClock = null,
+        ?LoggerInterface $logger = null,
+    ): InterestTermSweep {
         $clock = new NaiveUtcClock($wallClock);
 
         return new InterestTermSweep(
@@ -246,10 +269,10 @@ final class InterestTermSweepTest extends DbTestCase
                 $this->requireFromContainer(InterestTermRepository::class),
                 new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
                 $this->entityManager,
-                $clock,
+                null === $rarityClock ? $clock : new NaiveUtcClock($rarityClock),
             ),
             $clock,
-            new NullLogger(),
+            $logger ?? new NullLogger(),
             $this->entityManager,
         );
     }
