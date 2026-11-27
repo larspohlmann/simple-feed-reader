@@ -305,7 +305,8 @@
         "contextWindow": "El presupuesto de tokens que puede usar una solicitud. La línea de abajo indica de dónde viene el valor actual: tu valor personalizado aquí, el límite que informa tu proveedor o el predeterminado. Deja el campo vacío para usar el valor del proveedor o el predeterminado.",
         "fixedPrompt": "El rol y el formato de salida que envía cada ejecución. Son fijos para que la respuesta siga siendo legible por la máquina; el prompt de orientación de arriba es el lugar para tus propias instrucciones.",
         "debug": "Si está activado, cada ejecución guarda su registro completo de solicitudes y respuestas. El registro aparece en el panel “Registro de depuración” de abajo en cuanto una ejecución ha generado entradas. El modo de depuración no cambia lo que muestra la lista de recomendaciones; eso lo controla “Mostrar por qué se eligieron los artículos”.",
-        "purge": "Elimina de “Para ti” todos los artículos recomendados de esta cuenta. Los artículos en sí y su estado de lectura no se tocan. No se puede deshacer: la próxima ejecución crea una lista nueva."
+        "purge": "Elimina de “Para ti” todos los artículos recomendados de esta cuenta. Los artículos en sí y su estado de lectura no se tocan. No se puede deshacer: la próxima ejecución crea una lista nueva.",
+        "forYouStream": "La IA convierte tu perfil en palabras ponderadas para cada idioma. El titular y el texto de cada entrada nueva se comparan con ellas, y las palabras poco frecuentes en tus feeds cuentan más. Un cambio solo afecta a las entradas que lleguen después."
       },
       "guide": {
         "title": "Configuración paso a paso",
@@ -338,6 +339,27 @@
         "title": "Recomendaciones",
         "forYouTitle": "Para ti",
         "forYouCaption": "Cómo se crea tu feed personal.",
+        "forYouStream": {
+          "title": "Flujo Para ti",
+          "caption": "Entradas de tus feeds que encajan con tus intereses, nada más llegar.",
+          "enabled": "Mostrar el flujo Para ti",
+          "enabledDesc": "Desactiva el flujo para ocultarlo de la barra lateral; no se borra nada.",
+          "precision": "Precisión",
+          "precisionDesc": "Cuánto debe encajar una entrada con tus intereses para aparecer.",
+          "narrower": "Más estrecha",
+          "wider": "Más amplia",
+          "resetPrecision": "Restablecer la precisión",
+          "precisionReadout": "Precisión: {{label}}",
+          "precisionLabel": {
+            "narrowest": "La más estrecha",
+            "narrow": "Estrecha",
+            "balanced": "Equilibrada",
+            "wide": "Amplia",
+            "widest": "La más amplia"
+          },
+          "phrases": "Palabras elegidas por la IA",
+          "phrasesEmpty": "Aún no hay lista de palabras. Aparece tras tu próxima actualización del perfil."
+        },
         "showScoreAndReasons": "Mostrar puntuación y motivos",
         "showScoreAndReasonsDesc": "Añade la puntuación de cada selección y, si el modelo lo escribe, su motivo.",
         "autoGenerate": "Generar Para ti automáticamente",

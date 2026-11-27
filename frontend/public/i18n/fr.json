@@ -305,7 +305,8 @@
         "contextWindow": "Le budget de jetons qu'une requête peut utiliser. La ligne ci-dessous indique d'où vient la valeur actuelle : votre valeur personnalisée ici, la limite indiquée par votre fournisseur, ou la valeur par défaut intégrée. Laissez le champ vide pour utiliser la valeur du fournisseur ou la valeur par défaut.",
         "fixedPrompt": "Le rôle et le format de sortie que chaque cycle envoie. Ils sont fixes pour que la réponse reste lisible par la machine — le prompt d'orientation ci-dessus est l'endroit pour vos propres instructions.",
         "debug": "Lorsqu'il est activé, chaque cycle conserve son journal complet de requêtes et de réponses. Le journal apparaît dans le panneau « Journal de débogage » ci-dessous dès qu'un cycle a produit des entrées. Le mode débogage ne change pas ce qu'affiche la liste de recommandations — c'est le rôle de « Afficher la note et la justification ».",
-        "purge": "Supprime tous les articles recommandés de « Pour vous » pour ce compte. Les articles eux-mêmes et leur état de lecture ne sont pas touchés. Cette action est irréversible — le prochain cycle construit une nouvelle liste."
+        "purge": "Supprime tous les articles recommandés de « Pour vous » pour ce compte. Les articles eux-mêmes et leur état de lecture ne sont pas touchés. Cette action est irréversible — le prochain cycle construit une nouvelle liste.",
+        "forYouStream": "L'IA transforme votre profil en termes pondérés pour chaque langue. Le titre et le texte de chaque nouvel article sont comparés à ces termes, et ceux qui sont rares dans vos flux comptent davantage. Une modification n'affecte que les articles qui arrivent ensuite."
       },
       "guide": {
         "title": "Configuration pas à pas",
@@ -338,6 +339,27 @@
         "title": "Recommandations",
         "forYouTitle": "Pour vous",
         "forYouCaption": "Comment votre flux personnel est construit.",
+        "forYouStream": {
+          "title": "Flux Pour vous",
+          "caption": "Les articles de vos flux qui correspondent à vos centres d'intérêt, dès leur arrivée.",
+          "enabled": "Afficher le flux Pour vous",
+          "enabledDesc": "Désactivez le flux pour le masquer de la barre latérale ; rien n'est supprimé.",
+          "precision": "Précision",
+          "precisionDesc": "À quel point un article doit correspondre à vos centres d'intérêt pour apparaître.",
+          "narrower": "Plus étroit",
+          "wider": "Plus large",
+          "resetPrecision": "Réinitialiser la précision",
+          "precisionReadout": "Précision : {{label}}",
+          "precisionLabel": {
+            "narrowest": "La plus étroite",
+            "narrow": "Étroite",
+            "balanced": "Équilibrée",
+            "wide": "Large",
+            "widest": "La plus large"
+          },
+          "phrases": "Termes choisis par l'IA",
+          "phrasesEmpty": "Pas encore de liste de termes. Elle apparaît après votre prochaine mise à jour du profil."
+        },
         "showScoreAndReasons": "Afficher la note et la justification",
         "showScoreAndReasonsDesc": "Ajoute la note de chaque sélection et, quand le modèle en rédige une, sa justification.",
         "autoGenerate": "Générer Pour vous automatiquement",

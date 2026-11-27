@@ -1,0 +1,55 @@
+.precision-bar {
+  inline-size: 12rem;
+  max-inline-size: 100%;
+}
+
+// The AI's phrases are read-only reference text, set in the rows' muted voice.
+.stream-phrases {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.stream-phrases-title,
+.stream-language-name {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.stream-language-name,
+.stream-phrases-empty {
+  color: var(--text-muted);
+}
+
+.stream-phrases-empty {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.stream-language {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stream-phrase-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stream-phrase {
+  display: inline-flex;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+}
+
+.stream-phrase-weight {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

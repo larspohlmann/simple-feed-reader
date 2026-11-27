@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
 import { ReaderApi } from '../../reader/reader-api';
@@ -28,6 +28,36 @@ export interface RecommendationSettingBounds {
 
 export type RecommendationExpertField =
   'favoritesCap' | 'candidatePoolSize' | 'picksLimit' | 'contextWindow';
+
+export const FOR_YOU_STREAM_PRECISIONS = [
+  'narrowest',
+  'narrow',
+  'balanced',
+  'wide',
+  'widest',
+] as const;
+
+export type ForYouStreamPrecision = (typeof FOR_YOU_STREAM_PRECISIONS)[number];
+
+export interface ForYouStreamSettings {
+  readonly enabled: boolean;
+  readonly precision: ForYouStreamPrecision;
+}
+
+export interface ForYouStreamPhrase {
+  readonly phrase: string;
+  readonly weight: number;
+}
+
+export interface ForYouStreamLanguagePhrases {
+  readonly language: string;
+  readonly phrases: readonly ForYouStreamPhrase[];
+}
+
+export interface ForYouStreamState extends ForYouStreamSettings {
+  readonly defaultPrecision: ForYouStreamPrecision;
+  readonly phrases: readonly ForYouStreamLanguagePhrases[];
+}
 
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
@@ -61,11 +91,12 @@ export interface RecommendationSettingsState {
   /** Shows each pick's score and, where the engine writes one, its reason — one
    *  switch for both; debug mode reaches neither (#576). */
   readonly showScoreAndReasons: boolean;
+  readonly forYouStream: ForYouStreamState;
 }
 
-/** The writable fields of the PUT body. `showScoreAndReasons` is the tenth field;
- *  every write built through this service (`bodyFromState`, `saveInstant`,
- *  `save`) always sends it. */
+/** The writable fields of the PUT body. `showScoreAndReasons` and `forYouStream`
+ *  are always sent by every write built through this service (`bodyFromState`,
+ *  `saveInstant`, `save`), so no write resets them. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
@@ -77,6 +108,7 @@ export interface SaveRecommendationSettings {
   readonly debugEnabled: boolean;
   readonly autoGenerateIntervalHours: number | null;
   readonly showScoreAndReasons: boolean;
+  readonly forYouStream: ForYouStreamSettings;
 }
 
 /** The typed text/number fields the explicit Save persists; the toggles and
@@ -107,6 +139,16 @@ export class RecommendationSettingsService extends DraftSettingsService<
   readonly purgeFailure = signal<Problem | null>(null);
   readonly purged = signal(false);
 
+  private readonly pendingForYouStream = signal<ForYouStreamSettings | null>(null);
+  private latestStreamRequest = 0;
+  private appliedStreamRequest = 0;
+
+  /** The stream settings as the card shows them: the choice still being saved
+   *  wins over the stored one, and a failed save drops it again. */
+  readonly forYouStream = computed<ForYouStreamSettings | null>(
+    () => this.pendingForYouStream() ?? this.state()?.forYouStream ?? null,
+  );
+
   /** Replaces the entire expert draft with the factory values from the API.
    *  This stays local until the card's explicit Save writes it. */
   resetExpertDraft(defaults: RecommendationExpertDefaults): void {
@@ -128,7 +170,40 @@ export class RecommendationSettingsService extends DraftSettingsService<
       debugEnabled: state.debugEnabled,
       autoGenerateIntervalHours: state.autoGenerateIntervalHours,
       showScoreAndReasons: state.showScoreAndReasons,
+      forYouStream: {
+        enabled: state.forYouStream.enabled,
+        precision: state.forYouStream.precision,
+      },
     };
+  }
+
+  /** Overlapping saves resolve to the last one chosen: only the newest request
+   *  clears the pending choice, and an older response never overwrites a newer
+   *  one. A success reloads the sidebar counts so the stream entry appears or
+   *  disappears at once. */
+  saveForYouStream(settings: ForYouStreamSettings): void {
+    const current = this.state();
+    if (!current) return;
+
+    const requestId = ++this.latestStreamRequest;
+    this.pendingForYouStream.set(settings);
+    this.put(
+      { ...this.bodyFromState(current), forYouStream: settings },
+      (state) => {
+        if (requestId > this.appliedStreamRequest) {
+          this.appliedStreamRequest = requestId;
+          this.state.set(state);
+        }
+        this.settleStreamRequest(requestId);
+        this.saved.set(true);
+        this.subscriptions.reloadCountsQuietly();
+      },
+      () => this.settleStreamRequest(requestId),
+    );
+  }
+
+  private settleStreamRequest(requestId: number): void {
+    if (requestId === this.latestStreamRequest) this.pendingForYouStream.set(null);
   }
 
   /** Clears every persisted recommendation. On success, refreshes the reader's

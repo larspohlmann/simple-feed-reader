@@ -77,8 +77,8 @@ export abstract class DraftSettingsService<State, Body extends object, TypedEdit
     this.draft.set({});
   }
 
-  protected put(body: Body, onSuccess: (state: State) => void): void {
-    this.run(this.http.put<State>(this.endpoint, body), onSuccess);
+  protected put(body: Body, onSuccess: (state: State) => void, onFailure?: () => void): void {
+    this.run(this.http.put<State>(this.endpoint, body), onSuccess, onFailure);
   }
 
   /** Adopts a server state as the new clean baseline; the draft is now saved. */
@@ -87,7 +87,11 @@ export abstract class DraftSettingsService<State, Body extends object, TypedEdit
     this.draft.set({});
   }
 
-  protected run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {
+  protected run<T>(
+    request: Observable<T>,
+    onSuccess: (value: T) => void,
+    onFailure?: () => void,
+  ): void {
     this.busy.set(true);
     this.failure.set(null);
     this.saved.set(false);
@@ -99,6 +103,7 @@ export abstract class DraftSettingsService<State, Body extends object, TypedEdit
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
         this.failure.set(parseProblem(error));
+        onFailure?.();
       },
     });
   }

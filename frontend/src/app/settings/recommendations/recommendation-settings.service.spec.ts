@@ -32,6 +32,12 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
     autoGenerateIntervalHours: null,
     workerAlive: true,
     showScoreAndReasons: false,
+    forYouStream: {
+      enabled: true,
+      precision: 'balanced',
+      defaultPrecision: 'wide',
+      phrases: [],
+    },
     ...otherOverrides,
     expertDefaults: expertDefaults ?? {
       guidancePrompt: null,
@@ -63,7 +69,7 @@ describe('RecommendationSettingsService', () => {
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ReaderApi, useValue: {} },
         { provide: RecommendationsService, useValue: {} },
-        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { reloadCountsQuietly: jest.fn() } },
       ],
     });
     service = TestBed.inject(RecommendationSettingsService);
@@ -90,6 +96,69 @@ describe('RecommendationSettingsService', () => {
 
     put.flush(state({ showScoreAndReasons: true }));
     expect(service.state()?.showScoreAndReasons).toBe(true);
+  });
+
+  it('sends forYouStream in every body built from state', () => {
+    loadState({
+      forYouStream: { enabled: false, precision: 'narrow', defaultPrecision: 'wide', phrases: [] },
+    });
+
+    service.saveInstant({ debugEnabled: true });
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.forYouStream).toEqual({ enabled: false, precision: 'narrow' });
+    put.flush(state());
+  });
+
+  it('reloads the sidebar counts after a stream save, not before', () => {
+    const reload = TestBed.inject(SubscriptionsStore).reloadCountsQuietly as jest.Mock;
+    loadState();
+
+    service.saveForYouStream({ enabled: false, precision: 'narrowest' });
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.forYouStream).toEqual({ enabled: false, precision: 'narrowest' });
+    expect(reload).not.toHaveBeenCalled();
+    put.flush(
+      state({
+        forYouStream: {
+          enabled: false,
+          precision: 'narrowest',
+          defaultPrecision: 'wide',
+          phrases: [],
+        },
+      }),
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(service.state()?.forYouStream.precision).toBe('narrowest');
+    expect(service.saved()).toBe(true);
+  });
+
+  it('shows the chosen stream settings at once and snaps back when the save fails', () => {
+    loadState();
+
+    service.saveForYouStream({ enabled: true, precision: 'widest' });
+    expect(service.forYouStream()?.precision).toBe('widest');
+
+    http.expectOne(ENDPOINT).flush({ title: 'boom' }, { status: 500, statusText: 'Server Error' });
+    expect(service.forYouStream()?.precision).toBe('balanced');
+    expect(service.failure()).not.toBeNull();
+  });
+
+  it('keeps the last chosen stream setting when two saves overlap', () => {
+    loadState();
+
+    service.saveForYouStream({ enabled: true, precision: 'wide' });
+    service.saveForYouStream({ enabled: true, precision: 'widest' });
+    const [first, second] = http.match(ENDPOINT);
+    const served = (precision: 'wide' | 'widest') =>
+      state({ forYouStream: { enabled: true, precision, defaultPrecision: 'wide', phrases: [] } });
+
+    first.flush(served('wide'));
+    expect(service.forYouStream()?.precision).toBe('widest');
+    second.flush(served('widest'));
+    expect(service.forYouStream()?.precision).toBe('widest');
+    expect(service.state()?.forYouStream.precision).toBe('widest');
   });
 
   it('typed path: a cap edit sets dirty and issues no PUT until save()', () => {

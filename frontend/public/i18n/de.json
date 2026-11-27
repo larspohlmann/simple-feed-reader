@@ -305,7 +305,8 @@
         "contextWindow": "Das Token-Budget einer einzelnen Anfrage. Die Zeile darunter zeigt, woher der aktuelle Wert stammt: deine Eingabe hier, das vom Anbieter gemeldete Limit oder der eingebaute Standard. Leer lassen, um Anbieterwert oder Standard zu nutzen.",
         "fixedPrompt": "Rolle und Ausgabe-Vertrag, die jeder Lauf sendet. Sie sind fest, damit die Antwort maschinenlesbar bleibt — für eigene Anweisungen ist der Leitprompt oben da.",
         "debug": "Wenn aktiv, behält jeder Lauf sein vollständiges Anfrage- und Antwortprotokoll. Das Protokoll erscheint unten im Bereich „Debug-Protokoll“, sobald ein Lauf Einträge erzeugt hat. Der Debug-Modus ändert nicht, was die Empfehlungsliste zeigt — dafür ist „Anzeigen, warum Artikel gewählt wurden“ zuständig.",
-        "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf."
+        "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf.",
+        "forYouStream": "Die KI macht aus deinem Profil gewichtete Begriffe für jede Sprache. Überschrift und Text jedes neuen Eintrags werden damit abgeglichen, und Begriffe, die in deinen Feeds selten vorkommen, zählen mehr. Eine Änderung wirkt sich nur auf Einträge aus, die danach eintreffen."
       },
       "guide": {
         "title": "Schritt-für-Schritt-Einrichtung",
@@ -338,6 +339,27 @@
         "title": "Empfehlungen",
         "forYouTitle": "Für dich",
         "forYouCaption": "Wie dein persönlicher Feed aufgebaut wird.",
+        "forYouStream": {
+          "title": "Für-dich-Stream",
+          "caption": "Einträge aus deinen Feeds, die zu deinen Interessen passen, sobald sie ankommen.",
+          "enabled": "Für-dich-Stream anzeigen",
+          "enabledDesc": "Schalte den Stream aus, um ihn aus der Seitenleiste auszublenden; es wird nichts gelöscht.",
+          "precision": "Genauigkeit",
+          "precisionDesc": "Wie genau ein Eintrag zu deinen Interessen passen muss, um zu erscheinen.",
+          "narrower": "Enger",
+          "wider": "Weiter",
+          "resetPrecision": "Genauigkeit zurücksetzen",
+          "precisionReadout": "Genauigkeit: {{label}}",
+          "precisionLabel": {
+            "narrowest": "Am engsten",
+            "narrow": "Eng",
+            "balanced": "Ausgewogen",
+            "wide": "Weit",
+            "widest": "Am weitesten"
+          },
+          "phrases": "Von der KI gewählte Begriffe",
+          "phrasesEmpty": "Noch keine Begriffsliste. Sie erscheint nach der nächsten Profilaktualisierung."
+        },
         "showScoreAndReasons": "Bewertung und Begründung anzeigen",
         "showScoreAndReasonsDesc": "Fügt jeder Empfehlung ihre Bewertung und, wo das Modell eine schreibt, ihre Begründung hinzu.",
         "autoGenerate": "„Für dich“ automatisch erzeugen",
