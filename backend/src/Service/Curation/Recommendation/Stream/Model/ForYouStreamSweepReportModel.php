@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream\Model;
 
+use App\Service\Library\Search\Membership\Model\MarkGroupWalkReportModel;
+
 final readonly class ForYouStreamSweepReportModel
 {
     public function __construct(
@@ -14,15 +16,14 @@ final readonly class ForYouStreamSweepReportModel
     ) {
     }
 
+    public static function fromWalk(MarkGroupWalkReportModel $report): self
+    {
+        return new self($report->membersSwept, $report->entriesScanned, $report->matchesInserted, $report->caughtUp);
+    }
+
     public static function none(): self
     {
         return new self(0, 0, 0, false);
-    }
-
-    #[\NoDiscard]
-    public function withCaughtUp(): self
-    {
-        return clone($this, ['caughtUp' => true]);
     }
 
     /** @return array{usersSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool} */

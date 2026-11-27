@@ -28,6 +28,7 @@ use App\Service\Curation\Recommendation\Stream\ForYouStreamScorer;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Stemming\Support\WordStems;
+use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
@@ -245,15 +246,15 @@ final class ForYouStreamSweepTest extends DbTestCase
         $user = $this->subscriber('budget@example.com');
         $ids = array_map(
             static fn (Entry $entry): int => $entry->requireId(),
-            $this->entries(ForYouStreamSweep::CHUNK + 1),
+            $this->entries(MarkGroupWalker::CHUNK + 1),
         );
         $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
 
         $first = $this->sweep($clock)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertFalse($first->caughtUp);
-        self::assertSame(ForYouStreamSweep::CHUNK, $first->entriesScanned);
-        self::assertSame($ids[ForYouStreamSweep::CHUNK - 1], $this->readMark($user));
+        self::assertSame(MarkGroupWalker::CHUNK, $first->entriesScanned);
+        self::assertSame($ids[MarkGroupWalker::CHUNK - 1], $this->readMark($user));
         $this->entityManager->clear();
 
         $second = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
@@ -347,15 +348,14 @@ final class ForYouStreamSweepTest extends DbTestCase
         return new ForYouStreamSweep(
             $sets,
             $terms,
-            $entries,
             new SettledCeiling($entries, $clock),
+            new MarkGroupWalker($entries, $this->entityManager, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
             new ForYouStreamChunkMatcher(
                 new ForYouStreamSourceRepository($this->entityManager),
                 new ForYouStreamScorer(),
             ),
             $memberships,
-            $this->entityManager,
             new NaiveUtcClock($clock),
             $logger ?? new RecordingLogger(),
         );

@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Repository\SavedSearchRepository;
+use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Library\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Library\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
@@ -34,11 +35,14 @@ final class MembershipSweepFactory
     ): SavedSearchMembershipSweep {
         return new SavedSearchMembershipSweep(
             self::service($container, SavedSearchRepository::class),
-            self::service($container, EntryMembershipSweepRepository::class),
             new SettledCeiling(self::service($container, EntryMembershipSweepRepository::class), $clock),
+            new MarkGroupWalker(
+                self::service($container, EntryMembershipSweepRepository::class),
+                $entityManager,
+                $clock,
+            ),
             $memberships ?? self::service($container, SavedSearchEntryMembershipRepository::class),
             $matcher,
-            $entityManager,
             $clock,
             $logger ?? new NullLogger(),
         );

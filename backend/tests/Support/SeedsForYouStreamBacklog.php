@@ -21,6 +21,7 @@ use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamScorer;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Psr\Clock\ClockInterface;
 
@@ -65,15 +66,14 @@ trait SeedsForYouStreamBacklog
         return new ForYouStreamSweep(
             $sets,
             $terms,
-            $entries,
             new SettledCeiling($entries, $clock),
+            new MarkGroupWalker($entries, $this->entityManager, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
             new ForYouStreamChunkMatcher(
                 new ForYouStreamSourceRepository($this->entityManager),
                 new ForYouStreamScorer(),
             ),
             $memberships,
-            $this->entityManager,
             new NaiveUtcClock($clock),
             new RecordingLogger(),
         );

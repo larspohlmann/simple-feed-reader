@@ -121,10 +121,14 @@ final class SavedSearchRepository extends ServiceEntityRepository implements Dig
      * Moves the given searches' marks up to $entryId, never back: a slower run that commits after a faster one must
      * not undo its progress.
      *
-     * @param non-empty-list<int> $savedSearchIds
+     * @param list<int> $savedSearchIds
      */
     public function advanceMarks(array $savedSearchIds, int $entryId): void
     {
+        if ($savedSearchIds === []) {
+            return;
+        }
+
         $this->getEntityManager()->createQuery(
             'UPDATE ' . SavedSearch::class . ' s SET s.matchedUpToEntryId = :entryId'
             . ' WHERE s.id IN (:ids) AND s.matchedUpToEntryId < :entryId',
