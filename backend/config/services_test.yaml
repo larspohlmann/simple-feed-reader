@@ -17,6 +17,11 @@ services:
     App\Tests\Support\StubChatClient:
         autowire: true
 
+    # Nothing in the app injects it yet: the extractor test fetches it by class.
+    App\Service\Curation\Recommendation\Llm\Run\LlmInterestTermExtractor:
+        autowire: true
+        public: true
+
     # Every test talks to StubChatClient, never to a real provider.
     App\Service\Curation\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient

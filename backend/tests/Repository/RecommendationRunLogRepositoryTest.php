@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\CallOutcome;
+use App\Entity\InterestTermRun;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -347,6 +348,43 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $storyRun;
+    }
+
+    public function testDeleteOutsideInterestTermRunsKeepsTheNamedRunsAndOtherOwners(): void
+    {
+        $kept = $this->interestTermRunWithOneRow($this->user);
+        $dropped = $this->interestTermRunWithOneRow($this->user);
+        $otherOwners = $this->interestTermRunWithOneRow($this->otherUser);
+        [, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        $this->logs->deleteForUserOutsideInterestTermRuns($this->user, [$kept->requireId()]);
+
+        self::assertSame(1, $this->logs->count(['interestTermRun' => $kept]));
+        self::assertSame(0, $this->logs->count(['interestTermRun' => $dropped]));
+        self::assertSame(1, $this->logs->count(['interestTermRun' => $otherOwners]));
+        self::assertCount(1, $this->logs->listForRun($this->user, AiRunKind::ForYou, $run->requireId()));
+        self::assertCount(1, $this->logs->listForRun($this->user, AiRunKind::Profile, $profileRun->requireId()));
+    }
+
+    private function interestTermRunWithOneRow(User $owner): InterestTermRun
+    {
+        $termRun = new InterestTermRun(
+            $owner,
+            new \DateTimeImmutable('2026-10-03T08:00:00Z'),
+            new \DateTimeImmutable('2026-10-03T09:00:00Z'),
+            null,
+            null,
+        );
+        $this->entityManager->persist($termRun);
+        $this->entityManager->persist(RecommendationRunLog::forInterestTermRun(
+            $termRun,
+            1,
+            '{"term-request":1}',
+            new \DateTimeImmutable('2026-10-03T09:00:05Z'),
+        ));
+        $this->entityManager->flush();
+
+        return $termRun;
     }
 
     /** @return array{User, RecommendationRun, ProfileRun} */
