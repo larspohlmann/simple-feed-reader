@@ -12,9 +12,9 @@ use App\Repository\ForYouStreamSourceRepository;
 use App\Repository\InterestTermRepository;
 use App\Service\Curation\Recommendation\Stream\Factory\EntryStemmingFactory;
 use App\Service\Curation\Recommendation\Stream\InterestTermRarity;
-use App\Service\Curation\Recommendation\Stream\InterestTermRefresh;
-use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
+use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
+use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsProfiledAccounts;
 use App\Tests\Support\SeedsUsers;
@@ -54,22 +54,13 @@ final class InterestTermRefreshRarityFailureTest extends DbTestCase
         $chat = self::getContainer()->get(StubChatClient::class);
         self::assertInstanceOf(StubChatClient::class, $chat);
         $chat->queueContent('{"terms":[{"language":"en","term":"solar","weight":8}]}');
-        $refresh = self::getContainer()->get(InterestTermRefresh::class);
-        self::assertInstanceOf(InterestTermRefresh::class, $refresh);
-        $due = new DueInterestTermsModel(
-            $this->owner,
-            $this->requireConnection($this->owner),
-            'Likes solar power.',
-            $this->profileGeneratedAt(),
-        );
+        $sweep = self::getContainer()->get(InterestTermSweep::class);
+        self::assertInstanceOf(InterestTermSweep::class, $sweep);
 
-        try {
-            $refresh->refresh($due);
-            self::fail('The rarity failure should have propagated.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('rarity unavailable', $exception->getMessage());
-        }
+        $report = $sweep->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
+        self::assertSame(1, $report->stored);
+        self::assertSame(0, $report->raritiesRefreshed);
         $this->entityManager->clear();
         $run = $this->entityManager->getRepository(InterestTermRun::class)->findOneBy(['user' => $this->owner]);
         self::assertInstanceOf(InterestTermRun::class, $run);

@@ -45,7 +45,7 @@ final class InterestTermSweepTest extends DbTestCase
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(
-            ['due' => 2, 'stored' => 1, 'failed' => 0, 'raritiesRefreshed' => 0],
+            ['due' => 2, 'stored' => 1, 'failed' => 0, 'raritiesRefreshed' => 1],
             $report->toLogContext(),
         );
         self::assertCount(1, $this->entityManager->getRepository(InterestTermSet::class)->findAll());
@@ -164,7 +164,7 @@ final class InterestTermSweepTest extends DbTestCase
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
 
         self::assertSame(1, $report->stored);
-        self::assertSame(0, $report->raritiesRefreshed);
+        self::assertSame(1, $report->raritiesRefreshed);
         $set = $this->entityManager->getRepository(InterestTermSet::class)->find($user);
         self::assertInstanceOf(InterestTermSet::class, $set);
         self::assertNotNull($set->getRaritiesRefreshedAt());
