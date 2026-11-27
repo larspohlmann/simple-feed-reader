@@ -15,6 +15,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class EntryLabelRepository extends ServiceEntityRepository
 {
+    private const int INSERT_CHUNK_SIZE = 500;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, EntryLabel::class);
@@ -114,17 +116,37 @@ final class EntryLabelRepository extends ServiceEntityRepository
     public function addMissing(array $labelIdsByEntryId): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $statement = sprintf(
-            'INSERT %s INTO entry_label (label_id, entry_id) VALUES (?, ?)',
-            DatabasePlatform::insertIgnoreClause($connection),
-        );
-        $connection->transactional(static function () use ($connection, $statement, $labelIdsByEntryId): void {
-            foreach ($labelIdsByEntryId as $entryId => $labelIds) {
-                foreach (array_unique($labelIds) as $labelId) {
-                    $connection->executeStatement($statement, [$labelId, $entryId]);
-                }
+        $insertIgnore = DatabasePlatform::insertIgnoreClause($connection);
+        $chunks = array_chunk(self::collectPairs($labelIdsByEntryId), self::INSERT_CHUNK_SIZE);
+        $connection->transactional(static function () use ($connection, $insertIgnore, $chunks): void {
+            foreach ($chunks as $pairs) {
+                $connection->executeStatement(
+                    sprintf(
+                        'INSERT %s INTO entry_label (label_id, entry_id) VALUES %s',
+                        $insertIgnore,
+                        implode(', ', array_fill(0, \count($pairs), '(?, ?)')),
+                    ),
+                    array_merge(...$pairs),
+                );
             }
         });
+    }
+
+    /**
+     * @param array<int, list<int>> $labelIdsByEntryId
+     *
+     * @return list<array{int, int}> each distinct (label id, entry id) pair
+     */
+    private static function collectPairs(array $labelIdsByEntryId): array
+    {
+        $pairs = [];
+        foreach ($labelIdsByEntryId as $entryId => $labelIds) {
+            foreach (array_unique($labelIds) as $labelId) {
+                $pairs[] = [$labelId, $entryId];
+            }
+        }
+
+        return $pairs;
     }
 
     /**
