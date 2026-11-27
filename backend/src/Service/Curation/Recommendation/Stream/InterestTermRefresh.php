@@ -35,6 +35,7 @@ final readonly class InterestTermRefresh
         private ForYouStreamSourceRepository $sources,
         private InterestTermExtractorInterface $extractor,
         private InterestTermStore $store,
+        private InterestTermRarity $rarity,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
     ) {
@@ -82,7 +83,8 @@ final readonly class InterestTermRefresh
             return $this->recordInvalidReply($run, $outcome->requireUnusableReply());
         }
 
-        $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireTerms());
+        $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireTerms());
+        $this->rarity->refreshRarities($set);
         $run->complete($this->clock->now());
         $this->entityManager->flush();
 

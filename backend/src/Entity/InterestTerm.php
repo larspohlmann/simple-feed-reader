@@ -44,6 +44,11 @@ final class InterestTerm
         $this->weight = $weight;
     }
 
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
     public function getStem(): string
     {
         return $this->stem;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestTermSet;
+use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermRefreshResult;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
@@ -16,6 +18,8 @@ final readonly class InterestTermSweep
     public function __construct(
         private DueInterestTermFinder $finder,
         private InterestTermRefresh $refresh,
+        private InterestTermSetRepository $termSets,
+        private InterestTermRarity $rarity,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
@@ -46,7 +50,44 @@ final readonly class InterestTermSweep
             $failed += InterestTermRefreshResult::Failed === $result ? 1 : 0;
         }
 
-        return new InterestTermSweepReportModel(\count($due), $stored, $failed, 0);
+        return new InterestTermSweepReportModel(
+            \count($due),
+            $stored,
+            $failed,
+            $this->refreshStaleRarities($deadline),
+        );
+    }
+
+    private function refreshStaleRarities(?\DateTimeImmutable $deadline): int
+    {
+        $now = $this->clock->now();
+        $refreshed = 0;
+        $cutoff = $now->modify(\sprintf('-%d hours', InterestTermRarity::REFRESH_HOURS));
+        foreach ($this->termSets->findWithStaleRarities($cutoff, $now) as $set) {
+            if (null !== $deadline && $this->clock->now() >= $deadline) {
+                break;
+            }
+            $refreshed += $this->refreshRaritiesOf($set) ? 1 : 0;
+        }
+
+        return $refreshed;
+    }
+
+    /** One account's failure must not cost the others their refresh. */
+    private function refreshRaritiesOf(InterestTermSet $set): bool
+    {
+        try {
+            $this->rarity->refreshRarities($set);
+
+            return true;
+        } catch (\Throwable $exception) {
+            $this->logger->error('Interest-term sweep: refreshing an account\'s rarities failed.', [
+                'userId' => $set->getUser()->getId(),
+                'exception' => $exception,
+            ]);
+
+            return false;
+        }
     }
 
     /** One account's failure must not cost the others their refresh. */

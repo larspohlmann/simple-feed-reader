@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
 use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
@@ -59,6 +60,52 @@ final class InterestTermSweepTest extends DbTestCase
         $sets = self::getContainer()->get(InterestTermSetRepository::class);
         self::assertInstanceOf(InterestTermSetRepository::class, $sets);
         self::assertCount(1, $sets->findAll());
+    }
+
+    public function testStaleRaritiesAreRefreshedOnceADay(): void
+    {
+        $set = new InterestTermSet(
+            $this->user('terms-sweep-stale@example.test'),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            0,
+        );
+        $recent = new \DateTimeImmutable('-23 hours');
+        $set->recordRaritiesRefreshed($recent);
+        $this->entityManager->persist($set);
+        $this->entityManager->flush();
+
+        $untouched = $this->sweep()->refreshDue();
+
+        self::assertSame(0, $untouched->raritiesRefreshed);
+        self::assertEquals($recent, $set->getRaritiesRefreshedAt());
+
+        $set->recordRaritiesRefreshed(new \DateTimeImmutable('-25 hours'));
+        $this->entityManager->flush();
+
+        $refreshed = $this->sweep()->refreshDue();
+
+        self::assertSame(1, $refreshed->raritiesRefreshed);
+        self::assertGreaterThan(new \DateTimeImmutable('-1 minute'), $set->getRaritiesRefreshedAt());
+    }
+
+    public function testStoringTermsComputesTheirRaritiesAtOnce(): void
+    {
+        $user = $this->profiledAccount('terms-sweep-fresh@example.test');
+        $this->chat()->queueContent(self::USABLE_REPLY);
+
+        $report = $this->sweep()->refreshDue();
+
+        self::assertSame(1, $report->stored);
+        self::assertSame(0, $report->raritiesRefreshed);
+        $set = $this->entityManager->getRepository(InterestTermSet::class)->find($user);
+        self::assertInstanceOf(InterestTermSet::class, $set);
+        self::assertNotNull($set->getRaritiesRefreshedAt());
+        $terms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $user]);
+        self::assertNotSame([], $terms);
+        foreach ($terms as $term) {
+            self::assertEqualsWithDelta(log(502 / 1), $term->getRarity(), 1e-9);
+        }
     }
 
     private function sweep(): InterestTermSweep

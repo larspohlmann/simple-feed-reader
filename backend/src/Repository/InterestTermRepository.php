@@ -26,6 +26,17 @@ final class InterestTermRepository extends ServiceEntityRepository
             ->setParameter('userId', $userId)
             ->getQuery()
             ->execute();
+        $this->detachManagedForUser($userId);
+    }
+
+    private function detachManagedForUser(int $userId): void
+    {
+        $entityManager = $this->getEntityManager();
+        foreach ($entityManager->getUnitOfWork()->getIdentityMap()[InterestTerm::class] ?? [] as $term) {
+            if ($term instanceof InterestTerm && $term->getUser()->requireId() === $userId) {
+                $entityManager->detach($term);
+            }
+        }
     }
 
     /** @return list<InterestTerm> */
