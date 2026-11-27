@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Curation\Recommendation\Llm\Prompt\Pass\PromptContext;
@@ -215,6 +216,28 @@ final readonly class RecommendationPromptBuilder
                     . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT,
             ],
             ['role' => 'user', 'content' => $this->distillSections($inputs)],
+        ];
+    }
+
+    /**
+     * @param list<FeedLanguage> $languages
+     *
+     * @return list<array{role: string, content: string}>
+     */
+    public function interestTermMessages(string $profileText, array $languages): array
+    {
+        $languageList = implode(', ', array_map(
+            static fn (FeedLanguage $language): string => $language->value . ' (' . $language->englishName() . ')',
+            $languages,
+        ));
+
+        return [
+            [
+                'role' => 'system',
+                'content' => RecommendationPromptText::INTEREST_TERMS_ROLE
+                    . "\n\n" . RecommendationPromptText::INTEREST_TERMS_OUTPUT_CONTRACT,
+            ],
+            ['role' => 'user', 'content' => 'LANGUAGES: ' . $languageList . "\n\nPROFILE:\n" . $profileText],
         ];
     }
 

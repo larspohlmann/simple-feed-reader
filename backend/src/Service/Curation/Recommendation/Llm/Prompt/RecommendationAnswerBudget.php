@@ -30,6 +30,9 @@ final readonly class RecommendationAnswerBudget
     /** One `{"title": "...", "synopsis": "..."}` reply: a ~90-character title and a ~350-character synopsis. */
     private const int STORY_TITLE_ANSWER_TOKENS = 220;
 
+    /** Up to RecommendationPromptText::MAX_TERMS_PER_LANGUAGE short terms for each of four languages, as JSON objects. */
+    private const int INTEREST_TERMS_ANSWER_TOKENS = 3000;
+
     /** The distillation reply: one profile string at the cap DISTILL_ROLE sets. */
     public const int PROFILE_ANSWER_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
         * self::PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS / 100;
@@ -65,6 +68,7 @@ final readonly class RecommendationAnswerBudget
             RecommendationResponseSchema::BatchScore => $replyItemCount * self::TOKENS_PER_SCORE_PICK,
             RecommendationResponseSchema::Consolidation => $replyItemCount * self::TOKENS_PER_PICK,
             RecommendationResponseSchema::StoryTitle => self::STORY_TITLE_ANSWER_TOKENS,
+            RecommendationResponseSchema::InterestTerms => self::INTEREST_TERMS_ANSWER_TOKENS,
         };
 
         $bounded = max(self::MINIMUM_ANSWER_TOKENS, $expected);
