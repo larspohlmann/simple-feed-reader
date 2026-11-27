@@ -13,7 +13,7 @@
 - **List rows and magazine cards** (Lars, 2026-11-27: "Magazine cards should change, too"); the article/reader view's action bar is out of scope and keeps the like after the favorite.
 - All items folder: **closed by default, open state remembered**.
 - Favorites, Kept, Saved searches, Followed stories **keep their chevrons and sublists**.
-- In **boxed** too, the All items folder's children hang indented on a hairline like airy's sublist (Lars, 2026-11-27: "yes"); only this sublist — Favorites/Kept label subfolders and the other boxed sublists stay as they are.
+- In **boxed** too, every sublist of the two view groups — All items' children, Favorites/Kept labels, Saved searches' terms, Followed stories' stories — hangs indented on a hairline like airy's (Lars, 2026-11-27: "Do the indentation for all subelements"). Tags, feeds and social sections keep their own boxed nesting.
 
 ## Global Constraints
 
@@ -121,12 +121,12 @@
   - `test('no view row is bold')` — computed `font-weight` of every `.views-group .label` and non-active `.views-group .name` is `400`.
   - `test('the groups are two cards with nothing between Kept and All items')` — exactly two `.views-group`; in boxed, Favorites/Kept heads are inside the first group's box (their rects within its rect) with no border between rows; in airy, the second group carries the section rule (`border-top-color` not transparent) and the first group's rows carry none.
   - `test('an expanded head keeps the row inset')` — the expanded Favorites `.folder-head` left equals the Kept head's left and its background is transparent when not hovered/current.
-  - `test('the All items children hang indented on a hairline in both styles')` — Recently read's icon left is greater than All items' icon left by at least `--space-5`, and the `.sublist::before` rail has a non-zero `border-left-width`; the Favorites label rows' left in boxed is unchanged from develop (equal to the Favorites head's left).
+  - `test('every view sublist hangs indented on a hairline in both styles')` — for each of All items, Favorites, Saved searches and Followed stories expanded: the first child row's icon left exceeds its head's icon left by at least `--space-5`, and the `.sublist::before` rail has a non-zero `border-left-width`, in both styles.
   - `test('an empty second group draws nothing')` — with AI, trending, stream, saved searches and followed stories all off: the second `.views-group` has zero height or `display: none`.
 
 - [ ] **Step 2: Run, expect FAIL** — `cd frontend && npx playwright test e2e/sidebar-views-groups.spec.ts --trace off` (Docker stack up).
 
-- [ ] **Step 3: Implement** the mixin and swap the components onto it; `.views-group` in `sidebar.component.scss` uses the existing `.card` look (boxed) / airy section rule; hide it with `.views-group:not(:has(.nav, .folder-head)) { display: none; }`; give the All items `.sublist` the airy indent and rail in boxed too (`padding-left: var(--space-5)` and the `airy-rail` hairline, coloured `var(--border)` in boxed, `var(--airy-rule)` in airy), scoped to `sidebar-views` so no other sublist changes; move the airy "no rule under the search band" rule from `.card.primary` (views scss) to the first `.views-group`; fix the coarse-pointer offsets (`.nav .trail` margin, `.slot` hidden) so the folder heads' counts land in the same column as the nav rows'.
+- [ ] **Step 3: Implement** the mixin and swap the components onto it; `.views-group` in `sidebar.component.scss` uses the existing `.card` look (boxed) / airy section rule; hide it with `.views-group:not(:has(.nav, .folder-head)) { display: none; }`; make `@mixin sublist` indent and draw the rail in both styles (`padding-left: var(--space-5)` and the `airy-rail` hairline, coloured `var(--border)` in boxed, `var(--airy-rule)` in airy) — check that `sidebar-social-section`, the mixin's other user, should follow or opt it out to keep its boxed look; move the airy "no rule under the search band" rule from `.card.primary` (views scss) to the first `.views-group`; fix the coarse-pointer offsets (`.nav .trail` margin, `.slot` hidden) so the folder heads' counts land in the same column as the nav rows'.
 
 - [ ] **Step 4: Run** the new spec plus the touched e2e specs and the sidebar Jest folder; expect PASS.
 
