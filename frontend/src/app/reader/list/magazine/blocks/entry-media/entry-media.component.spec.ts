@@ -18,6 +18,7 @@ import {
   stubIntersectionObserver,
 } from '../../../../../../testing/intersection-observer-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 jest.mock(
@@ -75,6 +76,7 @@ async function mountFixture(testEntry: EntryDto) {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],
@@ -372,6 +374,7 @@ describe('EntryMediaComponent in an autoplaying list', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ListAutoplayCoordinator, useValue: coordinator },
         ...extraProviders,

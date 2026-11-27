@@ -6,9 +6,11 @@ namespace App\Tests\Service\Operations\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
+use App\Entity\EntryLabel;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
+use App\Entity\Label;
 use App\Entity\LinkCardContent;
 use App\Entity\NetworkExclusion;
 use App\Entity\ReadingSettings;
@@ -23,6 +25,7 @@ use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\SubscriptionSet;
 use App\Exception\ValidationException;
+use App\Repository\EntryLabelRepository;
 use App\Repository\FeedRepository;
 use App\Repository\LinkCardRepository;
 use App\Repository\NetworkExclusionRepository;
@@ -709,6 +712,104 @@ final class AccountRestorerTest extends DbTestCase
             [$sourceRows['feed']->getUrl(), $sourceRows['entry']->getGuidHash()],
             [$restoredEntry->getFeed()->getUrl(), $restoredEntry->getGuidHash()],
         );
+    }
+
+    public function testAFavoritesLabelsSurviveTheRestoreWithoutDuplicatingTheDefaultLabel(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('labels-source@example.com');
+        $sourceEntry = $this->fixtureRowsOf($source)['entry'];
+        $readLater = new Label($source, 'read later');
+        $this->entityManager->persist($readLater);
+        $this->entityManager->persist(new EntryLabel($readLater, $sourceEntry));
+        $this->entityManager->flush();
+        $foundation = $this->backupOf($source);
+        $entryParts = $this->entryPartsOf($source);
+        $target = $this->userFactory->create('labels-target@example.com');
+        $this->deleteEveryFeed();
+
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
+        foreach ($entryParts as $entryPart) {
+            $this->entryPartRestorer()->load($this->reload($target), $entryPart);
+        }
+
+        $targetRows = $this->fixtureRowsOf($this->reload($target));
+        self::assertTrue($targetRows['entryState']->isFavorite());
+        $targetId = $target->requireId();
+        $entryId = $targetRows['entry']->requireId();
+        self::assertSame(
+            ['Read later', 'Work'],
+            array_column($this->entryLabels()->findLabelsByEntryIds($targetId, [$entryId])[$entryId] ?? [], 'name'),
+        );
+        self::assertSame(
+            1,
+            $this->scalarInt('SELECT COUNT(*) FROM label WHERE user_id = ? AND LOWER(name) = ?', [
+                $targetId,
+                'read later',
+            ]),
+        );
+    }
+
+    public function testAStateLineWithoutLabelsRestoresTheStateAndNoLabel(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('unlabeled-source@example.com');
+        $foundation = $this->backupOf($source);
+        $entryParts = array_map(
+            static fn (string $part): string => (string) gzencode((string) preg_replace(
+                '/,"labels":\\[[^\\]]*\\]/',
+                '',
+                (string) gzdecode($part),
+            )),
+            $this->entryPartsOf($source),
+        );
+        $target = $this->userFactory->create('unlabeled-target@example.com');
+        $this->deleteEveryFeed();
+
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
+        foreach ($entryParts as $entryPart) {
+            $this->entryPartRestorer()->load($this->reload($target), $entryPart);
+        }
+
+        $targetRows = $this->fixtureRowsOf($this->reload($target));
+        self::assertTrue($targetRows['entryState']->isFavorite());
+        $entryId = $targetRows['entry']->requireId();
+        self::assertSame([], $this->entryLabels()->findLabelsByEntryIds($target->requireId(), [$entryId]));
+    }
+
+    public function testAReplaceRestoreDropsTheAccountsOldEntryLabelsAndKeepsItsLabels(): void
+    {
+        $account = $this->fullyPopulatedAccount()->create('relabel@example.com');
+        $entryId = $this->fixtureRowsOf($account)['entry']->requireId();
+        $accountId = $account->requireId();
+        $this->entityManager->getConnection()->executeStatement(
+            'DELETE FROM entry_label WHERE entry_id = ?',
+            [$entryId],
+        );
+        $this->entityManager->clear();
+        $foundation = $this->backupOf($this->reload($account));
+        $entryParts = $this->entryPartsOf($this->reload($account));
+        $this->entityManager->getConnection()->executeStatement(
+            'INSERT INTO entry_label (label_id, entry_id) SELECT id, ? FROM label WHERE user_id = ? AND name = ?',
+            [$entryId, $accountId, 'Work'],
+        );
+
+        $this->restorer()->start($this->reload($account), $foundation, 'REPLACE');
+        foreach ($entryParts as $entryPart) {
+            $this->entryPartRestorer()->load($this->reload($account), $entryPart);
+        }
+
+        self::assertSame([], $this->entryLabels()->findLabelsByEntryIds($accountId, [$entryId]));
+        self::assertSame(
+            1,
+            $this->scalarInt('SELECT COUNT(*) FROM label WHERE user_id = ? AND name = ?', [$accountId, 'Work']),
+        );
+    }
+
+    private function entryLabels(): EntryLabelRepository
+    {
+        $entryLabels = self::getContainer()->get(EntryLabelRepository::class);
+        self::assertInstanceOf(EntryLabelRepository::class, $entryLabels);
+
+        return $entryLabels;
     }
 
     /** @return list<LinkCardContent> */

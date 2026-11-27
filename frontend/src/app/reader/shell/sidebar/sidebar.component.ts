@@ -34,6 +34,7 @@ import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarFollowedStoriesComponent } from './sidebar-followed-stories.component';
+import { SidebarCollectionComponent } from './sidebar-collection.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
@@ -104,6 +105,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarFootComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
+    SidebarCollectionComponent,
     SidebarFollowedStoriesComponent,
     SidebarSavedSearchesComponent,
     SidebarSocialSectionComponent,
@@ -137,8 +139,6 @@ export class SidebarComponent {
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
-  readonly favoritesCount = input(0);
-  readonly keptCount = input(0);
   readonly sharedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);

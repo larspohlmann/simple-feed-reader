@@ -10,6 +10,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideStoryContext } from '../../../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -44,6 +45,7 @@ function mount(item: ListItem) {
       provideStoryContext(storyOf(item)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: ImageProxyService, useValue: imageProxy },
       provideRouter([]),

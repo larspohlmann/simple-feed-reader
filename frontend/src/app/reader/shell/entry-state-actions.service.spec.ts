@@ -1,14 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { DestroyRef, Signal, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
-import { EMPTY, Observable, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
 import { EntryRowCache } from '../state/entry-row-cache';
+import { ReaderApi } from '../reader-api';
+import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { LabelsStore } from '../labels/labels.store';
+import { LabelPill } from '../labels/labels.models';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Problem } from '../../core/problem';
@@ -27,6 +32,8 @@ interface Collaborators {
   routeState: object;
   savedSearches?: object;
   toast?: object;
+  rows?: object;
+  labels?: object;
 }
 
 /** The list on screen lists what the route names; a spec's route state gives its selection. */
@@ -40,7 +47,8 @@ function createActions(collaborators: Collaborators): EntryStateActions {
     imports: [provideTranslocoTesting()],
     providers: [
       EntryStateActions,
-      { provide: EntryRowCache, useValue: {} },
+      { provide: EntryRowCache, useValue: collaborators.rows ?? {} },
+      { provide: LabelsStore, useValue: collaborators.labels ?? { reload: jest.fn() } },
       provideRouter([]),
       ...provideRouteListForTest(collaborators.entries, selectionOf(collaborators.routeState)),
       { provide: SubscriptionsStore, useValue: collaborators.subscriptions },
@@ -70,6 +78,7 @@ describe('EntryStateActions liking (#1600)', () => {
         { provide: EntryRowCache, useValue: { setLiked } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: {} },
         {
           provide: ReaderRouteState,
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
@@ -129,6 +138,7 @@ describe('EntryStateActions opening', () => {
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: {} },
         {
           provide: ReaderRouteState,
           useValue: { openEntryId: signal(null), openEntry: signal(null) },
@@ -372,6 +382,7 @@ describe('EntryStateActions deleting my own post (#1972)', () => {
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: {} },
         {
           provide: ReaderRouteState,
           useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
@@ -433,6 +444,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
         ...provideRouteListForTest({}),
         { provide: SubscriptionsStore, useValue: { reloadCountsQuietly } },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: {} },
         {
           provide: ReaderRouteState,
           useValue: { openEntryId, openEntry: signal(null), selection: () => ({ kind: 'all' }) },
@@ -489,6 +501,7 @@ describe('EntryStateActions voting (#2218)', () => {
         { provide: EntryRowCache, useValue: { setVote, refreshVote } },
         { provide: SubscriptionsStore, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: {} },
         {
           provide: ReaderRouteState,
           useValue: { openEntryId: signal(null), openEntry },
@@ -583,5 +596,243 @@ describe("EntryStateActions with a story's list over the reader's (#2329)", () =
     expect(routeSetState).not.toHaveBeenCalled();
     expect(story.leavingIds().has(9)).toBe(false);
     expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
+  });
+});
+
+describe('EntryStateActions labelling a row (#2581)', () => {
+  const work: LabelPill = { id: 3, name: 'Work' };
+  const home: LabelPill = { id: 4, name: 'Home' };
+  let saved = new Subject<unknown>();
+  const shownRow = jest.fn((): EntryDto | null => null);
+  const attachLabel = jest.fn(() => saved.asObservable());
+  const detachLabel = jest.fn(() => saved.asObservable());
+  const labels = {
+    reload: jest.fn(),
+    attach: jest.fn(() => of(undefined)),
+    detach: jest.fn(() => of(undefined)),
+    create: jest.fn(() => of(work)),
+  };
+  const showProblem = jest.fn();
+  const selection = signal<Selection>({ kind: 'all', unread: false });
+  let actions: EntryStateActions;
+
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+  const failTheSave = () =>
+    saved.error(new HttpErrorResponse({ status: 500, error: { title: 'Broken' } }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    shownRow.mockReset();
+    saved = new Subject<unknown>();
+    selection.set({ kind: 'all', unread: false });
+    actions = createActions({
+      entries: {},
+      subscriptions: {},
+      routeState: { openEntryId: signal(null), openEntry: signal(null), selection },
+      rows: { entry: shownRow, attachLabel, detachLabel },
+      labels,
+      toast: { showProblem },
+    });
+  });
+
+  it('attaches through the row cache', () => {
+    const entry = anEntry({ id: 9, labels: [work] });
+
+    actions.attachLabel(entry, home);
+
+    expect(attachLabel).toHaveBeenCalledWith(9, home, expect.anything());
+    expect(labels.attach).toHaveBeenCalledWith(9, 4);
+  });
+
+  it('attaches nothing that is already on the row', () => {
+    actions.attachLabel(anEntry({ id: 9, labels: [work] }), work);
+
+    expect(attachLabel).not.toHaveBeenCalled();
+  });
+
+  it('detaches nothing the row does not carry', () => {
+    actions.detachLabel(anEntry({ id: 9, labels: [home] }), work);
+
+    expect(detachLabel).not.toHaveBeenCalled();
+  });
+
+  it('reads the row as shown, not the copy the caller holds', () => {
+    shownRow.mockReturnValue(anEntry({ id: 9, labels: [work] }));
+    const heldSinceTheMenuOpened = anEntry({ id: 9 });
+
+    actions.attachLabel(heldSinceTheMenuOpened, work);
+    actions.detachLabel(heldSinceTheMenuOpened, work);
+
+    expect(attachLabel).not.toHaveBeenCalled();
+    expect(detachLabel).toHaveBeenCalledWith(9, work, expect.anything());
+  });
+
+  it('drops the detached label through the row cache', () => {
+    const entry = anEntry({ id: 9, labels: [home, work] });
+
+    actions.detachLabel(entry, work);
+
+    expect(detachLabel).toHaveBeenCalledWith(9, work, expect.anything());
+    expect(labels.detach).toHaveBeenCalledWith(9, 3);
+  });
+
+  it('reloads the label tallies once the change is saved', () => {
+    actions.attachLabel(anEntry({ id: 9 }), work);
+    expect(labels.reload).not.toHaveBeenCalled();
+
+    saved.next(undefined);
+
+    expect(labels.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the favorites list of the label it detaches', () => {
+    selection.set({ kind: 'favorites', label: 3 });
+
+    actions.detachLabel(anEntry({ id: 9, isFavorite: true, labels: [work] }), work);
+
+    expect(isLeaving(9)).toBe(true);
+  });
+
+  it('stays in the favorites list of a label it keeps', () => {
+    selection.set({ kind: 'favorites', label: 3 });
+
+    actions.detachLabel(anEntry({ id: 9, isFavorite: true, labels: [home, work] }), home);
+
+    expect(isLeaving(9)).toBe(false);
+  });
+
+  it('leaves the unlabeled list with any label it gains', () => {
+    selection.set({ kind: 'kept', label: 'unlabeled' });
+
+    actions.attachLabel(anEntry({ id: 9, isKept: true }), home);
+
+    expect(isLeaving(9)).toBe(true);
+  });
+
+  it('stays in a list no label narrows', () => {
+    selection.set({ kind: 'kept' });
+
+    actions.detachLabel(anEntry({ id: 9, isKept: true, labels: [work] }), work);
+
+    expect(isLeaving(9)).toBe(false);
+  });
+
+  it('comes back and says why when the change fails', () => {
+    selection.set({ kind: 'favorites', label: 3 });
+    actions.detachLabel(anEntry({ id: 9, isFavorite: true, labels: [work] }), work);
+
+    failTheSave();
+
+    expect(isLeaving(9)).toBe(false);
+    expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }));
+    expect(labels.reload).not.toHaveBeenCalled();
+  });
+
+  it('creates a label and attaches it', () => {
+    const entry = anEntry({ id: 9 });
+    const done = jest.fn();
+
+    actions.createLabel(entry, 'Work').subscribe({ complete: done });
+
+    expect(labels.create).toHaveBeenCalledWith('Work');
+    expect(attachLabel).toHaveBeenCalledWith(9, work, expect.anything());
+    expect(done).toHaveBeenCalled();
+  });
+
+  it('errors with the problem when the label cannot be created, attaching nothing', () => {
+    labels.create.mockReturnValueOnce(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { type: 'label_name_taken', title: 'Taken', status: 409 },
+          }),
+      ),
+    );
+    const failed = jest.fn();
+
+    actions.createLabel(anEntry({ id: 9 }), 'Work').subscribe({ error: failed });
+
+    expect(failed).toHaveBeenCalledWith(expect.objectContaining({ type: 'label_name_taken' }));
+    expect(attachLabel).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions toggling several labels on one row (#2581)', () => {
+  const work: LabelPill = { id: 3, name: 'Work' };
+  const home: LabelPill = { id: 4, name: 'Home' };
+  let cache: EntryRowCache;
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        EntryRowCache,
+        { provide: ReaderApi, useValue: {} },
+        { provide: SocialPostApi, useValue: {} },
+        {
+          provide: LabelsStore,
+          useValue: { reload: jest.fn(), attach: () => new Subject(), detach: () => new Subject() },
+        },
+        provideRouter([]),
+        ...provideRouteListForTest({}),
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null) },
+        },
+        { provide: ToastService, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
+      ],
+    });
+    cache = TestBed.inject(EntryRowCache);
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('shows both labels ticked from one stale copy of the row', () => {
+    const stale = anEntry({ id: 9 });
+    const held = cache.cached([stale]);
+    cache.hold(held, new Set([9]));
+
+    actions.attachLabel(stale, work);
+    actions.attachLabel(stale, home);
+
+    expect(cache.entry(9)?.labels).toEqual([home, work]);
+  });
+});
+
+describe('EntryStateActions saving a flag the labels count (#2581)', () => {
+  const setState = jest.fn();
+  const reload = jest.fn();
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    actions = createActions({
+      entries: { setState },
+      subscriptions: { bumpFavorites: jest.fn(), bumpKept: jest.fn() },
+      routeState: { openEntryId: signal(null), openEntry: signal(null) },
+      labels: { reload },
+    });
+  });
+
+  it('reloads the label tallies once an un-favorite is saved', () => {
+    actions.favorite(anEntry({ id: 9, isFavorite: true }));
+    expect(reload).not.toHaveBeenCalled();
+
+    (setState.mock.calls[0][2] as StateSaveOutcome).onSaved?.();
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the label tallies once a keep is saved', () => {
+    actions.keep(anEntry({ id: 9 }));
+
+    (setState.mock.calls[0][2] as StateSaveOutcome).onSaved?.();
+
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

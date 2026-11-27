@@ -8,6 +8,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { EntriesStore } from '../../state/entries.store';
 import { FollowedStoriesStore } from '../../state/followed-stories.store';
+import { LabelsStore } from '../../labels/labels.store';
 
 describe('SubscriptionReload', () => {
   let reload: SubscriptionReload;
@@ -15,6 +16,7 @@ describe('SubscriptionReload', () => {
   let reloadSavedSearches: jest.SpyInstance;
   let reloadIfShowing: jest.SpyInstance;
   let loadFollowedStories: jest.SpyInstance;
+  let reloadLabels: jest.SpyInstance;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -38,6 +40,22 @@ describe('SubscriptionReload', () => {
     loadFollowedStories = jest
       .spyOn(TestBed.inject(FollowedStoriesStore), 'load')
       .mockImplementation(() => undefined);
+    reloadLabels = jest
+      .spyOn(TestBed.inject(LabelsStore), 'reload')
+      .mockImplementation(() => undefined);
+  });
+
+  it('reloads the subscriptions and the label tallies after a subscribe or unsubscribe (#2581)', () => {
+    reload.afterMembershipChange();
+
+    expect(reloadSubscriptions).toHaveBeenCalledTimes(1);
+    expect(reloadLabels).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the label tallies alone after a write that kept the subscription', () => {
+    reload.afterWrite(['savedSearches', 'trending']);
+
+    expect(reloadLabels).not.toHaveBeenCalled();
   });
 
   it('reloads only the subscriptions when the write left the saved-search flag alone', () => {

@@ -37,6 +37,7 @@ Glossary — one term per concept, everywhere:
 | entry | article | entrada |
 | post (social) | publication | publicación |
 | tag / untagged | étiquette / Sans étiquette | etiqueta / Sin etiqueta |
+| label / unlabeled (Favorites, Kept; never the tag word, #2581) | libellé / Sans libellé | rótulo / Sin rótulo |
 | subscribe / subscription | s'abonner / abonnement | suscribirse / suscripción |
 | saved search | recherche enregistrée | búsqueda guardada |
 | read / unread | lu / non lu | leído / no leído |

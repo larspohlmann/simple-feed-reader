@@ -11,6 +11,7 @@ import { ChapterDto, TranscriptDto } from './episode-detail';
 import { TrendingWindow } from './trending/trending.models';
 import { FeedLanguage, FeedLanguageChoice } from './feed-language';
 import { SidebarTotalsDto } from './sidebar-totals';
+import { LabelFilter, LabelPill } from './labels/labels.models';
 
 export type {
   DiscoverResult,
@@ -238,6 +239,8 @@ export interface EntryDto {
   isShared: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** The reader's labels on this entry, alphabetical (#2581). */
+  labels: LabelPill[];
   /** The nocookie player of the YouTube Short the entry links (`…/embed/<id>#shorts`); null for any other entry. */
   shortPlayerUrl: string | null;
   /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
@@ -380,6 +383,8 @@ export interface EntryQuery {
   q?: string;
   /** Set only for a single saved search: fetch its members from the membership table. */
   savedSearchId?: number;
+  /** Set only for a favorites or kept list narrowed to one label or to the unlabeled posts (#2581). */
+  label?: LabelFilter;
   /** Set only for a Trending story's list: fetch the story's entries. */
   storyId?: number;
   /** Absent means newest first, the API's own default. */

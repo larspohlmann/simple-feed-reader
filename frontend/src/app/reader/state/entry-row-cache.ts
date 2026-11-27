@@ -9,8 +9,16 @@ import { SocialPostApi, VoteAnswer } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
+import { LabelPill } from '../labels/labels.models';
+import { byLabelName } from '../labels/label-order';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
+import {
+  InFlightLabelChanges,
+  LabelChange,
+  reversedLabelChange,
+  withLabelChange,
+} from './in-flight-label-changes';
 import { HeldItem, heldItem } from './held-item';
 import { ListItem } from './list-item';
 
@@ -33,9 +41,13 @@ export class EntryRowCache {
   private readonly records = new Map<number, WritableSignal<EntryDto>>();
   private readonly holds = new Map<object, ReadonlySet<number>>();
   private readonly inFlight = new InFlightPatches();
+  private readonly labelsInFlight = new InFlightLabelChanges();
 
   constructor() {
-    onIdentityChange(() => this.inFlight.clear());
+    onIdentityChange(() => {
+      this.inFlight.clear();
+      this.labelsInFlight.clear();
+    });
   }
 
   /** The items with their entries written over the cached ones, each change still on the wire laid back over them,
@@ -96,6 +108,24 @@ export class EntryRowCache {
         error: (error: HttpErrorResponse) => onError(parseProblem(error)),
       },
     );
+  }
+
+  /** The label shows on the entry at once, its copies keep their own; a failure takes back this label alone. */
+  attachLabel(
+    entryId: number,
+    label: LabelPill,
+    request$: Observable<unknown>,
+  ): Observable<unknown> {
+    return this.changeLabel({ entryId, label, attached: true }, request$);
+  }
+
+  /** The label leaves the entry at once; a failure puts back this label alone. */
+  detachLabel(
+    entryId: number,
+    label: LabelPill,
+    request$: Observable<unknown>,
+  ): Observable<unknown> {
+    return this.changeLabel({ entryId, label, attached: false }, request$);
   }
 
   /** The vote shows at once; its score waits for the answer. */
@@ -161,8 +191,20 @@ export class EntryRowCache {
     this.patch([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
+  /** Shows a label renamed on the server under its new name on every row; no request. */
+  renameLabelLocally(labelId: number, name: string): void {
+    this.patchLabelled(labelId, (labels) =>
+      labels.map((label) => (label.id === labelId ? { ...label, name } : label)).sort(byLabelName),
+    );
+  }
+
+  /** Takes a label deleted on the server off every row; no request. */
+  dropLabelLocally(labelId: number): void {
+    this.patchLabelled(labelId, (labels) => labels.filter((label) => label.id !== labelId));
+  }
+
   private write(entry: EntryDto): Signal<EntryDto> {
-    const shown = this.inFlight.overlay(entry);
+    const shown = this.labelsInFlight.overlay(this.inFlight.overlay(entry));
     const record = this.records.get(entry.id);
     if (record) {
       record.set(shown);
@@ -258,6 +300,26 @@ export class EntryRowCache {
       idsByItem.set(itemId, [...(idsByItem.get(itemId) ?? []), id]);
     }
     return idsByItem;
+  }
+
+  private changeLabel(change: LabelChange, request$: Observable<unknown>): Observable<unknown> {
+    const release = this.labelsInFlight.add(change);
+    this.patch([change.entryId], (row) => withLabelChange(row, change));
+    return request$.pipe(
+      tap({
+        error: () =>
+          this.patch([change.entryId], (row) => withLabelChange(row, reversedLabelChange(change))),
+      }),
+      finalize(release),
+    );
+  }
+
+  private patchLabelled(labelId: number, change: (labels: LabelPill[]) => LabelPill[]): void {
+    this.patch(this.records.keys(), (entry) =>
+      entry.labels.some((label) => label.id === labelId)
+        ? { ...entry, labels: change(entry.labels) }
+        : entry,
+    );
   }
 
   /** An entry keeps its identity when `patch` hands it back, so nothing derived from it recomputes. */

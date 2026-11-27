@@ -1123,7 +1123,8 @@
   },
   "problem": {
     "not_a_feed": "Unter dieser Adresse ließ sich kein Feed lesen.",
-    "feed_throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut."
+    "feed_throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
+    "label_name_taken": "Du hast schon ein Label mit diesem Namen."
   },
   "manage": {
     "unsubscribeTitle": "Abbestellen",
@@ -1902,6 +1903,23 @@
     "compose": {
       "button": "Neuer Beitrag auf {{network}}",
       "reconnect": "Verbinde dein {{network}}-Konto neu, um zu posten"
+    },
+    "labels": {
+      "unlabeled": "Ohne Label",
+      "rename": "Umbenennen",
+      "delete": "Löschen",
+      "deleteTitle": "Label löschen",
+      "deleteConfirmOne": "„{{name}}“ löschen? Es ist 1 Artikel zugeordnet.",
+      "deleteConfirmOther": "„{{name}}“ löschen? Es ist {{count}} Artikeln zugeordnet.",
+      "toggleFavorites": "Labels in „Favoriten“ ein- oder ausklappen",
+      "toggleKept": "Labels in „Gemerkt“ ein- oder ausklappen",
+      "nameField": "Name des Labels",
+      "menu": "Labels",
+      "newLabel": "Neues Label…",
+      "newLabelTitle": "Neues Label",
+      "filter": "Labels filtern",
+      "filterBy": "Nach Label „{{name}}“ filtern",
+      "more": "+{{count}} weitere Labels"
     }
   },
   "social": {

@@ -34,6 +34,7 @@ final readonly class AccountWipeRepository
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RecommendationRunLogRepository $logs,
+        private EntryLabelRepository $entryLabels,
     ) {
     }
 
@@ -59,6 +60,8 @@ final readonly class AccountWipeRepository
     {
         $this->deleteByUser(EntryState::class, $user);
         $this->deleteByUser(EntryShare::class, $user);
+        // The labels themselves stay, the default one included: a restore resolves the file's names onto them.
+        $this->entryLabels->deleteForUser($user->requireId());
         $this->deleteByUser(TrendingStoryFollow::class, $user);
         $this->deleteByUser(TrendingStoryHide::class, $user);
         // Members, placements, follows and hides of these stories die through story_id's CASCADE.

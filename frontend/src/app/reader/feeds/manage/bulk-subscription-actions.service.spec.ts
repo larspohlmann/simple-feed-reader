@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../../core/api';
 import { BulkSubscriptionActions } from './bulk-subscription-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
+import { LabelsStore } from '../../labels/labels.store';
 import { SubscriptionDto, TagDto } from '../../models';
 import { makeTag } from '../../testing/tag.factory';
 import { makeSubscription } from '../../testing/subscription.factory';
@@ -59,10 +60,13 @@ describe('BulkSubscriptionActions', () => {
     const savedSearchesLoad = jest
       .spyOn(TestBed.inject(SavedSearchesStore), 'load')
       .mockImplementation(() => undefined);
+    const reloadLabels = jest
+      .spyOn(TestBed.inject(LabelsStore), 'reload')
+      .mockImplementation(() => undefined);
 
     if (options.confirmAnswer !== undefined) closed.next(options.confirmAnswer);
 
-    return { actions, http, dialogOpen, reloadSubscriptions, savedSearchesLoad };
+    return { actions, http, dialogOpen, reloadSubscriptions, savedSearchesLoad, reloadLabels };
   }
 
   it('posts one bulk patch when a tag is added to several feeds', () => {
@@ -224,7 +228,7 @@ describe('BulkSubscriptionActions', () => {
   });
 
   it('unsubscribes and reloads after a confirmed bulk unsubscribe', () => {
-    const { actions, http, reloadSubscriptions } = setup({ confirmAnswer: true });
+    const { actions, http, reloadSubscriptions, reloadLabels } = setup({ confirmAnswer: true });
 
     actions.bulkUnsubscribe(subscriptions(2)).subscribe();
     const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk-unsubscribe`);
@@ -232,5 +236,6 @@ describe('BulkSubscriptionActions', () => {
     testRequest.flush({ removed: 2 });
 
     expect(reloadSubscriptions).toHaveBeenCalled();
+    expect(reloadLabels).toHaveBeenCalledTimes(1);
   });
 });

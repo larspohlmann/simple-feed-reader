@@ -55,25 +55,35 @@
         </div>
       }
       <app-sidebar-views
+        section="primary"
         [selection]="selection()"
         [totalUnread]="totalUnread()"
-        [favoritesCount]="favoritesCount()"
-        [keptCount]="keptCount()"
         [sharedCount]="sharedCount()"
         [viewedCount]="viewedCount()"
         [forYouUnread]="forYouUnread()"
         [trendingUnopened]="trendingUnopened()"
       />
-      <app-sidebar-followed-stories
-        [stories]="followedStories()"
-        [activeStoryId]="activeStoryId()"
-      />
-      <app-sidebar-saved-searches
-        [savedSearches]="savedSearches()"
-        [activeSavedSearchId]="activeSavedSearchId()"
-        [combinedActive]="selection().kind === 'saved-searches'"
-        [showDigestToggles]="showDigestToggles()"
-        (toggleDigest)="toggleDigest.emit($event)"
+      <div class="collections">
+        <app-sidebar-collection collection="favorites" [selection]="selection()" />
+        <app-sidebar-collection collection="kept" [selection]="selection()" />
+        <app-sidebar-followed-stories
+          [stories]="followedStories()"
+          [activeStoryId]="activeStoryId()"
+        />
+        <app-sidebar-saved-searches
+          [savedSearches]="savedSearches()"
+          [activeSavedSearchId]="activeSavedSearchId()"
+          [combinedActive]="selection().kind === 'saved-searches'"
+          [showDigestToggles]="showDigestToggles()"
+          (toggleDigest)="toggleDigest.emit($event)"
+        />
+      </div>
+      <app-sidebar-views
+        section="discover"
+        [selection]="selection()"
+        [totalUnread]="totalUnread()"
+        [forYouUnread]="forYouUnread()"
+        [trendingUnopened]="trendingUnopened()"
       />
     }
 

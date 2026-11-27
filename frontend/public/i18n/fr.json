@@ -1123,7 +1123,8 @@
   },
   "problem": {
     "not_a_feed": "Aucun flux n'a pu être lu à cette adresse.",
-    "feed_throttled": "Ce site limite les requêtes en ce moment — patientez un instant et réessayez."
+    "feed_throttled": "Ce site limite les requêtes en ce moment — patientez un instant et réessayez.",
+    "label_name_taken": "Vous avez déjà un libellé portant ce nom."
   },
   "manage": {
     "unsubscribeTitle": "Se désabonner",
@@ -1902,6 +1903,23 @@
     "compose": {
       "button": "Nouvelle publication sur {{network}}",
       "reconnect": "Reconnectez votre compte {{network}} pour publier"
+    },
+    "labels": {
+      "unlabeled": "Sans libellé",
+      "rename": "Renommer",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer le libellé",
+      "deleteConfirmOne": "Supprimer « {{name}} » ? Il figure sur 1 article.",
+      "deleteConfirmOther": "Supprimer « {{name}} » ? Il figure sur {{count}} articles.",
+      "toggleFavorites": "Afficher ou masquer les libellés de « Favoris »",
+      "toggleKept": "Afficher ou masquer les libellés de « Mis de côté »",
+      "nameField": "Nom du libellé",
+      "menu": "Libellés",
+      "newLabel": "Nouveau libellé…",
+      "newLabelTitle": "Nouveau libellé",
+      "filter": "Filtrer les libellés",
+      "filterBy": "Filtrer par le libellé « {{name}} »",
+      "more": "+{{count}} autres libellés"
     }
   },
   "social": {

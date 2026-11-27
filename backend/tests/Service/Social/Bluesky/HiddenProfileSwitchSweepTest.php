@@ -15,6 +15,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
+use App\Repository\EntryLabelRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\EntryTwinRepository;
@@ -539,6 +540,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             new SavedStateMover(
                 self::service(EntryStateRepository::class),
                 self::service(EntryShareRepository::class),
+                self::service(EntryLabelRepository::class),
                 $this->entityManager,
             ),
             self::service(SubscriptionService::class),

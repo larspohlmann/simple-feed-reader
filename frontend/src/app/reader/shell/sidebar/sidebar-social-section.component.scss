@@ -5,6 +5,7 @@
 @include row.chevron('.section-chevron');
 @include row.dots;
 @include row.group;
+@include row.sublist;
 @include row.drag-handle;
 @include row.hidden-feed-mark('app-network-logo');
 
@@ -65,15 +66,7 @@
   }
 }
 
-.rows {
-  --row-h: var(--sidebar-sub-row-h);
-  --row-fs: var(--fs-dense);
-
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0);
-  font-size: var(--row-fs);
-
+.sublist {
   @include row.label-x(var(--row-h), var(--icon-md));
 }
 
@@ -117,15 +110,6 @@
   }
 }
 
-:host-context(.sidebar-airy) .rows {
-  position: relative;
-  padding-left: var(--space-5);
-}
-
-:host-context(.sidebar-airy) .rows::before {
-  @include row.airy-rail(var(--space-0));
-}
-
 :host-context(.sidebar-airy) .divider {
   border-top-color: var(--airy-hrule);
 }
@@ -134,7 +118,7 @@
   --icon-lead-self: var(--icon-sm);
 }
 
-.organising .rows {
+.organising .sublist {
   --row-fs: var(--fs-base);
 }
 

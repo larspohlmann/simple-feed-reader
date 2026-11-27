@@ -26,6 +26,7 @@ use App\Enum\VoteScore;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowGroupings;
 use App\Repository\EntryListRowLemmy;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSocial;
@@ -606,6 +607,7 @@ final class EntryJsonTest extends TestCase
     {
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
         $savedSearch = ['id' => 3, 'slug' => '3-climate', 'term' => 'climate'];
+        $label = ['id' => 7, 'name' => 'Read later'];
         $row = new EntryListRow(
             $this->entryTitled('Enriched'),
             new EntryListRowSubscription(1, 'Source'),
@@ -613,7 +615,7 @@ final class EntryJsonTest extends TestCase
             null,
             enrichment: new EntryListRowEnrichment(
                 ['Politics'],
-                [$savedSearch],
+                new EntryListRowGroupings([$savedSearch], [$label]),
                 [$card],
                 true,
             ),
@@ -630,12 +632,14 @@ final class EntryJsonTest extends TestCase
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
-                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'myVote', 'community', 'duplicates',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'labels', 'social', 'myVote', 'community',
+                'duplicates',
             ],
             array_keys($json),
         );
         self::assertSame(['Politics'], $json['categories']);
         self::assertSame([$savedSearch], $json['savedSearches']);
+        self::assertSame([$label], $json['labels']);
         self::assertSame(['https://i.example/chart'], array_column($json['linkCards'], 'url'));
         self::assertTrue($json['pending']);
     }

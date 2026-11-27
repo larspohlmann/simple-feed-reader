@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SubscriptionDto, TagDto } from '../../models';
 import { SubscriptionReload } from './subscription-reload.service';
 import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
@@ -17,7 +16,6 @@ import { surfacesIn } from '../../feed-exclusions';
 export class BulkSubscriptionActions {
   private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
-  private readonly subscriptions = inject(SubscriptionsStore);
   private readonly subscriptionReload = inject(SubscriptionReload);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
@@ -64,7 +62,7 @@ export class BulkSubscriptionActions {
         if (!confirmed) return of(false);
         return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
           tap((result) => {
-            this.subscriptions.reloadQuietly();
+            this.subscriptionReload.afterMembershipChange();
             this.toast.show({
               message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
                 count: result.removed,

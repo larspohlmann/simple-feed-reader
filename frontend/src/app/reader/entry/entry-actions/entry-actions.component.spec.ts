@@ -13,12 +13,19 @@ import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
+import { LabelMenu } from '../../labels/label-menu.service';
 
 /** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
 @Component({
   imports: [EntryActionsComponent, OpensEntryDirective],
   template: `<article class="card" [appOpensEntry]="entry">
-    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" [like]="likeShown" />
+    <app-entry-actions
+      [entry]="entry"
+      [size]="size"
+      [audio]="audio"
+      [like]="likeShown"
+      [labelMenu]="labelMenu"
+    />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
@@ -27,6 +34,7 @@ class HostComponent implements EntryActionHandler {
   size: 'sm' | 'md' = 'sm';
   audio = true;
   likeShown = true;
+  labelMenu: 'list' | 'article' = 'list';
   likeAnswer = new Subject<void>();
   cardOpened = false;
   favoriteCount = 0;
@@ -37,6 +45,9 @@ class HostComponent implements EntryActionHandler {
   deleted: EntryDto | null = null;
 
   readonly vote = (): Observable<void> => EMPTY;
+  readonly attachLabel = (): void => undefined;
+  readonly detachLabel = (): void => undefined;
+  readonly createLabel = (): Observable<void> => EMPTY;
 
   favorite(): void {
     this.favoriteCount++;
@@ -99,6 +110,10 @@ function mount(testEntry: EntryDto = anEntry()) {
 const buttons = (fixture: { nativeElement: HTMLElement }) =>
   Array.from(fixture.nativeElement.querySelectorAll('button'));
 
+/** The flag toggles alone: a favorite or kept entry also shows the label button, which opens a menu. */
+const toggles = (fixture: { nativeElement: HTMLElement }) =>
+  buttons(fixture).filter((button) => button.getAttribute('aria-haspopup') !== 'menu');
+
 const iconSizes = (fixture: ReturnType<typeof mount>) =>
   fixture.debugElement
     .queryAll(By.directive(IconComponent))
@@ -110,15 +125,137 @@ const episode = (): EntryDto =>
 
 describe('EntryActionsComponent', () => {
   let player: StubAudioPlayer;
+  let labelMenu: { open: jest.Mock; isOpenAt: jest.Mock; closeWithin: jest.Mock };
 
   beforeEach(() => {
     player = new StubAudioPlayer();
+    labelMenu = { open: jest.fn(), isOpenAt: jest.fn(() => false), closeWithin: jest.fn() };
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
       providers: [
         { provide: AudioPlayerService, useValue: player.asService() },
+        { provide: LabelMenu, useValue: labelMenu },
         provideAccountIdentity(),
       ],
+    });
+  });
+
+  describe('the label button (#2581)', () => {
+    const labels = (fixture: ReturnType<typeof mount>) =>
+      buttons(fixture).map((button) => button.getAttribute('aria-label'));
+
+    it('leads the star on every favorite row', () => {
+      expect(labels(mount(anEntry({ isFavorite: true })))).toEqual([
+        'Labels',
+        'Favorite',
+        'Keep',
+        'Toggle read',
+      ]);
+    });
+
+    it('leads the star on every kept row', () => {
+      expect(labels(mount(anEntry({ isKept: true })))[0]).toBe('Labels');
+    });
+
+    it('is absent from a row that is neither favorite nor kept', () => {
+      expect(labels(mount(anEntry({ isFavorite: false, isKept: false })))).not.toContain('Labels');
+    });
+
+    it.each([
+      ['favorite', { isFavorite: true }],
+      ['kept', { isKept: true }],
+    ] as const)('appears on a row the moment it turns %s, and leaves again', (_, flag) => {
+      const fixture = mount(anEntry({ isFavorite: false, isKept: false }));
+      expect(labels(fixture)).not.toContain('Labels');
+
+      fixture.componentInstance.entry = { ...fixture.componentInstance.entry, ...flag };
+      fixture.detectChanges();
+      expect(labels(fixture)[0]).toBe('Labels');
+
+      fixture.componentInstance.entry = anEntry({ isFavorite: false, isKept: false });
+      fixture.detectChanges();
+      expect(labels(fixture)).not.toContain('Labels');
+    });
+
+    it('follows the tick in the article header of a kept entry', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = anEntry({ isKept: true });
+      fixture.componentInstance.labelMenu = 'article';
+      fixture.detectChanges();
+
+      expect(labels(fixture)).toEqual(['Favorite', 'Keep', 'Toggle read', 'Labels']);
+    });
+
+    it('appears in the article header once the entry turns favorite', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = anEntry({ isFavorite: false, isKept: false });
+      fixture.componentInstance.labelMenu = 'article';
+      fixture.detectChanges();
+      expect(labels(fixture)).not.toContain('Labels');
+
+      fixture.componentInstance.entry = anEntry({ isFavorite: true });
+      fixture.detectChanges();
+
+      expect(labels(fixture)).toContain('Labels');
+    });
+
+    it('fills its glyph only while the entry carries a label', () => {
+      const fill = (testEntry: EntryDto) =>
+        mount(testEntry)
+          .debugElement.queryAll(By.directive(IconComponent))
+          .find((icon) => icon.componentInstance.name() === 'label')!
+          .componentInstance.fill();
+
+      expect(fill(anEntry({ isFavorite: true, labels: [] }))).toBe(false);
+      expect(fill(anEntry({ isFavorite: true, labels: [{ id: 1, name: 'Work' }] }))).toBe(true);
+    });
+
+    it('is a menu button that says whether its menu is open, never a pressed toggle', () => {
+      const fixture = mount(anEntry({ isFavorite: true, labels: [{ id: 1, name: 'Work' }] }));
+      const [button] = buttons(fixture);
+      expect(button.getAttribute('aria-haspopup')).toBe('menu');
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(button.hasAttribute('aria-pressed')).toBe(false);
+      expect(button.classList).toContain('flag-toggle');
+      expect(button.classList).toContain('on');
+
+      labelMenu.isOpenAt.mockImplementation((anchor: HTMLElement) => anchor === button);
+      fixture.componentInstance.entry = { ...fixture.componentInstance.entry };
+      fixture.detectChanges();
+
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('closes its menu when the row leaves the page', () => {
+      const fixture = mount(anEntry({ isFavorite: true }));
+      const host = fixture.nativeElement.querySelector('app-entry-actions');
+
+      fixture.destroy();
+
+      expect(labelMenu.closeWithin).toHaveBeenCalledWith(host);
+    });
+
+    it('reads no list on screen, so a Trending story’s rows follow the same rule', () => {
+      expect(() => mount(anEntry())).not.toThrow();
+      expect(labels(mount(anEntry({ isKept: true })))).toContain('Labels');
+    });
+
+    it('opens the menu at itself with the handler, by click, Enter or Space, without opening the card', () => {
+      const fixture = mount(anEntry({ isFavorite: true }));
+      const [button] = buttons(fixture);
+
+      button.click();
+      pressEnter(button);
+      pressSpace(button);
+
+      expect(labelMenu.open).toHaveBeenCalledTimes(3);
+      expect(labelMenu.open).toHaveBeenCalledWith(
+        fixture.componentInstance.entry,
+        button,
+        fixture.componentInstance,
+      );
+      expect(button.getAttribute('title')).toBe('Labels');
+      expect(fixture.componentInstance.cardOpened).toBe(false);
     });
   });
 
@@ -144,13 +281,13 @@ describe('EntryActionsComponent', () => {
   it('reports each action state through aria-pressed', () => {
     // The third toggle is the tick: it reflects "viewed", not "read" (#482).
     const fixture = mount(anEntry({ isFavorite: true, isKept: false, isViewed: true }));
-    const pressed = buttons(fixture).map((button) => button.getAttribute('aria-pressed'));
+    const pressed = toggles(fixture).map((button) => button.getAttribute('aria-pressed'));
     expect(pressed).toEqual(['true', 'false', 'true']);
   });
 
   it('marks every active toggle the same way, the tick one included', () => {
     const fixture = mount(anEntry({ isFavorite: true, isKept: true, isViewed: true }));
-    const on = buttons(fixture).map((button) => button.classList.contains('on'));
+    const on = toggles(fixture).map((button) => button.classList.contains('on'));
     expect(on).toEqual([true, true, true]);
   });
 
@@ -230,6 +367,7 @@ describe('EntryActionsComponent', () => {
     const fills = (testEntry: EntryDto) =>
       mount(testEntry)
         .debugElement.queryAll(By.directive(IconComponent))
+        .filter((icon) => icon.componentInstance.name() !== 'label')
         .map((icon) => icon.componentInstance.fill());
 
     expect(fills(anEntry({ isFavorite: false, isKept: false }))).toEqual([false, false, false]);
@@ -247,7 +385,7 @@ describe('EntryActionsComponent', () => {
 
   describe('tooltips', () => {
     const titles = (testEntry: EntryDto) =>
-      buttons(mount(testEntry)).map((button) => button.getAttribute('title'));
+      toggles(mount(testEntry)).map((button) => button.getAttribute('title'));
 
     it('says what each click will do while the toggles are off', () => {
       expect(titles(anEntry({ isFavorite: false, isKept: false, isViewed: false }))).toEqual([

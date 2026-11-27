@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of } from 'rxjs';
 import { anEntry } from '../../../testing/entry-testing';
 import { ReaderApi } from '../reader-api';
@@ -225,5 +226,98 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(2)).toEqual(
       expect.objectContaining({ isViewed: false, isHidden: false, myVote: 0, score: 10 }),
     );
+  });
+
+  describe('label changes (#2581)', () => {
+    const work = { id: 3, name: 'Work' };
+    const home = { id: 4, name: 'Home' };
+    const failWith500 = (request: Subject<never>) =>
+      request.error(new HttpErrorResponse({ status: 500 }));
+
+    it('shows an attached label at once, on the entry alone and not on its copies', () => {
+      holdEntries(buildCopy(1, 7), buildCopy(2, 7));
+
+      cache.attachLabel(1, work, new Subject()).subscribe();
+
+      expect(readShownEntry(1).labels).toEqual([work]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
+
+    it('takes a failed attach back off the row', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+      const failing = new Subject<never>();
+
+      cache.attachLabel(1, home, failing).subscribe({ error: jest.fn() });
+      failWith500(failing);
+
+      expect(readShownEntry(1).labels).toEqual([work]);
+    });
+
+    it('undoes only the failed change when two changes on one row are out', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+      const attaching = new Subject<never>();
+
+      cache.attachLabel(1, home, attaching).subscribe({ error: jest.fn() });
+      cache.detachLabel(1, work, new Subject()).subscribe();
+      failWith500(attaching);
+
+      expect(readShownEntry(1).labels).toEqual([]);
+    });
+
+    it('puts a failed detach back beside a change made since', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+      const detaching = new Subject<never>();
+
+      cache.detachLabel(1, work, detaching).subscribe({ error: jest.fn() });
+      cache.attachLabel(1, home, new Subject()).subscribe();
+      failWith500(detaching);
+
+      expect(readShownEntry(1).labels).toEqual([home, work]);
+    });
+
+    it('keeps every change on the wire over a reload that lands meanwhile', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+
+      cache.attachLabel(1, home, new Subject()).subscribe();
+      cache.detachLabel(1, work, new Subject()).subscribe();
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+
+      expect(readShownEntry(1).labels).toEqual([home]);
+    });
+
+    it('lets a reload show the server once a change has settled', () => {
+      holdEntries(buildCopy(1, null));
+
+      cache.attachLabel(1, work, of(undefined)).subscribe();
+      holdEntries(buildCopy(1, null));
+
+      expect(readShownEntry(1).labels).toEqual([]);
+    });
+  });
+
+  describe('a label renamed or deleted elsewhere (#2581)', () => {
+    const work = { id: 3, name: 'Work' };
+    const home = { id: 4, name: 'Home' };
+
+    it('shows the new name on every held row, in name order', () => {
+      holdEntries(buildCopy(1, null, { labels: [home, work] }), buildCopy(2, null));
+
+      cache.renameLabelLocally(3, 'Errands');
+
+      expect(readShownEntry(1).labels).toEqual([{ id: 3, name: 'Errands' }, home]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
+
+    it('drops the pill from every held row', () => {
+      holdEntries(
+        buildCopy(1, null, { labels: [home, work] }),
+        buildCopy(2, null, { labels: [work] }),
+      );
+
+      cache.dropLabelLocally(3);
+
+      expect(readShownEntry(1).labels).toEqual([home]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
   });
 });

@@ -1,0 +1,96 @@
+@let hasFolders = folders().length > 0;
+@let shown = hasFolders && expanded();
+<div class="card">
+  <div class="section-head collection-head" [class.current]="headCurrent()">
+    <a
+      class="section-link"
+      [routerLink]="['/']"
+      [queryParams]="selectionQueryParams({ view: collection() })"
+      queryParamsHandling="merge"
+    >
+      <span class="favicon-slot"><app-icon [name]="icon()" size="dense" /></span>
+      <span class="label">{{ 'reader.' + collection() | transloco }}</span>
+      @if (total() > 0) {
+        <span class="section-count">{{ total() }}</span>
+      }
+    </a>
+    <span class="slot" aria-hidden="true"></span>
+    @if (hasFolders) {
+      <button
+        class="chevzone"
+        type="button"
+        [attr.aria-expanded]="shown"
+        [attr.aria-label]="toggleLabel() | transloco"
+        (click)="toggleExpanded()"
+      >
+        <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
+      </button>
+    } @else {
+      <span class="trail" aria-hidden="true"></span>
+    }
+  </div>
+  @if (shown) {
+    <div class="sublist">
+      @for (folder of folders(); track folder.filter) {
+        @let label = folder.label;
+        <div class="label-row" [class.active]="folder.filter === activeFilter()">
+          @if (label !== null && renamingId() === label.id) {
+            <app-icon name="label" size="md" />
+            <input
+              #renameField
+              class="name rename"
+              type="text"
+              [maxLength]="labelNameMax"
+              [value]="label.name"
+              [attr.aria-label]="'reader.labels.nameField' | transloco"
+              (keydown.enter)="saveRename(label, renameField.value)"
+              (keydown.escape)="cancelRename()"
+              (blur)="cancelRename()"
+            />
+          } @else {
+            <a
+              class="nav"
+              [routerLink]="['/']"
+              [queryParams]="folder.params"
+              queryParamsHandling="merge"
+            >
+              <app-icon name="label" size="md" />
+              <span class="name">{{ label?.name ?? ('reader.labels.unlabeled' | transloco) }}</span>
+              @if (folder.count > 0) {
+                <span class="count">{{ folder.count }}</span>
+              }
+            </a>
+          }
+          @if (label === null) {
+            <span class="slot" aria-hidden="true"></span>
+          } @else if (screen.isCoarse()) {
+            <button
+              class="dots"
+              type="button"
+              aria-haspopup="dialog"
+              [attr.aria-label]="'reader.manage' | transloco: { name: label.name }"
+              (click)="openLabelSheet(label)"
+            >
+              <app-icon name="more_horiz" size="md" />
+            </button>
+          } @else {
+            <app-sidebar-row-menu
+              [menuKey]="menuKey(label)"
+              [label]="'reader.manage' | transloco: { name: label.name }"
+            >
+              <ng-template>
+                <button role="menuitem" (click)="startRename(label)">
+                  {{ 'reader.labels.rename' | transloco }}
+                </button>
+                <button role="menuitem" class="danger" (click)="confirmDelete(label)">
+                  {{ 'reader.labels.delete' | transloco }}
+                </button>
+              </ng-template>
+            </app-sidebar-row-menu>
+          }
+          <span class="trail" aria-hidden="true"></span>
+        </div>
+      }
+    </div>
+  }
+</div>

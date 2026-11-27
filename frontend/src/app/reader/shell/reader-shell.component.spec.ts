@@ -267,6 +267,9 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
+      .expectOne('https://api.test/api/labels')
+      .flush({ labels: [], unlabeled: { favoriteCount: 0, keptCount: 0 } });
+    ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
@@ -1821,6 +1824,8 @@ describe('ReaderShellComponent', () => {
             socialAccounts: [],
             keptCount: 0,
             tags: [],
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
           }),
         );
       ctrl.verify();
@@ -2442,12 +2447,20 @@ describe('ReaderShellComponent', () => {
             link: null,
             q: null,
             window: null,
+            label: null,
           },
         }),
       );
       ctrl
         .match(() => true)
-        .forEach((testRequest) => testRequest.flush({ entries: [], nextCursor: null }));
+        .forEach((testRequest) =>
+          testRequest.flush({
+            entries: [],
+            nextCursor: null,
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
+          }),
+        );
     });
 
     it('layers a search over the current list, keeping view/tag/subscription in the URL to return to (#542)', () => {
@@ -3426,6 +3439,8 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             stories: [],
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
@@ -3480,6 +3495,8 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             stories: [],
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
@@ -3606,6 +3623,8 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             stories: [],
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
             favoritesCount: 0,
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],

@@ -44,6 +44,7 @@ import {
   trackPageScrollTop,
 } from '../../../../testing/scroll-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { listPageOf } from '../../state/list-page';
 import {
@@ -101,6 +102,7 @@ function mount(
     providers: [
       provideRouter([]),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogAvailability, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },

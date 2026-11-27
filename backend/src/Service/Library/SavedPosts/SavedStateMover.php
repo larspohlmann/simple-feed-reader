@@ -8,6 +8,7 @@ use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
+use App\Repository\EntryLabelRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,7 @@ final readonly class SavedStateMover
     public function __construct(
         private EntryStateRepository $entryStates,
         private EntryShareRepository $entryShares,
+        private EntryLabelRepository $entryLabels,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -36,6 +38,7 @@ final readonly class SavedStateMover
             self::merge($sources[$entryId] ?? null, $targets[$targetId] ?? null);
         }
         $this->moveShares($userId, $targetByEntryId);
+        $this->entryLabels->moveToEntries($userId, $targetByEntryId);
         $this->entityManager->flush();
     }
 

@@ -13,7 +13,8 @@ screenshots; the [gallery](screenshots.md) has more.
   own version at any time, or open the original page. If the text is only the
   free preview of a paywalled article, the reader tells you.
 - Read/unread tracking with "mark all read", favorites, and a separate
-  "keep" list.
+  "keep" list. Sort either list with your own labels, shown as pills on each
+  row and in the article header.
 - Full-text search across your articles, including exact phrases in quotes.
   Save a search as a named view in the sidebar, each with its own unread
   count — open one, or open all as a combined list.

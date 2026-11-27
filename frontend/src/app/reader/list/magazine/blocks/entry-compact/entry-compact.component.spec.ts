@@ -10,6 +10,7 @@ import {
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { INCLUDED_EVERYWHERE } from '../../../../tag-inclusion';
 
@@ -47,6 +48,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -79,6 +81,14 @@ describe('EntryCompactComponent', () => {
     expect(mountInDigest(entry).querySelector('.pill.short')).toBeNull();
   });
 
+  it('carries no label pills, even on a labelled favorite (#2581)', () => {
+    const labelled = { ...entry, isFavorite: true, labels: [{ id: 3, name: 'Work' }] };
+    const element = mount(labelled).nativeElement as HTMLElement;
+
+    expect(element.querySelector('app-entry-meta')).not.toBeNull();
+    expect(element.querySelector('a.pill.label')).toBeNull();
+  });
+
   it('renders the source and title', () => {
     const element = mount().nativeElement as HTMLElement;
     expect(element.textContent).toContain('One-liner headline');
@@ -91,6 +101,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -115,6 +126,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
       ],
       imports: [EntryCompactComponent, provideTranslocoTesting()],
@@ -134,6 +146,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -153,6 +166,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],

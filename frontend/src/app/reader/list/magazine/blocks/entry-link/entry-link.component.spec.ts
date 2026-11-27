@@ -13,6 +13,7 @@ import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { aLinkCard, anEntry, aStory, aStoryArticle } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideStoryContext } from '../../../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
@@ -57,6 +58,7 @@ function mount(item: ListItem) {
       provideStoryContext(storyOf(item)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: LinkReaderNavigation, useValue: navigation },
       { provide: PreviewProgress, useValue: { isLoading: () => true } },

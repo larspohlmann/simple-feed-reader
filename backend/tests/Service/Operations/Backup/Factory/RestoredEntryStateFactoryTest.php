@@ -82,6 +82,7 @@ final class RestoredEntryStateFactoryTest extends TestCase
             hiddenAt: null,
             isViewed: $viewed,
             viewedAt: $viewedAt,
+            labels: [],
         );
     }
 }
