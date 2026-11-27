@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The list row's thumbs up joins the favorite/kept/tick cluster as its first button, and the sidebar's views regroup into two cards — All items as a folder (Recently read, Liked, Shared) with Favorites and Kept, then Saved searches, For you, For you stream, Followed stories, Trending — all regular weight with one counter column.
+**Goal:** The thumbs up on list rows and magazine cards joins the favorite/kept/tick cluster as its first button, and the sidebar's views regroup into two cards — All items as a folder (Recently read, Liked, Shared) with Favorites and Kept, then Saved searches, For you, For you stream, Followed stories, Trending — all regular weight with one counter column.
 
-**Architecture:** Frontend only. `EntryLikeComponent` learns to put its count before the icon, `EntryActionsComponent` learns to lead with the like, and `EntryMetaComponent` gets a switch that the list row flips; magazine cards keep today's placement. In the sidebar, `sidebar.component.html` wraps the views in two `.card.views-group` wrappers; `SidebarViewsComponent` renders its items in three named slices instead of two cards; the four collapsible heads (and the new All items head) drop the boxed `section-head` look for a new `folder-head` row that shares the `.nav` row geometry, so weight, size and the count column match the plain rows.
+**Architecture:** Frontend only. `EntryLikeComponent` learns to put its count before the icon, `EntryActionsComponent` learns to lead with the like, and `EntryMetaComponent` (the meta line of list rows and every magazine card) hands it to the actions instead of its discussion group; the grouped compact magazine entry's kicker-line actions lead with it too. The article view's actions keep today's order. In the sidebar, `sidebar.component.html` wraps the views in two `.card.views-group` wrappers; `SidebarViewsComponent` renders its items in three named slices instead of two cards; the four collapsible heads (and the new All items head) drop the boxed `section-head` look for a new `folder-head` row that shares the `.nav` row geometry, so weight, size and the count column match the plain rows.
 
 **Tech Stack:** Angular 20 standalone components and signals, SCSS with the `_sidebar-row.scss` mixins, Jest (in the Docker `frontend` container), Playwright e2e against stubbed routes.
 
 **Spec:** GitHub issue #2593 (body is the spec), plus these rulings from the conversation with Lars (2026-11-27):
 - The thumb goes **first in the action cluster** (not the row's left edge), at the cluster's size; its count sits left of the icon.
-- **List view only** (`app-entry-row`); magazine cards keep the thumb where it is (scope rule: the named case only).
+- **List rows and magazine cards** (Lars, 2026-11-27: "Magazine cards should change, too"); the article/reader view's action bar is out of scope and keeps the like after the favorite.
 - All items folder: **closed by default, open state remembered**.
 - Favorites, Kept, Saved searches, Followed stories **keep their chevrons and sublists**.
 
@@ -31,39 +31,39 @@
 2. **Group 2 with nothing in it** (no AI, Trending off, no stream, no saved searches, no followed stories): no empty card or stray divider — pinned in Task 2 (Jest) and Task 3 (e2e).
 3. **An expanded head inside a shared card** (Favorites open between Kept and All items): no band bleeding to the card edges, no extra rule; the sublist hangs under its head — pinned in Task 3 e2e screenshot-free geometry (head top equals previous row bottom + gap).
 4. **Coarse pointer**: `.slot` is hidden and `.trail` widens to the tap target there; counters must still align — pinned in Task 3 e2e on the mobile project.
-5. **A voted Lemmy post in the list** (no toggle, bare like count): the bare count also moves into the cluster, before nothing else — pinned in Task 1.
+5. **A voted Lemmy post in a list row or magazine card** (no toggle, bare like count): the bare count also moves into the cluster, before nothing else — pinned in Task 1.
 
 ---
 
-### Task 1: The list row's thumb leads the action cluster
+### Task 1: The thumb leads the action cluster on list rows and magazine cards
 
 **Files:**
 - Modify: `frontend/src/app/reader/entry/entry-like/entry-like.component.{ts,html,scss}`
 - Modify: `frontend/src/app/reader/entry/entry-actions/entry-actions.component.{ts,html}`
 - Modify: `frontend/src/app/reader/list/entry-meta/entry-meta.component.{ts,html}`
-- Modify: `frontend/src/app/reader/list/entry-row/entry-row.component.html`
-- Test: `entry-like.component.spec.ts`, `entry-actions.component.spec.ts`, `entry-meta.component.spec.ts`, `frontend/src/app/reader/list/entry-row/entry-row.component.spec.ts`
+- Modify: `frontend/src/app/reader/list/magazine/blocks/entry-compact/entry-compact.component.html`
+- Test: `entry-like.component.spec.ts`, `entry-actions.component.spec.ts`, `entry-meta.component.spec.ts`, `entry-compact.component.spec.ts`
 
 **Interfaces:**
-- Produces: `EntryLikeComponent.countSide = input<'start' | 'end'>('end')`; `EntryActionsComponent.like = input<'first' | 'after-favorite' | 'none'>('after-favorite')` (replaces the boolean); `EntryMetaComponent.likePlace = input<'discussion' | 'actions'>('discussion')`.
+- Produces: `EntryLikeComponent.countSide = input<'start' | 'end'>('end')`; `EntryActionsComponent.like = input<'first' | 'after-favorite' | 'none'>('after-favorite')` (replaces the boolean). `EntryMetaComponent` gets no new input: it always passes `like="first"`.
 
 - [ ] **Step 1: Write the failing tests**
   - `entry-like`: `it('puts the count before the thumb when countSide is start')` — with `likeCount: 12` and `countSide: 'start'`, inside the button `.count` precedes `app-icon` (`compareDocumentPosition` FOLLOWING from count to icon); same for the bare `.likes` span on a voted Lemmy entry. Default `'end'` keeps icon first (existing tests stay).
   - `entry-actions`: `it('leads with the like when like is first')` — first child element of the host is `app-entry-like`; `like: 'none'` renders no `app-entry-like`; `'after-favorite'` keeps today's order (rewrite existing `[like]="false"` usages in the spec host to `'none'`).
-  - `entry-meta`: `it('moves the like into the actions, first and count-first, when likePlace is actions')` — no `app-entry-like` inside `.discussion`; `app-entry-actions app-entry-like` exists with `countSide` start (assert `.count` before icon); a voted Lemmy entry with `likeCount` and `score` keeps the vote pill in `.discussion` and puts the bare count in the actions. Default `'discussion'` keeps the existing tests green.
-  - `entry-row`: `it('hands the like to the action cluster')` — `app-entry-meta app-entry-actions app-entry-like` exists, and `.discussion app-entry-like` does not.
+  - `entry-meta`: replace `'puts the like before the comment count, out of the actions'` and `'keeps the like count beside the local toggle…'` with `it('hands the like to the actions, first and count-first')` — no `app-entry-like` inside `.discussion`; `app-entry-actions app-entry-like` is the actions' first element and its `.count` precedes its icon; a voted Lemmy entry with `likeCount` and `score` keeps the vote pill in `.discussion` and puts the bare count first in the actions; an entry with only a like (no score, no comments) renders no `.discussion` span.
+  - `entry-compact`: `it('leads the kicker-line actions with the like')` — in the grouped (no source) case, `app-entry-kicker-line app-entry-actions` first element is `app-entry-like`.
 
-- [ ] **Step 2: Run them, expect FAIL** — `docker compose exec -T frontend npx jest src/app/reader/entry/entry-like src/app/reader/entry/entry-actions src/app/reader/list/entry-meta src/app/reader/list/entry-row`
+- [ ] **Step 2: Run them, expect FAIL** — `docker compose exec -T frontend npx jest src/app/reader/entry/entry-like src/app/reader/entry/entry-actions src/app/reader/list/entry-meta src/app/reader/list/magazine/blocks/entry-compact`
 
 - [ ] **Step 3: Implement**
   - `entry-like.component.html`: render `.count` before the icon when `countSide() === 'start'` in both the button and the bare span. In `.scss`, the start-side count uses `margin-inline-end: var(--space-1)` and no start margin.
   - `entry-actions.component.html`: `@if (like() === 'first') { <app-entry-like [entry]="entry()" [size]="size()" countSide="start" /> }` as the very first element (before the audio buttons and the label button); the existing after-favorite slot renders on `like() === 'after-favorite'`.
-  - `entry-meta`: `showsLike` gates the `.discussion` like only when `likePlace() === 'discussion'` (the `.discussion` span's `@if` must also stop counting the like in `'actions'` mode); pass `[like]="likePlace() === 'actions' ? 'first' : 'none'"` to `app-entry-actions`.
-  - `entry-row.component.html`: `<app-entry-meta … size="md" likePlace="actions" />`.
+  - `entry-meta`: delete `showsLike` and the like from `.discussion` (its `@if` becomes score or comments); pass `like="first"` to `app-entry-actions`.
+  - `entry-compact.component.html`: `<app-entry-actions [entry]="entry()" like="first" />`.
 
 - [ ] **Step 4: Run the same jest command, expect PASS**; then `npx tsc -p tsconfig.app.json --noEmit` and `npx tsc -p tsconfig.spec.json --noEmit` in the container.
 
-- [ ] **Step 5: Commit** — `feat(#2593): the list row's thumb leads the action cluster, count first`
+- [ ] **Step 5: Commit** — `feat(#2593): the thumb leads the action cluster on list rows and magazine cards, count first`
 
 ---
 
@@ -132,4 +132,4 @@
 
 ---
 
-After Task 3 (controller, not a task): screenshots of the real page — desktop and phone, boxed and airy, list row with a liked entry and a count — sent to Lars for sign-off before the final review, `/simplify`, the pre-PR gate run and the PR.
+After Task 3 (controller, not a task): screenshots of the real page — desktop and phone, boxed and airy, a list row and magazine cards (including a grouped compact entry) with a liked entry and a count — sent to Lars for sign-off before the final review, `/simplify`, the pre-PR gate run and the PR.
