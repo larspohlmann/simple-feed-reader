@@ -9,7 +9,6 @@ use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
 use App\Tests\Support\StemmingWiring;
-use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -161,7 +160,7 @@ final class WordEquivalentsTest extends TestCase
         self::assertSame(['ukrain', 'talks'], $this->stemsOf('Ukraine Ukrainian talks', null));
     }
 
-    public function testAHangulHeadlineWithoutALanguageKeepsItsWords(): void
+    public function testAHangulTextWithoutALanguageKeepsItsWords(): void
     {
         self::assertCount(3, $this->stemsOf('한국 경제 뉴스', null));
         self::assertCount(3, $this->stemsOf('서울 대통령 선거', null));
@@ -180,25 +179,25 @@ final class WordEquivalentsTest extends TestCase
 
     public function testEveryCanonicalIsAnOpaqueIdNoMapKeysAndNoLanguageSeeds(): void
     {
-        $filler = TrendingWiring::filler();
+        $stopWordStems = StemmingWiring::stopWordStems();
         $stemKeys = self::allStemKeys();
         foreach (self::canonicalsByTable() as $label => $canonical) {
             self::assertGreaterThanOrEqual(3, mb_strlen($canonical), $label);
             self::assertSame($canonical, WordStems::cut($canonical), $label);
             self::assertArrayNotHasKey($canonical, $stemKeys, $label);
             foreach ([null, ...FeedLanguage::cases()] as $language) {
-                self::assertFalse($filler->isSeed($canonical, $language), $label);
+                self::assertFalse($stopWordStems->isStopWordStem($canonical, $language), $label);
             }
         }
     }
 
     public function testEveryStemKeyIsBareAndNoSeedOfItsLanguage(): void
     {
-        $filler = TrendingWiring::filler();
+        $stopWordStems = StemmingWiring::stopWordStems();
         foreach (FeedLanguage::cases() as $language) {
             foreach (array_keys(self::stemsByLanguage()[$language->value]) as $stem) {
                 self::assertSame(WordStems::bare($stem), $stem, $stem);
-                self::assertFalse($filler->isSeed($stem, $language), $language->value . ' ' . $stem);
+                self::assertFalse($stopWordStems->isStopWordStem($stem, $language), $language->value . ' ' . $stem);
             }
         }
     }
@@ -377,7 +376,7 @@ final class WordEquivalentsTest extends TestCase
         }
     }
 
-    /** @return list<string> distinct stems, as `HeadlineWindow` takes them word by word */
+    /** @return list<string> distinct stems, as a caller takes them word by word */
     private function stemsOf(string $text, ?FeedLanguage $language): array
     {
         $stems = [];

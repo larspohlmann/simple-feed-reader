@@ -115,7 +115,7 @@ final class TrendingWiring
 
     public static function filler(): HeadlineFiller
     {
-        return new HeadlineFiller(StemmingWiring::stemmer(), LanguageWiring::stopWords());
+        return new HeadlineFiller(StemmingWiring::stopWordStems());
     }
 
     public static function storyLinks(): StoryLinks

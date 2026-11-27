@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Service\Foundation\Stemming\Factory\SnowballStemmerFactory;
 use App\Service\Foundation\Stemming\GermanCompoundSplitter;
 use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
+use App\Service\Foundation\Stemming\StopWordStems;
 use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Stemming\WordStemmer;
 
@@ -30,6 +31,11 @@ final class StemmingWiring
     public static function equivalents(): WordEquivalents
     {
         return new WordEquivalents(self::stemmer(), self::compoundSplitter());
+    }
+
+    public static function stopWordStems(): StopWordStems
+    {
+        return new StopWordStems(self::stemmer(), LanguageWiring::stopWords());
     }
 
     private function __construct()
