@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem } from '../../core/problem';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FieldComponent } from '../../shared/field/field.component';
@@ -34,6 +34,7 @@ export class NewLabelDialogComponent {
   readonly ref = inject<DialogRef<void>>(DialogRef);
   private readonly data = inject<NewLabelDialogData>(DIALOG_DATA);
   private readonly toast = inject(ToastService);
+  private readonly i18n = inject(TranslocoService);
 
   readonly form = inject(NonNullableFormBuilder).group({
     name: [
@@ -51,7 +52,7 @@ export class NewLabelDialogComponent {
       complete: () => this.ref.close(),
       error: (problem: Problem) => {
         this.saving.set(false);
-        this.toast.showProblem(problem);
+        this.toast.showTranslatedProblem(problem, this.i18n);
       },
     });
   }

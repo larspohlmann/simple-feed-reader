@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -23,7 +24,7 @@ describe('NewLabelDialogComponent', () => {
           provide: DIALOG_DATA,
           useValue: { row: { createLabel } as unknown as LabelledRow },
         },
-        { provide: ToastService, useValue: { showProblem } },
+        { provide: ToastService, useValue: { showTranslatedProblem: showProblem } },
       ],
     });
     const fixture = TestBed.createComponent(NewLabelDialogComponent);
@@ -60,7 +61,7 @@ describe('NewLabelDialogComponent', () => {
     answer.error(taken);
     fixture.detectChanges();
 
-    expect(showProblem).toHaveBeenCalledWith(taken);
+    expect(showProblem).toHaveBeenCalledWith(taken, TestBed.inject(TranslocoService));
     expect(close).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(false);
   });

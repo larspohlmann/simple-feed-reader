@@ -1123,7 +1123,8 @@
   },
   "problem": {
     "not_a_feed": "No feed could be read at that address.",
-    "feed_throttled": "This site is limiting requests right now — wait a moment and try again."
+    "feed_throttled": "This site is limiting requests right now — wait a moment and try again.",
+    "label_name_taken": "You already have a label with that name."
   },
   "manage": {
     "unsubscribeTitle": "Unsubscribe",

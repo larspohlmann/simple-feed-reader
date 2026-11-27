@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NEVER, Observable, Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -47,7 +48,7 @@ describe('LabelMenuPanelComponent', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: LabelsStore, useValue: { labels } },
-        { provide: ToastService, useValue: { showProblem } },
+        { provide: ToastService, useValue: { showTranslatedProblem: showProblem } },
         { provide: ReaderApi, useValue: {} },
         { provide: SocialPostApi, useValue: {} },
       ],
@@ -157,7 +158,7 @@ describe('LabelMenuPanelComponent', () => {
     answer.error(taken);
     fixture.detectChanges();
 
-    expect(showProblem).toHaveBeenCalledWith(taken);
+    expect(showProblem).toHaveBeenCalledWith(taken, TestBed.inject(TranslocoService));
     expect(nameField(fixture)!.value).toBe('Work');
     expect(nameField(fixture)!.readOnly).toBe(false);
   });

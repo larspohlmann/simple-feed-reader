@@ -1123,7 +1123,8 @@
   },
   "problem": {
     "not_a_feed": "No se pudo leer ningún feed en esa dirección.",
-    "feed_throttled": "Este sitio está limitando las solicitudes ahora mismo; espera un momento y vuelve a intentarlo."
+    "feed_throttled": "Este sitio está limitando las solicitudes ahora mismo; espera un momento y vuelve a intentarlo.",
+    "label_name_taken": "Ya tienes un rótulo con ese nombre."
   },
   "manage": {
     "unsubscribeTitle": "Cancelar suscripción",
@@ -1917,7 +1918,7 @@
       "newLabel": "Nuevo rótulo…",
       "newLabelTitle": "Nuevo rótulo",
       "filter": "Filtrar rótulos",
-      "filterBy": "Filtrar por el rótulo «{{name}}»",
+      "filterBy": "Filtrar por el rótulo “{{name}}”",
       "more": "+{{count}} rótulos más"
     }
   },

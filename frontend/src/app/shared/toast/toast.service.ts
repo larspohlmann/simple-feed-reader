@@ -1,7 +1,8 @@
 import { Injectable, Signal, inject, signal } from '@angular/core';
 import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
-import { Problem, problemMessage } from '../../core/problem';
+import { TranslocoService } from '@jsverse/transloco';
+import { Problem, problemMessage, problemText } from '../../core/problem';
 import { ToastComponent, ToastData } from './toast.component';
 
 const DEFAULT_DURATION_MS = 6000;
@@ -95,6 +96,11 @@ export class ToastService {
 
   showProblem(problem: Problem): void {
     this.show({ message: problemMessage(problem) });
+  }
+
+  /** `showProblem` in the reader's language for a problem type `problem.<type>` translates. */
+  showTranslatedProblem(problem: Problem, i18n: TranslocoService): void {
+    this.show({ message: problemText(problem, i18n) });
   }
 
   dismiss(): void {

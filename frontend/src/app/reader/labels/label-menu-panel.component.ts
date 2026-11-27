@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem } from '../../core/problem';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.component';
@@ -38,6 +38,7 @@ export class LabelMenuPanelComponent {
   readonly row = input.required<LabelledRow>();
 
   private readonly toast = inject(ToastService);
+  private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
   private readonly labels = inject(LabelsStore).labels;
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
@@ -89,7 +90,7 @@ export class LabelMenuPanelComponent {
         },
         error: (problem: Problem) => {
           this.saving.set(false);
-          this.toast.showProblem(problem);
+          this.toast.showTranslatedProblem(problem, this.i18n);
         },
       });
   }

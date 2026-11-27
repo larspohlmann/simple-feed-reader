@@ -2,6 +2,8 @@ import { ApplicationRef, ChangeDetectionStrategy, Component } from '@angular/cor
 import { TestBed } from '@angular/core/testing';
 import { NoopScrollStrategy, OverlayContainer } from '@angular/cdk/overlay';
 import { Dialog } from '@angular/cdk/dialog';
+import { TranslocoService } from '@jsverse/transloco';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from './toast.service';
 
 describe('ToastService', () => {
@@ -9,7 +11,7 @@ describe('ToastService', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
     toast = TestBed.inject(ToastService);
     container = TestBed.inject(OverlayContainer).getContainerElement();
   });
@@ -41,6 +43,20 @@ describe('ToastService', () => {
     toast.show({ message: 'Refresh finished' });
     tick();
     expect(element()!.textContent).toContain('Refresh finished');
+  });
+
+  it('renders a problem in the reader’s language where its type is translated (#2581)', () => {
+    const i18n = TestBed.inject(TranslocoService);
+    toast.showTranslatedProblem({ type: 'label_name_taken', title: 'Taken', status: 409 }, i18n);
+    tick();
+    expect(element()!.textContent).toContain('You already have a label with that name.');
+
+    toast.showTranslatedProblem(
+      { type: 'x', title: 'Refused', status: 409, detail: 'No boosts' },
+      i18n,
+    );
+    tick();
+    expect(element()!.textContent).toContain('No boosts');
   });
 
   it("renders a problem's own message", () => {

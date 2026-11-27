@@ -1123,7 +1123,8 @@
   },
   "problem": {
     "not_a_feed": "Unter dieser Adresse ließ sich kein Feed lesen.",
-    "feed_throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut."
+    "feed_throttled": "Diese Seite begrenzt gerade die Anfragen – warte einen Moment und versuche es erneut.",
+    "label_name_taken": "Du hast schon ein Label mit diesem Namen."
   },
   "manage": {
     "unsubscribeTitle": "Abbestellen",
