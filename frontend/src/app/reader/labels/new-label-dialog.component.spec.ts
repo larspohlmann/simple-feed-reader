@@ -2,14 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { anEntry } from '../../../testing/entry-testing';
 import { Problem } from '../../core/problem';
 import { ToastService } from '../../shared/toast/toast.service';
-import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
+import { LabelledRow } from './labelled-row';
 import { NewLabelDialogComponent } from './new-label-dialog.component';
 
 describe('NewLabelDialogComponent', () => {
-  const entry = anEntry();
   let close: jest.Mock;
   let createLabel: jest.Mock;
   let showProblem: jest.Mock;
@@ -23,7 +21,7 @@ describe('NewLabelDialogComponent', () => {
         { provide: DialogRef, useValue: { close } },
         {
           provide: DIALOG_DATA,
-          useValue: { entry, actions: { createLabel } as unknown as EntryActionHandler },
+          useValue: { row: { createLabel } as unknown as LabelledRow },
         },
         { provide: ToastService, useValue: { showProblem } },
       ],
@@ -48,7 +46,7 @@ describe('NewLabelDialogComponent', () => {
 
     submit(fixture, ' Work ');
 
-    expect(createLabel).toHaveBeenCalledWith(entry, 'Work');
+    expect(createLabel).toHaveBeenCalledWith('Work');
     expect(close).toHaveBeenCalled();
   });
 

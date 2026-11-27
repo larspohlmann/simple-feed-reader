@@ -1,3 +1,6 @@
+/** The longest label name the server stores. */
+export const LABEL_NAME_MAX = 60;
+
 /** A label as an entry row carries it. */
 export interface LabelPill {
   id: number;

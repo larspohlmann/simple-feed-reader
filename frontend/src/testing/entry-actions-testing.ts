@@ -7,6 +7,9 @@ import { provideRouteListForTest } from './list-context-testing';
 export function provideEntryActionsContext(selection?: Signal<Selection>): Provider[] {
   return [
     ...provideRouteListForTest({}, selection),
-    { provide: LabelMenu, useValue: { open: () => undefined } },
+    {
+      provide: LabelMenu,
+      useValue: { open: () => undefined, isOpenAt: () => false, closeWithin: () => undefined },
+    },
   ];
 }

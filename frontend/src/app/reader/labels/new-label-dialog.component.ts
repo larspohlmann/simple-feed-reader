@@ -8,12 +8,11 @@ import { ButtonComponent } from '../../shared/button/button.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { ToastService } from '../../shared/toast/toast.service';
-import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { EntryDto } from '../models';
+import { LabelledRow } from './labelled-row';
+import { LABEL_NAME_MAX } from './labels.models';
 
 export interface NewLabelDialogData {
-  entry: EntryDto;
-  actions: EntryActionHandler;
+  row: LabelledRow;
 }
 
 /** The coarse-pointer label sheet's "New label…": names a label, creates it and puts it on the entry. A taken name
@@ -37,14 +36,18 @@ export class NewLabelDialogComponent {
   private readonly toast = inject(ToastService);
 
   readonly form = inject(NonNullableFormBuilder).group({
-    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(60)]],
+    name: [
+      '',
+      [Validators.required, Validators.pattern(/\S/), Validators.maxLength(LABEL_NAME_MAX)],
+    ],
   });
   protected readonly saving = signal(false);
+  protected readonly nameMax = LABEL_NAME_MAX;
 
   create(): void {
     if (this.form.invalid || this.saving()) return;
     this.saving.set(true);
-    this.data.actions.createLabel(this.data.entry, this.form.getRawValue().name.trim()).subscribe({
+    this.data.row.createLabel(this.form.getRawValue().name.trim()).subscribe({
       complete: () => this.ref.close(),
       error: (problem: Problem) => {
         this.saving.set(false);

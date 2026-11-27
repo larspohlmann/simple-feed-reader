@@ -1438,8 +1438,11 @@ above them from nine labels on, and a "New label…" item that turns into a name
 field (Enter creates and attaches; a taken name toasts and keeps the field). On
 a coarse pointer it opens the `<app-action-sheet>` with an `ActionSheetCheck` per
 label and a "New label…" action that opens `NewLabelDialogComponent` in
-`<app-overlay-panel>`. Every box reads the entry's row in `EntryRowCache`, so it
-follows each toggle at once. `actions` is the caller's `EntryActionHandler`: the
+`<app-overlay-panel>`. Every box reads the entry's row in `EntryRowCache`
+through a `LabelledRow`, which keeps the last row seen and lays the menu's own
+toggles over it, so a row that leaves a label's list still shows and re-takes its
+labels. A row's `app-entry-actions` closes the popover when it leaves the page
+(`closeWithin`), so the menu never floats over a gone trigger. `actions` is the caller's `EntryActionHandler`: the
 menu renders outside the trigger's injector.
 
 **Not for:** tags — a feed's tags are edited in its own dialog.
@@ -1748,20 +1751,15 @@ child to choke on where the component lands inside a `<p>`.
 | `entry` | `EntryDto` (required) | — |
 | `size` | `'sm' \| 'md'` | `'sm'` |
 | `labelMenu` | `'list' \| 'article'` | `'list'` — where the label button goes (#2581) |
+| `audio` | `boolean` | `true` — off where the host has its own listen controls |
+| `like` | `boolean` | `true` — off where another row carries the like |
 
-| Output | Type | Fires |
-|---|---|---|
-| `favorite` | `output<EntryDto>` | the favorite button is pressed |
-| `keep` | `output<EntryDto>` | the keep button is pressed |
-| `read` | `output<EntryDto>` | the mark-read button is pressed |
+It has no outputs: every button calls the `EntryActionHandler` in its injector
+(the reader shell's `EntryStateActions`, or a host that provides its own, as
+`entry-duplicates` does for its copies).
 
 ```html
-<app-entry-actions
-  [entry]="entry()"
-  (favorite)="favorite.emit($event)"
-  (keep)="keep.emit($event)"
-  (read)="read.emit($event)"
-/>
+<app-entry-actions [entry]="entry()" [size]="size()" [like]="false" />
 ```
 
 Clicks stop propagating: the card around the buttons is itself clickable, and
@@ -1772,8 +1770,10 @@ glyph while on; the tick has no hollow form. The reader view's article row is
 this component at `size="md"`, and its toolbar Keep/Favorite reuse the same
 directive, so every keep and favourite toggle in the app looks the same.
 
-The label button (glyph `label`, filled while the entry carries a label) opens
-the label menu through the `LabelMenu` service. It has two placements: with
+The label button (glyph `label`, accent and filled while the entry carries a
+label) opens the label menu through the `LabelMenu` service. It is a menu
+button, not a toggle: it carries the `flag-toggle` look as a plain class, with
+`aria-haspopup="menu"` and `aria-expanded`, never `aria-pressed`. It has two placements: with
 `labelMenu="list"` (list rows and compact magazine tiles) it leads the star, and
 only in Favorites or Kept; with `labelMenu="article"` (the reader view's action
 row) it follows the tick whenever the entry is a favorite or kept.

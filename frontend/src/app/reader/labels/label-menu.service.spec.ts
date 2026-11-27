@@ -18,6 +18,7 @@ import { LabelsStore } from './labels.store';
 import { LabelTally } from './labels.models';
 import { LabelMenu } from './label-menu.service';
 import { NewLabelDialogComponent } from './new-label-dialog.component';
+import { LabelledRow } from './labelled-row';
 
 const tally = (id: number, name: string): LabelTally => ({
   id,
@@ -78,6 +79,33 @@ describe('LabelMenu', () => {
     expect(document.activeElement).toBe(anchor);
   });
 
+  it('says it is open at its trigger until it closes', () => {
+    const menu = TestBed.inject(LabelMenu);
+    expect(menu.isOpenAt(anchor)).toBe(false);
+
+    menu.open(anEntry(), anchor, handler());
+    expect(menu.isOpenAt(anchor)).toBe(true);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(menu.isOpenAt(anchor)).toBe(false);
+  });
+
+  it('closes when the row holding its trigger leaves the page, and only then', () => {
+    const menu = TestBed.inject(LabelMenu);
+    const row = document.createElement('div');
+    row.appendChild(anchor);
+    document.body.appendChild(row);
+    menu.open(anEntry(), anchor, handler());
+
+    menu.closeWithin(document.createElement('div'));
+    expect(panel()).not.toBeNull();
+
+    menu.closeWithin(row);
+    expect(panel()).toBeNull();
+    expect(menu.isOpenAt(anchor)).toBe(false);
+    row.remove();
+  });
+
   describe('on a coarse pointer', () => {
     beforeEach(() => coarse.set(true));
 
@@ -107,7 +135,17 @@ describe('LabelMenu', () => {
       checks()[1].toggle();
 
       expect(actions.attachLabel).toHaveBeenCalledWith(entry, { id: 1, name: 'Home' });
-      expect(actions.detachLabel).toHaveBeenCalledWith(entry, { id: 2, name: 'Work' });
+      expect(actions.detachLabel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: entry.id,
+          labels: [
+            { id: 1, name: 'Home' },
+            { id: 2, name: 'Work' },
+          ],
+        }),
+        { id: 2, name: 'Work' },
+      );
+      expect(checks().map((check) => check.checked())).toEqual([true, false]);
     });
 
     it('opens the new-label dialog from its New label action', () => {
@@ -124,7 +162,10 @@ describe('LabelMenu', () => {
 
       expect(dialog.open).toHaveBeenCalledWith(
         NewLabelDialogComponent,
-        expect.objectContaining({ panelClass: 'app-dialog', data: { entry, actions: handler() } }),
+        expect.objectContaining({
+          panelClass: 'app-dialog',
+          data: { row: expect.any(LabelledRow) },
+        }),
       );
     });
   });

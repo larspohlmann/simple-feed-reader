@@ -23,7 +23,12 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { LayoutService } from '../../layout.service';
 import { byLabelName } from '../../labels/label-order';
-import { LabelCollection, LabelFilter, LabelTally } from '../../labels/labels.models';
+import {
+  LABEL_NAME_MAX,
+  LabelCollection,
+  LabelFilter,
+  LabelTally,
+} from '../../labels/labels.models';
 import { LabelsStore } from '../../labels/labels.store';
 import { Selection, SelectionOf, SelectionParams, selectionQueryParams } from '../../query/query';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -73,6 +78,7 @@ export class SidebarCollectionComponent {
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly labelNameMax = LABEL_NAME_MAX;
 
   protected readonly open = persistedToggle(
     () => `sfr.sidebar.${this.collection()}.collapsed`,

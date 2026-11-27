@@ -13,6 +13,7 @@ import { Problem } from '../../core/problem';
 import { LabelsStore } from './labels.store';
 import { LabelPill, LabelTally } from './labels.models';
 import { LabelMenuPanelComponent } from './label-menu-panel.component';
+import { LabelledRow } from './labelled-row';
 
 const tally = (id: number, name: string): LabelTally => ({
   id,
@@ -55,8 +56,11 @@ describe('LabelMenuPanelComponent', () => {
 
   function mount(entry: EntryDto): ComponentFixture<LabelMenuPanelComponent> {
     const fixture = TestBed.createComponent(LabelMenuPanelComponent);
-    fixture.componentRef.setInput('entry', entry);
-    fixture.componentRef.setInput('actions', actions as unknown as EntryActionHandler);
+    const rows = TestBed.inject(EntryRowCache);
+    fixture.componentRef.setInput(
+      'row',
+      new LabelledRow(rows, entry, actions as unknown as EntryActionHandler),
+    );
     fixture.detectChanges();
     return fixture;
   }
@@ -123,6 +127,17 @@ describe('LabelMenuPanelComponent', () => {
     expect(newLabelItem(fixture)).not.toBeNull();
   });
 
+  it('hands focus to New label once the label is made, so the keys keep reaching the menu', () => {
+    const fixture = mount(anEntry());
+    document.body.appendChild(fixture.nativeElement);
+
+    typeNewLabel(fixture, 'Work trips');
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(newLabelItem(fixture));
+    fixture.nativeElement.remove();
+  });
+
   it('creates nothing from a blank name', () => {
     const fixture = mount(anEntry());
 
@@ -173,6 +188,34 @@ describe('LabelMenuPanelComponent', () => {
     fixture.detectChanges();
 
     expect(boxNames(fixture)).toEqual(['Work']);
+  });
+
+  describe('on a row that leaves its label’s list while the menu is up (#2581)', () => {
+    it('keeps the last row seen, so the untick stays and a re-tick attaches again', () => {
+      const rows = TestBed.inject(EntryRowCache);
+      const row = anEntry({ id: 52, labels: [{ id: 1, name: 'Home' }] });
+      rows.cached([row]);
+      rows.hold(rows, new Set([row.id]));
+      actions.detachLabel.mockImplementation((entry: EntryDto, label: LabelPill) =>
+        rows.detachLabel(entry.id, label, NEVER).subscribe(),
+      );
+      const fixture = mount(row);
+
+      boxes(fixture)[0].dispatchEvent(new Event('change'));
+      rows.release(rows);
+      fixture.detectChanges();
+      expect(rows.entry(row.id)).toBeNull();
+      expect(boxes(fixture)[0].checked).toBe(false);
+
+      boxes(fixture)[0].dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(actions.attachLabel).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 52, labels: [] }),
+        { id: 1, name: 'Home' },
+      );
+      expect(boxes(fixture)[0].checked).toBe(true);
+    });
   });
 
   describe('on an article opened outside any list (#2581)', () => {

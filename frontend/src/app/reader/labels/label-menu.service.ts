@@ -1,9 +1,9 @@
-import { Injectable, Injector, computed, inject } from '@angular/core';
+import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
-import { Overlay } from '@angular/cdk/overlay';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { TranslocoService } from '@jsverse/transloco';
-import { filter, merge, takeUntil } from 'rxjs';
+import { filter, finalize, merge, take, takeUntil } from 'rxjs';
 import {
   ACTION_SHEET_DIVIDER,
   ActionSheetCheck,
@@ -16,9 +16,9 @@ import { LayoutService } from '../layout.service';
 import { EntryDto } from '../models';
 import { EntryRowCache } from '../state/entry-row-cache';
 import { LabelMenuPanelComponent } from './label-menu-panel.component';
-import { carriesLabel, toLabelPill, toggleLabel } from './label-toggle';
+import { LabelledRow, toLabelPill } from './labelled-row';
 import { LabelsStore } from './labels.store';
-import { NewLabelDialogComponent, NewLabelDialogData } from './new-label-dialog.component';
+import { NewLabelDialogComponent } from './new-label-dialog.component';
 
 const NEW_LABEL = 'new';
 
@@ -34,13 +34,29 @@ export class LabelMenu {
   private readonly rows = inject(EntryRowCache);
   private readonly transloco = inject(TranslocoService);
   private readonly injector = inject(Injector);
+  private readonly openAnchor = signal<HTMLElement | null>(null);
+  private popover: OverlayRef | null = null;
 
   open(entry: EntryDto, anchor: HTMLElement, actions: EntryActionHandler): void {
-    if (this.layout.isCoarse()) this.openSheet(entry, actions);
-    else this.openPopover(entry, anchor, actions);
+    this.popover?.dispose();
+    const row = new LabelledRow(this.rows, entry, actions);
+    this.openAnchor.set(anchor);
+    if (this.layout.isCoarse()) this.openSheet(row);
+    else this.openPopover(row, anchor);
   }
 
-  private openPopover(entry: EntryDto, anchor: HTMLElement, actions: EntryActionHandler): void {
+  isOpenAt(anchor: HTMLElement): boolean {
+    return this.openAnchor() === anchor;
+  }
+
+  /** Closes the popover when its trigger lies within `host`, which is leaving the page: a row that leaves its label's
+   *  list takes its menu with it rather than leaving it floating at nothing. */
+  closeWithin(host: HTMLElement): void {
+    const anchor = this.openAnchor();
+    if (anchor !== null && host.contains(anchor)) this.popover?.dispose();
+  }
+
+  private openPopover(row: LabelledRow, anchor: HTMLElement): void {
     const popover = this.overlay.create({
       positionStrategy: this.overlay
         .position()
@@ -53,9 +69,10 @@ export class LabelMenu {
       backdropClass: 'cdk-overlay-transparent-backdrop',
       disposeOnNavigation: true,
     });
-    const panel = popover.attach(new ComponentPortal(LabelMenuPanelComponent, null, this.injector));
-    panel.setInput('entry', entry);
-    panel.setInput('actions', actions);
+    popover
+      .attach(new ComponentPortal(LabelMenuPanelComponent, null, this.injector))
+      .setInput('row', row);
+    this.popover = popover;
     merge(
       popover.backdropClick(),
       popover.keydownEvents().pipe(filter((event) => event.key === 'Escape')),
@@ -65,17 +82,20 @@ export class LabelMenu {
         popover.dispose();
         anchor.focus({ preventScroll: true });
       });
+    popover
+      .detachments()
+      .pipe(take(1))
+      .subscribe(() => this.forget(popover, anchor));
   }
 
-  private openSheet(entry: EntryDto, actions: EntryActionHandler): void {
-    const shown = computed(() => this.rows.entry(entry.id) ?? entry);
+  private openSheet(row: LabelledRow): void {
     const checks = this.labels.labels().map((tally): ActionSheetCheck => {
       const label = toLabelPill(tally);
       return {
         id: `label-${label.id}`,
         label: label.name,
-        checked: computed(() => carriesLabel(shown(), label.id)),
-        toggle: () => toggleLabel(actions, shown(), label),
+        checked: computed(() => row.carries(label.id)),
+        toggle: () => row.toggle(label),
       };
     });
     const items: ActionSheetItem[] = [
@@ -83,14 +103,21 @@ export class LabelMenu {
       ...(checks.length > 0 ? [ACTION_SHEET_DIVIDER] : []),
       { id: NEW_LABEL, label: this.transloco.translate('reader.labels.newLabel'), symbol: 'add' },
     ];
+    const anchor = this.openAnchor();
     this.sheet
       .open({ title: this.transloco.translate('reader.labels.menu'), actions: items })
+      .pipe(finalize(() => this.forget(null, anchor)))
       .subscribe((choice) => {
-        if (choice === NEW_LABEL) this.openNewLabelDialog({ entry: shown(), actions });
+        if (choice === NEW_LABEL) this.openNewLabelDialog(row);
       });
   }
 
-  private openNewLabelDialog(data: NewLabelDialogData): void {
-    this.dialog.open(NewLabelDialogComponent, { panelClass: 'app-dialog', data });
+  private openNewLabelDialog(row: LabelledRow): void {
+    this.dialog.open(NewLabelDialogComponent, { panelClass: 'app-dialog', data: { row } });
+  }
+
+  private forget(popover: OverlayRef | null, anchor: HTMLElement | null): void {
+    if (popover !== null && this.popover === popover) this.popover = null;
+    if (this.openAnchor() === anchor) this.openAnchor.set(null);
   }
 }

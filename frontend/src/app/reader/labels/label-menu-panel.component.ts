@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -16,12 +18,9 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.component';
 import { stepMenu } from '../../shared/menu-keys';
 import { ToastService } from '../../shared/toast/toast.service';
-import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { EntryDto } from '../models';
-import { EntryRowCache } from '../state/entry-row-cache';
 import { LabelsStore } from './labels.store';
-import { LabelTally } from './labels.models';
-import { toLabelPill, toggleLabel } from './label-toggle';
+import { LABEL_NAME_MAX, LabelTally } from './labels.models';
+import { LabelledRow, toLabelPill } from './labelled-row';
 
 const MOST_LABELS_UNFILTERED = 8;
 
@@ -36,18 +35,23 @@ const MOST_LABELS_UNFILTERED = 8;
   host: { '(keydown)': 'step($event)' },
 })
 export class LabelMenuPanelComponent {
-  readonly entry = input.required<EntryDto>();
-  readonly actions = input.required<EntryActionHandler>();
+  readonly row = input.required<LabelledRow>();
 
-  private readonly rows = inject(EntryRowCache);
   private readonly toast = inject(ToastService);
+  private readonly injector = inject(Injector);
   private readonly labels = inject(LabelsStore).labels;
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
+  private readonly newLabelItem = viewChild<ElementRef<HTMLButtonElement>>('newLabelItem');
 
-  private readonly shown = computed(() => this.rows.entry(this.entry().id) ?? this.entry());
-  protected readonly checkedIds = computed(
-    () => new Set(this.shown().labels.map((label) => label.id)),
-  );
+  protected readonly nameMax = LABEL_NAME_MAX;
+  protected readonly checkedIds = computed(() => {
+    const row = this.row();
+    return new Set(
+      this.labels()
+        .filter((label) => row.carries(label.id))
+        .map((label) => label.id),
+    );
+  });
   protected readonly filterable = computed(() => this.labels().length > MOST_LABELS_UNFILTERED);
   protected readonly query = signal('');
   protected readonly listed = computed(() => {
@@ -66,19 +70,22 @@ export class LabelMenuPanelComponent {
   }
 
   protected toggle(label: LabelTally): void {
-    toggleLabel(this.actions(), this.shown(), toLabelPill(label));
+    this.row().toggle(toLabelPill(label));
   }
 
   protected create(name: string): void {
     const trimmed = name.trim();
     if (trimmed === '' || this.saving()) return;
     this.saving.set(true);
-    this.actions()
-      .createLabel(this.shown(), trimmed)
+    this.row()
+      .createLabel(trimmed)
       .subscribe({
         complete: () => {
           this.saving.set(false);
           this.naming.set(false);
+          afterNextRender(() => this.newLabelItem()?.nativeElement.focus(), {
+            injector: this.injector,
+          });
         },
         error: (problem: Problem) => {
           this.saving.set(false);

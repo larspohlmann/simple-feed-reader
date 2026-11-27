@@ -40,7 +40,7 @@
               #renameField
               class="name rename"
               type="text"
-              maxlength="60"
+              [maxLength]="labelNameMax"
               [value]="label.name"
               [attr.aria-label]="'reader.labels.nameField' | transloco"
               (keydown.enter)="saveRename(label, renameField.value)"

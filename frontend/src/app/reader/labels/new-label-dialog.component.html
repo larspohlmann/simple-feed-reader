@@ -1,7 +1,7 @@
 <form [formGroup]="form" (ngSubmit)="create()" cdkTrapFocus>
   <app-overlay-panel [heading]="'reader.labels.newLabelTitle' | transloco">
     <app-field [label]="'reader.labels.nameField' | transloco">
-      <input id="new-label-name" formControlName="name" maxlength="60" cdkFocusInitial />
+      <input id="new-label-name" formControlName="name" [maxLength]="nameMax" cdkFocusInitial />
     </app-field>
 
     <app-button footer (click)="ref.close()">

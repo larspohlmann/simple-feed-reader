@@ -34,14 +34,14 @@
       #nameField
       class="new-label"
       type="text"
-      maxlength="60"
+      [maxLength]="nameMax"
       [readOnly]="saving()"
       [placeholder]="'reader.labels.nameField' | transloco"
       [attr.aria-label]="'reader.labels.nameField' | transloco"
       (keydown.enter)="create(nameField.value)"
     />
   } @else {
-    <button role="menuitem" type="button" (click)="naming.set(true)">
+    <button #newLabelItem role="menuitem" type="button" (click)="naming.set(true)">
       <app-icon name="add" size="sm" />
       {{ 'reader.labels.newLabel' | transloco }}
     </button>

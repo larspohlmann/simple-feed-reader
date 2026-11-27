@@ -109,10 +109,12 @@
   <button
     #labelTrigger
     type="button"
+    class="flag-toggle"
     aria-haspopup="menu"
+    [attr.aria-expanded]="labelPicker.isOpenAt(labelTrigger)"
     [attr.aria-label]="'reader.labels.menu' | transloco"
     [attr.title]="'reader.labels.menu' | transloco"
-    [appFlagToggle]="entry().labels.length > 0"
+    [class.on]="entry().labels.length > 0"
     (click)="$event.stopPropagation(); labelPicker.open(entry(), labelTrigger, actions)"
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"

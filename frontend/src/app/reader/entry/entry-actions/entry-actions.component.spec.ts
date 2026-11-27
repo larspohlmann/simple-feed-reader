@@ -124,12 +124,12 @@ const episode = (): EntryDto =>
 describe('EntryActionsComponent', () => {
   let player: StubAudioPlayer;
   let selection: ReturnType<typeof signal<Selection>>;
-  let labelMenu: { open: jest.Mock };
+  let labelMenu: { open: jest.Mock; isOpenAt: jest.Mock; closeWithin: jest.Mock };
 
   beforeEach(() => {
     player = new StubAudioPlayer();
     selection = signal<Selection>({ kind: 'all', unread: false });
-    labelMenu = { open: jest.fn() };
+    labelMenu = { open: jest.fn(), isOpenAt: jest.fn(() => false), closeWithin: jest.fn() };
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
       providers: [
@@ -198,6 +198,43 @@ describe('EntryActionsComponent', () => {
 
       expect(fill(anEntry({ isFavorite: true, labels: [] }))).toBe(false);
       expect(fill(anEntry({ isFavorite: true, labels: [{ id: 1, name: 'Work' }] }))).toBe(true);
+    });
+
+    it('is a menu button that says whether its menu is open, never a pressed toggle', () => {
+      selection.set({ kind: 'favorites' });
+      const fixture = mount(anEntry({ isFavorite: true, labels: [{ id: 1, name: 'Work' }] }));
+      const [button] = buttons(fixture);
+      expect(button.getAttribute('aria-haspopup')).toBe('menu');
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(button.hasAttribute('aria-pressed')).toBe(false);
+      expect(button.classList).toContain('flag-toggle');
+      expect(button.classList).toContain('on');
+
+      labelMenu.isOpenAt.mockImplementation((anchor: HTMLElement) => anchor === button);
+      fixture.componentInstance.entry = { ...fixture.componentInstance.entry };
+      fixture.detectChanges();
+
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('closes its menu when the row leaves the page', () => {
+      selection.set({ kind: 'favorites' });
+      const fixture = mount(anEntry({ isFavorite: true }));
+      const host = fixture.nativeElement.querySelector('app-entry-actions');
+
+      fixture.destroy();
+
+      expect(labelMenu.closeWithin).toHaveBeenCalledWith(host);
+    });
+
+    it('stays out of a Trending story’s list', () => {
+      selection.set({ kind: 'trending-story', id: 7, unread: false });
+
+      expect(
+        buttons(mount(anEntry({ isFavorite: true }))).map((button) =>
+          button.getAttribute('aria-label'),
+        ),
+      ).not.toContain('Labels');
     });
 
     it('opens the menu at itself with the handler, by click, Enter or Space, without opening the card', () => {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, input } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -66,4 +66,9 @@ export class EntryActionsComponent {
   protected readonly labelsFollowTick = computed(
     () => this.labelMenu() === 'article' && (this.entry().isFavorite || this.entry().isKept),
   );
+
+  constructor() {
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    inject(DestroyRef).onDestroy(() => this.labelPicker.closeWithin(host));
+  }
 }
