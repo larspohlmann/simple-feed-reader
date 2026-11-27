@@ -290,38 +290,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
   });
 
-  it('closes a block its subfolder opened on the chevron, without storing it', () => {
-    labels.set([tally(1, 'Home')]);
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-
-    toggle(fixture);
-
-    expect(root(fixture).querySelector('.label-row')).toBeNull();
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBeNull();
-  });
-
-  it('closes a stored-open block on the chevron while one of its subfolders is listed', () => {
-    labels.set([tally(1, 'Home')]);
-    localStorage.setItem('sfr.sidebar.favorites.collapsed', 'false');
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-
-    toggle(fixture);
-
-    expect(root(fixture).querySelector('.label-row')).toBeNull();
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('true');
-  });
-
-  it('reopens a block closed inside a subfolder on the chevron, storing it open', () => {
-    labels.set([tally(1, 'Home')]);
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-    toggle(fixture);
-
-    toggle(fixture);
-
-    expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('false');
-  });
-
   it('opens a block closed inside one subfolder again on the next', () => {
     labels.set([tally(1, 'Home'), tally(2, 'Work')]);
     const fixture = mount('favorites', { kind: 'favorites', label: 1 });

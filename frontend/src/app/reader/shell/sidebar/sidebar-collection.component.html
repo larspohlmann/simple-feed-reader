@@ -1,5 +1,5 @@
 @let hasFolders = folders().length > 0;
-@let shown = hasFolders && expanded();
+@let shown = hasFolders && folder.expanded();
 <div class="folder-head collection-head" [class.current]="headCurrent()">
   <a
     class="section-link"
@@ -20,7 +20,7 @@
       type="button"
       [attr.aria-expanded]="shown"
       [attr.aria-label]="toggleLabel() | transloco"
-      (click)="toggleExpanded()"
+      (click)="folder.toggle()"
     >
       <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
     </button>

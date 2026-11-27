@@ -1,15 +1,8 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  linkedSignal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
-import { persistedToggle } from '../../../core/preferences/persisted-toggle';
+import { folderToggle } from '../../../core/preferences/folder-toggle';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
@@ -43,29 +36,11 @@ export class SidebarViewsComponent {
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly forYouStream = input<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY);
 
-  protected readonly open = persistedToggle(() => 'sfr.sidebar.all-items.collapsed', 'collapsed');
-  protected readonly childActive = computed(() =>
+  private readonly childActive = computed(() =>
     ['viewed', 'liked', 'shared'].includes(this.selection().kind),
   );
-
-  /** Set by the chevron, cleared on entering or leaving a child: a folder opened only by its current child still closes. */
-  private readonly collapsedHere = linkedSignal({
-    source: this.childActive,
-    computation: () => false,
-  });
-
-  /** Following a child view opens the folder; the stored collapse stays. */
-  protected readonly expanded = computed(
-    () => !this.collapsedHere() && (this.open.expanded() || this.childActive()),
+  protected readonly folder = folderToggle(
+    () => 'sfr.sidebar.all-items.collapsed',
+    this.childActive,
   );
-
-  protected toggleExpanded(): void {
-    if (this.expanded()) {
-      if (this.open.expanded()) this.open.toggle();
-      this.collapsedHere.set(true);
-      return;
-    }
-    this.collapsedHere.set(false);
-    this.open.open();
-  }
 }

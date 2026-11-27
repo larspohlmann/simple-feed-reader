@@ -17,14 +17,14 @@
       <button
         class="chevzone"
         type="button"
-        [attr.aria-expanded]="expanded()"
+        [attr.aria-expanded]="folder.expanded()"
         [attr.aria-label]="'reader.toggleAllItems' | transloco"
-        (click)="toggleExpanded()"
+        (click)="folder.toggle()"
       >
-        <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+        <app-icon [name]="folder.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
       </button>
     </div>
-    @if (expanded()) {
+    @if (folder.expanded()) {
       <div class="sublist">
         <a
           class="nav"
