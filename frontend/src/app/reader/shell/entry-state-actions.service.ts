@@ -6,7 +6,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { StateSaveOutcome } from '../state/entries.store';
-import { EntryRowCache, SocialActOutcome, localStatePatch } from '../state/entry-row-cache';
+import {
+  EntryRowCache,
+  SocialActOutcome,
+  buildLikePatch,
+  buildVotePatch,
+  localStatePatch,
+} from '../state/entry-row-cache';
+import { RowPatch } from '../state/in-flight-patches';
 import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -14,7 +21,7 @@ import { Selection } from '../query/query';
 import { entryParam } from '../query/slug';
 import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
-import { isEntryLiked } from '../entry-social';
+import { isEntryLiked, isLikedAnyWay } from '../entry-social';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
@@ -86,14 +93,12 @@ export class EntryStateActions implements EntryActionHandler {
 
   like(entry: EntryDto): Observable<void> {
     const isLiked = !isEntryLiked(entry);
-    return this.rows.setLiked(entry, isLiked, this.buildLikedMove(entry, isLiked));
+    const move = this.buildLikedMove(entry, buildLikePatch(entry, isLiked));
+    return this.rows.setLiked(entry, isLiked, move);
   }
 
   vote(entry: EntryDto, to: VoteValue): Observable<void> {
-    const isUp = to === 1;
-    const wasLiked = entry.myVote === 1 || entry.isLiked;
-    const outcome = wasLiked === isUp ? this.failureToast() : this.buildLikedMove(entry, isUp);
-    return this.rows.setVote(entry, to, outcome);
+    return this.rows.setVote(entry, to, this.buildLikedMove(entry, buildVotePatch(to)));
   }
 
   keep(entry: EntryDto): void {
@@ -182,27 +187,25 @@ export class EntryStateActions implements EntryActionHandler {
     this.markOpenedViewed(entry);
   };
 
-  /** Counts the entry into or out of Liked once the change goes out, and out of the Liked list on screen; a failure
-   *  takes both back. */
-  private buildLikedMove(entry: EntryDto, joins: boolean): SocialActOutcome {
-    const delta = joins ? 1 : -1;
+  /** Counts the entry into or out of Liked as `patch` moves it once the change goes out, and out of the Liked list
+   *  on screen; a failure takes both back. */
+  private buildLikedMove(entry: EntryDto, patch: RowPatch): SocialActOutcome {
+    const wasLiked = isLikedAnyWay(entry);
+    const isLiked = isLikedAnyWay({ ...entry, ...patch });
+    const delta = Number(isLiked) - Number(wasLiked);
     const list = this.list();
-    const leaves = !joins && list.selection().kind === 'liked';
+    const leaves = delta < 0 && list.selection().kind === 'liked';
     return {
       onStarted: () => {
-        this.subscriptions.bumpLiked(delta);
+        if (delta !== 0) this.subscriptions.bumpLiked(delta);
         if (leaves) list.markLeaving(entry.id);
       },
       onFailed: (problem) => {
-        this.subscriptions.bumpLiked(-delta);
+        if (delta !== 0) this.subscriptions.bumpLiked(-delta);
         if (leaves) list.stayInList(entry.id);
         this.toast.showProblem(problem);
       },
     };
-  }
-
-  private failureToast(): SocialActOutcome {
-    return { onFailed: (problem) => this.toast.showProblem(problem) };
   }
 
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */

@@ -65,23 +65,28 @@ export interface LikeToggle {
   target: LikeTarget;
 }
 
-/** On the post's network where the reader can like there, else kept here; null on a voted Lemmy post. */
-export function likeToggle(entry: {
+/** What of an entry says whether the reader likes it. */
+export interface LikeFacts {
   social: EntrySocialDto | null;
   isLiked: boolean;
   myVote: number | null;
-}): LikeToggle | null {
+}
+
+/** On the post's network where the reader can like there, else kept here; null on a voted Lemmy post. */
+export function likeToggle(entry: LikeFacts): LikeToggle | null {
   const social = likeableSocial(entry);
   if (social) return { isLiked: social.isLiked, target: social.network };
   return entry.myVote === null ? { isLiked: entry.isLiked, target: 'local' } : null;
 }
 
-export function isEntryLiked(entry: {
-  social: EntrySocialDto | null;
-  isLiked: boolean;
-  myVote: number | null;
-}): boolean {
+/** Whether the thumb shows the entry liked. */
+export function isEntryLiked(entry: LikeFacts): boolean {
   return likeToggle(entry)?.isLiked ?? entry.isLiked;
+}
+
+/** Whether the Liked view holds the entry: a local like, a network like the reader can take back, or an up-vote. */
+export function isLikedAnyWay(entry: LikeFacts): boolean {
+  return entry.isLiked || likeableSocial(entry)?.isLiked === true || entry.myVote === 1;
 }
 
 /** The i18n key under `reader.` and `reader.actionHint.` for toggling a like on `target`. */

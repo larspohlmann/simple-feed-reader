@@ -69,6 +69,28 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
   });
 
+  it('takes the local like with a network unlike, and puts it back when that fails (#2587)', () => {
+    const failing = new Subject<never>();
+    socialPosts.unlike.mockReturnValue(failing);
+    holdEntries(buildCopy(1, null, { isLiked: true, social: { ...social, isLiked: true } }));
+
+    cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ isLiked: false }));
+
+    failing.error(new Error('no'));
+    expect(readShownEntry(1)).toEqual(
+      expect.objectContaining({ isLiked: true, social: { ...social, isLiked: true } }),
+    );
+  });
+
+  it('keeps the local like through a network like (#2587)', () => {
+    holdEntries(buildCopy(1, null, { isLiked: true }));
+
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+
+    expect(readShownEntry(1).isLiked).toBe(true);
+  });
+
   it('leaves the like count alone until the network answers', () => {
     socialPosts.like.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));

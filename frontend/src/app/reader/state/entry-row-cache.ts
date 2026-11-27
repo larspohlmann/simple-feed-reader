@@ -94,11 +94,9 @@ export class EntryRowCache {
 
   setLiked(entry: EntryDto, isLiked: boolean, outcome: SocialActOutcome): Observable<void> {
     if (this.inFlight.onTheWire(entry.id, 'social', 'isLiked')) return EMPTY;
-    const social = likeableSocial(entry);
-    const patch: RowPatch = social ? { social: { ...social, isLiked } } : { isLiked };
     outcome.onStarted?.();
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    return subscribeUntilSettled(this.optimistic(entry, patch, request$), {
+    return subscribeUntilSettled(this.optimistic(entry, buildLikePatch(entry, isLiked), request$), {
       next: (answer) => {
         if (answer.likeCount === null) return;
         this.patch(this.collectCopyIds(entry), (row) => ({
@@ -128,7 +126,7 @@ export class EntryRowCache {
     return this.changeLabel({ entryId, label, attached: false }, request$);
   }
 
-  /** The vote shows at once and replaces the entry's local like; its score waits for the answer. */
+  /** The vote shows at once; its score waits for the answer. */
   setVote(entry: EntryDto, to: VoteValue, outcome: SocialActOutcome): Observable<void> {
     if (
       entry.myVote === null ||
@@ -138,7 +136,7 @@ export class EntryRowCache {
       return EMPTY;
     outcome.onStarted?.();
     return subscribeUntilSettled(
-      this.optimistic(entry, { myVote: to, isLiked: false }, this.socialPosts.vote(entry.id, to)),
+      this.optimistic(entry, buildVotePatch(to), this.socialPosts.vote(entry.id, to)),
       {
         next: (answer) => {
           this.patch(this.collectCopyIds(entry), (row) => ({
@@ -341,6 +339,20 @@ function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
     shared.social = { ...copy.social, isLiked: patch.social.isLiked };
   }
   return shared;
+}
+
+/** The like as it shows at once: on the post's network where the reader can like there, else here. A network
+ *  unlike takes the local like with it, as the server does. */
+export function buildLikePatch(entry: EntryDto, isLiked: boolean): RowPatch {
+  const social = likeableSocial(entry);
+  if (!social) return { isLiked };
+  const networkLike = { social: { ...social, isLiked } };
+  return isLiked ? networkLike : { ...networkLike, isLiked: false };
+}
+
+/** The vote as it shows at once; it replaces the entry's local like, as the server does. */
+export function buildVotePatch(to: VoteValue): RowPatch {
+  return { myVote: to, isLiked: false };
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

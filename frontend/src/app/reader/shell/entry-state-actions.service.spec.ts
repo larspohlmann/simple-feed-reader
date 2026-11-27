@@ -143,6 +143,17 @@ describe('EntryStateActions liking (#1600)', () => {
     expect(bumpLiked.mock.calls).toEqual([[1], [-1]]);
   });
 
+  it('counts a network like of a locally liked entry nothing, and its unlike out once (#2587)', () => {
+    const network = { network: 'bluesky' as const, canLike: true, isOwn: false };
+    actions.like(anEntry({ id: 1, isLiked: true, social: { ...network, isLiked: false } }));
+    actions.like(anEntry({ id: 2, isLiked: true, social: { ...network, isLiked: true } }));
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpLiked.mock.calls).toEqual([[-1]]);
+  });
+
   it('takes the count back when the like fails', () => {
     actions.like(anEntry({ id: 1, isLiked: false }));
 
