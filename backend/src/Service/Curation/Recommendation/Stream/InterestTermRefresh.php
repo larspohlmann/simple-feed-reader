@@ -28,12 +28,16 @@ use Doctrine\ORM\EntityManagerInterface;
 /** One account's term extraction under the tick lock its recommendation and profile runs take. */
 final readonly class InterestTermRefresh
 {
+    private const string NO_STORABLE_STEMS = 'None of the terms reduces to a storable stem.';
+    private const string STORE_FAILED = 'The interest terms could not be stored.';
+
     public function __construct(
         private UserTickLock $tickLock,
         private TickLockTtl $lockTtl,
         private InterestTermRuns $runs,
         private ForYouStreamSourceRepository $sources,
         private InterestTermExtractorInterface $extractor,
+        private InterestTermStems $stems,
         private InterestTermStore $store,
         private InterestTermRarity $rarity,
         private EntityManagerInterface $entityManager,
@@ -83,9 +87,18 @@ final readonly class InterestTermRefresh
             return $this->recordInvalidReply($run, $outcome->requireUnusableReply());
         }
 
-        $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireTerms());
-        $run->complete($this->clock->now());
-        $this->entityManager->flush();
+        $stems = $this->stems->buildTermStems($outcome->requireTerms());
+        if ([] === $stems) {
+            return $this->recordInvalidReply($run, self::NO_STORABLE_STEMS);
+        }
+
+        try {
+            $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $stems);
+            $run->complete($this->clock->now());
+            $this->entityManager->flush();
+        } catch (\Throwable) {
+            return $this->strikeForStoreFailure($run);
+        }
         $this->rarity->refreshRarities($set);
 
         return InterestTermRefreshResult::Stored;
@@ -111,6 +124,21 @@ final readonly class InterestTermRefresh
         InterestTermRun $run,
         string $detail,
     ): InterestTermRefreshResult {
+        return $this->strike($run, ProviderFailedMessage::formatMessage($due->connection->getBaseUrl(), $detail));
+    }
+
+    private function strikeForStoreFailure(InterestTermRun $run): InterestTermRefreshResult
+    {
+        $saved = $this->runs->findRunningAfterFailure($run->requireId());
+        if (null === $saved) {
+            return InterestTermRefreshResult::Skipped;
+        }
+
+        return $this->strike($saved, self::STORE_FAILED);
+    }
+
+    private function strike(InterestTermRun $run, string $failureMessage): InterestTermRefreshResult
+    {
         $run->recordTransportFailure();
         if (!$run->hasExhaustedTransportRetries()) {
             $this->entityManager->flush();
@@ -118,7 +146,7 @@ final readonly class InterestTermRefresh
             return InterestTermRefreshResult::Retrying;
         }
 
-        return $this->failForProvider($due, $run, $detail);
+        return $this->fail($run, $failureMessage);
     }
 
     private function failForProvider(

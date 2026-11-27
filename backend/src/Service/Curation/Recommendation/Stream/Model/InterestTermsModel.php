@@ -8,12 +8,12 @@ use App\Enum\FeedLanguage;
 
 final readonly class InterestTermsModel
 {
-    /** @param array<string, array<string, float>> $strengthsByLanguageKey weight × rarity per stem */
+    /** @param array<string, array<array-key, float>> $strengthsByLanguageKey weight × rarity per stem */
     private function __construct(private array $strengthsByLanguageKey)
     {
     }
 
-    /** @param array<string, array<string, float>> $strengthsByLanguageKey */
+    /** @param array<string, array<array-key, float>> $strengthsByLanguageKey */
     public static function fromStrengths(array $strengthsByLanguageKey): self
     {
         return new self($strengthsByLanguageKey);

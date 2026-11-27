@@ -27,6 +27,6 @@ final readonly class ForYouStreamScorer
         }
         arsort($contributions);
 
-        return new StreamScoreModel($score, array_keys($contributions));
+        return new StreamScoreModel($score, array_map(strval(...), array_keys($contributions)));
     }
 }

@@ -67,19 +67,17 @@ final readonly class InterestTermSweep
             if (null !== $deadline && $this->clock->now() >= $deadline) {
                 break;
             }
-            $refreshed += $this->refreshSetRarities($set) ? 1 : 0;
+            $refreshed += $this->refreshSetRarities($set, $deadline) ? 1 : 0;
         }
 
         return $refreshed;
     }
 
     /** One account's failure must not cost the others their refresh. */
-    private function refreshSetRarities(InterestTermSet $set): bool
+    private function refreshSetRarities(InterestTermSet $set, ?\DateTimeImmutable $deadline): bool
     {
         try {
-            $this->rarity->refreshRarities($set);
-
-            return true;
+            return $this->rarity->refreshRarities($set, $deadline);
         } catch (\Throwable $exception) {
             $this->logger->error('Interest-term sweep: refreshing an account\'s rarities failed.', [
                 'userId' => $set->getUser()->getId(),

@@ -15,6 +15,7 @@ use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\InterestTermStems;
 use App\Service\Curation\Recommendation\Stream\InterestTermStore;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
+use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
 use App\Service\Curation\Recommendation\Stream\StreamCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StemmingWiring;
@@ -45,7 +46,6 @@ final class InterestTermStoreTest extends DbTestCase
             $this->entityManager,
             $this->termSets,
             $this->storedTerms,
-            new InterestTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
             new StreamCeiling($entries, $clock),
             $clock,
         );
@@ -59,7 +59,7 @@ final class InterestTermStoreTest extends DbTestCase
         $set = $this->store->replaceTerms(
             $this->user,
             new \DateTimeImmutable('2026-11-27T08:00:00'),
-            [$this->term('solar')],
+            $this->stemsOf('solar'),
         );
 
         self::assertSame($old->requireId(), $set->matchedUpToEntryId());
@@ -71,7 +71,7 @@ final class InterestTermStoreTest extends DbTestCase
     {
         $this->entry('old', '2026-11-27T09:00:00');
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $set = $this->store->replaceTerms($this->user, $generatedAt, [$this->term('solar')]);
+        $set = $this->store->replaceTerms($this->user, $generatedAt, $this->stemsOf('solar'));
         $this->termSets->advanceMarks([$this->user->requireId()], 42);
         $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-27T09:30:00'));
         $this->entityManager->flush();
@@ -79,7 +79,7 @@ final class InterestTermStoreTest extends DbTestCase
 
         $user = $this->entityManager->find(User::class, $this->user->requireId());
         self::assertNotNull($user);
-        $second = $this->store->replaceTerms($user, $generatedAt, [$this->term('wind')]);
+        $second = $this->store->replaceTerms($user, $generatedAt, $this->stemsOf('wind'));
 
         self::assertSame(42, $second->matchedUpToEntryId());
         self::assertNull($second->getRaritiesRefreshedAt());
@@ -92,22 +92,44 @@ final class InterestTermStoreTest extends DbTestCase
         );
     }
 
+    public function testAnOlderSweepCannotMoveTheMarkBackwards(): void
+    {
+        $this->store->replaceTerms($this->user, new \DateTimeImmutable('2026-11-27T08:00:00'), $this->stemsOf('solar'));
+        $this->termSets->advanceMarks([$this->user->requireId()], 500);
+
+        $this->termSets->advanceMarks([$this->user->requireId()], 120);
+        $this->entityManager->clear();
+
+        $set = $this->termSets->findForUser($this->requireUser());
+        self::assertSame(500, $set?->matchedUpToEntryId());
+    }
+
     public function testAnotherUsersTermsAreUntouched(): void
     {
         $other = new User('other-terms@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
         $this->entityManager->flush();
         $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $this->store->replaceTerms($other, $generatedAt, [$this->term('solar')]);
+        $this->store->replaceTerms($other, $generatedAt, $this->stemsOf('solar'));
 
-        $this->store->replaceTerms($this->user, $generatedAt, [$this->term('wind')]);
+        $this->store->replaceTerms($this->user, $generatedAt, $this->stemsOf('wind'));
 
         self::assertCount(2, $this->storedTerms->findForUser($other->requireId()));
     }
 
-    private function term(string $phrase): InterestTermModel
+    private function requireUser(): User
     {
-        return new InterestTermModel(FeedLanguage::English, $phrase, 0.8);
+        $user = $this->entityManager->find(User::class, $this->user->requireId());
+        self::assertNotNull($user);
+
+        return $user;
+    }
+
+    /** @return list<TermStemModel> */
+    private function stemsOf(string $phrase): array
+    {
+        return (new InterestTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()))
+            ->buildTermStems([new InterestTermModel(FeedLanguage::English, $phrase, 0.8)]);
     }
 
     private function entry(string $guid, string $createdAt): Entry

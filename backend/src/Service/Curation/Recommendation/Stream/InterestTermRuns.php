@@ -13,6 +13,7 @@ use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 
 /** Opens the term run an extraction records on; a run still going for this very profile is carried on. */
 final readonly class InterestTermRuns
@@ -23,8 +24,22 @@ final readonly class InterestTermRuns
         private InterestTermRunRepository $runs,
         private RecommendationRunLogRepository $logs,
         private EntityManagerInterface $entityManager,
+        private ManagerRegistry $registry,
         private NaiveUtcClock $clock,
     ) {
+    }
+
+    /** The run as last saved, after a failure that may have closed the manager; null when it is no longer running. */
+    public function findRunningAfterFailure(int $runId): ?InterestTermRun
+    {
+        if ($this->entityManager->isOpen()) {
+            $this->entityManager->clear();
+        } else {
+            $this->registry->resetManager();
+        }
+        $saved = $this->entityManager->find(InterestTermRun::class, $runId);
+
+        return RunStatus::Running === $saved?->getStatus() ? $saved : null;
     }
 
     public function openFor(DueInterestTermsModel $due): InterestTermRun

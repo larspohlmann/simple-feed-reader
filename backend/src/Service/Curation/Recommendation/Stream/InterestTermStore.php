@@ -9,7 +9,7 @@ use App\Entity\InterestTermSet;
 use App\Entity\User;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
+use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -19,17 +19,14 @@ final readonly class InterestTermStore
         private EntityManagerInterface $entityManager,
         private InterestTermSetRepository $termSets,
         private InterestTermRepository $storedTerms,
-        private InterestTermStems $stems,
         private StreamCeiling $ceiling,
         private ClockInterface $clock,
     ) {
     }
 
-    /** @param list<InterestTermModel> $terms */
-    public function replaceTerms(User $user, \DateTimeImmutable $profileGeneratedAt, array $terms): InterestTermSet
+    /** @param list<TermStemModel> $stems */
+    public function replaceTerms(User $user, \DateTimeImmutable $profileGeneratedAt, array $stems): InterestTermSet
     {
-        $stems = $this->stems->buildTermStems($terms);
-
         return $this->entityManager->wrapInTransaction(function () use (
             $user,
             $profileGeneratedAt,

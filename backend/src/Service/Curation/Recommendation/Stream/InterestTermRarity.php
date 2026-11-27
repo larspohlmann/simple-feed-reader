@@ -32,33 +32,50 @@ final readonly class InterestTermRarity
     ) {
     }
 
-    public function refreshRarities(InterestTermSet $set): void
+    /** @return bool false when the deadline cut the walk short, leaving the set unstamped for the next sweep */
+    public function refreshRarities(InterestTermSet $set, ?\DateTimeImmutable $deadline = null): bool
     {
         $userId = $set->getUser()->requireId();
         $terms = $this->storedTerms->findForUser($userId);
         $now = $this->clock->now();
-        if ($terms !== []) {
-            $this->weighTerms($userId, $terms, $now);
+        if ($terms !== [] && !$this->weighTerms($userId, $terms, $now, $deadline)) {
+            return false;
         }
         $set->recordRaritiesRefreshed($now);
         $this->entityManager->flush();
+
+        return true;
     }
 
     /** @param list<InterestTerm> $terms */
-    private function weighTerms(int $userId, array $terms, \DateTimeImmutable $now): void
-    {
-        $tally = $this->tally($userId, $now->modify(\sprintf('-%d days', self::WINDOW_DAYS)), $terms);
+    private function weighTerms(
+        int $userId,
+        array $terms,
+        \DateTimeImmutable $now,
+        ?\DateTimeImmutable $deadline,
+    ): bool {
+        $since = $now->modify(\sprintf('-%d days', self::WINDOW_DAYS));
+        $tally = $this->tally($userId, $since, $terms, $deadline);
+        if (null === $tally) {
+            return false;
+        }
 
         foreach ($terms as $term) {
             $key = InterestTermsModel::languageKey($term->getLanguage());
             $counted = max($tally->countEntries($key), self::COUNTED_ENTRIES_FLOOR);
             $term->recordRarity(log(($counted + 2) / ($tally->countDocuments($key, $term->getStem()) + 1)));
         }
+
+        return true;
     }
 
     /** @param list<InterestTerm> $terms */
-    private function tally(int $userId, \DateTimeImmutable $since, array $terms): RarityTally
-    {
+    private function tally(
+        int $userId,
+        \DateTimeImmutable $since,
+        array $terms,
+        ?\DateTimeImmutable $deadline,
+    ): ?RarityTally {
         $wanted = [];
         foreach ($terms as $term) {
             $wanted[InterestTermsModel::languageKey($term->getLanguage())][$term->getStem()] = true;
@@ -71,6 +88,9 @@ final readonly class InterestTermRarity
             foreach ($entries as $entry) {
                 $tally->count($stemming->collectStems($entry));
                 $afterId = $entry->id;
+            }
+            if (\count($entries) === self::CHUNK && null !== $deadline && $this->clock->now() >= $deadline) {
+                return null;
             }
         } while (\count($entries) === self::CHUNK);
 

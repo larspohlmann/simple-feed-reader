@@ -25,7 +25,8 @@ final class RarityTally
     {
         $key = InterestTermsModel::languageKey($entry->language);
         $this->entryCounts[$key] = ($this->entryCounts[$key] ?? 0) + 1;
-        foreach (array_keys($entry->positionWeights) as $stem) {
+        foreach (array_keys($entry->positionWeights) as $stemKey) {
+            $stem = (string) $stemKey;
             if (isset($this->wantedStemsByLanguageKey[$key][$stem])) {
                 $this->documentFrequencies[$key][$stem] = ($this->documentFrequencies[$key][$stem] ?? 0) + 1;
             }

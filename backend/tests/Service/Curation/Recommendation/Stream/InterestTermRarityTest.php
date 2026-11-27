@@ -115,6 +115,29 @@ final class InterestTermRarityTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
     }
 
+    public function testAWalkCutShortByTheDeadlineBetweenChunksLeavesTheSetUnstamped(): void
+    {
+        $this->term('solar', FeedLanguage::English);
+        $this->entries(InterestTermRarity::CHUNK + 1, FeedLanguage::English, [2 => 'solar']);
+
+        $finished = $this->rarity->refreshRarities($this->set, new \DateTimeImmutable(self::NOW));
+
+        self::assertFalse($finished);
+        self::assertNull($this->set->getRaritiesRefreshedAt());
+        self::assertSame(1.0, $this->termRarity('solar', FeedLanguage::English));
+    }
+
+    public function testAWalkWithinTheDeadlineFinishesAndStamps(): void
+    {
+        $this->term('solar', FeedLanguage::English);
+        $this->entries(InterestTermRarity::CHUNK + 1, FeedLanguage::English, [2 => 'solar']);
+
+        $finished = $this->rarity->refreshRarities($this->set, new \DateTimeImmutable(self::NOW . ' +1 second'));
+
+        self::assertTrue($finished);
+        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
+    }
+
     public function testASetWithoutTermsIsStampedAndWeighsNothing(): void
     {
         $this->entries(3, FeedLanguage::English, [1 => 'solar']);

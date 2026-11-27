@@ -59,6 +59,7 @@ final class InterestTermSetRepository extends ServiceEntityRepository
             ->update()
             ->set('s.matchedUpToEntryId', ':entryId')
             ->andWhere('IDENTITY(s.user) IN (:userIds)')
+            ->andWhere('s.matchedUpToEntryId < :entryId')
             ->setParameter('entryId', $entryId)
             ->setParameter('userIds', $userIds)
             ->getQuery()

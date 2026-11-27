@@ -65,6 +65,17 @@ final class InterestTermRefreshTest extends DbTestCase
         self::assertEquals($this->profileGeneratedAt(), $this->termSet()?->getProfileGeneratedAt());
     }
 
+    public function testATermWhoseStemsAllDropIsAnUnusableReplyThatRetriesAndStoresNothing(): void
+    {
+        $this->chat->queueContent('{"terms":[{"language":"en","term":"the","weight":8}]}');
+
+        self::assertSame(InterestTermRefreshResult::Retrying, $this->refresh->refresh($this->due()));
+
+        self::assertSame(RunStatus::Running, $this->latestRun()->getStatus());
+        self::assertSame(1, $this->latestRun()->getAttempts());
+        self::assertNull($this->termSet());
+    }
+
     public function testThreeUnusableRepliesFailTheRunAndKeepThePreviousTerms(): void
     {
         $previous = new \DateTimeImmutable('2026-10-01 06:00:00');

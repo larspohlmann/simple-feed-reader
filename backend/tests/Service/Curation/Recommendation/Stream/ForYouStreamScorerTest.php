@@ -38,6 +38,14 @@ final class ForYouStreamScorerTest extends TestCase
         self::assertSame(['grid', 'solar'], $this->scorer->findMatch($terms, $stems)?->matchedStems);
     }
 
+    public function testANumericStemComesBackAsAString(): void
+    {
+        $terms = InterestTermsModel::fromStrengths(['en' => ['2026' => 2.0]]);
+        $stems = new EntryStemsModel(FeedLanguage::English, ['2026' => 1.0]);
+
+        self::assertSame(['2026'], $this->scorer->findMatch($terms, $stems)?->matchedStems);
+    }
+
     public function testAScoreBelowTheThresholdIsNoMatch(): void
     {
         $terms = InterestTermsModel::fromStrengths(['en' => ['solar' => 1.49]]);
