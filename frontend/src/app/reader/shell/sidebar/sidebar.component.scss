@@ -117,6 +117,24 @@
   }
 }
 
+// Favorites, Kept, Followed stories and Saved searches read as one group: closer together, and
+// under the airy style only the first keeps the rule above it.
+.collections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+:host-context(.sidebar-airy) .collections {
+  --airy-card-pad-y: var(--space-2);
+
+  gap: 0;
+}
+
+:host-context(.sidebar-airy) .collections > :not(:first-child) {
+  --airy-hrule: transparent;
+}
+
 .feeds-card:not(.card) {
   display: contents;
 }

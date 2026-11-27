@@ -40,7 +40,7 @@
 
 // The airy sidebar (#2493) draws no box: a faint rule above each section.
 @mixin airy-section-rule {
-  padding-block: var(--space-3);
+  padding-block: var(--airy-card-pad-y, var(--space-3));
   border-color: var(--airy-hrule) transparent transparent;
   border-radius: 0;
   background: none;
