@@ -4,7 +4,7 @@ import type { LabelTalliesResponse } from '../src/app/reader/labels/labels.model
 import type { FollowedStoriesResponseDto } from '../src/app/reader/trending/trending.models';
 import { makeTag } from '../src/app/reader/testing/tag.factory';
 import { aSubscription } from '../src/testing/subscription-testing';
-import { ACCOUNT_PREFERENCES, presetLocalStorage, STUB_PROFILE } from './support/auth';
+import { presetLocalStorage, stubAccountProfile } from './support/auth';
 import { expectNear, measureToken } from './support/first-line';
 import { savedSearchWire, stubOneFeedReader, subscriptionsJson } from './support/reader';
 
@@ -69,28 +69,10 @@ async function stubViews(page: Page, style: SidebarStyle, { everyView }: Views):
     (route) =>
       route.fulfill({ json: everyView ? FOLLOWED : { stories: [], nextBuildDueAt: null } }),
   );
-  await page.route(
-    (url) => url.pathname === '/api/me',
-    (route) =>
-      route.fulfill({
-        json: {
-          ...STUB_PROFILE,
-          email: 'account@example.invalid',
-          roles: ['ROLE_USER'],
-          status: 'active',
-          createdAt: '2026-07-01T00:00:00+00:00',
-          locale: 'en',
-          trialEndsAt: null,
-          ai: { ready: everyView, model: everyView ? 'stub' : null, capabilities: null },
-          mail: { enabled: false },
-          emailVerified: true,
-          preferences: {
-            ...ACCOUNT_PREFERENCES,
-            sidebarStyle: style,
-            trendingEnabled: everyView,
-          },
-        },
-      }),
+  await stubAccountProfile(
+    page,
+    { sidebarStyle: style, trendingEnabled: everyView },
+    { profile: { ai: { ready: everyView, model: everyView ? 'stub' : null, capabilities: null } } },
   );
   await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.layout': 'magazine' });
 }

@@ -366,7 +366,7 @@ test.describe('first paint', () => {
     });
     const requests = fontRequests(page);
     await stubMagazine(page, ENTRIES);
-    await stubAccountProfile(page, { theme: 'classic' }, held);
+    await stubAccountProfile(page, { theme: 'classic' }, { release: held });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
