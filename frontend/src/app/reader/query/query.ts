@@ -35,6 +35,7 @@ interface SelectionFields {
   favorites: LabelledList;
   kept: LabelledList;
   shared: OrderedList;
+  liked: OrderedList;
   viewed: OrderedList;
   'for-you': Pick<FilteredList, 'unread'>;
   trending: { window: TrendingWindow };
@@ -107,6 +108,7 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   favorites: (selection) => String(selection.label ?? ''),
   kept: (selection) => String(selection.label ?? ''),
   shared: () => '',
+  liked: () => '',
   viewed: () => '',
   'for-you': () => '',
   trending: (selection) => selection.window,
@@ -129,7 +131,7 @@ export function visibleSearchTerm(term: string): string {
 }
 
 /** Whether the list offers the "All posts / only unread" switch. Favorites,
- *  kept, shared, viewed and Trending carry no unread flag: they do not. */
+ *  kept, shared, liked, viewed and Trending carry no unread flag: they do not. */
 export function hasUnreadFilter(selection: Selection): selection is FilteredSelection {
   return 'unread' in selection;
 }
@@ -327,7 +329,7 @@ export function selectionFromParams(paramMap: ParamMap, context: ViewContext): P
 }
 
 /** The views of entry states: no feed, no unread switch. */
-const STATE_VIEWS = ['favorites', 'kept', 'shared', 'viewed'] as const;
+const STATE_VIEWS = ['favorites', 'kept', 'shared', 'liked', 'viewed'] as const;
 
 /** The state views a label narrows. */
 const LABELLED_VIEWS = ['favorites', 'kept'] as const;

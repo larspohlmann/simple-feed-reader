@@ -85,9 +85,21 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   like(entry: EntryDto): Observable<void> {
-    return this.rows.setLiked(entry, !isEntryLiked(entry), (problem) =>
-      this.toast.showProblem(problem),
-    );
+    const isLiked = !isEntryLiked(entry);
+    const delta = isLiked ? 1 : -1;
+    const list = this.list();
+    const leaves = !isLiked && list.selection().kind === 'liked';
+    return this.rows.setLiked(entry, isLiked, {
+      onStarted: () => {
+        this.subscriptions.bumpLiked(delta);
+        if (leaves) list.markLeaving(entry.id);
+      },
+      onFailed: (problem) => {
+        this.subscriptions.bumpLiked(-delta);
+        if (leaves) list.stayInList(entry.id);
+        this.toast.showProblem(problem);
+      },
+    });
   }
 
   vote(entry: EntryDto, to: VoteValue): Observable<void> {

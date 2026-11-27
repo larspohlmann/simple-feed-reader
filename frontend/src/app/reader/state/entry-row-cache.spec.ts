@@ -64,7 +64,7 @@ describe('EntryRowCache', () => {
   it('setLiked on a copy patches the other copy and keeps its own network facts', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7, { social: { ...social, isOwn: true } }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
   });
@@ -73,7 +73,7 @@ describe('EntryRowCache', () => {
     socialPosts.like.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(4);
     expect(readShownEntry(2).likeCount).toBe(4);
@@ -82,7 +82,7 @@ describe('EntryRowCache', () => {
     socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: 12 }));
     holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(12);
     expect(readShownEntry(2).likeCount).toBe(12);
@@ -91,7 +91,7 @@ describe('EntryRowCache', () => {
   it('keeps the stored like count when the network answers none', () => {
     holdEntries(buildCopy(1, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(4);
   });
@@ -111,7 +111,9 @@ describe('EntryRowCache', () => {
     holdEntries(buildCopy(1, 7));
     const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
+    cache
+      .setLiked(readShownEntry(1), true, { onFailed: jest.fn() })
+      .subscribe({ complete: settled });
 
     expect(settled).not.toHaveBeenCalled();
     answer.next({ isLiked: true, likeCount: 5 });
@@ -125,7 +127,9 @@ describe('EntryRowCache', () => {
     holdEntries(buildCopy(1, 7));
     const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
+    cache
+      .setLiked(readShownEntry(1), true, { onFailed: jest.fn() })
+      .subscribe({ complete: settled });
     failing.error(new Error('no'));
 
     expect(settled).toHaveBeenCalled();
@@ -139,7 +143,7 @@ describe('EntryRowCache', () => {
       socialPosts.like.mockReturnValue(new Subject());
       holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
 
-      cache.setLiked(readShownEntry(1), true, jest.fn());
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
       expect(readShownEntry(1)).toEqual(
         expect.objectContaining({
@@ -154,7 +158,7 @@ describe('EntryRowCache', () => {
       socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: null }));
       holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
 
-      cache.setLiked(readShownEntry(1), true, jest.fn());
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
       expect(readShownEntry(1).likeCount).toBe(7);
     });
@@ -165,7 +169,7 @@ describe('EntryRowCache', () => {
       holdEntries(buildArticle(1));
       const onError = jest.fn();
 
-      cache.setLiked(readShownEntry(1), true, onError);
+      cache.setLiked(readShownEntry(1), true, { onFailed: onError });
       expect(readShownEntry(1).isLiked).toBe(true);
       failing.error(new HttpErrorResponse({ status: 500 }));
 
@@ -176,7 +180,7 @@ describe('EntryRowCache', () => {
     it('unlikes through the unlike request', () => {
       holdEntries(buildArticle(1, { isLiked: true }));
 
-      cache.setLiked(readShownEntry(1), false, jest.fn());
+      cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
 
       expect(socialPosts.unlike).toHaveBeenCalledWith(1);
       expect(readShownEntry(1).isLiked).toBe(false);
@@ -186,18 +190,29 @@ describe('EntryRowCache', () => {
       socialPosts.like.mockReturnValue(new Subject());
       holdEntries(buildArticle(1));
 
-      cache.setLiked(readShownEntry(1), true, jest.fn());
-      cache.setLiked(readShownEntry(1), false, jest.fn());
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+      cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
 
       expect(socialPosts.like).toHaveBeenCalledTimes(1);
       expect(socialPosts.unlike).not.toHaveBeenCalled();
       expect(readShownEntry(1).isLiked).toBe(true);
     });
 
+    it('says it started only for the like that goes on the wire', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildArticle(1));
+      const started = jest.fn();
+
+      cache.setLiked(readShownEntry(1), true, { onStarted: started, onFailed: jest.fn() });
+      cache.setLiked(readShownEntry(1), false, { onStarted: started, onFailed: jest.fn() });
+
+      expect(started).toHaveBeenCalledTimes(1);
+    });
+
     it('likes the entry alone, not its copies', () => {
       holdEntries(buildArticle(1, { canonicalItemId: 7 }), buildArticle(2, { canonicalItemId: 7 }));
 
-      cache.setLiked(readShownEntry(1), true, jest.fn());
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
       expect(readShownEntry(1).isLiked).toBe(true);
       expect(readShownEntry(2).isLiked).toBe(false);
@@ -207,7 +222,7 @@ describe('EntryRowCache', () => {
   it('a like leaves an unknown like count unknown', () => {
     holdEntries(buildCopy(1, 7));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBeNull();
   });

@@ -165,7 +165,7 @@ export interface SubscriptionDto {
 }
 
 /** The sidebar bootstrap payload: the feed list plus the totals shown as badges on the
- *  Favorites/Kept/Shared/Recently-read nav items. */
+ *  Favorites/Kept/Shared/Liked/Recently-read nav items. */
 export interface SubscriptionsResponse extends SidebarTotalsDto {
   subscriptions: SubscriptionDto[];
   socialAccounts: SocialAccountRefDto[];
@@ -361,6 +361,7 @@ export type EntryView =
   | 'favorites'
   | 'kept'
   | 'shared'
+  | 'liked'
   | 'viewed'
   | 'for-you'
   | 'saved-searches'

@@ -141,6 +141,7 @@ function inputDefaults() {
     socialSections: [] as SocialSection[],
     totalUnread: 0,
     sharedCount: 0,
+    likedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', unread: true } satisfies Selection,
@@ -173,6 +174,7 @@ function mount(
     socialSections: SocialSection[];
     totalUnread: number;
     sharedCount: number;
+    likedCount: number;
     trendingUnopened: TrendingUnopened;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
@@ -291,6 +293,45 @@ describe('SidebarComponent', () => {
         nav.querySelector('.name')?.textContent?.includes('Shared'),
       )!;
       expect(shared.classList).toContain('active');
+    });
+  });
+
+  describe('the Liked item (#2587)', () => {
+    const navLabels = (element: HTMLElement): string[] =>
+      [...element.querySelectorAll('.nav .name')].map((name) => name.textContent?.trim() ?? '');
+    const likedNav = (element: HTMLElement): HTMLAnchorElement =>
+      [...element.querySelectorAll<HTMLAnchorElement>('.nav')].find((nav) =>
+        nav.querySelector('.name')?.textContent?.includes('Liked'),
+      )!;
+
+    it('sits between Shared and Recently read', () => {
+      const labels = navLabels(mount({ sharedCount: 2 }).nativeElement as HTMLElement);
+
+      expect(labels.slice(labels.indexOf('Shared'), labels.indexOf('Recently read') + 1)).toEqual([
+        'Shared',
+        'Liked',
+        'Recently read',
+      ]);
+    });
+
+    it('shows with no count while nothing is liked', () => {
+      const liked = likedNav(mount({ likedCount: 0 }).nativeElement as HTMLElement);
+
+      expect(liked.querySelector('.count')).toBeNull();
+    });
+
+    it('carries the thumbs-up, its count and the liked view', () => {
+      const liked = likedNav(mount({ likedCount: 3 }).nativeElement as HTMLElement);
+
+      expect(liked.querySelector('app-icon')?.textContent?.trim()).toBe('thumb_up');
+      expect(liked.querySelector('.count')?.textContent?.trim()).toBe('3');
+      expect(liked.getAttribute('href')).toContain('view=liked');
+    });
+
+    it('is marked active on the liked selection', () => {
+      const liked = likedNav(mount({ selection: { kind: 'liked' } }).nativeElement as HTMLElement);
+
+      expect(liked.classList).toContain('active');
     });
   });
 

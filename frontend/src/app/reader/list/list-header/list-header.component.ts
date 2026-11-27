@@ -43,6 +43,7 @@ const LIST_ICON: Record<SelectionKind, string | null> = {
   favorites: 'star',
   kept: 'bookmark',
   shared: 'share',
+  liked: 'thumb_up',
   viewed: 'history',
   'for-you': 'auto_awesome',
   trending: 'trending_up',

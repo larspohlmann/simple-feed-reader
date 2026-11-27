@@ -30,6 +30,12 @@ export interface RowSaveOutcome {
   readonly onFailed?: (error: HttpErrorResponse) => void;
 }
 
+/** What a like's caller hears: that it went on the wire (a dropped like never does), and why it failed. */
+export interface LikeOutcome {
+  readonly onStarted?: () => void;
+  readonly onFailed: (problem: Problem) => void;
+}
+
 const NONE: ReadonlySet<number> = new Set();
 
 /** Every entry the lists on screen show, once (#2329): a change to one shows in each list that holds it. A list holds
@@ -87,14 +93,11 @@ export class EntryRowCache {
   }
 
   /** Optimistic like apart from `saveState`, on the network where the reader can like there, else here; dropped while a like is on the wire. */
-  setLiked(
-    entry: EntryDto,
-    isLiked: boolean,
-    onError: (problem: Problem) => void,
-  ): Observable<void> {
+  setLiked(entry: EntryDto, isLiked: boolean, outcome: LikeOutcome): Observable<void> {
     const social = likeableSocial(entry);
     const patch: RowPatch = social ? { social: { ...social, isLiked } } : { isLiked };
     if (this.inFlight.onTheWire(entry.id, social ? 'social' : 'isLiked')) return EMPTY;
+    outcome.onStarted?.();
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
     return subscribeUntilSettled(this.optimistic(entry, patch, request$), {
       next: (answer) => {
@@ -104,7 +107,7 @@ export class EntryRowCache {
           likeCount: answer.likeCount,
         }));
       },
-      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
     });
   }
 

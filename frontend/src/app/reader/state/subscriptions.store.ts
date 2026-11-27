@@ -66,6 +66,7 @@ export class SubscriptionsStore {
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
   readonly sharedCount = signal(0);
+  readonly likedCount = signal(0);
   readonly viewedCount = signal(0);
   /** Unopened Trending stories in the window the sidebar links to; only the server moves them (#2017). */
   readonly trendingUnopened = signal<TrendingUnopened>(NO_TRENDING_UNOPENED, {
@@ -168,6 +169,7 @@ export class SubscriptionsStore {
     this.favoritesCount.set(0);
     this.keptCount.set(0);
     this.sharedCount.set(0);
+    this.likedCount.set(0);
     this.viewedCount.set(0);
     this.trendingUnopened.set(NO_TRENDING_UNOPENED);
     this.socialAccounts.set([]);
@@ -279,6 +281,7 @@ export class SubscriptionsStore {
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.sharedCount.set(response.sharedCount);
+    this.likedCount.set(response.likedCount);
     this.viewedCount.set(response.viewedCount);
     this.trendingUnopened.set(response.trending);
     this.socialAccounts.set(response.socialAccounts);
@@ -305,6 +308,7 @@ export class SubscriptionsStore {
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
     this.setIfMoved(this.sharedCount, response.sharedCount);
+    this.setIfMoved(this.likedCount, response.likedCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
   }
 
@@ -324,6 +328,10 @@ export class SubscriptionsStore {
 
   bumpShared(by: number): void {
     this.bumpCount(this.sharedCount, by);
+  }
+
+  bumpLiked(by: number): void {
+    this.bumpCount(this.likedCount, by);
   }
 
   /** Keep the Recently-read badge live after an article is opened, without a

@@ -6,7 +6,7 @@ import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
-import { EntryRowCache } from '../state/entry-row-cache';
+import { EntryRowCache, LikeOutcome } from '../state/entry-row-cache';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
@@ -16,7 +16,6 @@ import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ToastService } from '../../shared/toast/toast.service';
-import { Problem } from '../../core/problem';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
@@ -62,21 +61,34 @@ function createActions(collaborators: Collaborators): EntryStateActions {
 }
 
 describe('EntryStateActions liking (#1600)', () => {
-  const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
+  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, LikeOutcome]>(() => EMPTY);
+  const bumpLiked = jest.fn();
   const showProblem = jest.fn();
+  const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
+  const outcome = (call = 0): LikeOutcome => setLiked.mock.calls[call][2];
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+  const problem = {
+    type: 'social_post_not_found',
+    title: 'Post no longer available',
+    status: 404,
+    detail: 'The post is no longer on Mastodon.',
+  };
+
   beforeEach(() => {
-    setLiked.mockReset();
+    setLiked.mockClear();
+    bumpLiked.mockReset();
     showProblem.mockReset();
+    selection.set({ kind: 'all', unread: false });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({}),
+        ...provideRouteListForTest({}, selection),
         { provide: EntryRowCache, useValue: { setLiked } },
-        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { bumpLiked } },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: LabelsStore, useValue: {} },
         {
@@ -113,17 +125,49 @@ describe('EntryStateActions liking (#1600)', () => {
         social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
       }),
     );
-    const onError = setLiked.mock.calls[0][2];
 
-    const problem = {
-      type: 'social_post_not_found',
-      title: 'Post no longer available',
-      status: 404,
-      detail: 'The post is no longer on Mastodon.',
-    };
-    onError(problem);
+    outcome().onFailed(problem);
 
     expect(showProblem).toHaveBeenCalledWith(problem);
+  });
+
+  it('counts a like up and an unlike down once each goes out', () => {
+    actions.like(anEntry({ id: 1, isLiked: false }));
+    actions.like(anEntry({ id: 2, isLiked: true }));
+    expect(bumpLiked).not.toHaveBeenCalled();
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpLiked.mock.calls).toEqual([[1], [-1]]);
+  });
+
+  it('takes the count back when the like fails', () => {
+    actions.like(anEntry({ id: 1, isLiked: false }));
+
+    outcome().onStarted?.();
+    outcome().onFailed(problem);
+
+    expect(bumpLiked.mock.calls).toEqual([[1], [-1]]);
+  });
+
+  it('leaves the Liked list when unliked there and comes back when that fails', () => {
+    selection.set({ kind: 'liked' });
+    actions.like(anEntry({ id: 9, isLiked: true }));
+
+    outcome().onStarted?.();
+    expect(isLeaving(9)).toBe(true);
+
+    outcome().onFailed(problem);
+    expect(isLeaving(9)).toBe(false);
+  });
+
+  it('stays in any other list when unliked', () => {
+    actions.like(anEntry({ id: 9, isLiked: true }));
+
+    outcome().onStarted?.();
+
+    expect(isLeaving(9)).toBe(false);
   });
 });
 

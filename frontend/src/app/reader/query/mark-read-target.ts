@@ -47,6 +47,7 @@ const MARK_READ_TARGET: BySelectionKind<MarkReadTarget | null> = {
   favorites: () => null,
   kept: () => null,
   shared: () => null,
+  liked: () => null,
   viewed: () => null,
   trending: () => null,
   notifications: () => null,

@@ -82,6 +82,7 @@ interface CountTotals {
   favorites?: number;
   kept?: number;
   shared?: number;
+  liked?: number;
   viewed?: number;
   trending?: TrendingUnopened;
   unreadTotals?: Partial<UnreadTotalsDto>;
@@ -102,6 +103,7 @@ const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   favoritesCount: totals.favorites ?? 0,
   keptCount: totals.kept ?? 0,
   sharedCount: totals.shared ?? 0,
+  likedCount: totals.liked ?? 0,
   viewedCount: totals.viewed ?? 0,
   trending: totals.trending ?? { window: 'day', unopened: 0 },
   unreadTotals: unreadTotalsDto(totals.unreadTotals),
@@ -643,6 +645,27 @@ describe('SubscriptionsStore', () => {
     expect(store.sharedCount()).toBe(0);
     store.bumpShared(1);
     expect(store.sharedCount()).toBe(1);
+  });
+
+  it('loads the liked total and bumps it, clamped at zero', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 3)], { liked: 2 }));
+    expect(store.likedCount()).toBe(2);
+
+    store.bumpLiked(1);
+    expect(store.likedCount()).toBe(3);
+    store.bumpLiked(-5);
+    expect(store.likedCount()).toBe(0);
+  });
+
+  it('forgets the liked total when the signed-in identity changes', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 3)], { liked: 2 }));
+
+    tokens.clear();
+    TestBed.tick();
+
+    expect(store.likedCount()).toBe(0);
   });
 
   it('optimistically decrements unread', () => {
@@ -1271,6 +1294,7 @@ describe('SubscriptionsStore counts-only reload', () => {
       countsBody([{ id: 1, unreadCount: 7 }], {
         favorites: 4,
         kept: 5,
+        liked: 2,
         viewed: 6,
         unreadTotals: { allItems: 7 },
       }),
@@ -1278,6 +1302,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
+    expect(store.likedCount()).toBe(2);
     expect(store.viewedCount()).toBe(6);
     expect(store.loading()).toBe(false);
   });

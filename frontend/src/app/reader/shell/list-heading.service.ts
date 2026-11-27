@@ -119,6 +119,7 @@ export class ListHeading {
     favorites: this.feedFetchedAt,
     kept: this.feedFetchedAt,
     shared: this.feedFetchedAt,
+    liked: this.feedFetchedAt,
     viewed: this.feedFetchedAt,
     'saved-searches': this.feedFetchedAt,
     'saved-search': this.feedFetchedAt,
@@ -147,6 +148,7 @@ export class ListHeading {
       this.labelFolder(selection)?.name ?? this.i18n.translate('reader.favorites'),
     kept: (selection) => this.labelFolder(selection)?.name ?? this.i18n.translate('reader.kept'),
     shared: () => this.i18n.translate('reader.shared'),
+    liked: () => this.i18n.translate('reader.liked'),
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
     trending: (selection) =>
@@ -249,6 +251,7 @@ export class ListHeading {
     kept: (selection) =>
       items(this.labelFolder(selection)?.count ?? this.subscriptions.keptCount()),
     shared: () => items(this.subscriptions.sharedCount()),
+    liked: () => items(this.subscriptions.likedCount()),
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
       bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
