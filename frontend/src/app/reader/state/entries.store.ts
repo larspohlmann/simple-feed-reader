@@ -12,13 +12,12 @@ import { StoryRef } from '../trending/trending.models';
 import { RetryableFailure } from './retryable-failure';
 import { LandedList } from './landed-list';
 import { MatchedWords } from './matched-words';
-import { EntryRowCache, RowSaveOutcome } from './entry-row-cache';
+import { ActOutcome, EntryRowCache } from './entry-row-cache';
 import { HeldItem } from './held-item';
+import { parseProblem } from '../../core/problem';
 
-/** `RowSaveOutcome` for a caller the list's banner tells what failed. */
-export type StateSaveOutcome = Omit<RowSaveOutcome, 'onFailed'> & {
-  readonly onFailed?: () => void;
-};
+/** `ActOutcome` for a caller the list's banner already tells what failed. */
+export type StateSaveOutcome = Partial<ActOutcome>;
 
 /** One list (#2329): what it lists, its order, its paging and its banner. Its rows live in `EntryRowCache`, so a
  *  change to one shows in every list that holds it. */
@@ -173,16 +172,19 @@ export class EntriesStore {
     this.failure.clear();
     this.rows.saveState(entryId, patch, {
       ...outcome,
-      onFailed: (error) => {
-        this.failure.report(error, () => this.setState(entryId, patch, outcome));
-        outcome.onFailed?.();
+      onFailed: (problem) => {
+        this.failure.reportProblem(problem, () => this.setState(entryId, patch, outcome));
+        outcome.onFailed?.(problem);
       },
     });
   }
 
   /** `setState` for a mark nobody asked to see fail: it reverts, but shows no error and offers no retry. */
   setStateQuietly(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
-    this.rows.saveState(entryId, patch, outcome);
+    this.rows.saveState(entryId, patch, {
+      ...outcome,
+      onFailed: (problem) => outcome.onFailed?.(problem),
+    });
   }
 
   /** Hides a card's story (#2017, #2128); the card stays in the list, so the caller can let it leave in
@@ -202,8 +204,9 @@ export class EntriesStore {
     request$.subscribe({
       next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
-        this.failure.report(error, retry);
-        outcome.onFailed?.();
+        const problem = parseProblem(error);
+        this.failure.reportProblem(problem, retry);
+        outcome.onFailed?.(problem);
       },
     });
   }

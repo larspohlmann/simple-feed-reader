@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { anEntry } from '../../../testing/entry-testing';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
@@ -336,16 +336,29 @@ describe('EntryRowCache', () => {
   it('saveState read on a copy patches the other copy and sends one request', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.saveState(1, { isViewed: true }, {});
+    cache.saveState(1, { isViewed: true }, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ isViewed: true, isHidden: true }));
     expect(readerApi.updateState).toHaveBeenCalledTimes(1);
   });
 
+  it('saveState rolls the row back and reports the parsed problem when the save fails', () => {
+    readerApi.updateState.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    holdEntries(buildCopy(1, null));
+    const onFailed = jest.fn();
+
+    cache.saveState(1, { isFavorite: true }, { onFailed });
+
+    expect(readShownEntry(1).isFavorite).toBe(false);
+    expect(onFailed).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 500, type: 'about:blank' }),
+    );
+  });
+
   it('saveState leaves the other copy’s favourite alone', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.saveState(1, { isFavorite: true }, {});
+    cache.saveState(1, { isFavorite: true }, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).isFavorite).toBe(true);
     expect(readShownEntry(2).isFavorite).toBe(false);
@@ -366,7 +379,7 @@ describe('EntryRowCache', () => {
   it('an article’s patch touches only itself', () => {
     holdEntries(buildCopy(1, null), buildCopy(2, null));
 
-    cache.saveState(1, { isViewed: true }, {});
+    cache.saveState(1, { isViewed: true }, { onFailed: jest.fn() });
     cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(

@@ -49,7 +49,7 @@ describe('TrendingHideAction (#2017)', () => {
     const list = TestBed.inject(ListContext);
     outcome?.onStarted?.();
     expect(list.leavingIds().has(7)).toBe(true);
-    outcome?.onFailed?.();
+    outcome?.onFailed?.({ title: 'Nope', status: 500, type: 'about:blank' });
     expect(list.leavingIds().has(7)).toBe(false);
   });
 

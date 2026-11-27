@@ -6,7 +6,7 @@ import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
-import { EntryRowCache, SocialActOutcome } from '../state/entry-row-cache';
+import { EntryRowCache, ActOutcome } from '../state/entry-row-cache';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
@@ -27,6 +27,8 @@ import { ListCover } from './list-cover';
 import type { ListHeading } from './list-heading.service';
 import { Mark } from '../state/marks';
 import { Problem } from '../../core/problem';
+
+const aProblem: Problem = { title: 'Nope', status: 500, type: 'about:blank' };
 
 interface Collaborators {
   entries: object;
@@ -64,13 +66,13 @@ function createActions(collaborators: Collaborators): EntryStateActions {
 }
 
 describe('EntryStateActions liking (#1600)', () => {
-  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, SocialActOutcome]>(() => EMPTY);
+  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, ActOutcome]>(() => EMPTY);
   const bumpCount = jest.fn();
   const showProblem = jest.fn();
   const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
-  const outcome = (call = 0): SocialActOutcome => setLiked.mock.calls[call][2];
+  const outcome = (call = 0): ActOutcome => setLiked.mock.calls[call][2];
   const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
   const problem = {
     type: 'social_post_not_found',
@@ -260,7 +262,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    outcome().onFailed?.();
+    outcome().onFailed?.(aProblem);
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
@@ -274,7 +276,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    outcome().onFailed?.();
+    outcome().onFailed?.(aProblem);
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
@@ -355,7 +357,7 @@ describe('EntryStateActions sharing (#2007)', () => {
     actions.share(anEntry({ id: 7, isShared: false }));
     setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+    setStateQuietly.mock.calls[0][2]?.onFailed?.(aProblem);
 
     expect(bumpCount).toHaveBeenLastCalledWith('shared', -1);
     expect(show).not.toHaveBeenCalled();
@@ -366,7 +368,7 @@ describe('EntryStateActions sharing (#2007)', () => {
     actions.share(anEntry({ id: 7, isShared: true }));
     setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+    setStateQuietly.mock.calls[0][2]?.onFailed?.(aProblem);
 
     expect(bumpCount).not.toHaveBeenCalled();
   });
@@ -552,7 +554,7 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
 });
 
 describe('EntryStateActions voting (#2218)', () => {
-  const setVote = jest.fn<Observable<void>, [EntryDto, VoteValue, SocialActOutcome]>(() => EMPTY);
+  const setVote = jest.fn<Observable<void>, [EntryDto, VoteValue, ActOutcome]>(() => EMPTY);
   const refreshVote = jest.fn();
   const showProblem = jest.fn();
   const bumpCount = jest.fn();
@@ -560,7 +562,7 @@ describe('EntryStateActions voting (#2218)', () => {
   const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
-  const outcome = (call = 0): SocialActOutcome => setVote.mock.calls[call][2];
+  const outcome = (call = 0): ActOutcome => setVote.mock.calls[call][2];
   const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
 
   beforeEach(() => {
@@ -988,7 +990,6 @@ describe('EntryStateActions moving an entry into and out of each mark (#2587)', 
   };
   const bumpCount = jest.fn();
   const selection = signal<Selection>({ kind: 'all', unread: false });
-  const problem = { title: 'Nope', status: 500, type: 'about:blank' };
   let actions: EntryStateActions;
 
   const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
@@ -1071,7 +1072,7 @@ describe('EntryStateActions moving an entry into and out of each mark (#2587)', 
     joins(actions);
 
     lastMove().onStarted?.();
-    lastMove().onFailed?.(problem);
+    lastMove().onFailed?.(aProblem);
 
     expect(bumpCount.mock.calls).toEqual([
       [mark, 1],
@@ -1087,7 +1088,7 @@ describe('EntryStateActions moving an entry into and out of each mark (#2587)', 
     expect(bumpCount.mock.calls).toEqual([[mark, -1]]);
     expect(isLeaving(9)).toBe(true);
 
-    lastMove().onFailed?.(problem);
+    lastMove().onFailed?.(aProblem);
     expect(bumpCount.mock.calls).toEqual([
       [mark, -1],
       [mark, 1],

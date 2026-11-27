@@ -7,6 +7,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { StateSaveOutcome } from '../state/entries.store';
 import {
+  ActOutcome,
   EntryRowCache,
   buildLikePatch,
   buildVotePatch,
@@ -169,11 +170,7 @@ export class EntryStateActions implements EntryActionHandler {
 
   /** Moves the entry's counts and its place in the view on screen from what it shows to what `patch` makes of it,
    *  each time the change goes out; a failure takes both back. */
-  private buildMarkMove<FailureDetail extends unknown[]>(
-    entry: EntryDto,
-    patch: RowPatch,
-    outcome: MarkMoveOutcome<FailureDetail>,
-  ) {
+  private buildMarkMove(entry: EntryDto, patch: RowPatch, outcome: StateSaveOutcome): ActOutcome {
     const changed = { ...entry, ...patch };
     const moves = MARK_NAMES.map((mark) => ({
       mark,
@@ -190,10 +187,10 @@ export class EntryStateActions implements EntryActionHandler {
         if (leaves) list.markLeaving(entry.id);
       },
       onSaved: outcome.onSaved,
-      onFailed: (...detail: FailureDetail) => {
+      onFailed: (problem) => {
         bump(-1);
         if (leaves) list.stayInList(entry.id);
-        outcome.onFailed?.(...detail);
+        outcome.onFailed?.(problem);
       },
     };
   }
@@ -254,11 +251,6 @@ export class EntryStateActions implements EntryActionHandler {
     const move = this.buildMarkMove(entry, localStatePatch(patch), outcome);
     this.list().entries.setState(entry.id, patch, move);
   }
-}
-
-interface MarkMoveOutcome<FailureDetail extends unknown[]> {
-  readonly onSaved?: () => void;
-  readonly onFailed?: (...detail: FailureDetail) => void;
 }
 
 /** Whether a row with `labels` falls out of the label or unlabeled selection on screen. */

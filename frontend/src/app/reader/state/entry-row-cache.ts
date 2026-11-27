@@ -22,17 +22,11 @@ import {
 import { HeldItem, heldItem } from './held-item';
 import { ListItem } from './list-item';
 
-/** A failed state change has already rolled its row back when `onFailed` runs. */
-export interface RowSaveOutcome {
-  /** Runs as each attempt starts, a retry's included. */
+/** What the caller of a row change hears: each attempt that goes on the wire (a dropped one never does), a retry's
+ *  included; its save; and why it failed, once the row is rolled back. */
+export interface ActOutcome {
   readonly onStarted?: () => void;
   readonly onSaved?: () => void;
-  readonly onFailed?: (error: HttpErrorResponse) => void;
-}
-
-/** What a like's or vote's caller hears: that it went on the wire (a dropped one never does), and why it failed. */
-export interface SocialActOutcome {
-  readonly onStarted?: () => void;
   readonly onFailed: (problem: Problem) => void;
 }
 
@@ -81,18 +75,18 @@ export class EntryRowCache {
   }
 
   /** Optimistic patch of one entry's flags; puts it back if the PATCH fails, and reports to `outcome`. */
-  saveState(entryId: number, patch: EntryStatePatch, outcome: RowSaveOutcome): void {
+  saveState(entryId: number, patch: EntryStatePatch, outcome: ActOutcome): void {
     const target = this.entry(entryId);
     if (!target) return;
     outcome.onStarted?.();
     const request$ = this.readerApi.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
-      error: (error: HttpErrorResponse) => outcome.onFailed?.(error),
+      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
     });
   }
 
-  setLiked(entry: EntryDto, isLiked: boolean, outcome: SocialActOutcome): Observable<void> {
+  setLiked(entry: EntryDto, isLiked: boolean, outcome: ActOutcome): Observable<void> {
     if (this.inFlight.onTheWire(entry.id, 'social', 'isLiked')) return EMPTY;
     outcome.onStarted?.();
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
@@ -127,7 +121,7 @@ export class EntryRowCache {
   }
 
   /** The vote shows at once; its score waits for the answer. */
-  setVote(entry: EntryDto, to: VoteValue, outcome: SocialActOutcome): Observable<void> {
+  setVote(entry: EntryDto, to: VoteValue, outcome: ActOutcome): Observable<void> {
     if (
       entry.myVote === null ||
       entry.score === null ||
