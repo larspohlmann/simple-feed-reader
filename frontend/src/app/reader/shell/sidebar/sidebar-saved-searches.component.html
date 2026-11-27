@@ -3,6 +3,7 @@
     <div class="section-head savedsearch-head" [class.current]="combinedActive()">
       <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
       <a class="section-link savedsearch-toggle" [routerLink]="['/searches/saved/all']">
+        <span class="favicon-slot"><app-icon name="saved_search" size="dense" /></span>
         <span class="label">{{ 'reader.savedSearches' | transloco }}</span>
         @if (savedSearchesUnread() > 0) {
           <span class="count section-count">{{ savedSearchesUnread() }}</span>
@@ -20,7 +21,7 @@
       </button>
     </div>
     @if (savedSearchesExpanded()) {
-      <div class="savedsearch-list">
+      <div class="sublist">
         @for (saved of visibleSavedSearches(); track saved.id) {
           <a
             class="nav savedsearch-item"

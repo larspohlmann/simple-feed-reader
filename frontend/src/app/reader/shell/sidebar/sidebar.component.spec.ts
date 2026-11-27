@@ -1522,6 +1522,34 @@ describe('SidebarComponent', () => {
       expect(chevron.getAttribute('aria-expanded')).toBe('true');
     });
 
+    it('leads the head with the saved-search glyph and hangs the terms on the shared sublist', () => {
+      const fixture = mount({
+        savedSearches: [
+          {
+            id: 1,
+            slug: '1-climate',
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            memberCount: 3,
+            includeInDigest: false,
+          },
+        ],
+      });
+      const head: HTMLElement = fixture.nativeElement.querySelector('.savedsearch-head');
+      expect(head.querySelector('.favicon-slot app-icon')?.textContent?.trim()).toBe(
+        'saved_search',
+      );
+      head.querySelector<HTMLButtonElement>('.chevzone')!.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.sublist > .savedsearch-item')).toHaveLength(
+        1,
+      );
+    });
+
     it('navigates to the combined view instead of expanding', async () => {
       const fixture = mount({
         savedSearches: [

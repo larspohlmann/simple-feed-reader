@@ -30,7 +30,7 @@
     }
   </div>
   @if (expanded) {
-    <div class="label-list">
+    <div class="sublist">
       @for (folder of folders(); track folder.filter) {
         @let label = folder.label;
         <div class="label-row" [class.active]="folder.filter === activeFilter()">

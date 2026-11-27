@@ -146,6 +146,14 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(rowNames(fixture)).toEqual(['Work', 'Unlabeled']);
   });
 
+  it('hangs its label rows on the shared sidebar sublist', () => {
+    labels.set([tally(1, 'Work')]);
+    const fixture = mount('favorites');
+    toggle(fixture);
+
+    expect(root(fixture).querySelectorAll('.sublist > .label-row')).toHaveLength(2);
+  });
+
   it('sorts the rows alphabetically regardless of case, Unlabeled last', () => {
     labels.set([tally(1, 'zebra'), tally(2, 'Apple'), tally(3, 'mango')]);
     unlabeled.set({ favoriteCount: 4, keptCount: 0 });

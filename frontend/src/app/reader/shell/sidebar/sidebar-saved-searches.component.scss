@@ -2,19 +2,12 @@
 @include row.card;
 @include row.row-parts;
 @include row.section-head;
+@include row.section-head-glyph;
 @include row.chevron('.chevzone');
+@include row.sublist;
 
 :host {
   display: contents;
-}
-
-.savedsearch-list {
-  --row-h: var(--sidebar-sub-row-h);
-  --row-fs: var(--fs-dense);
-
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0);
 }
 
 .savedsearch-item {

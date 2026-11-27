@@ -56,6 +56,29 @@
   border-left: 1px solid var(--airy-rule);
 }
 
+// A section's rows under its head: a network's feeds, Favorites' and Kept's labels, saved searches, followed
+// stories. The airy sidebar hangs them --space-5 in on a hairline under the head's lead.
+@mixin sublist {
+  .sublist {
+    --row-h: var(--sidebar-sub-row-h);
+    --row-fs: var(--fs-dense);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0);
+    font-size: var(--row-fs);
+  }
+
+  :host-context(.sidebar-airy) .sublist {
+    position: relative;
+    padding-left: var(--space-5);
+  }
+
+  :host-context(.sidebar-airy) .sublist::before {
+    @include airy-rail(var(--space-0));
+  }
+}
+
 @mixin row-box-height($height) {
   --row-box: #{$height};
 }
@@ -480,6 +503,24 @@
     &.current .label {
       color: var(--accent);
     }
+  }
+}
+
+// A section head led by a glyph: Favorites' star, Kept's bookmark, Saved searches, Followed stories.
+@mixin section-head-glyph {
+  .section-head .favicon-slot {
+    --icon-lead-self: var(--icon-dense);
+
+    width: var(--icon-lead-self);
+  }
+
+  .section-head:not(.current) .favicon-slot app-icon {
+    color: var(--text-muted);
+  }
+
+  // The airy network head's logo box, so the label and the rail line up with a network's.
+  :host-context(.sidebar-airy) .section-head .favicon-slot {
+    --icon-lead-self: var(--icon-md);
   }
 }
 

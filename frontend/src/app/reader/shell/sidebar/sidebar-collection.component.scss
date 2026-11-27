@@ -2,28 +2,13 @@
 @include row.card;
 @include row.row-parts;
 @include row.section-head;
+@include row.section-head-glyph;
 @include row.chevron('.chevzone');
 @include row.dots;
+@include row.sublist;
 
 :host {
   display: contents;
-}
-
-.section-head .favicon-slot {
-  --icon-lead-self: var(--icon-dense);
-}
-
-.section-head:not(.current) .favicon-slot app-icon {
-  color: var(--text-muted);
-}
-
-.label-list {
-  --row-h: var(--sidebar-sub-row-h);
-  --row-fs: var(--fs-dense);
-
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0);
 }
 
 .label-row {
