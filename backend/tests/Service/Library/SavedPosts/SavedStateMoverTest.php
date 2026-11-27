@@ -66,6 +66,53 @@ final class SavedStateMoverTest extends DbTestCase
         self::assertFalse($source->isKept());
     }
 
+    public function testALocalLikeMovesToTheSavedCopy(): void
+    {
+        $likedAt = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->source)->markLiked($likedAt);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($likedAt, $this->stateOf($targetId)->getLikedAt());
+        self::assertFalse($this->stateOf($sourceId)->isLiked());
+    }
+
+    public function testTheEarlierLikeSurvivesWhenBothCopiesAreLiked(): void
+    {
+        $earlier = new \DateTimeImmutable('2026-11-20T10:00:00Z');
+        $later = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->source)->markLiked($later);
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->target)->markLiked($earlier);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($earlier, $this->stateOf($targetId)->getLikedAt());
+    }
+
+    public function testASourceLikedEarlierReplacesALaterLikeOnTheTarget(): void
+    {
+        $earlier = new \DateTimeImmutable('2026-11-20T10:00:00Z');
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->source)->markLiked($earlier);
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->target)
+            ->markLiked(new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($earlier, $this->stateOf($targetId)->getLikedAt());
+    }
+
     public function testTheTargetTakesTheSharedInstantAndTheSourceLosesIt(): void
     {
         $sharedAt = new \DateTimeImmutable('2026-10-02T10:00:00Z');

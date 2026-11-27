@@ -41,6 +41,9 @@ final class EntryState
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $viewedAt = null;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $likedAt = null;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry)
     {
@@ -91,6 +94,26 @@ final class EntryState
     public function clearKept(): void
     {
         $this->isKept = false;
+    }
+
+    public function isLiked(): bool
+    {
+        return null !== $this->likedAt;
+    }
+
+    public function getLikedAt(): ?\DateTimeImmutable
+    {
+        return $this->likedAt;
+    }
+
+    public function markLiked(\DateTimeImmutable $when): void
+    {
+        $this->likedAt ??= $when;
+    }
+
+    public function clearLiked(): void
+    {
+        $this->likedAt = null;
     }
 
     public function getHiddenAt(): ?\DateTimeImmutable

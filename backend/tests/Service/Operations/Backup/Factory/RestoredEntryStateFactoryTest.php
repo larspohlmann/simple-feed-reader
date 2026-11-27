@@ -39,6 +39,23 @@ final class RestoredEntryStateFactoryTest extends TestCase
         self::assertFalse($state->isViewed());
     }
 
+    public function testALikedLineRestoresItsInstant(): void
+    {
+        $likedAt = new \DateTimeImmutable('2026-11-27 10:00:00');
+
+        $line = $this->line(favorite: false, kept: false, viewedAt: null, viewed: false, likedAt: $likedAt);
+        $state = $this->factory()->create($this->user(), $this->entry(), $line);
+
+        self::assertEquals($likedAt, $state->getLikedAt());
+    }
+
+    public function testALineWithoutALikeRestoresNone(): void
+    {
+        $line = $this->line(favorite: false, kept: false, viewedAt: null, viewed: false);
+
+        self::assertFalse($this->factory()->create($this->user(), $this->entry(), $line)->isLiked());
+    }
+
     public function testAViewedLineWithoutItsTimeTakesTheRestoresOwn(): void
     {
         $line = $this->line(favorite: false, kept: false, viewedAt: null);
@@ -72,6 +89,7 @@ final class RestoredEntryStateFactoryTest extends TestCase
         bool $kept,
         ?\DateTimeImmutable $viewedAt,
         bool $viewed = true,
+        ?\DateTimeImmutable $likedAt = null,
     ): EntryStateLine {
         return new EntryStateLine(
             feedUrl: 'https://restored.example/feed.xml',
@@ -82,6 +100,7 @@ final class RestoredEntryStateFactoryTest extends TestCase
             hiddenAt: null,
             isViewed: $viewed,
             viewedAt: $viewedAt,
+            likedAt: $likedAt,
             labels: [],
         );
     }

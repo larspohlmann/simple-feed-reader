@@ -249,6 +249,7 @@ final readonly class FullyPopulatedAccount
         $state->markKept();
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00Z'));
         $state->markViewed(new \DateTimeImmutable('2026-08-05T10:00:00Z'));
+        $state->markLiked(new \DateTimeImmutable('2026-08-06T10:00:00Z'));
 
         return $state;
     }

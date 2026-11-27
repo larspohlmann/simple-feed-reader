@@ -85,6 +85,7 @@ final readonly class SavedStateMover
             return;
         }
         self::moveFlags($source, $target);
+        self::moveLike($source, $target);
         self::copyReading($source, $target);
     }
 
@@ -98,6 +99,19 @@ final readonly class SavedStateMover
         }
         $source->clearFavorite();
         $source->clearKept();
+    }
+
+    private static function moveLike(EntryState $source, EntryState $target): void
+    {
+        $sourceLikedAt = $source->getLikedAt();
+        if (null === $sourceLikedAt) {
+            return;
+        }
+        $targetLikedAt = $target->getLikedAt();
+        $earliest = null !== $targetLikedAt && $targetLikedAt < $sourceLikedAt ? $targetLikedAt : $sourceLikedAt;
+        $target->clearLiked();
+        $target->markLiked($earliest);
+        $source->clearLiked();
     }
 
     private static function copyReading(EntryState $source, EntryState $target): void

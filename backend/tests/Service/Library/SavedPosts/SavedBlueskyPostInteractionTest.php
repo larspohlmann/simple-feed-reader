@@ -104,7 +104,14 @@ final class SavedBlueskyPostInteractionTest extends DbTestCase
         $row = new EntryListRow(
             $this->savedPost,
             new EntryListRowSubscription(1, 'Saved from Bluesky'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
         );
 

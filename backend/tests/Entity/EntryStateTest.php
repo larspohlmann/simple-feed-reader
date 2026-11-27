@@ -13,6 +13,28 @@ use PHPUnit\Framework\TestCase;
 
 final class EntryStateTest extends TestCase
 {
+    public function testMarkLikedKeepsTheFirstInstant(): void
+    {
+        $state = $this->makeState();
+        $first = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+
+        $state->markLiked($first);
+        $state->markLiked(new \DateTimeImmutable('2026-11-27T11:00:00Z'));
+
+        self::assertTrue($state->isLiked());
+        self::assertEquals($first, $state->getLikedAt());
+
+        $state->clearLiked();
+
+        self::assertFalse($state->isLiked());
+        self::assertNull($state->getLikedAt());
+    }
+
+    public function testAFreshStateIsNotLiked(): void
+    {
+        self::assertFalse($this->makeState()->isLiked());
+    }
+
     public function testAFreshStateIsNotViewed(): void
     {
         $state = $this->makeState();

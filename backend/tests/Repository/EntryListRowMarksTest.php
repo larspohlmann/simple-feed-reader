@@ -15,6 +15,7 @@ final class EntryListRowMarksTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
+            isLiked: false,
             viewedAt: new \DateTimeImmutable('2026-11-09T10:00:00Z'),
             sharedAt: null,
         );
@@ -28,6 +29,7 @@ final class EntryListRowMarksTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
+            isLiked: false,
             viewedAt: null,
             sharedAt: null,
         );
@@ -41,6 +43,7 @@ final class EntryListRowMarksTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
+            isLiked: false,
             viewedAt: null,
             sharedAt: new \DateTimeImmutable('2026-11-09T10:00:00Z'),
         );
@@ -54,6 +57,7 @@ final class EntryListRowMarksTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
+            isLiked: false,
             viewedAt: null,
             sharedAt: null,
         );

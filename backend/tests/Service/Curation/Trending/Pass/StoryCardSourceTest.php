@@ -25,7 +25,14 @@ final class StoryCardSourceTest extends DbTestCase
         $row = new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Alpha'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
         );
         $source = new StoryCardSource(
@@ -63,7 +70,14 @@ final class StoryCardSourceTest extends DbTestCase
         $row = new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Alpha'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
         );
         $source = new StoryCardSource(

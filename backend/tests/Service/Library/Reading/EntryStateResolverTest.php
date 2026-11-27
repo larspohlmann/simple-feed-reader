@@ -91,6 +91,7 @@ final class EntryStateResolverTest extends DbTestCase
                 isHidden: $isHidden,
                 isFavorite: false,
                 isKept: false,
+                isLiked: false,
                 viewedAt: null,
                 sharedAt: null,
             ),

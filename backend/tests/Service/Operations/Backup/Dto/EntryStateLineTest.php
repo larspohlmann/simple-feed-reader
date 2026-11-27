@@ -23,7 +23,7 @@ final class EntryStateLineTest extends TestCase
             sprintf(
                 '{"kind":"entryState","feedUrl":"https://one.example/rss","guidHash":"%s","isHidden":true,'
                 . '"isFavorite":true,"isKept":false,"hiddenAt":"2026-08-04T08:00:00+00:00","isViewed":true,'
-                . '"viewedAt":"2026-08-04T08:30:00+00:00","labels":["Read later","Work"]}',
+                . '"viewedAt":"2026-08-04T08:30:00+00:00","likedAt":null,"labels":["Read later","Work"]}',
                 $state->getEntry()->getGuidHash(),
             ),
             EntryStateLine::fromState($state, 'https://one.example/rss', ['Read later', 'Work'])->toBackupLine(),
@@ -38,11 +38,31 @@ final class EntryStateLineTest extends TestCase
         self::assertSame(
             sprintf(
                 '{"kind":"entryState","feedUrl":"https://one.example/rss","guidHash":"%s","isHidden":false,'
-                . '"isFavorite":false,"isKept":true,"hiddenAt":null,"isViewed":false,"viewedAt":null,"labels":[]}',
+                . '"isFavorite":false,"isKept":true,"hiddenAt":null,"isViewed":false,"viewedAt":null,'
+                . '"likedAt":null,"labels":[]}',
                 $state->getEntry()->getGuidHash(),
             ),
             EntryStateLine::fromState($state, 'https://one.example/rss', [])->toBackupLine(),
         );
+    }
+
+    public function testALikedStateRoundTripsItsInstant(): void
+    {
+        $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
+        $state->markLiked(new \DateTimeImmutable('2026-11-27T10:00:00+01:00'));
+
+        $written = EntryStateLine::fromState($state, 'https://one.example/rss', [])->toBackupLine();
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($written, true, flags: JSON_THROW_ON_ERROR);
+        $line = EntryStateLine::fromLine($decoded);
+
+        self::assertStringContainsString('"likedAt":"2026-11-27T09:00:00+00:00"', $written);
+        self::assertEquals(new \DateTimeImmutable('2026-11-27T09:00:00Z'), $line->likedAt);
+    }
+
+    public function testALineWrittenBeforeLikesHaveNoLikedAt(): void
+    {
+        self::assertNull(EntryStateLine::fromLine(self::lineWith([]))->likedAt);
     }
 
     public function testLineWithoutLabelsRestores(): void

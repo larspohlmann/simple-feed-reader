@@ -27,6 +27,9 @@ final readonly class RestoredEntryStateFactory
         if ($line->isKept) {
             $state->markKept();
         }
+        if (null !== $line->likedAt) {
+            $state->markLiked($line->likedAt);
+        }
         if ($line->isViewed) {
             // A "viewed" line without its timestamp keeps the flag and takes the restore's own time.
             $state->markViewed($line->viewedAt ?? $this->clock->now());

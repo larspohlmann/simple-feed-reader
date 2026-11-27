@@ -250,6 +250,7 @@ final class EntryPageTest extends TestCase
                 isHidden: false,
                 isFavorite: false,
                 isKept: false,
+                isLiked: false,
                 viewedAt: $viewedAt,
                 sharedAt: null,
             ),

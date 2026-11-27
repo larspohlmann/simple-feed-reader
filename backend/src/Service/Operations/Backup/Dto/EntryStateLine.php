@@ -28,6 +28,7 @@ final readonly class EntryStateLine
         public ?\DateTimeImmutable $hiddenAt,
         public bool $isViewed,
         public ?\DateTimeImmutable $viewedAt,
+        public ?\DateTimeImmutable $likedAt,
         /** @var list<string> */
         public array $labels,
     ) {
@@ -47,6 +48,7 @@ final readonly class EntryStateLine
             hiddenAt: LineField::dateOrNull($line, 'hiddenAt'),
             isViewed: LineField::bool($line, 'isViewed'),
             viewedAt: LineField::dateOrNull($line, 'viewedAt'),
+            likedAt: LineField::dateOrNull($line, 'likedAt'),
             labels: self::parseLabelNames($line),
         );
     }
@@ -63,6 +65,7 @@ final readonly class EntryStateLine
             hiddenAt: $state->getHiddenAt(),
             isViewed: $state->isViewed(),
             viewedAt: $state->getViewedAt(),
+            likedAt: $state->getLikedAt(),
             labels: $labels,
         );
     }
@@ -79,6 +82,7 @@ final readonly class EntryStateLine
             'hiddenAt' => BackupLineFormat::dateOrNull($this->hiddenAt),
             'isViewed' => $this->isViewed,
             'viewedAt' => BackupLineFormat::dateOrNull($this->viewedAt),
+            'likedAt' => BackupLineFormat::dateOrNull($this->likedAt),
             'labels' => $this->labels,
         ]);
     }

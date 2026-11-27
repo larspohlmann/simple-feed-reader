@@ -528,6 +528,24 @@ final class EntryListTest extends DbTestCase
         self::assertFalse($kepts[0]->marks->isFavorite);
     }
 
+    public function testALocallyLikedEntryCarriesTheLikeMark(): void
+    {
+        $liked = $this->entry('liked', '2026-07-05T00:00:00Z');
+        $this->entry('plain', '2026-07-06T00:00:00Z');
+        $state = new EntryState($this->user, $liked);
+        $state->markLiked(new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+
+        $byGuid = [];
+        foreach ($rows as $row) {
+            $byGuid[$row->entry->getGuid()] = $row->marks->isLiked;
+        }
+        self::assertEquals(['liked' => true, 'plain' => false], $byGuid);
+    }
+
     public function testAnEntryWithoutAStateRowCarriesNoMarks(): void
     {
         $this->entry('plain', '2026-07-07T00:00:00Z');
