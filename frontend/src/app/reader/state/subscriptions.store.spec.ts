@@ -704,11 +704,11 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
-    store.bumpFavorites(1);
+    store.bumpCount('favorites', 1);
     expect(store.favoritesCount()).toBe(2);
-    store.bumpFavorites(-5);
+    store.bumpCount('favorites', -5);
     expect(store.favoritesCount()).toBe(0); // never negative
-    store.bumpKept(1);
+    store.bumpCount('kept', 1);
     expect(store.keptCount()).toBe(1);
   });
 
@@ -724,9 +724,9 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
-    store.bumpShared(-1);
+    store.bumpCount('shared', -1);
     expect(store.sharedCount()).toBe(0);
-    store.bumpShared(1);
+    store.bumpCount('shared', 1);
     expect(store.sharedCount()).toBe(1);
   });
 
@@ -735,9 +735,9 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 3)], { liked: 2 }));
     expect(store.likedCount()).toBe(2);
 
-    store.bumpLiked(1);
+    store.bumpCount('liked', 1);
     expect(store.likedCount()).toBe(3);
-    store.bumpLiked(-5);
+    store.bumpCount('liked', -5);
     expect(store.likedCount()).toBe(0);
   });
 
@@ -1300,7 +1300,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
 
     store.reloadCountsQuietly();
-    store.bumpFavorites(1);
+    store.bumpCount('favorites', 1);
     ctrl
       .expectOne(countsUrl)
       .flush(countsBody([{ id: 1, unreadCount: 0 }], { unreadTotals: { allItems: 0 } }));
@@ -1322,7 +1322,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     settleAndAge([sub(1, 2)]);
 
     store.reloadCountsIfStale();
-    store.bumpFavorites(1);
+    store.bumpCount('favorites', 1);
     ctrl.expectOne(countsUrl).flush(
       countsBody([{ id: 1, unreadCount: 2 }], {
         notifications: [{ network: 'mastodon', unseenCount: 2 }],
@@ -1362,7 +1362,7 @@ describe('SubscriptionsStore counts-only reload', () => {
 
     store.reloadCountsIfStale();
     const tick = ctrl.expectOne(countsUrl);
-    store.bumpFavorites(1);
+    store.bumpCount('favorites', 1);
     tick.flush(
       countsBody([{ id: 1, unreadCount: 2 }], { trending: { window: 'day', unopened: 3 } }),
     );
