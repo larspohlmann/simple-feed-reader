@@ -28,7 +28,7 @@ final readonly class EntryLabelController
     {
         $this->labeling->attach(
             $this->labels->requireOneForUser($user->requireId(), $labelId),
-            $this->entryList->getRowForUser($user->requireId(), $id)->entry,
+            $this->entryList->getOneSubscribedForUser($user->requireId(), $id),
         );
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
@@ -39,7 +39,7 @@ final readonly class EntryLabelController
     {
         $this->labeling->detach(
             $this->labels->requireOneForUser($user->requireId(), $labelId),
-            $this->entryList->getRowForUser($user->requireId(), $id)->entry,
+            $this->entryList->getOneSubscribedForUser($user->requireId(), $id),
         );
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
