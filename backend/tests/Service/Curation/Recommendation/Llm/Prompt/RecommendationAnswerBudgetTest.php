@@ -63,10 +63,10 @@ final class RecommendationAnswerBudgetTest extends TestCase
         return $this->answerBudget->outputBoundTokens(100, RecommendationResponseSchema::Consolidation, $limit);
     }
 
-    public function testInterestTermsReserveThreeThousandTokensPlusTheBound(): void
+    public function testInterestTermsReserveFiveThousandTokensPlusTheBound(): void
     {
         self::assertSame(
-            intdiv(3000 * 150, 100),
+            intdiv(5000 * 150, 100),
             $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::InterestTerms),
         );
     }
