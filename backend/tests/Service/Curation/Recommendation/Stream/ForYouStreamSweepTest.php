@@ -120,7 +120,9 @@ final class ForYouStreamSweepTest extends DbTestCase
 
     public function testAnInactiveAccountIsNotSweptAndKeepsItsMark(): void
     {
-        $user = $this->subscriber('pending@example.com', active: false);
+        $user = $this->subscriber('suspended@example.com');
+        $user->suspend();
+        $this->entityManager->flush();
         $this->term($user, 'solar', 2.0);
         $this->entry('Solar panels');
 
@@ -369,12 +371,9 @@ final class ForYouStreamSweepTest extends DbTestCase
         return $user;
     }
 
-    private function subscriber(string $email, ?int $mark = 0, bool $active = true): User
+    private function subscriber(string $email, ?int $mark = 0): User
     {
         $user = $this->account($email);
-        if (!$active) {
-            $user->suspend();
-        }
         $this->entityManager->persist(new Subscription($user, $this->feed, new \DateTimeImmutable('2026-07-01')));
         $at = new \DateTimeImmutable('2026-11-01 00:00:00');
         $this->entityManager->persist(new InterestTermSet($user, $at, $at, $mark ?? 0));
