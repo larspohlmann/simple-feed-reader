@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** How one call ended: built by RecordedCall when it settles, written to the run-log row by the repository's SQL. */
 #[ORM\Embeddable]
-final class CallOutcome
+final readonly class CallOutcome
 {
     public function __construct(
         /** Null while the call is still streaming. */

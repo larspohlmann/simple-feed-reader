@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** What the provider said about one call besides its answer; RecordedCall builds it, the repository's SQL writes it. */
 #[ORM\Embeddable]
-final class CallReceipt
+final readonly class CallReceipt
 {
     public function __construct(
         #[ORM\Column(length: 255, nullable: true)]

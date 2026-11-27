@@ -31,7 +31,7 @@ final readonly class RejectedRequestRecovery
 
         $this->calls->recordAdjustment(
             $callingRun,
-            new CallFailure($rejection->getMessage(), $adjustment->setting, $adjustment->value),
+            CallFailure::adjusted($rejection->getMessage(), $adjustment->setting, $adjustment->value),
         );
 
         return true;

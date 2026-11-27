@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  * settles and the adjustment later, onto the newest failure carrying the same detail.
  */
 #[ORM\Embeddable]
-final class CallFailure
+final readonly class CallFailure
 {
     public function __construct(
         /** The transport exception's message, for transport-failed calls only. */
@@ -24,6 +24,12 @@ final class CallFailure
         #[ORM\Column(length: 64, nullable: true)]
         private ?string $adjustedValue = null,
     ) {
+    }
+
+    /** The rejection a fallback answered: the detail names the failed call, the setting and value what changed. */
+    public static function adjusted(string $errorDetail, RequestAdjustment $setting, ?string $value): self
+    {
+        return new self($errorDetail, $setting, $value);
     }
 
     public function getErrorDetail(): ?string

@@ -58,7 +58,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
+            CallFailure::adjusted(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run);
@@ -75,7 +75,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
+            CallFailure::adjusted(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run);
@@ -93,7 +93,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
 
         $this->calls->recordAdjustment(
             CallingRun::recommendationRun($run->requireId()),
-            new CallFailure(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
+            CallFailure::adjusted(self::REJECTION, RequestAdjustment::OutputCap, '32768'),
         );
 
         $adjusted = $this->adjustmentsByLog($run) + $this->adjustmentsByLog($otherRun);
