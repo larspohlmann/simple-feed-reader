@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem } from '../../core/problem';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { MenuCheckboxComponent } from '../../shared/menu-checkbox/menu-checkbox.component';
@@ -38,21 +38,20 @@ export class LabelMenuPanelComponent {
   readonly row = input.required<LabelledRow>();
 
   private readonly toast = inject(ToastService);
-  private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
   private readonly labels = inject(LabelsStore).labels;
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly newLabelItem = viewChild<ElementRef<HTMLButtonElement>>('newLabelItem');
 
   protected readonly nameMax = LABEL_NAME_MAX;
-  protected readonly checkedIds = computed(() => {
-    const row = this.row();
-    return new Set(
-      this.labels()
-        .filter((label) => row.carries(label.id))
-        .map((label) => label.id),
-    );
-  });
+  protected readonly checkedIds = computed(
+    () =>
+      new Set(
+        this.row()
+          .entry()
+          .labels.map((label) => label.id),
+      ),
+  );
   protected readonly filterable = computed(() => this.labels().length > MOST_LABELS_UNFILTERED);
   protected readonly query = signal('');
   protected readonly listed = computed(() => {
@@ -90,7 +89,7 @@ export class LabelMenuPanelComponent {
         },
         error: (problem: Problem) => {
           this.saving.set(false);
-          this.toast.showTranslatedProblem(problem, this.i18n);
+          this.toast.showProblem(problem);
         },
       });
   }
