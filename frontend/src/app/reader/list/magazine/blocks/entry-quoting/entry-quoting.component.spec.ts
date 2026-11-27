@@ -6,6 +6,7 @@ import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import {
   aMastodonAccount,
   provideSocialAccounts,
@@ -32,6 +33,7 @@ function mount(entry: EntryDto): HTMLElement {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],

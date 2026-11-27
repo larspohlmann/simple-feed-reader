@@ -8,10 +8,12 @@ use App\Entity\CanonicalItem;
 use App\Entity\Discussion;
 use App\Entity\DiscussionCounts;
 use App\Entity\Entry;
+use App\Entity\EntryLabel;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
+use App\Entity\Label;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\PostCommunity;
@@ -29,6 +31,7 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\LemmyPostEntries;
+use App\Tests\Support\NamesLabels;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsFeedEntries;
 use App\Tests\Support\SharedLinks;
@@ -39,6 +42,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class EntryControllerTest extends ApiTestCase
 {
+    use NamesLabels;
     use SeedsFeedEntries;
     use SignsReaderUrls;
 
@@ -1516,6 +1520,62 @@ final class EntryControllerTest extends ApiTestCase
         self::assertIsArray($decoded['entry']);
         self::assertArrayHasKey('canonicalItemId', $decoded['entry']);
         self::assertNull($decoded['entry']['canonicalItemId']);
+    }
+
+    public function testListRowsCarryTheirLabelsAlphabetically(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-list-labels@example.com');
+        $entry = $this->entryWithGuid($this->seedFeedWithEntries($user, 2), 'g2');
+        $this->attachLabel($entry, $this->labelNamed($user, 'work'));
+        $this->attachLabel($entry, $this->labelNamed($user, 'Read later'));
+
+        $client->request('GET', '/api/entries', server: $headers);
+
+        [$newest, $oldest] = $this->entriesOf($client);
+        self::assertIsArray($newest);
+        self::assertIsArray($oldest);
+        self::assertIsArray($newest['labels']);
+        self::assertSame(['Read later', 'work'], array_column($newest['labels'], 'name'));
+        self::assertSame([], $oldest['labels']);
+    }
+
+    public function testAnotherUsersLabelsNeverShow(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-list-labels-mine@example.com');
+        $other = $this->factory()->create('e-list-labels-theirs@example.com');
+        $entry = $this->entryWithGuid($this->seedFeedWithEntries($user, 1), 'g1');
+        $this->attachLabel($entry, $this->labelNamed($other, 'Read later'));
+
+        $client->request('GET', '/api/entries', server: $headers);
+
+        [$row] = $this->entriesOf($client);
+        self::assertIsArray($row);
+        self::assertSame([], $row['labels']);
+    }
+
+    public function testEntryDetailCarriesLabels(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->bearerAndUser('e-detail-labels@example.com');
+        $entry = $this->entryWithGuid($this->seedFeedWithEntries($user, 1), 'g1');
+        $label = $this->labelNamed($user, 'Read later');
+        $this->attachLabel($entry, $label);
+
+        $client->request('GET', "/api/entries/{$entry->requireId()}", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $decoded = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded['entry']);
+        self::assertSame([['id' => $label->requireId(), 'name' => 'Read later']], $decoded['entry']['labels']);
+    }
+
+    private function attachLabel(Entry $entry, Label $label): void
+    {
+        $this->entityManager()->persist(new EntryLabel($label, $entry));
+        $this->entityManager()->flush();
     }
 
     private function findState(User $user, Entry $entry): ?EntryState

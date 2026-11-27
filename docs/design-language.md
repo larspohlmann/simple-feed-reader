@@ -1429,6 +1429,26 @@ checkbox outside a menu.
 
 ---
 
+### Label menu (via the `LabelMenu` service, #2581)
+
+`LabelMenu.open(entry, anchor, actions)` puts labels on an entry and takes them
+off. On a fine pointer it opens `app-label-menu-panel` as a popover at `anchor`
+(`TOOLBAR_MENU_POSITIONS`): an `<app-menu-checkbox>` per label, a filter field
+above them from nine labels on, and a "New label…" item that turns into a name
+field (Enter creates and attaches; a taken name toasts and keeps the field). On
+a coarse pointer it opens the `<app-action-sheet>` with an `ActionSheetCheck` per
+label and a "New label…" action that opens `NewLabelDialogComponent` in
+`<app-overlay-panel>`. Every box reads the entry's row in `EntryRowCache`
+through a `LabelledRow`, which keeps the last row seen and lays the menu's own
+toggles over it, so a row that leaves a label's list still shows and re-takes its
+labels. A row's `app-entry-actions` closes the popover when it leaves the page
+(`closeWithin`), so the menu never floats over a gone trigger. `actions` is the caller's `EntryActionHandler`: the
+menu renders outside the trigger's injector.
+
+**Not for:** tags — a feed's tags are edited in its own dialog.
+
+---
+
 ### `<app-feed-exclusion-marker>`
 
 The eye badge on a hidden row's lead (see *Hidden-feed favicon*): `role="img"`,
@@ -1730,29 +1750,34 @@ child to choke on where the component lands inside a `<p>`.
 |---|---|---|
 | `entry` | `EntryDto` (required) | — |
 | `size` | `'sm' \| 'md'` | `'sm'` |
+| `labelMenu` | `'list' \| 'article'` | `'list'` — where the label button goes |
+| `audio` | `boolean` | `true` — off where the host has its own listen controls |
+| `like` | `boolean` | `true` — off where another row carries the like |
 
-| Output | Type | Fires |
-|---|---|---|
-| `favorite` | `output<EntryDto>` | the favorite button is pressed |
-| `keep` | `output<EntryDto>` | the keep button is pressed |
-| `read` | `output<EntryDto>` | the mark-read button is pressed |
+It has no outputs: every button calls the `EntryActionHandler` in its injector
+(the reader shell's `EntryStateActions`, or a host that provides its own, as
+`entry-duplicates` does for its copies).
 
 ```html
-<app-entry-actions
-  [entry]="entry()"
-  (favorite)="favorite.emit($event)"
-  (keep)="keep.emit($event)"
-  (read)="read.emit($event)"
-/>
+<app-entry-actions [entry]="entry()" [size]="size()" [like]="false" />
 ```
 
 Clicks stop propagating: the card around the buttons is itself clickable, and
-would otherwise open the entry instead of toggling the flag. Each button is a
-`button[appFlagToggle]`: muted while off, accent while on, with the look owned
-by `frontend/src/styles/_flag-toggle.scss`. Favourite and keep also fill their
-glyph while on; the tick has no hollow form. The reader view's article row is
-this component at `size="md"`, and its toolbar Keep/Favorite reuse the same
-directive, so every keep and favourite toggle in the app looks the same.
+would otherwise open the entry instead of toggling the flag. Each flag toggle
+(favourite, keep, read) is a `button[appFlagToggle]`: muted while off, accent
+while on, with the look owned by `frontend/src/styles/_flag-toggle.scss`.
+Favourite and keep also fill their glyph while on; the tick has no hollow
+form. The reader view's article row is this component at `size="md"`, and its
+toolbar Keep/Favorite reuse the same directive, so every keep and favourite toggle in the app looks the same.
+
+The label button (glyph `label`, accent and filled while the entry carries a
+label) shows on every favorite or kept entry, in any list, from the moment the
+star or bookmark is set, and goes when neither is. It opens the label menu
+through the `LabelMenu` service. It is a menu button, not a toggle: it carries
+the `flag-toggle` look as a plain class, with `aria-haspopup="menu"` and
+`aria-expanded`, never `aria-pressed`. With `labelMenu="list"` (list rows and
+compact magazine tiles) it leads the star; with `labelMenu="article"` (the
+reader view's action row) it follows the tick.
 
 On a coarse pointer the buttons grow to `--tap-target` height on negative
 margins alone, so a card never gets taller on a phone, and the gap between
@@ -1929,11 +1954,17 @@ locally: key on `pointer: coarse` (capability), never on viewport width
 
 ### Sidebar cards (#1749)
 
-The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then smart views, Saved searches, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
+The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then All items, Shared and Recently read, Favorites, Kept, Followed stories, Saved searches, Trending and For you, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
 
 **A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset, <its lead space>)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
-**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Shared, Recently read, Trending, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Three ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, a label row's in Favorites and Kept, the only phone entry to rename and delete, and organise mode's, whose rows all carry one.
+
+**The collections group** (#2581). Favorites, Kept, Followed stories and Saved searches sit in one `.collections` wrapper in `sidebar.component.html` and their heads stand at the smart views' row pitch (`--collections-pad-y: 0px` zeroes the cards' vertical padding; the airy wrapper has no gap and the boxed one `--space-1`, as the shorter boxed head needs it to land on the same pitch; the expanded sublist still hangs under its head). Under the airy style only the first of them keeps the faint rule above it, from the smart views; the wrapper sets `--airy-hrule: transparent` on the rest. Trending and For you (`app-sidebar-views` with `section="discover"`, the same component as the first card) follow the group as a card of their own with the usual section divider above it (the airy `--airy-hrule` rule, the boxed gap) and their counts in the heads' column (`.slot` and `.trail` in the row); the first card holds All items, Shared and Recently read. The card below the group (Tags or Feeds) keeps its own rule.
+
+**Collection blocks** (#2581). Favorites and Kept are each a card of their own (`app-sidebar-collection`): a section head with the star or bookmark lead, the collection's total, and a chevron only while a label subfolder shows (open state in `localStorage`, collapsed by default). A subfolder is a sub-row with the `label` glyph and its count in that collection, alphabetical, "Unlabeled" last; each label row's ⋯ offers Rename (in place) and Delete, as a sheet on a coarse pointer.
+
+**Sublists** (#2581). A section's rows under its head are one `.sublist` (`row.sublist` in `_sidebar-row.scss`): sub-row height, `--fs-dense`, `--space-0` apart. Every grouped block uses it: a network's feeds, Favorites' and Kept's labels, Saved searches, Followed stories. Under the airy style a sublist hangs `--space-5` in on the `airy-rail` hairline under the head's lead. Those heads all carry a lead (`row.section-head-glyph` for the glyph ones: Favorites `star`, Kept `bookmark`, Saved searches `saved_search`, Followed stories `notifications_active`; a network its logo), so the rail has a lead to hang under; under the airy style a glyph lead takes the network logo's `--icon-md` box, so every head's label starts at the same x.
 
 **The Notifications row** (#2240) leads each network card's rows, only while the network has a connected account and not while organising. It is a feed-row look: a bell lead, the name, and the unseen count as a `<app-count-pill>` instead of a plain count. It has no ⋯ and no chevron, so it ends in an empty `.slot` and `.trail` like any row without them; the pill is pulled right by `calc(var(--space-2) * -1)` so its digit lines up with the other rows' count digits. At 0 there is no pill, and the count is never added to the head's.
 
@@ -1943,7 +1974,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down, the four surface switches (All items, For You, saved searches, Trending) as checks, and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
 
-**Airy** (#2493). The Settings choice `sidebarStyle` (`airy` for a new account since #2565, `boxed` the other option, under the magazine style) puts `.sidebar-airy` on the shell's `aside.sidebar`, and every airy rule is scoped by that class; the magazine's `.airy` is a separate choice. The column is one sheet (`--airy-sheet`: `--surface-2` in light, `--surface-read` in dark) with no card boxes, drawn with hairline rules (`--airy-rule`, and the fainter `--airy-hrule` between sections). The search row is the list header's band, its height and one inset rule running into the header's own. The sheet's edge is a hairline with a faint cast (`--airy-edge-cast`), both shadows so they add no width (#2565). A network head is a heading and its rows hang `--space-5` in on a hairline; the other section heads are heading-only, with no band when open. The current row is accent text plus a 3px inset accent bar, and hover keeps today's fill.
+**Airy** (#2493). The Settings choice `sidebarStyle` (`airy` for a new account since #2565, `boxed` the other option, under the magazine style) puts `.sidebar-airy` on the shell's `aside.sidebar`, and every airy rule is scoped by that class; the magazine's `.airy` is a separate choice. The column is one sheet (`--airy-sheet`: `--surface-2` in light, `--surface-read` in dark) with no card boxes, drawn with hairline rules (`--airy-rule`, and the fainter `--airy-hrule` between sections). The search row is the list header's band, its height and one inset rule running into the header's own. The sheet's edge is a hairline with a faint cast (`--airy-edge-cast`), both shadows so they add no width (#2565). A section head is a heading with no band when open; a network's, Favorites', Kept's, Saved searches' and Followed stories' rows hang `--space-5` in on a hairline (*Sublists* above), while Tags and Feeds keep their own nesting. The current row is accent text plus a 3px inset accent bar, and hover keeps today's fill.
 
 ### Notifications list (#2240)
 

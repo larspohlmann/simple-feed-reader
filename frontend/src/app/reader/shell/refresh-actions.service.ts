@@ -10,6 +10,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
+import { LabelsStore } from '../labels/labels.store';
 import { RefreshScope, selectionQueryParams } from '../query/query';
 import { queryFromSelection } from '../query/entry-query';
 import { SubscriptionDto } from '../models';
@@ -33,6 +34,7 @@ export class RefreshActions {
   private readonly refreshSvc = inject(RefreshService);
   private readonly recs = inject(RecommendationsService);
   private readonly savedSearchesStore = inject(SavedSearchesStore);
+  private readonly labels = inject(LabelsStore);
   private readonly heading = inject(ListHeading);
   private readonly selection = inject(ReaderRouteState).selection;
 
@@ -132,6 +134,7 @@ export class RefreshActions {
       if (!sub) return;
       this.subs.load();
       this.savedSearchesStore.load();
+      this.labels.reload();
       void this.router.navigate(['/'], {
         queryParams: selectionQueryParams({ subscription: sub.id }),
         queryParamsHandling: 'merge',

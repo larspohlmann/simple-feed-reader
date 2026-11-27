@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api';
+import { LabelsStore } from '../labels/labels.store';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import {
@@ -17,6 +18,7 @@ describe('SidebarCountsPoll', () => {
   let reloadBadges: jest.Mock;
   let reloadFollowed: jest.Mock;
   let loadFollowed: jest.Mock;
+  let reloadLabels: jest.Mock;
   let fetchMock: jest.Mock;
 
   /** The marker the mocked web server serves. `null` means the file is missing
@@ -78,6 +80,7 @@ describe('SidebarCountsPoll', () => {
     reloadBadges = jest.fn();
     reloadFollowed = jest.fn();
     loadFollowed = jest.fn();
+    reloadLabels = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         SidebarCountsPoll,
@@ -91,6 +94,7 @@ describe('SidebarCountsPoll', () => {
           provide: FollowedStoriesStore,
           useValue: { reloadIfStale: reloadFollowed, load: loadFollowed },
         },
+        { provide: LabelsStore, useValue: { reloadIfStale: reloadLabels } },
       ],
     });
   });
@@ -177,6 +181,17 @@ describe('SidebarCountsPoll', () => {
     setVisibility('visible');
     expect(reloadFull).toHaveBeenCalledTimes(1);
     expect(loadFollowed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the label tallies on a counts tick and on a full reload (#2581)', async () => {
+    await start(null);
+
+    await elapse(SIDEBAR_RELOAD_INTERVAL_MS);
+    expect(reloadLabels).toHaveBeenCalledTimes(1);
+
+    setVisibility('hidden');
+    setVisibility('visible');
+    expect(reloadLabels).toHaveBeenCalledTimes(2);
   });
 
   it('reloads the followed stories on tab regain even before the next build is due', async () => {

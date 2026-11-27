@@ -26,6 +26,8 @@ final readonly class EntryQuery
     /** The effective page size — already clamped, never the raw request value. */
     public int $limit;
 
+    public ?LabelScope $labelScope;
+
     public function __construct(
         public int $userId,
         public EntryView $view = EntryView::All,
@@ -41,6 +43,7 @@ final readonly class EntryQuery
             throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');
         }
         $this->limit = self::clampLimit($limit);
+        $this->labelScope = null;
     }
 
     public function ordering(): EntryListOrdering
@@ -74,17 +77,13 @@ final readonly class EntryQuery
     #[\NoDiscard]
     public function inAllView(): self
     {
-        return new self(
-            $this->userId,
-            EntryView::All,
-            $this->subscriptionId,
-            $this->tagId,
-            $this->cursor,
-            $this->limit,
-            $this->order,
-            $this->networkScope,
-            $this->feedGroup,
-        );
+        return clone($this, ['view' => EntryView::All]);
+    }
+
+    #[\NoDiscard]
+    public function withLabelScope(LabelScope $scope): self
+    {
+        return clone($this, ['labelScope' => $scope]);
     }
 
     #[\NoDiscard]

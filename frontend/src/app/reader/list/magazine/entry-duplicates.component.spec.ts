@@ -13,6 +13,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 import { CommentTotals } from '../../state/comment-totals';
@@ -51,6 +52,7 @@ function mount(testEntry: ListItem, arrange?: () => void) {
       provideStoryContext(storyOf(testEntry)).provider,
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],
@@ -415,6 +417,7 @@ it("shows a copy's row in the popover without the story's pieces", () => {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],

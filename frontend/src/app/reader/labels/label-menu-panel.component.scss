@@ -1,0 +1,25 @@
+@use '../../theme/menu-items';
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 14rem;
+  max-block-size: 70vh;
+
+  @include menu-items.menu-panel;
+
+  padding-inline: var(--space-1);
+
+  [role='menuitem'] {
+    border-radius: calc(var(--radius) - var(--space-0));
+  }
+}
+
+.labels {
+  overflow-y: auto;
+}
+
+.filter,
+.new-label {
+  margin: var(--space-1) calc(var(--row-pad-x) - var(--space-1));
+}

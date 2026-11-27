@@ -1,5 +1,6 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { ListOrder } from '../models';
+import { LabelFilter } from '../labels/labels.models';
 import { TrendingWindow } from '../trending/trending.models';
 import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
@@ -18,6 +19,9 @@ interface OrderedList {
   order?: ListOrder;
 }
 
+/** A saved collection, whole or narrowed to one label or to the posts without any (#2581). */
+type LabelledList = OrderedList & { label?: LabelFilter };
+
 /** A list that takes the unread switch and the newest/oldest order. */
 type FilteredList = OrderedList & { unread: boolean };
 
@@ -28,8 +32,8 @@ interface SelectionFields {
   subscription: FilteredList & { id: number };
   network: FilteredList & { network: SocialNetworkName; feedKind?: NetworkFeedKind };
   group: FilteredList & { group: FeedGroupName };
-  favorites: OrderedList;
-  kept: OrderedList;
+  favorites: LabelledList;
+  kept: LabelledList;
   shared: OrderedList;
   viewed: OrderedList;
   'for-you': Pick<FilteredList, 'unread'>;
@@ -100,8 +104,8 @@ const IDENTITY_KEY: BySelectionKind<string> = {
   network: (selection) =>
     selection.feedKind ? `${selection.network}:${selection.feedKind}` : selection.network,
   group: (selection) => selection.group,
-  favorites: () => '',
-  kept: () => '',
+  favorites: (selection) => String(selection.label ?? ''),
+  kept: (selection) => String(selection.label ?? ''),
   shared: () => '',
   viewed: () => '',
   'for-you': () => '',
@@ -241,6 +245,7 @@ const SELECTION_PARAM_NAMES = [
   'link',
   'q',
   'window',
+  'label',
 ] as const;
 
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
@@ -324,6 +329,9 @@ export function selectionFromParams(paramMap: ParamMap, context: ViewContext): P
 /** The views of entry states: no feed, no unread switch. */
 const STATE_VIEWS = ['favorites', 'kept', 'shared', 'viewed'] as const;
 
+/** The state views a label narrows. */
+const LABELLED_VIEWS = ['favorites', 'kept'] as const;
+
 /** The views that name no feed but take the unread switch. */
 const FILTERED_VIEWS = ['for-you', 'saved-searches'] as const;
 
@@ -335,11 +343,23 @@ function viewFromParams(paramMap: ParamMap, context: ViewContext): ParsedView {
   const view = selectionParam(paramMap, 'view');
   if (view === 'notifications') return notificationsFromParams(paramMap);
   if (view === 'trending') return trendingFromParams(paramMap, context);
+  if (isViewIn(LABELLED_VIEWS, view)) {
+    return { selection: labelledSelection(view, paramMap), urlCorrection: null };
+  }
   if (isViewIn(STATE_VIEWS, view)) return { selection: { kind: view }, urlCorrection: null };
   if (isViewIn(FILTERED_VIEWS, view)) {
     return { selection: { kind: view, unread: false }, urlCorrection: null };
   }
   return { selection: feedScopedSelection(paramMap), urlCorrection: null };
+}
+
+function labelledSelection(kind: (typeof LABELLED_VIEWS)[number], paramMap: ParamMap): Selection {
+  const label = labelFilter(selectionParam(paramMap, 'label'));
+  return label === null ? { kind } : { kind, label };
+}
+
+function labelFilter(value: string | null): LabelFilter | null {
+  return value === 'unlabeled' ? value : posInt(value);
 }
 
 function notificationsFromParams(paramMap: ParamMap): ParsedView {

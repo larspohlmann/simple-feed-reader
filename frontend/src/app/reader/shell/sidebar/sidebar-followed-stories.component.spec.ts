@@ -102,6 +102,21 @@ describe('SidebarFollowedStoriesComponent (#2128)', () => {
     expect(root(fixture).querySelectorAll('.followed-row')).toHaveLength(1);
   });
 
+  it('leads the head with the followed-story glyph', () => {
+    const fixture = mount([story(1)]);
+
+    expect(
+      root(fixture).querySelector('.section-head .favicon-slot app-icon')?.textContent?.trim(),
+    ).toBe('notifications_active');
+  });
+
+  it('hangs its story rows on the shared sidebar sublist', () => {
+    const fixture = mount([story(1), story(2)]);
+    expand(fixture);
+
+    expect(root(fixture).querySelectorAll('.sublist > .followed-row')).toHaveLength(2);
+  });
+
   it('lists the rows in the order given, each linking to its story', () => {
     const fixture = mount([story(7), story(4), story(9)]);
     expand(fixture);

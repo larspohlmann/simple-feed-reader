@@ -18,6 +18,7 @@ import { aThreadPost } from '../../../../testing/thread-testing';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { provideStoryContext } from '../../../../testing/story-context-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
@@ -118,6 +119,7 @@ describe('EntryRowComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ImageProxyService, useValue: imageProxy },
         provideRouter([]),
@@ -364,6 +366,7 @@ describe('EntryRowComponent', () => {
         providers: [
           provideSocialAccounts(),
           provideAccountIdentity(),
+          ...provideEntryActionsContext(),
           { provide: LinkReaderNavigation, useValue: navigation },
         ],
       });

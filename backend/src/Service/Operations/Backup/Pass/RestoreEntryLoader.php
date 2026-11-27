@@ -10,6 +10,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Content\LinkCard\SharedLinkWriter;
+use App\Service\Library\Label\EntryLabeling;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryShareLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
@@ -23,7 +24,7 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Loads one entry part's entries, entry states and shares. Constructed per request,
+ * Loads one entry part's entries, entry states with their labels, and shares. Constructed per request,
  * never shared: every field is per-run working state, and the User is a
  * reference re-acquired after every clear().
  */
@@ -60,6 +61,7 @@ final class RestoreEntryLoader
         private readonly RestoreEntrySharesInterface $entryShares,
         private readonly EntryBatchInserter $inserter,
         private readonly SharedLinkWriter $linkWriter,
+        private readonly EntryLabeling $labeling,
         private readonly RestoredEntryStateFactory $stateFactory,
         RestoreDestination $destination,
     ) {
@@ -268,6 +270,7 @@ final class RestoreEntryLoader
         $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
         $userId = $this->user->requireId();
         $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
+        $labelNamesByEntryId = [];
         foreach ($held as [$line, $entryId]) {
             if (isset($alreadyStated[$entryId])) {
                 continue;
@@ -275,9 +278,27 @@ final class RestoreEntryLoader
 
             $this->entityManager->persist($this->buildState($line, $entryId));
             ++$this->entryStatesCreated;
+            if ([] !== $line->labels) {
+                $labelNamesByEntryId[$entryId] = $line->labels;
+            }
         }
 
         $this->flushStates();
+        $this->attachLabels($labelNamesByEntryId);
+    }
+
+    /** @param array<int, list<string>> $labelNamesByEntryId */
+    private function attachLabels(array $labelNamesByEntryId): void
+    {
+        if ([] === $labelNamesByEntryId) {
+            return;
+        }
+
+        try {
+            $this->labeling->attachByName($this->user, $labelNamesByEntryId);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
+        }
     }
 
     private function writeHeldShares(): void

@@ -9,6 +9,7 @@ import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy
 import { describePortraitCover } from '../../../../../../testing/portrait-cover-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -42,6 +43,7 @@ function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: ImageProxyService, useValue: imageProxy },
       provideRouter([]),

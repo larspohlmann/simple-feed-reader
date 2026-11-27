@@ -38,3 +38,29 @@
     <span class="name">{{ m.term }}</span>
   </a>
 }
+@for (label of labelPills(); track label.id) {
+  <a
+    class="pill label"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ view: labelView(), label: label.id })"
+    queryParamsHandling="merge"
+    [attr.title]="'reader.labels.filterBy' | transloco: { name: label.name }"
+    (click)="$event.stopPropagation()"
+  >
+    <app-icon name="label" size="xs" />
+    <span class="name">{{ label.name }}</span>
+  </a>
+}
+@if (hiddenLabelCount() > 0) {
+  <button
+    #more
+    type="button"
+    class="pill more"
+    aria-haspopup="menu"
+    [attr.aria-expanded]="labelMenu.isOpenAt(more)"
+    [attr.aria-label]="'reader.labels.more' | transloco: { count: hiddenLabelCount() }"
+    (click)="$event.stopPropagation(); labelMenu.open(labelled()!, more, actions)"
+  >
+    +{{ hiddenLabelCount() }}
+  </button>
+}

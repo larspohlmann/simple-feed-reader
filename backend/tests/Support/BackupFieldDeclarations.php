@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Entry;
+use App\Entity\EntryLabel;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
+use App\Entity\Label;
 use App\Entity\LinkCard;
 use App\Entity\NetworkExclusion;
 use App\Entity\ReadingSettings;
@@ -141,6 +143,9 @@ final class BackupFieldDeclarations
             'entry' => ['feedUrl', 'guidHash'],
             'sharedAt' => 'sharedAt',
         ],
+        // A label rides by name on the marks of its articles, so a label on no marked article is not in the file.
+        Label::class => ['name' => 'labels'],
+        EntryLabel::class => ['label' => 'labels', 'entry' => ['feedUrl', 'guidHash']],
     ];
 
     /** Doctrine class => the `kind` of the line its fields are written on. */
@@ -161,6 +166,8 @@ final class BackupFieldDeclarations
         SavedEntryOrigin::class => BackupSchema::KIND_ENTRY,
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
         EntryShare::class => BackupSchema::KIND_ENTRY_SHARE,
+        Label::class => BackupSchema::KIND_ENTRY_STATE,
+        EntryLabel::class => BackupSchema::KIND_ENTRY_STATE,
     ];
 
     private function __construct()

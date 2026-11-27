@@ -6,20 +6,25 @@ namespace App\Tests\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
+use App\Entity\EntryLabel;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\User;
+use App\Repository\EntryLabelRepository;
 use App\Repository\EntryShareRepository;
 use App\Service\Library\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
+use App\Tests\Support\NamesLabels;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SavedStateMoverTest extends DbTestCase
 {
+    use NamesLabels;
+
     private const string READ_AT = '2026-10-16 08:00:00';
     private const string VIEWED_AT = '2026-10-16 08:05:00';
 
@@ -226,6 +231,60 @@ final class SavedStateMoverTest extends DbTestCase
         self::assertTrue($this->stateOf($this->target->requireId())->isFavorite());
     }
 
+    public function testMoveCarriesLabelsOntoTheSavedCopy(): void
+    {
+        $work = $this->labelNamed($this->user, 'Work');
+        $readLater = $this->labelNamed($this->user, 'Read later');
+        $this->entityManager->persist(new EntryLabel($work, $this->source));
+        $this->entityManager->persist(new EntryLabel($work, $this->target));
+        $this->entityManager->persist(new EntryLabel($readLater, $this->target));
+        $this->entityManager->flush();
+
+        $this->moveSourceToTarget();
+
+        self::assertSame(['Read later', 'Work'], $this->labelNamesOn($this->user, $this->target->requireId()));
+        self::assertSame([], $this->labelNamesOn($this->user, $this->source->requireId()));
+    }
+
+    public function testTwoSourcesOntoOneTargetLeaveEachLabelOnceOnTheTarget(): void
+    {
+        $work = $this->labelNamed($this->user, 'Work');
+        $otherSource = SavedPostFixtures::entry(
+            $this->entityManager,
+            $this->source->getFeed(),
+            'other-source',
+            'https://mover.example/3',
+        );
+        $this->entityManager->persist(new EntryLabel($work, $this->source));
+        $this->entityManager->persist(new EntryLabel($work, $otherSource));
+        $this->entityManager->flush();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move(
+            $this->user->requireId(),
+            [$this->source->requireId() => $targetId, $otherSource->requireId() => $targetId],
+        );
+        $this->entityManager->clear();
+
+        self::assertSame(['Work'], $this->labelNamesOn($this->user, $targetId));
+    }
+
+    public function testAnotherUsersLabelOnTheSourceStaysWhereItIs(): void
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $stranger = (new UserFactory($this->entityManager, $hasher))->create('stranger@example.test');
+        $this->entityManager->persist(new EntryLabel($this->labelNamed($stranger, 'Theirs'), $this->source));
+        $this->entityManager->persist(new EntryLabel($this->labelNamed($this->user, 'Mine'), $this->source));
+        $this->entityManager->flush();
+
+        $this->moveSourceToTarget();
+
+        self::assertSame(['Theirs'], $this->labelNamesOn($stranger, $this->source->requireId()));
+        self::assertSame([], $this->labelNamesOn($stranger, $this->target->requireId()));
+        self::assertSame(['Mine'], $this->labelNamesOn($this->user, $this->target->requireId()));
+    }
+
     private function moveSourceToTarget(): void
     {
         $this->mover()->move($this->user->requireId(), [$this->source->requireId() => $this->target->requireId()]);
@@ -249,6 +308,15 @@ final class SavedStateMoverTest extends DbTestCase
         $shares = $this->entityManager->getRepository(EntryShare::class);
 
         return $shares->findSharedAt($this->user->requireId(), $entryId);
+    }
+
+    /** @return list<string> */
+    private function labelNamesOn(User $user, int $entryId): array
+    {
+        /** @var EntryLabelRepository $entryLabels */
+        $entryLabels = $this->entityManager->getRepository(EntryLabel::class);
+
+        return array_column($entryLabels->findLabelsByEntryIds($user->requireId(), [$entryId])[$entryId] ?? [], 'name');
     }
 
     private function mover(): SavedStateMover

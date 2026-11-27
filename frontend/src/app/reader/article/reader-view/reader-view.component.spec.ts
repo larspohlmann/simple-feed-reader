@@ -49,6 +49,7 @@ import { PostMediaComponent } from '../../media/post-media/post-media.component'
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import {
   aMastodonAccount,
   provideSocialAccounts,
@@ -205,6 +206,7 @@ describe('ReaderViewComponent', () => {
       imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: EntryStateActions, useValue: { share: jest.fn() } },
         provideRouter([]),

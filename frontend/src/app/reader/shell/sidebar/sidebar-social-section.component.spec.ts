@@ -210,7 +210,7 @@ describe('SidebarSocialSectionComponent', () => {
       const root = element(mount(ONE_ACCOUNT));
 
       expect(bellOf(root)).not.toBeNull();
-      expect(root.querySelector('.rows')).toBeNull();
+      expect(root.querySelector('.sublist')).toBeNull();
     });
 
     it('offers no bell without a connected account', () => {
@@ -312,6 +312,15 @@ describe('SidebarSocialSectionComponent', () => {
     expect(rows[0]).toContain('Home@bsky');
     expect(rows[1]).toContain('Writers');
     expect(root.querySelector('.account-handle')).toBeNull();
+  });
+
+  it('hangs its feed rows on the shared sidebar sublist', () => {
+    const root = element(mount(ONE_ACCOUNT));
+
+    expect(root.querySelectorAll('.sublist .feedrow')).toHaveLength(
+      root.querySelectorAll('.feedrow').length,
+    );
+    expect(root.querySelectorAll('.feedrow').length).toBeGreaterThan(0);
   });
 
   it('keeps a renamed Home under the name it was given', () => {

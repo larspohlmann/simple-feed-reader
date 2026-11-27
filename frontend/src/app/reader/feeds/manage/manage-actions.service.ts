@@ -160,7 +160,7 @@ export class ManageActions {
     this.confirm.confirmThen(unsubscribeConfirm(this.i18n, subscription), () => {
       this.api
         .deleteSubscription(subscription.id)
-        .subscribe({ next: () => this.subscriptions.reloadQuietly() });
+        .subscribe({ next: () => this.subscriptionReload.afterMembershipChange() });
     });
   }
 
@@ -175,7 +175,7 @@ export class ManageActions {
 
     return ref.closed.pipe(
       tap((subscription) => {
-        if (subscription) this.subscriptions.reloadQuietly();
+        if (subscription) this.subscriptionReload.afterMembershipChange();
       }),
     );
   }

@@ -25,5 +25,6 @@
   [subscriptionId]="entry().subscriptionId"
   [savedSearches]="entry().savedSearches ?? []"
   [short]="shortPill()"
+  [labelled]="labelsShown() ? entry() : null"
 />
 <app-entry-actions [entry]="entry()" [size]="size()" [like]="false" />

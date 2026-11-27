@@ -111,6 +111,31 @@ describe('selectionFromParams', () => {
     });
     expect(selectionFromParams(pm({ view: 'kept' }), ON).selection.kind).toBe('kept');
   });
+  it('reads the label a favorites or kept list is narrowed to (#2581)', () => {
+    expect(selectionFromParams(pm({ view: 'kept', label: 'unlabeled' }), ON).selection).toEqual({
+      kind: 'kept',
+      label: 'unlabeled',
+    });
+    expect(selectionFromParams(pm({ view: 'favorites', label: '3' }), ON).selection).toEqual({
+      kind: 'favorites',
+      label: 3,
+    });
+  });
+  it('drops a label no favorites or kept list can take (#2581)', () => {
+    expect(selectionFromParams(pm({ view: 'all', label: '3' }), ON).selection).toEqual({
+      kind: 'all',
+      unread: false,
+    });
+    expect(selectionFromParams(pm({ view: 'shared', label: '3' }), ON).selection).toEqual({
+      kind: 'shared',
+    });
+    expect(selectionFromParams(pm({ view: 'kept', label: '0' }), ON).selection).toEqual({
+      kind: 'kept',
+    });
+    expect(selectionFromParams(pm({ view: 'kept', label: 'work' }), ON).selection).toEqual({
+      kind: 'kept',
+    });
+  });
   it('reads view=shared into the shared selection', () => {
     expect(selectionFromParams(pm({ view: 'shared' }), ON).selection).toEqual({
       kind: 'shared',
@@ -202,6 +227,7 @@ describe('selectionQueryParams', () => {
         'entry',
         'feedKind',
         'group',
+        'label',
         'link',
         'network',
         'q',
@@ -224,6 +250,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: null,
       window: null,
+      label: null,
     });
   });
   it('keeps only the params the caller set, nulling the rest', () => {
@@ -238,6 +265,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: null,
       window: null,
+      label: null,
     });
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
       view: null,
@@ -250,6 +278,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: null,
       window: null,
+      label: null,
     });
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
       view: 'favorites',
@@ -262,6 +291,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: null,
       window: null,
+      label: null,
     });
   });
   it('clears q along with everything else when nothing is set', () => {
@@ -276,6 +306,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: null,
       window: null,
+      label: null,
     });
   });
   // The results are cached so that a [queryParams] binding — one per sidebar
@@ -316,6 +347,7 @@ describe('selectionQueryParams', () => {
         link: null,
         q: null,
         window: null,
+        label: null,
       });
     });
   });
@@ -332,6 +364,7 @@ describe('selectionQueryParams', () => {
       link: null,
       q: 'angular',
       window: null,
+      label: null,
     });
   });
 });
@@ -942,6 +975,8 @@ describe('identityKey (#2107)', () => {
   it('names what tells two lists of one kind apart, and nothing else', () => {
     expect(identityKey({ kind: 'all', unread: true })).toBe('');
     expect(identityKey({ kind: 'favorites' })).toBe('');
+    expect(identityKey({ kind: 'favorites', label: 3 })).toBe('3');
+    expect(identityKey({ kind: 'kept', label: 'unlabeled' })).toBe('unlabeled');
     expect(identityKey({ kind: 'tag', id: 3, unread: true })).toBe('3');
     expect(identityKey({ kind: 'saved-search', id: 7, unread: false })).toBe('7');
     expect(identityKey({ kind: 'network', unread: true, network: 'bluesky' })).toBe('bluesky');

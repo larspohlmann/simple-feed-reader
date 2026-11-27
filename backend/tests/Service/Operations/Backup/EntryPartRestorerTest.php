@@ -19,6 +19,7 @@ use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscribedEntryCountRepository;
+use App\Service\Library\Label\EntryLabeling;
 use App\Service\Operations\Backup\BackupFitCheck;
 use App\Service\Operations\Backup\BackupReader;
 use App\Service\Operations\Backup\EntryPartInspector;
@@ -595,6 +596,8 @@ final class EntryPartRestorerTest extends DbTestCase
         $entryShares = self::getContainer()->get(EntryShareRepository::class);
         /** @var EntryBatchInserter $inserter */
         $inserter = self::getContainer()->get(EntryBatchInserter::class);
+        /** @var EntryLabeling $labeling */
+        $labeling = self::getContainer()->get(EntryLabeling::class);
 
         $inspector = new EntryPartInspector($reader, $feeds, $entries, $subscribedEntryCounts, $accountEntryCeiling);
         $loaderFactory = new RestoreEntryLoaderFactory(
@@ -604,6 +607,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryShares,
             $inserter,
             PostEnrichers::sharedLinkWriter($this->entityManager),
+            $labeling,
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );

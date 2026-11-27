@@ -99,7 +99,7 @@
     }
   </div>
   @if (expanded() || organising()) {
-    <div class="rows">
+    <div class="sublist">
       @for (group of current.accounts; track group.accountId) {
         @if (current.showsHandles && group.handle) {
           <p class="account-handle">{{ group.handle }}</p>

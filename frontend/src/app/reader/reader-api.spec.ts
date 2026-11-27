@@ -204,6 +204,19 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it('GETs a favorites or kept list narrowed to a label or the unlabeled posts (#2581)', () => {
+    api.entries({ view: 'favorites', label: 3 }).subscribe();
+    api.entries({ view: 'kept', label: 'unlabeled' }).subscribe();
+    const [byLabel, unlabeled] = ctrl.match(
+      (request) => request.url === 'https://api.test/api/entries',
+    );
+    expect(byLabel.request.params.get('label')).toBe('3');
+    expect(unlabeled.request.params.get('label')).toBe('unlabeled');
+    expect(unlabeled.request.params.get('view')).toBe('kept');
+    byLabel.flush({ entries: [], nextCursor: null });
+    unlabeled.flush({ entries: [], nextCursor: null });
+  });
+
   // #91: the STRATO host is slow, so the client asks for the biggest page the
   // backend allows rather than falling back to its smaller default.
   it('asks for a full page on both the first request and a paged one', () => {

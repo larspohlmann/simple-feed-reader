@@ -1,0 +1,85 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, map, tap } from 'rxjs';
+import { onIdentityChange } from '../../core/auth/session-identity';
+import { EntryRowCache } from '../state/entry-row-cache';
+import { StaleGatedLoad } from '../state/stale-gated-load';
+import { byLabelName } from './label-order';
+import { LabelsApi } from './labels.api';
+import { LabelPill, LabelTally, UnlabeledTally } from './labels.models';
+
+const NO_UNLABELED: UnlabeledTally = { favoriteCount: 0, keptCount: 0 };
+
+/** The reader's labels, alphabetical, with how many favorites and kept posts each sorts, and how many carry none.
+ *  Every change to a label reloads the tallies (a new one through the attach that follows it) and reaches the rows
+ *  on screen; a row's own labels change through `EntryActionHandler`. */
+@Injectable({ providedIn: 'root' })
+export class LabelsStore {
+  private readonly api = inject(LabelsApi);
+  private readonly rows = inject(EntryRowCache);
+  private readonly loads = new StaleGatedLoad();
+  private readonly storedLabels = signal<LabelTally[]>([]);
+  private readonly storedUnlabeled = signal<UnlabeledTally>(NO_UNLABELED);
+
+  private readonly hasLoaded = signal(false);
+
+  readonly loaded = this.hasLoaded.asReadonly();
+  readonly labels = this.storedLabels.asReadonly();
+  readonly unlabeled = this.storedUnlabeled.asReadonly();
+
+  constructor() {
+    onIdentityChange(() => {
+      this.loads.forget();
+      this.storedLabels.set([]);
+      this.storedUnlabeled.set(NO_UNLABELED);
+      this.hasLoaded.set(false);
+    });
+  }
+
+  reload(): void {
+    this.loads.run(this.api.tallies(), (response) => {
+      this.storedLabels.set([...response.labels].sort(byLabelName));
+      this.storedUnlabeled.set(response.unlabeled);
+      this.hasLoaded.set(true);
+    });
+  }
+
+  /** The counts poll's reload (#708), inside the freshness window and with nothing out a no-op. */
+  reloadIfStale(): void {
+    if (this.loads.isStale()) this.reload();
+  }
+
+  /** Lists the new label at once with no posts counted; the attach that follows reloads the tallies. */
+  create(name: string): Observable<LabelPill> {
+    return this.api.create(name).pipe(tap((label) => this.listUncounted(label)));
+  }
+
+  rename(id: number, name: string): Observable<void> {
+    return this.reloadAfter(
+      this.api.rename(id, name).pipe(tap((label) => this.rows.renameLabelLocally(id, label.name))),
+    );
+  }
+
+  remove(id: number): Observable<void> {
+    return this.reloadAfter(this.api.remove(id).pipe(tap(() => this.rows.dropLabelLocally(id))));
+  }
+
+  attach(entryId: number, labelId: number): Observable<void> {
+    return this.api.attach(entryId, labelId);
+  }
+
+  detach(entryId: number, labelId: number): Observable<void> {
+    return this.api.detach(entryId, labelId);
+  }
+
+  private listUncounted({ id, name }: LabelPill): void {
+    const label: LabelTally = { id, name, favoriteCount: 0, keptCount: 0, articleCount: 0 };
+    this.storedLabels.update((labels) => [...labels, label].sort(byLabelName));
+  }
+
+  private reloadAfter(write: Observable<unknown>): Observable<void> {
+    return write.pipe(
+      tap(() => this.reload()),
+      map(() => undefined),
+    );
+  }
+}

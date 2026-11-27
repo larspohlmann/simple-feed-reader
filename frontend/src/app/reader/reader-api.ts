@@ -377,5 +377,6 @@ function mainListParams(query: EntryQuery, params: HttpParams): HttpParams {
   if (query.network != null) listParams = listParams.set('network', query.network);
   if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
   if (query.group != null) listParams = listParams.set('group', query.group);
+  if (query.label != null) listParams = listParams.set('label', query.label);
   return listParams;
 }

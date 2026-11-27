@@ -8,9 +8,11 @@ use App\Entity\Entry;
 use App\Enum\CommentsLoad;
 use App\Enum\SourceFormat;
 use App\Repository\EntryCategoryRepository;
+use App\Repository\EntryLabelRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowGroupings;
 use App\Repository\EntryListRowSocial;
 use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
@@ -20,7 +22,7 @@ use App\Repository\ThreadPostRepository;
 use App\Service\Content\Comments\Support\SubstackPostAddress;
 
 /**
- * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state,
+ * Gives a page of rows their categories, saved searches, labels, link cards, thread posts, pending flag, social state,
  * discussion and saved origin: one query per lookup, two for the thread posts and their cards.
  */
 final readonly class EntryListRowEnricher
@@ -33,6 +35,7 @@ final readonly class EntryListRowEnricher
         private ThreadPostRepository $threadPosts,
         private SavedEntryOriginRepository $savedOrigins,
         private ConnectedAccountStates $connectedAccountStates,
+        private EntryLabelRepository $entryLabels,
     ) {
     }
 
@@ -59,6 +62,7 @@ final readonly class EntryListRowEnricher
         $entryIds = array_keys($entries);
         $categories = $this->categories->labelsByEntryIds($entryIds);
         $savedSearches = $this->memberships->savedSearchesByEntry($userId, $entryIds);
+        $labels = $this->entryLabels->findLabelsByEntryIds($userId, $entryIds);
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->findPendingEntryIds(self::collectTopLevelEntryIds($rows)));
@@ -69,7 +73,7 @@ final readonly class EntryListRowEnricher
         foreach ($entryIds as $entryId) {
             $enrichments[$entryId] = new EntryListRowEnrichment(
                 $categories[$entryId] ?? [],
-                $savedSearches[$entryId] ?? [],
+                new EntryListRowGroupings($savedSearches[$entryId] ?? [], $labels[$entryId] ?? []),
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
                 $states->social[$entryId] ?? null,

@@ -1,0 +1,42 @@
+@use 'sidebar-row' as row;
+@include row.card;
+@include row.row-parts;
+@include row.section-head;
+@include row.section-head-glyph;
+@include row.chevron('.chevzone');
+@include row.dots;
+@include row.sublist;
+
+:host {
+  display: contents;
+}
+
+.label-row {
+  @include row.row-geometry;
+}
+
+@include row.row-link('.nav');
+@include row.row-states('.label-row', '.label-row.active');
+
+.label-row:not(.active) app-icon {
+  color: var(--text-muted);
+}
+
+.label-row.active .nav {
+  color: var(--accent);
+}
+
+.label-row .rename {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--row-box) - 2 * var(--space-1));
+  margin-block: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+/* On touch a label row's ⋯ takes the 44px chevron column, so its count lines up with Unlabeled's and the head's. */
+@media (pointer: coarse) {
+  .label-row .dots + .trail {
+    display: none;
+  }
+}

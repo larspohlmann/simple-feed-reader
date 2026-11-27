@@ -11,6 +11,7 @@ use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
+use App\Repository\LabelScope;
 use App\Repository\NetworkScope;
 use PHPUnit\Framework\TestCase;
 
@@ -136,5 +137,23 @@ final class EntryQueryTest extends TestCase
             }
             self::assertSame($field->getValue($unread), $field->getValue($allView), $name);
         }
+    }
+
+    public function testALabelScopeIsUnsetUntilAWitherSetsIt(): void
+    {
+        $favorites = new EntryQuery(userId: 7, view: EntryView::Favorites);
+
+        $labeled = $favorites->withLabelScope(LabelScope::forLabel(12));
+
+        self::assertNull($favorites->labelScope);
+        self::assertEquals(LabelScope::forLabel(12), $labeled->labelScope);
+        self::assertSame(EntryView::Favorites, $labeled->view);
+    }
+
+    public function testTheAllViewKeepsTheLabelScope(): void
+    {
+        $labeled = new EntryQuery(userId: 7, view: EntryView::Kept)->withLabelScope(LabelScope::unlabeled());
+
+        self::assertEquals(LabelScope::unlabeled(), $labeled->inAllView()->labelScope);
     }
 }

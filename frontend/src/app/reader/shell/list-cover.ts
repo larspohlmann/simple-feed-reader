@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Selection } from '../query/query';
 import { ListContext } from '../state/list-context';
 import { ListHeading } from './list-heading.service';
 
@@ -32,15 +33,32 @@ export class ListCover {
 /** What `pick` reads off the list the reader sees: the one over the route's, else `route`, the route list's own.
  *  Call from an injection context at the reader shell. */
 export function onScreen<T>(route: T, pick: (list: CoveringList) => T): Signal<T> {
-  const cover = inject(ListCover);
-  return computed(() => {
-    const list = cover.list();
-    return list ? pick(list) : route;
-  });
+  return resolveOnScreen(inject(ListCover), route, pick);
 }
 
 /** The list the reader sees. Call from an injection context at the reader shell, where `ListContext` is the
  *  route's. */
 export function injectListOnScreen(): Signal<ListContext> {
   return onScreen(inject(ListContext), (list) => list.context);
+}
+
+/** What the list the reader sees lists, or null where no reader shell provides a list (a host mounted on its own). */
+export function injectSelectionOnScreen(): Signal<Selection | null> {
+  const list = resolveOnScreen(
+    inject(ListCover, { optional: true }),
+    inject(ListContext, { optional: true }),
+    (covering) => covering.context,
+  );
+  return computed(() => list()?.selection() ?? null);
+}
+
+function resolveOnScreen<T>(
+  cover: ListCover | null,
+  route: T,
+  pick: (list: CoveringList) => T,
+): Signal<T> {
+  return computed(() => {
+    const list = cover?.list();
+    return list ? pick(list) : route;
+  });
 }

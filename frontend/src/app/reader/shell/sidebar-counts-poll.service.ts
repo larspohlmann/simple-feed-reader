@@ -2,6 +2,7 @@ import { DestroyRef, Injectable, NgZone, inject } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
+import { LabelsStore } from '../labels/labels.store';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
@@ -59,6 +60,7 @@ export class SidebarCountsPoll {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly followedStories = inject(FollowedStoriesStore);
+  private readonly labels = inject(LabelsStore);
   private readonly zone = inject(NgZone);
   private readonly apiBase = inject(API_BASE_URL);
 
@@ -163,6 +165,7 @@ export class SidebarCountsPoll {
       this.subscriptions.reloadCountsIfStale();
       this.savedSearches.reloadIfStale();
       this.followedStories.reloadIfStale();
+      this.labels.reloadIfStale();
     });
   }
 
@@ -175,6 +178,7 @@ export class SidebarCountsPoll {
       this.subscriptions.reloadQuietlyIfStale();
       this.savedSearches.reloadIfStale();
       this.followedStories.load();
+      this.labels.reloadIfStale();
     });
     void this.refreshMarkerBaseline();
   }
