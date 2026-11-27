@@ -23,7 +23,7 @@ import { VoteValue } from '../vote-pill/vote';
 import { injectListOnScreen } from './list-cover';
 import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
-import { byLabelName } from '../labels/label-order';
+import { LabelChange, withLabelChange } from '../state/in-flight-label-changes';
 import { parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
@@ -155,14 +155,15 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   attachLabel(entry: EntryDto, label: LabelPill): void {
-    if (entry.labels.some((held) => held.id === label.id)) return;
-    const labels = [...entry.labels, label].sort(byLabelName);
-    this.saveLabels(entry, labels, this.labels.attach(entry.id, label.id));
+    this.changeLabel(entry, { entryId: entry.id, label, attached: true }, () =>
+      this.rows.attachLabel(entry.id, label, this.labels.attach(entry.id, label.id)),
+    );
   }
 
   detachLabel(entry: EntryDto, label: LabelPill): void {
-    const labels = entry.labels.filter((held) => held.id !== label.id);
-    this.saveLabels(entry, labels, this.labels.detach(entry.id, label.id));
+    this.changeLabel(entry, { entryId: entry.id, label, attached: false }, () =>
+      this.rows.detachLabel(entry.id, label, this.labels.detach(entry.id, label.id)),
+    );
   }
 
   createLabel(entry: EntryDto, name: string): Observable<void> {
@@ -218,15 +219,19 @@ export class EntryStateActions implements EntryActionHandler {
     };
   }
 
-  /** The row shows `labels` at once and leaves a list narrowed to a label it no longer fits. */
-  private saveLabels(entry: EntryDto, labels: LabelPill[], request$: Observable<void>): void {
+  /** Judged on the row as shown, not the caller's copy, which a menu may have held since it opened: a change it
+   *  already shows is dropped, and the row leaves a list narrowed to a label it no longer fits. */
+  private changeLabel(entry: EntryDto, change: LabelChange, save: () => Observable<unknown>): void {
+    const shown = this.rows.entry(entry.id) ?? entry;
+    const changed = withLabelChange(shown, change);
+    if (changed === shown) return;
     const list = this.list();
-    const leaves = leavesLabelledView(list.selection(), labels);
-    if (leaves) list.markLeaving(entry.id);
-    this.rows.saveLabels(entry, labels, request$).subscribe({
+    const leaves = leavesLabelledView(list.selection(), changed.labels);
+    if (leaves) list.markLeaving(change.entryId);
+    save().subscribe({
       next: () => this.labels.reload(),
       error: (error: HttpErrorResponse) => {
-        if (leaves) list.stayInList(entry.id);
+        if (leaves) list.stayInList(change.entryId);
         this.toast.showProblem(parseProblem(error));
       },
     });

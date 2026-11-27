@@ -13,6 +13,12 @@ import { LabelPill } from '../labels/labels.models';
 import { byLabelName } from '../labels/label-order';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
+import {
+  InFlightLabelChanges,
+  LabelChange,
+  reversedLabelChange,
+  withLabelChange,
+} from './in-flight-label-changes';
 import { HeldItem, heldItem } from './held-item';
 import { ListItem } from './list-item';
 
@@ -35,9 +41,13 @@ export class EntryRowCache {
   private readonly records = new Map<number, WritableSignal<EntryDto>>();
   private readonly holds = new Map<object, ReadonlySet<number>>();
   private readonly inFlight = new InFlightPatches();
+  private readonly labelsInFlight = new InFlightLabelChanges();
 
   constructor() {
-    onIdentityChange(() => this.inFlight.clear());
+    onIdentityChange(() => {
+      this.inFlight.clear();
+      this.labelsInFlight.clear();
+    });
   }
 
   /** The items with their entries written over the cached ones, each change still on the wire laid back over them,
@@ -100,13 +110,22 @@ export class EntryRowCache {
     );
   }
 
-  /** The entry's labels show at once and are put back if `request$` fails; its copies keep their own. */
-  saveLabels(
-    entry: EntryDto,
-    labels: LabelPill[],
+  /** The label shows on the entry at once, its copies keep their own; a failure takes back this label alone. */
+  attachLabel(
+    entryId: number,
+    label: LabelPill,
     request$: Observable<unknown>,
   ): Observable<unknown> {
-    return this.optimistic(entry, { labels }, request$);
+    return this.changeLabel({ entryId, label, attached: true }, request$);
+  }
+
+  /** The label leaves the entry at once; a failure puts back this label alone. */
+  detachLabel(
+    entryId: number,
+    label: LabelPill,
+    request$: Observable<unknown>,
+  ): Observable<unknown> {
+    return this.changeLabel({ entryId, label, attached: false }, request$);
   }
 
   /** The vote shows at once; its score waits for the answer. */
@@ -185,7 +204,7 @@ export class EntryRowCache {
   }
 
   private write(entry: EntryDto): Signal<EntryDto> {
-    const shown = this.inFlight.overlay(entry);
+    const shown = this.labelsInFlight.overlay(this.inFlight.overlay(entry));
     const record = this.records.get(entry.id);
     if (record) {
       record.set(shown);
@@ -281,6 +300,18 @@ export class EntryRowCache {
       idsByItem.set(itemId, [...(idsByItem.get(itemId) ?? []), id]);
     }
     return idsByItem;
+  }
+
+  private changeLabel(change: LabelChange, request$: Observable<unknown>): Observable<unknown> {
+    const release = this.labelsInFlight.add(change);
+    this.patch([change.entryId], (row) => withLabelChange(row, change));
+    return request$.pipe(
+      tap({
+        error: () =>
+          this.patch([change.entryId], (row) => withLabelChange(row, reversedLabelChange(change))),
+      }),
+      finalize(release),
+    );
   }
 
   private patchLabelled(labelId: number, change: (labels: LabelPill[]) => LabelPill[]): void {

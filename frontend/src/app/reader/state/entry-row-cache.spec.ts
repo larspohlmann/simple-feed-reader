@@ -228,36 +228,70 @@ describe('EntryRowCache', () => {
     );
   });
 
-  describe('saveLabels (#2581)', () => {
+  describe('label changes (#2581)', () => {
     const work = { id: 3, name: 'Work' };
     const home = { id: 4, name: 'Home' };
+    const failWith500 = (request: Subject<never>) =>
+      request.error(new HttpErrorResponse({ status: 500 }));
 
-    it('shows the labels at once, on the entry alone and not on its copies', () => {
+    it('shows an attached label at once, on the entry alone and not on its copies', () => {
       holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-      cache.saveLabels(readShownEntry(1), [work], new Subject()).subscribe();
+      cache.attachLabel(1, work, new Subject()).subscribe();
 
       expect(readShownEntry(1).labels).toEqual([work]);
       expect(readShownEntry(2).labels).toEqual([]);
     });
 
-    it('puts the labels back when the save fails', () => {
-      holdEntries(buildCopy(1, null, { labels: [home] }));
+    it('takes a failed attach back off the row', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
       const failing = new Subject<never>();
 
-      cache.saveLabels(readShownEntry(1), [home, work], failing).subscribe({ error: jest.fn() });
-      failing.error(new HttpErrorResponse({ status: 500 }));
+      cache.attachLabel(1, home, failing).subscribe({ error: jest.fn() });
+      failWith500(failing);
+
+      expect(readShownEntry(1).labels).toEqual([work]);
+    });
+
+    it('undoes only the failed change when two changes on one row are out', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+      const attaching = new Subject<never>();
+
+      cache.attachLabel(1, home, attaching).subscribe({ error: jest.fn() });
+      cache.detachLabel(1, work, new Subject()).subscribe();
+      failWith500(attaching);
+
+      expect(readShownEntry(1).labels).toEqual([]);
+    });
+
+    it('puts a failed detach back beside a change made since', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+      const detaching = new Subject<never>();
+
+      cache.detachLabel(1, work, detaching).subscribe({ error: jest.fn() });
+      cache.attachLabel(1, home, new Subject()).subscribe();
+      failWith500(detaching);
+
+      expect(readShownEntry(1).labels).toEqual([home, work]);
+    });
+
+    it('keeps every change on the wire over a reload that lands meanwhile', () => {
+      holdEntries(buildCopy(1, null, { labels: [work] }));
+
+      cache.attachLabel(1, home, new Subject()).subscribe();
+      cache.detachLabel(1, work, new Subject()).subscribe();
+      holdEntries(buildCopy(1, null, { labels: [work] }));
 
       expect(readShownEntry(1).labels).toEqual([home]);
     });
 
-    it('keeps the labels on the wire over a reload that lands meanwhile', () => {
+    it('lets a reload show the server once a change has settled', () => {
       holdEntries(buildCopy(1, null));
 
-      cache.saveLabels(readShownEntry(1), [work], new Subject()).subscribe();
+      cache.attachLabel(1, work, of(undefined)).subscribe();
       holdEntries(buildCopy(1, null));
 
-      expect(readShownEntry(1).labels).toEqual([work]);
+      expect(readShownEntry(1).labels).toEqual([]);
     });
   });
 

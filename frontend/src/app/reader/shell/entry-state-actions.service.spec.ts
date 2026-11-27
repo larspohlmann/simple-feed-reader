@@ -7,6 +7,8 @@ import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
 import { EntryRowCache } from '../state/entry-row-cache';
+import { ReaderApi } from '../reader-api';
+import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -601,7 +603,9 @@ describe('EntryStateActions labelling a row (#2581)', () => {
   const work: LabelPill = { id: 3, name: 'Work' };
   const home: LabelPill = { id: 4, name: 'Home' };
   let saved = new Subject<unknown>();
-  const saveLabels = jest.fn(() => saved.asObservable());
+  const shownRow = jest.fn((): EntryDto | null => null);
+  const attachLabel = jest.fn(() => saved.asObservable());
+  const detachLabel = jest.fn(() => saved.asObservable());
   const labels = {
     reload: jest.fn(),
     attach: jest.fn(() => of(undefined)),
@@ -618,31 +622,49 @@ describe('EntryStateActions labelling a row (#2581)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    shownRow.mockReset();
     saved = new Subject<unknown>();
     selection.set({ kind: 'all', unread: false });
     actions = createActions({
       entries: {},
       subscriptions: {},
       routeState: { openEntryId: signal(null), openEntry: signal(null), selection },
-      rows: { saveLabels },
+      rows: { entry: shownRow, attachLabel, detachLabel },
       labels,
       toast: { showProblem },
     });
   });
 
-  it('shows the attached label in name order through the row cache', () => {
+  it('attaches through the row cache', () => {
     const entry = anEntry({ id: 9, labels: [work] });
 
     actions.attachLabel(entry, home);
 
-    expect(saveLabels).toHaveBeenCalledWith(entry, [home, work], expect.anything());
+    expect(attachLabel).toHaveBeenCalledWith(9, home, expect.anything());
     expect(labels.attach).toHaveBeenCalledWith(9, 4);
   });
 
   it('attaches nothing that is already on the row', () => {
     actions.attachLabel(anEntry({ id: 9, labels: [work] }), work);
 
-    expect(saveLabels).not.toHaveBeenCalled();
+    expect(attachLabel).not.toHaveBeenCalled();
+  });
+
+  it('detaches nothing the row does not carry', () => {
+    actions.detachLabel(anEntry({ id: 9, labels: [home] }), work);
+
+    expect(detachLabel).not.toHaveBeenCalled();
+  });
+
+  it('reads the row as shown, not the copy the caller holds', () => {
+    shownRow.mockReturnValue(anEntry({ id: 9, labels: [work] }));
+    const heldSinceTheMenuOpened = anEntry({ id: 9 });
+
+    actions.attachLabel(heldSinceTheMenuOpened, work);
+    actions.detachLabel(heldSinceTheMenuOpened, work);
+
+    expect(attachLabel).not.toHaveBeenCalled();
+    expect(detachLabel).toHaveBeenCalledWith(9, work, expect.anything());
   });
 
   it('drops the detached label through the row cache', () => {
@@ -650,7 +672,7 @@ describe('EntryStateActions labelling a row (#2581)', () => {
 
     actions.detachLabel(entry, work);
 
-    expect(saveLabels).toHaveBeenCalledWith(entry, [home], expect.anything());
+    expect(detachLabel).toHaveBeenCalledWith(9, work, expect.anything());
     expect(labels.detach).toHaveBeenCalledWith(9, 3);
   });
 
@@ -713,7 +735,7 @@ describe('EntryStateActions labelling a row (#2581)', () => {
     actions.createLabel(entry, 'Work').subscribe({ complete: done });
 
     expect(labels.create).toHaveBeenCalledWith('Work');
-    expect(saveLabels).toHaveBeenCalledWith(entry, [work], expect.anything());
+    expect(attachLabel).toHaveBeenCalledWith(9, work, expect.anything());
     expect(done).toHaveBeenCalled();
   });
 
@@ -732,7 +754,53 @@ describe('EntryStateActions labelling a row (#2581)', () => {
     actions.createLabel(anEntry({ id: 9 }), 'Work').subscribe({ error: failed });
 
     expect(failed).toHaveBeenCalledWith(expect.objectContaining({ type: 'label_name_taken' }));
-    expect(saveLabels).not.toHaveBeenCalled();
+    expect(attachLabel).not.toHaveBeenCalled();
+  });
+});
+
+describe('EntryStateActions toggling several labels on one row (#2581)', () => {
+  const work: LabelPill = { id: 3, name: 'Work' };
+  const home: LabelPill = { id: 4, name: 'Home' };
+  let cache: EntryRowCache;
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        EntryStateActions,
+        EntryRowCache,
+        { provide: ReaderApi, useValue: {} },
+        { provide: SocialPostApi, useValue: {} },
+        {
+          provide: LabelsStore,
+          useValue: { reload: jest.fn(), attach: () => new Subject(), detach: () => new Subject() },
+        },
+        provideRouter([]),
+        ...provideRouteListForTest({}),
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null) },
+        },
+        { provide: ToastService, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
+      ],
+    });
+    cache = TestBed.inject(EntryRowCache);
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('shows both labels ticked from one stale copy of the row', () => {
+    const stale = anEntry({ id: 9 });
+    const held = cache.cached([stale]);
+    cache.hold(held, new Set([9]));
+
+    actions.attachLabel(stale, work);
+    actions.attachLabel(stale, home);
+
+    expect(cache.entry(9)?.labels).toEqual([home, work]);
   });
 });
 
