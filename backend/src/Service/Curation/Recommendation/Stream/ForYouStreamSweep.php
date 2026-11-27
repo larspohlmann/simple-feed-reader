@@ -88,7 +88,6 @@ final readonly class ForYouStreamSweep
         return $pass->caughtUp();
     }
 
-    /** Walks the pass's accounts from $mark to $stopAt; false when the budget or a failure stopped it short. */
     private function walkGroup(StreamSweepPass $pass, int $mark, int $stopAt): bool
     {
         while ($mark < $stopAt) {

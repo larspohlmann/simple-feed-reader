@@ -6,7 +6,6 @@ namespace App\Service\Curation\Recommendation\Stream\ForYouStreamMembershipWrite
 
 use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamMatchModel;
 
-/** The one write the stream sweep makes: store the pairs a chunk matched. */
 interface ForYouStreamMembershipWriterInterface
 {
     /**
