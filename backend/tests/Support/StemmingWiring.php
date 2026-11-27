@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Service\Foundation\Stemming\Factory\SnowballStemmerFactory;
 use App\Service\Foundation\Stemming\GermanCompoundSplitter;
 use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
+use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Stemming\WordStemmer;
 
 final class StemmingWiring
@@ -24,6 +25,11 @@ final class StemmingWiring
     public static function compoundSplitter(): GermanCompoundSplitter
     {
         return new GermanCompoundSplitter(self::germanLexicon());
+    }
+
+    public static function equivalents(): WordEquivalents
+    {
+        return new WordEquivalents(self::stemmer(), self::compoundSplitter());
     }
 
     private function __construct()

@@ -14,7 +14,6 @@ use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\FallbackChoice;
 use App\Service\Curation\Trending\FallbackTitles;
-use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineMarkers;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
@@ -101,7 +100,7 @@ final class TrendingWiring
         return new TrendingGrouping(
             new TrendingEntryRepository($entityManager),
             self::filler(),
-            self::equivalents(),
+            StemmingWiring::equivalents(),
             self::storyLinks(),
             new StoryGrouping(),
             new NaiveUtcClock($clock),
@@ -117,11 +116,6 @@ final class TrendingWiring
     public static function filler(): HeadlineFiller
     {
         return new HeadlineFiller(StemmingWiring::stemmer(), LanguageWiring::stopWords());
-    }
-
-    public static function equivalents(): HeadlineEquivalents
-    {
-        return new HeadlineEquivalents(StemmingWiring::stemmer(), StemmingWiring::compoundSplitter());
     }
 
     public static function storyLinks(): StoryLinks

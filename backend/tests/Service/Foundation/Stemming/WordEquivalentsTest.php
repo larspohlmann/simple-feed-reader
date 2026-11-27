@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending;
+namespace App\Tests\Service\Foundation\Stemming;
 
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Foundation\Stemming\Support\WordStems;
+use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
 use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-final class HeadlineEquivalentsTest extends TestCase
+final class WordEquivalentsTest extends TestCase
 {
-    private HeadlineEquivalents $equivalents;
+    private WordEquivalents $equivalents;
 
     protected function setUp(): void
     {
-        $this->equivalents = TrendingWiring::equivalents();
+        $this->equivalents = StemmingWiring::equivalents();
     }
 
     public function testADroppedShortWordLeavesNoGap(): void
@@ -420,7 +420,7 @@ final class HeadlineEquivalentsTest extends TestCase
     /** @return array<string, string> */
     private static function table(string $name): array
     {
-        $table = new \ReflectionClassConstant(HeadlineEquivalents::class, $name)->getValue();
+        $table = new \ReflectionClassConstant(WordEquivalents::class, $name)->getValue();
         self::assertIsArray($table);
 
         /** @var array<string, string> $table */
@@ -430,7 +430,7 @@ final class HeadlineEquivalentsTest extends TestCase
     /** @return array<string, array<string, string>> language => stem => canonical */
     private static function stemsByLanguage(): array
     {
-        $table = new \ReflectionClassConstant(HeadlineEquivalents::class, 'STEMS_BY_LANGUAGE')->getValue();
+        $table = new \ReflectionClassConstant(WordEquivalents::class, 'STEMS_BY_LANGUAGE')->getValue();
         self::assertIsArray($table);
 
         /** @var array<string, array<string, string>> $table */

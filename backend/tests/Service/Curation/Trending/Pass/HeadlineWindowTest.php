@@ -9,6 +9,7 @@ use App\Service\Curation\Trending\Model\EntryLinksModel;
 use App\Service\Curation\Trending\Model\SharedArticleModel;
 use App\Service\Curation\Trending\Model\WindowEntryModel;
 use App\Service\Curation\Trending\Pass\HeadlineWindow;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TrendingWiring;
 use PHPUnit\Framework\TestCase;
 
@@ -25,7 +26,7 @@ final class HeadlineWindowTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->window = new HeadlineWindow(TrendingWiring::filler(), TrendingWiring::equivalents());
+        $this->window = new HeadlineWindow(TrendingWiring::filler(), StemmingWiring::equivalents());
     }
 
     public function testSeedWordsAreNeverWeighed(): void

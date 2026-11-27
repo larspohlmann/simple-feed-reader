@@ -2,16 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending;
+namespace App\Service\Foundation\Stemming;
 
 use App\Enum\FeedLanguage;
-use App\Service\Foundation\Stemming\GermanCompoundSplitter;
 use App\Service\Foundation\Stemming\Support\WordStems;
-use App\Service\Foundation\Stemming\WordStemmer;
 use App\Service\Foundation\Text\Support\CasefoldedWords;
 
 /** Spellings of one institution share one stem in all four languages; never a person, event or country (#2231). */
-final readonly class HeadlineEquivalents
+final readonly class WordEquivalents
 {
     /** Case-sensitive whole words: abbreviations. */
     private const array EXACT_WORDS = [
@@ -19,7 +17,7 @@ final readonly class HeadlineEquivalents
         'UN' => 'onu', 'UNO' => 'onu', 'ONU' => 'onu',
     ];
 
-    /** Exact words that are also ordinary words in a shouted headline: French "UN PLAN", Spanish "UNO MÁS". */
+    /** Exact words that are also ordinary words in shouted text: French "UN PLAN", Spanish "UNO MÁS". */
     private const array SHOUTABLE_WORDS = ['UN' => true, 'UNO' => true];
 
     /** Folded words without diacritics, joined by one space. */

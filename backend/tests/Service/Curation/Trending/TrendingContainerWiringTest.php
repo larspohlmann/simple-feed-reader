@@ -6,13 +6,13 @@ namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
-use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
 use App\Service\Curation\Trending\StoryBuildPolicy\WeekStoryBuildPolicy;
 use App\Service\Curation\Trending\TrendingRebuild;
 use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
 use App\Service\Foundation\Stemming\GermanLexicon\GermanLexiconInterface;
+use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Text\StopWords\BundledStopWords;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 use App\Tests\DbTestCase;
@@ -68,8 +68,8 @@ final class TrendingContainerWiringTest extends DbTestCase
 
     public function testTheContainersEquivalentsSplitAGermanCompound(): void
     {
-        $equivalents = self::getContainer()->get(HeadlineEquivalents::class);
-        self::assertInstanceOf(HeadlineEquivalents::class, $equivalents);
+        $equivalents = self::getContainer()->get(WordEquivalents::class);
+        self::assertInstanceOf(WordEquivalents::class, $equivalents);
         $stems = $equivalents->stemWordAndParts('polizeieinsatz', 'polizeieinsatz', FeedLanguage::German);
 
         self::assertContains('polizei', $stems);
