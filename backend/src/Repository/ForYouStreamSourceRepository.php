@@ -60,7 +60,7 @@ final readonly class ForYouStreamSourceRepository
     public function findNewestEntries(int $userId, RarityWindowModel $window, int $beforeId, int $limit): array
     {
         $qb = $this->selectEntries()
-            ->join(Subscription::class, 'subscription', 'WITH', 'subscription.feed = feed')
+            ->join(Subscription::class, 'subscription', 'ON', 'subscription.feed = feed')
             ->where('IDENTITY(subscription.user) = :user')
             ->andWhere('entry.dates.effectiveDate >= :since')
             ->andWhere('entry.id > :afterId')

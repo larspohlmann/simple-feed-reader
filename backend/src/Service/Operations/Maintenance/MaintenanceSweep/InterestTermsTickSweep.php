@@ -20,7 +20,11 @@ final readonly class InterestTermsTickSweep implements MaintenanceSweepInterface
     public function run(\DateTimeImmutable $deadline): InterestTermSweepReportModel
     {
         return $this->interestTerms->sweep(
-            SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), InterestTermSweep::UNHURRIED_BUDGET_SECONDS),
+            SweepBudgetModel::remainingUntil(
+                $deadline,
+                $this->clock->now(),
+                InterestTermSweep::UNHURRIED_BUDGET_SECONDS,
+            ),
         );
     }
 
