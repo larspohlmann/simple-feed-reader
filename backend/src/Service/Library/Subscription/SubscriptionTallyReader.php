@@ -23,7 +23,7 @@ final readonly class SubscriptionTallyReader
         private UnreadCountRepository $unreadCounts,
         private RecommendationItemRepository $recommendationItems,
         private EntryShareRepository $entryShares,
-        private EntryListRepository $entryLists,
+        private EntryListRepository $entryList,
         private SocialNotificationRepository $socialNotifications,
     ) {
     }
@@ -55,7 +55,7 @@ final readonly class SubscriptionTallyReader
         return [
             ...$this->entryStates->stateCountsForUser($userId),
             'shared' => $this->entryShares->countForUser($userId),
-            'liked' => $this->entryLists->countLikedForUser($userId),
+            'liked' => $this->entryList->countLikedForUser($userId),
         ];
     }
 }

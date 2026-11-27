@@ -7,8 +7,8 @@ namespace App\Service\Library\Subscription\Model;
 final readonly class SubscriptionTalliesModel
 {
     /**
-     * @param array<int, int>    $unreadCounts        subscription id => unread
-     * @param array<int, int>    $entryCounts         subscription id => entries
+     * @param array<int, int> $unreadCounts subscription id => unread
+     * @param array<int, int> $entryCounts subscription id => entries
      * @param array{favorites: int, kept: int, shared: int, viewed: int, liked: int} $flagCounts
      * @param array<string, int> $notificationsUnseen network => unseen groups
      */
