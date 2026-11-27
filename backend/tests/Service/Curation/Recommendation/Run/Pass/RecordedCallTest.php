@@ -9,6 +9,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RequestAdjustment;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
@@ -93,6 +94,35 @@ final class RecordedCallTest extends DbTestCase
         self::assertSame(CallVerdict::TransportFailed, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertSame('cURL error 28', $log->getErrorDetail());
+    }
+
+    /** Every column the failure settle leaves alone is seeded first, so writing any of them shows. */
+    public function testATransportFailureWritesNoTranscriptNoAdjustmentAndWithoutAReceiptNoReceipt(): void
+    {
+        $this->entityManager->getConnection()->update('recommendation_run_log', [
+            'response_text' => 'the checkpointed transcript',
+            'adjusted_setting' => RequestAdjustment::OutputCap->value,
+            'adjusted_value' => '32768',
+            'request_id' => 'req-seeded',
+            'answering_model' => 'model-seeded',
+            'cost_nano_credits' => 7,
+        ], ['id' => $this->log->requireId()]);
+        $call = $this->call();
+
+        $call->abortAfterTransportFailure('cURL error 28');
+
+        $log = $this->reload($this->log);
+        self::assertSame('the checkpointed transcript', $log->getResponseText());
+        self::assertSame('req-seeded', $log->getRequestId());
+        self::assertSame('model-seeded', $log->getAnsweringModel());
+        self::assertSame(7, $log->getCostNanoCredits());
+        self::assertSame(
+            ['adjusted_setting' => RequestAdjustment::OutputCap->value, 'adjusted_value' => '32768'],
+            $this->entityManager->getConnection()->fetchAssociative(
+                'SELECT adjusted_setting, adjusted_value FROM recommendation_run_log WHERE id = :id',
+                ['id' => $this->log->requireId()],
+            ),
+        );
     }
 
     public function testAbortAfterTransportFailureAcceptsANullMessage(): void

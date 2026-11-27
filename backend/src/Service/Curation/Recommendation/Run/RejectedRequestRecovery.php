@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\CallFailure;
 use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
@@ -28,7 +29,10 @@ final readonly class RejectedRequestRecovery
             return false;
         }
 
-        $this->calls->recordAdjustment($callingRun, $adjustment, $rejection->getMessage());
+        $this->calls->recordAdjustment(
+            $callingRun,
+            CallFailure::adjusted($rejection->getMessage(), $adjustment->setting, $adjustment->value),
+        );
 
         return true;
     }

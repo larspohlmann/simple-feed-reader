@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\CallFailure;
+use App\Entity\CallOutcome;
+use App\Entity\CallReceipt;
 use App\Enum\CallVerdict;
-use App\Service\Curation\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Curation\Ai\Model\ProviderCallUsageModel;
-use App\Service\Curation\Recommendation\Run\Model\RequestAdjustmentModel;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -40,47 +41,37 @@ final readonly class RecommendationCallRepository
 
     public function settleAnswered(CallSettlement $settlement, string $content): void
     {
-        $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
             'response_text' => $content,
-            'verdict' => $outcome->verdict->value,
-            'wire_bytes' => $outcome->wireBytes,
-            'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
-            'finish_reason' => $outcome->finishReason,
+            ...self::outcomeColumns($settlement->outcome),
             ...self::receiptColumns($settlement->receipt),
         ], ['id' => $settlement->logId]);
     }
 
-    public function settleTransportFailure(CallSettlement $settlement, ?string $errorDetail): void
+    /** Writes the failure's detail and keeps the checkpointed transcript; recordAdjustment() writes the adjustment. */
+    public function settleTransportFailure(CallSettlement $settlement, CallFailure $failure): void
     {
-        $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
-            'verdict' => $outcome->verdict->value,
-            'wire_bytes' => $outcome->wireBytes,
-            'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
-            'error_detail' => $errorDetail,
-            'finish_reason' => $outcome->finishReason,
+            ...self::outcomeColumns($settlement->outcome),
+            'error_detail' => $failure->getErrorDetail(),
             ...self::receiptColumns($settlement->receipt),
         ], ['id' => $settlement->logId]);
     }
 
-    /** Onto the run's newest transport-failed call carrying the rejection's message, never a sibling's timeout. */
-    public function recordAdjustment(
-        CallingRun $callingRun,
-        RequestAdjustmentModel $adjustment,
-        string $rejectionMessage,
-    ): void {
+    /** Onto the run's newest transport-failed call carrying the failure's detail, never a sibling's timeout. */
+    public function recordAdjustment(CallingRun $callingRun, CallFailure $failure): void
+    {
         $this->connection->executeStatement(
             'UPDATE recommendation_run_log SET adjusted_setting = :setting, adjusted_value = :value'
             . ' WHERE id = (SELECT newest.id FROM (SELECT MAX(id) AS id FROM recommendation_run_log'
             . ' WHERE ' . $callingRun->logOwnerColumn . ' = :runId AND verdict = :rejected'
             . ' AND error_detail = :rejection) AS newest)',
             [
-                'setting' => $adjustment->setting->value,
-                'value' => $adjustment->value,
+                'setting' => $failure->getAdjustedSetting()?->value,
+                'value' => $failure->getAdjustedValue(),
                 'runId' => $callingRun->id,
                 'rejected' => CallVerdict::TransportFailed->value,
-                'rejection' => $rejectionMessage,
+                'rejection' => $failure->getErrorDetail(),
             ],
         );
     }
@@ -107,21 +98,32 @@ final readonly class RecommendationCallRepository
         $this->addCost($callingRun, $usage->costNanoCredits);
     }
 
+    /** @return array<string, string|int|null> */
+    private static function outcomeColumns(CallOutcome $outcome): array
+    {
+        return [
+            'verdict' => $outcome->getVerdict()?->value,
+            'wire_bytes' => $outcome->getWireBytes(),
+            'finished_at' => $outcome->getFinishedAt()?->format('Y-m-d H:i:s'),
+            'finish_reason' => $outcome->getFinishReason(),
+        ];
+    }
+
     /**
      * A streamed call settles without a receipt and writes none of its columns.
      *
      * @return array<string, string|int|null>
      */
-    private static function receiptColumns(?ProviderCallReceiptModel $receipt): array
+    private static function receiptColumns(?CallReceipt $receipt): array
     {
         if (null === $receipt) {
             return [];
         }
 
         return [
-            'request_id' => $receipt->requestId,
-            'answering_model' => $receipt->answeringModel,
-            'cost_nano_credits' => $receipt->usage?->costNanoCredits,
+            'request_id' => $receipt->getRequestId(),
+            'answering_model' => $receipt->getAnsweringModel(),
+            'cost_nano_credits' => $receipt->getCostNanoCredits(),
         ];
     }
 

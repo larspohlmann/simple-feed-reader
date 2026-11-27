@@ -74,14 +74,14 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.phase AS phase',
                 'l.batchNumber AS batchNumber',
                 'l.attempt AS attempt',
-                'l.answer.verdict AS verdict',
+                'l.outcome.verdict AS verdict',
                 'LENGTH(l.requestBody) AS requestBytes',
-                'LENGTH(l.answer.responseText) AS responseBytes',
-                'l.answer.wireBytes AS wireBytes',
+                'LENGTH(l.responseText) AS responseBytes',
+                'l.outcome.wireBytes AS wireBytes',
                 'l.createdAt AS createdAt',
-                'l.answer.finishedAt AS finishedAt',
+                'l.outcome.finishedAt AS finishedAt',
                 'l.failure.errorDetail AS errorDetail',
-                'l.receipt.finishReason AS finishReason',
+                'l.outcome.finishReason AS finishReason',
                 'l.failure.adjustedSetting AS adjustedSetting',
                 'l.failure.adjustedValue AS adjustedValue',
             )
@@ -175,11 +175,11 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     {
         /** @var list<array{id: int, responseText: string}> $rows */
         $rows = $this->createQueryBuilder('l')
-            ->select('l.id AS id', 'l.answer.responseText AS responseText')
+            ->select('l.id AS id', 'l.responseText AS responseText')
             ->join('l.' . $owner, 'r')
             ->where('r.user = :user')
             ->andWhere('r.id = :owner')
-            ->andWhere('l.answer.verdict IS NULL')
+            ->andWhere('l.outcome.verdict IS NULL')
             ->setParameter('user', $user)
             ->setParameter('owner', $ownerId)
             ->getQuery()
