@@ -64,18 +64,24 @@ final class ForYouStreamEntryRepositoryTest extends DbTestCase
         $this->member($this->secondFeed, 'https://example.com/read-first');
         $this->member($this->firstFeed, 'https://example.com/unread-first');
         $readLater = $this->member($this->secondFeed, 'https://example.com/unread-first');
-        $hidden = $this->member($this->firstFeed, 'https://example.com/hidden');
+        $readAlone = $this->member($this->firstFeed, 'https://example.com/read-alone');
         $this->member($this->secondFeed, 'https://example.com/unread');
-        foreach ([$readEarlier, $readLater, $hidden] as $read) {
+        $markedFeed = $this->subscribedFeed('marked');
+        $this->member($markedFeed, 'https://example.com/read-by-the-subscription-mark');
+        foreach ([$readEarlier, $readLater, $readAlone] as $read) {
             $state = new EntryState($this->user, $read);
             $state->hide(new \DateTimeImmutable('2026-11-27 09:30:00'));
             $this->entityManager->persist($state);
         }
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['user' => $this->user, 'feed' => $markedFeed]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-11-27 08:30:00'));
         $this->entityManager->flush();
 
         $tally = $this->streamEntries->countMembersAndUnread($this->user->requireId());
 
-        self::assertSame([2, 4], [$tally->unreadCount, $tally->entryCount]);
+        self::assertSame([2, 5], [$tally->unreadCount, $tally->entryCount]);
     }
 
     private function member(Feed $feed, string $url): Entry
