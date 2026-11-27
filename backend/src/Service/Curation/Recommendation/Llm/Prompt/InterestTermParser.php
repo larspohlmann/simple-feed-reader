@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Llm\Prompt;
 
+use App\Entity\InterestPhrase;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 
 /**
  * Turns one interest-term reply into weighted terms. A term in a language that was not asked for, with a blank or
@@ -27,7 +27,7 @@ final readonly class InterestTermParser
     /**
      * @param list<FeedLanguage> $languages
      *
-     * @return list<InterestTermModel> empty when the reply is unusable
+     * @return list<InterestPhrase> empty when the reply is unusable
      */
     public function parse(string $content, array $languages): array
     {
@@ -61,7 +61,7 @@ final readonly class InterestTermParser
     }
 
     /** @param list<FeedLanguage> $languages */
-    private function buildTerm(mixed $item, array $languages): ?InterestTermModel
+    private function buildTerm(mixed $item, array $languages): ?InterestPhrase
     {
         if (!\is_array($item)) {
             return null;
@@ -82,6 +82,6 @@ final readonly class InterestTermParser
 
         $clamped = (int) max(self::MIN_WEIGHT, min(self::MAX_WEIGHT, (float) $weight));
 
-        return new InterestTermModel($language, $phrase, $clamped / self::MAX_WEIGHT);
+        return new InterestPhrase($language, $phrase, $clamped / self::MAX_WEIGHT);
     }
 }

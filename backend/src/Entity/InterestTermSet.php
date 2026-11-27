@@ -30,6 +30,10 @@ final class InterestTermSet
     #[ORM\Column(name: 'matched_up_to_entry_id', options: ['default' => 0])]
     private int $matchedUpToEntryId;
 
+    /** @var list<array{language: string, phrase: string, weight: float}>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $phrases = null;
+
     public function __construct(
         User $user,
         \DateTimeImmutable $profileGeneratedAt,
@@ -72,6 +76,21 @@ final class InterestTermSet
         $this->profileGeneratedAt = $profileGeneratedAt;
         $this->storedAt = $storedAt;
         $this->raritiesRefreshedAt = null;
+    }
+
+    /** @param list<InterestPhrase> $phrases */
+    public function recordPhrases(array $phrases): void
+    {
+        $this->phrases = array_map(
+            static fn (InterestPhrase $phrase): array => $phrase->toStoredArray(),
+            $phrases,
+        );
+    }
+
+    /** @return list<InterestPhrase> */
+    public function getPhrases(): array
+    {
+        return array_map(InterestPhrase::fromStoredArray(...), $this->phrases ?? []);
     }
 
     public function recordRaritiesRefreshed(\DateTimeImmutable $refreshedAt): void

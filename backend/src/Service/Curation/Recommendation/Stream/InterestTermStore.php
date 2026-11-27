@@ -9,7 +9,7 @@ use App\Entity\InterestTermSet;
 use App\Entity\User;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
+use App\Service\Curation\Recommendation\Stream\Model\ExtractedTermsModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -25,16 +25,18 @@ final readonly class InterestTermStore
     ) {
     }
 
-    /** @param list<TermStemModel> $stems */
-    public function replaceTerms(User $user, \DateTimeImmutable $profileGeneratedAt, array $stems): InterestTermSet
-    {
+    public function replaceTerms(
+        User $user,
+        \DateTimeImmutable $profileGeneratedAt,
+        ExtractedTermsModel $extracted,
+    ): InterestTermSet {
         return $this->entityManager->wrapInTransaction(function () use (
             $user,
             $profileGeneratedAt,
-            $stems,
+            $extracted,
         ): InterestTermSet {
             $this->storedTerms->deleteForUser($user->requireId());
-            foreach ($stems as $stem) {
+            foreach ($extracted->stems as $stem) {
                 $this->entityManager->persist(new InterestTerm($user, $stem->stem, $stem->language, $stem->weight));
             }
             $set = $this->termSets->findForUser($user);
@@ -49,6 +51,7 @@ final readonly class InterestTermStore
             } else {
                 $set->replaceTerms($profileGeneratedAt, $this->clock->now());
             }
+            $set->recordPhrases($extracted->phrases);
             $this->entityManager->flush();
 
             return $set;

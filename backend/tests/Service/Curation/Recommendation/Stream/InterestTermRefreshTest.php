@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Recommendation\Stream;
 use App\Entity\Feed;
 use App\Entity\FeedTraits;
 use App\Entity\InclusionChange;
+use App\Entity\InterestPhrase;
 use App\Entity\InterestTermRun;
 use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
@@ -62,7 +63,9 @@ final class InterestTermRefreshTest extends DbTestCase
         self::assertSame(InterestTermRefreshResult::Stored, $this->refresh->refresh($this->due()));
 
         self::assertSame(RunStatus::Completed, $this->latestRun()->getStatus());
-        self::assertEquals($this->profileGeneratedAt(), $this->termSet()?->getProfileGeneratedAt());
+        $set = $this->termSet();
+        self::assertEquals($this->profileGeneratedAt(), $set?->getProfileGeneratedAt());
+        self::assertEquals([new InterestPhrase(FeedLanguage::English, 'solar', 0.8)], $set?->getPhrases());
     }
 
     public function testATermWhoseStemsAllDropIsAnUnusableReplyThatRetriesAndStoresNothing(): void

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestPhrase;
 use App\Entity\InterestTerm;
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
 use App\Service\Foundation\Stemming\StopWordStems;
@@ -21,7 +21,7 @@ final readonly class InterestTermStems
     }
 
     /**
-     * @param list<InterestTermModel> $terms
+     * @param list<InterestPhrase> $terms
      *
      * @return list<TermStemModel> one per language and stem, at its highest weight
      */
@@ -56,7 +56,7 @@ final readonly class InterestTermStems
     }
 
     /** @return list<TermStemModel> */
-    private function readStems(InterestTermModel $term, ?FeedLanguage $language): array
+    private function readStems(InterestPhrase $term, ?FeedLanguage $language): array
     {
         $stems = [];
         foreach ($this->equivalents->canonicalizeWords($term->phrase) as [$word, $bare]) {

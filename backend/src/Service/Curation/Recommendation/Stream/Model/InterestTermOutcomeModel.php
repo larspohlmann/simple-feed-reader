@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream\Model;
 
-/** What an extraction call settled to: the storable stems, or the unusable reply its caller retries. */
+/** What an extraction call settled to: the storable terms, or the unusable reply its caller retries. */
 final readonly class InterestTermOutcomeModel
 {
-    /** @param list<TermStemModel> $stems */
-    private function __construct(public array $stems, public ?string $unusableReply)
+    private function __construct(public ?ExtractedTermsModel $extracted, public ?string $unusableReply)
     {
     }
 
-    /** @param list<TermStemModel> $stems */
-    public static function usable(array $stems): self
+    public static function usable(ExtractedTermsModel $extracted): self
     {
-        return new self($stems, null);
+        return new self($extracted, null);
+    }
+
+    public function requireExtracted(): ExtractedTermsModel
+    {
+        return $this->extracted ?? throw new \LogicException('An unusable outcome carries no extracted terms.');
     }
 
     public static function unusable(string $reply): self
     {
-        return new self([], $reply);
+        return new self(null, $reply);
     }
 }

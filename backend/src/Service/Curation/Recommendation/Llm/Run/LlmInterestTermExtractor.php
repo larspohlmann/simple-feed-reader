@@ -11,6 +11,7 @@ use App\Service\Curation\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Stream\InterestTermExtractor\InterestTermExtractorInterface;
 use App\Service\Curation\Recommendation\Stream\InterestTermStems;
+use App\Service\Curation\Recommendation\Stream\Model\ExtractedTermsModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermOutcomeModel;
 use App\Service\Curation\Recommendation\Stream\Pass\InterestTermPass;
 
@@ -37,7 +38,8 @@ final readonly class LlmInterestTermExtractor implements InterestTermExtractorIn
         ));
         $recordedCall = $this->callRecorder->beginForInterestTermRun($pass->run, $request);
         $content = $this->providerCall->complete($pass->callRoute(), $request, $recordedCall);
-        $stems = $this->stems->buildTermStems($this->termParser->parse($content, $pass->languages));
+        $phrases = $this->termParser->parse($content, $pass->languages);
+        $stems = $this->stems->buildTermStems($phrases);
         if ([] === $stems) {
             $recordedCall->finishUnusable($content);
 
@@ -46,6 +48,6 @@ final readonly class LlmInterestTermExtractor implements InterestTermExtractorIn
 
         $recordedCall->finishUsable($content);
 
-        return InterestTermOutcomeModel::usable($stems);
+        return InterestTermOutcomeModel::usable(new ExtractedTermsModel($phrases, $stems));
     }
 }

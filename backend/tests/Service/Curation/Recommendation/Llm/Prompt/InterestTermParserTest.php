@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Llm\Prompt;
 
+use App\Entity\InterestPhrase;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Llm\Prompt\InterestTermParser;
 use App\Service\Curation\Recommendation\Llm\Prompt\ModelReplyJsonDecoder;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 use PHPUnit\Framework\TestCase;
 
 final class InterestTermParserTest extends TestCase
@@ -26,7 +26,7 @@ final class InterestTermParserTest extends TestCase
             [FeedLanguage::German],
         );
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Wärmepumpe', 0.7)], $result);
+        self::assertEquals([new InterestPhrase(FeedLanguage::German, 'Wärmepumpe', 0.7)], $result);
     }
 
     public function testATermInALanguageNotAskedForIsDropped(): void
@@ -41,7 +41,7 @@ final class InterestTermParserTest extends TestCase
         );
 
         self::assertSame([], $dropped);
-        self::assertEquals([new InterestTermModel(FeedLanguage::German, 'Pumpe', 0.5)], $kept);
+        self::assertEquals([new InterestPhrase(FeedLanguage::German, 'Pumpe', 0.5)], $kept);
     }
 
     public function testWeightsAreClampedToOneToTen(): void
@@ -53,8 +53,8 @@ final class InterestTermParserTest extends TestCase
 
         self::assertEquals(
             [
-                new InterestTermModel(FeedLanguage::English, 'low', 0.1),
-                new InterestTermModel(FeedLanguage::English, 'high', 1.0),
+                new InterestPhrase(FeedLanguage::English, 'low', 0.1),
+                new InterestPhrase(FeedLanguage::English, 'high', 1.0),
             ],
             $result,
         );
@@ -67,7 +67,7 @@ final class InterestTermParserTest extends TestCase
             [FeedLanguage::English],
         );
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'seven', 0.7)], $result);
+        self::assertEquals([new InterestPhrase(FeedLanguage::English, 'seven', 0.7)], $result);
     }
 
     public function testAnInfiniteOrHugeWeightClampsToTheTop(): void
@@ -80,8 +80,8 @@ final class InterestTermParserTest extends TestCase
 
         self::assertEquals(
             [
-                new InterestTermModel(FeedLanguage::English, 'infinite', 1.0),
-                new InterestTermModel(FeedLanguage::English, 'huge', 1.0),
+                new InterestPhrase(FeedLanguage::English, 'infinite', 1.0),
+                new InterestPhrase(FeedLanguage::English, 'huge', 1.0),
             ],
             $result,
         );
@@ -101,7 +101,7 @@ final class InterestTermParserTest extends TestCase
 
         $result = $this->parser->parse($reply, [FeedLanguage::English]);
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'kept', 0.5)], $result);
+        self::assertEquals([new InterestPhrase(FeedLanguage::English, 'kept', 0.5)], $result);
     }
 
     public function testEmptyAndOverlongTermsAreDropped(): void
@@ -115,7 +115,7 @@ final class InterestTermParserTest extends TestCase
 
         $result = $this->parser->parse($reply, [FeedLanguage::English]);
 
-        self::assertEquals([new InterestTermModel(FeedLanguage::English, str_repeat('b', 80), 0.5)], $result);
+        self::assertEquals([new InterestPhrase(FeedLanguage::English, str_repeat('b', 80), 0.5)], $result);
     }
 
     public function testEachLanguageKeepsItsFirstSixtyTerms(): void
@@ -133,7 +133,7 @@ final class InterestTermParserTest extends TestCase
 
         $german = array_values(array_filter(
             $result,
-            static fn (InterestTermModel $term): bool => FeedLanguage::German === $term->language,
+            static fn (InterestPhrase $term): bool => FeedLanguage::German === $term->language,
         ));
         self::assertCount(60, $german);
         self::assertSame('term1', $german[0]->phrase);

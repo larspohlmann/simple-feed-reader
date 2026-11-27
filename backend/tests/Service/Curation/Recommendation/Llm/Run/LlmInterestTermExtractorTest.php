@@ -64,10 +64,10 @@ final class LlmInterestTermExtractorTest extends DbTestCase
             ['solar'],
             array_values(array_unique(array_map(
                 static fn (TermStemModel $stem): string => substr($stem->stem, 0, 5),
-                $outcome->stems,
+                $outcome->requireExtracted()->stems,
             ))),
         );
-        self::assertEqualsWithDelta(0.9, $outcome->stems[0]->weight, 1e-9);
+        self::assertEqualsWithDelta(0.9, $outcome->requireExtracted()->stems[0]->weight, 1e-9);
         $log = $this->onlyLogRow();
         self::assertSame(CallPhase::InterestTerms, $log->getPhase());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());
