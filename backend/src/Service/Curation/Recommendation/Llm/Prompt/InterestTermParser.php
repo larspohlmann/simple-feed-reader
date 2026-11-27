@@ -41,9 +41,12 @@ final readonly class InterestTermParser
         foreach ($items as $item) {
             $term = $this->buildTerm($item, $languages);
 
-            $kept = null === $term ? 0 : $keptPerLanguage[$term->language->value] ?? 0;
+            if (null === $term) {
+                continue;
+            }
 
-            if (null === $term || $kept >= RecommendationPromptText::MAX_TERMS_PER_LANGUAGE) {
+            $kept = $keptPerLanguage[$term->language->value] ?? 0;
+            if ($kept >= RecommendationPromptText::MAX_TERMS_PER_LANGUAGE) {
                 continue;
             }
 
@@ -74,7 +77,7 @@ final readonly class InterestTermParser
             return null;
         }
 
-        $clamped = max(self::MIN_WEIGHT, min(self::MAX_WEIGHT, (int) $weight));
+        $clamped = (int) max(self::MIN_WEIGHT, min(self::MAX_WEIGHT, (float) $weight));
 
         return new InterestTermModel($language, $phrase, $clamped / self::MAX_WEIGHT);
     }

@@ -17,6 +17,8 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Opens the term run an extraction records on; a run still going for this very profile is carried on. */
 final readonly class InterestTermRuns
 {
+    private const string SUPERSEDED = 'A newer profile replaced this run before it finished.';
+
     public function __construct(
         private InterestTermRunRepository $runs,
         private RecommendationRunLogRepository $logs,
@@ -28,8 +30,11 @@ final readonly class InterestTermRuns
     public function openFor(DueInterestTermsModel $due): InterestTermRun
     {
         $latest = $this->runs->findLatestForUser($due->user);
-        if (RunStatus::Running === $latest?->getStatus() && $latest->isForProfile($due->profileGeneratedAt)) {
-            return $latest;
+        if (RunStatus::Running === $latest?->getStatus()) {
+            if ($latest->isForProfile($due->profileGeneratedAt)) {
+                return $latest;
+            }
+            $latest->fail(self::SUPERSEDED, $this->clock->now());
         }
 
         $run = new InterestTermRun(

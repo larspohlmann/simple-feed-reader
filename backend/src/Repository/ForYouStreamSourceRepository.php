@@ -41,6 +41,19 @@ final readonly class ForYouStreamSourceRepository
         ));
     }
 
+    public function findFirstEntryIdSince(\DateTimeImmutable $since): ?int
+    {
+        $lowest = $this->entityManager->createQueryBuilder()
+            ->select('MIN(entry.id)')
+            ->from(Entry::class, 'entry')
+            ->where('entry.dates.effectiveDate >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return null === $lowest ? null : (int) $lowest;
+    }
+
     /** @return list<StreamEntryModel> ascending by id, from the For you feeds the account is subscribed to */
     public function findRecentEntries(int $userId, \DateTimeImmutable $since, int $afterId, int $limit): array
     {

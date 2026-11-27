@@ -84,9 +84,9 @@ final readonly class InterestTermRefresh
         }
 
         $set = $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireTerms());
-        $this->rarity->refreshRarities($set);
         $run->complete($this->clock->now());
         $this->entityManager->flush();
+        $this->rarity->refreshRarities($set);
 
         return InterestTermRefreshResult::Stored;
     }

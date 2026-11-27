@@ -37,12 +37,16 @@ final readonly class InterestTermRarity
         $userId = $set->getUser()->requireId();
         $terms = $this->storedTerms->findForUser($userId);
         $now = $this->clock->now();
-        if ($terms === []) {
-            $set->recordRaritiesRefreshed($now);
-            $this->entityManager->flush();
-
-            return;
+        if ($terms !== []) {
+            $this->weighTerms($userId, $terms, $now);
         }
+        $set->recordRaritiesRefreshed($now);
+        $this->entityManager->flush();
+    }
+
+    /** @param list<InterestTerm> $terms */
+    private function weighTerms(int $userId, array $terms, \DateTimeImmutable $now): void
+    {
         $tally = $this->tally($userId, $now->modify(\sprintf('-%d days', self::WINDOW_DAYS)), $terms);
 
         foreach ($terms as $term) {
@@ -50,8 +54,6 @@ final readonly class InterestTermRarity
             $counted = max($tally->countEntries($key), self::COUNTED_ENTRIES_FLOOR);
             $term->recordRarity(log(($counted + 2) / ($tally->countDocuments($key, $term->getStem()) + 1)));
         }
-        $set->recordRaritiesRefreshed($now);
-        $this->entityManager->flush();
     }
 
     /** @param list<InterestTerm> $terms */
@@ -63,7 +65,7 @@ final readonly class InterestTermRarity
         }
         $tally = new RarityTally($wanted);
         $stemming = $this->stemmingFactory->create();
-        $afterId = 0;
+        $afterId = ($this->sources->findFirstEntryIdSince($since) ?? 1) - 1;
         do {
             $entries = $this->sources->findRecentEntries($userId, $since, $afterId, self::CHUNK);
             foreach ($entries as $entry) {

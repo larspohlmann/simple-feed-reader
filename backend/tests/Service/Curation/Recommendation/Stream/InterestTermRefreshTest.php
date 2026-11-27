@@ -14,9 +14,12 @@ use App\Entity\User;
 use App\Enum\FeedLanguage;
 use App\Enum\RunStatus;
 use App\Repository\InterestTermRunRepository;
+use App\Service\Curation\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
 use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
+use App\Service\Curation\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Curation\Recommendation\Run\Support\ProviderFailedMessage;
 use App\Service\Curation\Recommendation\Run\UserTickLock;
 use App\Service\Curation\Recommendation\Stream\InterestTermRefresh;
@@ -112,10 +115,26 @@ final class InterestTermRefreshTest extends DbTestCase
         $run = $this->latestRun();
         self::assertSame(RunStatus::Failed, $run->getStatus());
         self::assertSame(
-            ProviderFailedMessage::formatMessage($this->connectionOf($this->owner)->getBaseUrl(), 'gone'),
+            ProviderFailedMessage::formatMessage($this->requireConnection($this->owner)->getBaseUrl(), 'gone'),
             $run->getError(),
         );
         self::assertNull($this->termSet());
+    }
+
+    public function testARefusedKeyIsAStrikeAndTheThirdFailsTheRun(): void
+    {
+        $this->assertThreeStrikesFailTheRun(CredentialsRejectedException::refusedKey());
+    }
+
+    public function testAnUnreadableKeyFailsTheRunWithTheKeyMessage(): void
+    {
+        $this->chat->queueFailure(new AiKeyUnreadableException());
+
+        self::assertSame(InterestTermRefreshResult::Failed, $this->refresh->refresh($this->due()));
+
+        $run = $this->latestRun();
+        self::assertSame(RunStatus::Failed, $run->getStatus());
+        self::assertSame(RecommendationRunAdvancer::KEY_UNREADABLE, $run->getError());
     }
 
     public function testARateLimitSkipsWithoutAStrike(): void
@@ -139,7 +158,7 @@ final class InterestTermRefreshTest extends DbTestCase
         $run = $this->latestRun();
         self::assertSame(RunStatus::Failed, $run->getStatus());
         self::assertSame(
-            ProviderFailedMessage::formatMessage($this->connectionOf($this->owner)->getBaseUrl(), 'bad request'),
+            ProviderFailedMessage::formatMessage($this->requireConnection($this->owner)->getBaseUrl(), 'bad request'),
             $run->getError(),
         );
     }
@@ -184,7 +203,7 @@ final class InterestTermRefreshTest extends DbTestCase
         self::assertStringStartsWith('LANGUAGES: de (German)' . "\n", $this->userMessageOfCall(0));
     }
 
-    public function testANewProfileOpensAFreshRunInsteadOfContinuingTheOldOne(): void
+    public function testANewProfileFailsTheOldRunAndOpensAFreshOne(): void
     {
         $olderProfile = new \DateTimeImmutable('2026-10-01 06:00:00');
         $oldRun = new InterestTermRun($this->owner, $olderProfile, $olderProfile, 'api.example.test', 'qwen3-14b');
@@ -195,7 +214,8 @@ final class InterestTermRefreshTest extends DbTestCase
 
         $this->refresh->refresh($this->due());
 
-        self::assertSame(RunStatus::Running, $oldRun->getStatus());
+        self::assertSame(RunStatus::Failed, $oldRun->getStatus());
+        self::assertSame('A newer profile replaced this run before it finished.', $oldRun->getError());
         self::assertSame(1, $oldRun->getAttempts());
         $run = $this->latestRun();
         self::assertNotSame($oldRun->getId(), $run->getId());
@@ -204,11 +224,39 @@ final class InterestTermRefreshTest extends DbTestCase
         self::assertSame('user', $messages[\count($messages) - 1]['role']);
     }
 
+    private function assertThreeStrikesFailTheRun(\RuntimeException $failure): void
+    {
+        foreach (range(1, InterestTermRun::MAX_TRANSPORT_FAILURES) as $ignored) {
+            $this->chat->queueFailure($failure);
+        }
+
+        $results = [];
+        foreach (range(1, InterestTermRun::MAX_TRANSPORT_FAILURES) as $ignored) {
+            $results[] = $this->refresh->refresh($this->due());
+        }
+
+        self::assertSame(
+            [
+                InterestTermRefreshResult::Retrying,
+                InterestTermRefreshResult::Retrying,
+                InterestTermRefreshResult::Failed,
+            ],
+            $results,
+        );
+        self::assertSame(
+            ProviderFailedMessage::formatMessage(
+                $this->requireConnection($this->owner)->getBaseUrl(),
+                $failure->getMessage(),
+            ),
+            $this->latestRun()->getError(),
+        );
+    }
+
     private function due(): DueInterestTermsModel
     {
         return new DueInterestTermsModel(
             $this->owner,
-            $this->connectionOf($this->owner),
+            $this->requireConnection($this->owner),
             'Likes solar power.',
             $this->profileGeneratedAt(),
         );

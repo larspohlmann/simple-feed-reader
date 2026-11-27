@@ -115,7 +115,7 @@ final class InterestTermRarityTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
     }
 
-    public function testASetWithoutTermsIsStampedWithoutReadingEntries(): void
+    public function testASetWithoutTermsIsStampedAndWeighsNothing(): void
     {
         $this->entries(3, FeedLanguage::English, [1 => 'solar']);
 

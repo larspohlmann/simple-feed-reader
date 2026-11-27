@@ -71,6 +71,40 @@ final class InterestTermParserTest extends TestCase
         self::assertEquals([new InterestTermModel(FeedLanguage::English, 'seven', 0.7)], $result->terms);
     }
 
+    public function testAnInfiniteOrHugeWeightClampsToTheTop(): void
+    {
+        $result = $this->parser->parse(
+            '{"terms":[{"language":"en","term":"infinite","weight":1e999},'
+            . '{"language":"en","term":"huge","weight":1e30}]}',
+            [FeedLanguage::English],
+        );
+
+        self::assertEquals(
+            [
+                new InterestTermModel(FeedLanguage::English, 'infinite', 1.0),
+                new InterestTermModel(FeedLanguage::English, 'huge', 1.0),
+            ],
+            $result->terms,
+        );
+    }
+
+    public function testAMalformedItemOrFieldDropsOnlyThatTerm(): void
+    {
+        $reply = json_encode(['terms' => [
+            'not an object',
+            ['language' => 7, 'term' => 'numeric language', 'weight' => 5],
+            ['language' => 'en', 'term' => 7, 'weight' => 5],
+            ['language' => 'en', 'term' => 'bool weight', 'weight' => true],
+            ['language' => 'en', 'term' => 'null weight', 'weight' => null],
+            ['language' => 'en', 'term' => 'missing weight'],
+            ['language' => 'en', 'term' => 'kept', 'weight' => 5],
+        ]], JSON_THROW_ON_ERROR);
+
+        $result = $this->parser->parse($reply, [FeedLanguage::English]);
+
+        self::assertEquals([new InterestTermModel(FeedLanguage::English, 'kept', 0.5)], $result->terms);
+    }
+
     public function testEmptyAndOverlongTermsAreDropped(): void
     {
         $reply = json_encode(['terms' => [

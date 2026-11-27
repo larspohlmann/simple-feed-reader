@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestTerm;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermsModel;
@@ -60,13 +61,20 @@ final readonly class InterestTermStems
         $stems = [];
         foreach ($this->equivalents->canonicalizeWords($term->phrase) as [$word, $bare]) {
             foreach ($this->equivalents->stemWordAndParts($word, $bare, $language) as $position => $stem) {
-                if (!$this->stopWordStems->isStopWordStem($stem, $language)) {
-                    $weight = $position === 0 ? $term->weight : $term->weight * self::PART_WEIGHT_SHARE;
-                    $stems[] = new TermStemModel($language, $stem, $weight);
+                if (!$this->isStorable($stem, $language)) {
+                    continue;
                 }
+                $weight = $position === 0 ? $term->weight : $term->weight * self::PART_WEIGHT_SHARE;
+                $stems[] = new TermStemModel($language, $stem, $weight);
             }
         }
 
         return $stems;
+    }
+
+    private function isStorable(string $stem, ?FeedLanguage $language): bool
+    {
+        return mb_strlen($stem) <= InterestTerm::STEM_MAX_LENGTH
+            && !$this->stopWordStems->isStopWordStem($stem, $language);
     }
 }

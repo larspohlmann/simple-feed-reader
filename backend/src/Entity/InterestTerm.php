@@ -15,6 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_interest_term_user', columns: ['user_id'])]
 final class InterestTerm
 {
+    public const int STEM_MAX_LENGTH = 64;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -24,7 +26,7 @@ final class InterestTerm
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    #[ORM\Column(length: 64)]
+    #[ORM\Column(length: self::STEM_MAX_LENGTH)]
     private string $stem;
 
     #[ORM\Column(length: 2, nullable: true, enumType: FeedLanguage::class)]

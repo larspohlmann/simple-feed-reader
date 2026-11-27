@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestTerm;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Stream\InterestTermStems;
 use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
@@ -71,6 +72,24 @@ final class InterestTermStemsTest extends TestCase
         foreach ($stems as $stem) {
             self::assertFalse($this->stopWordStems->isStopWordStem($stem->stem, $stem->language));
         }
+    }
+
+    public function testAStemLongerThanTheColumnIsDroppedAndTheRestOfThePhraseKept(): void
+    {
+        $fits = str_repeat('q', InterestTerm::STEM_MAX_LENGTH);
+        $stems = $this->stems->buildTermStems([
+            new InterestTermModel(FeedLanguage::English, 'solar ' . $fits . 'q', 0.8),
+            new InterestTermModel(FeedLanguage::English, $fits, 0.7),
+        ]);
+
+        self::assertNotSame([], $stems);
+        foreach ($stems as $stem) {
+            self::assertLessThanOrEqual(InterestTerm::STEM_MAX_LENGTH, mb_strlen($stem->stem));
+        }
+        $stored = array_column(self::rows($stems), 1);
+        self::assertContains($this->stemmer->stem('solar', FeedLanguage::English), $stored);
+        self::assertContains($fits, $stored);
+        self::assertNotContains($fits . 'q', $stored);
     }
 
     public function testADuplicateStemKeepsItsHighestWeight(): void
