@@ -212,7 +212,8 @@ export class SidebarCollectionComponent {
           this.openWholeCollection(selection.kind);
         }
       },
-      error: (error: HttpErrorResponse) => this.toast.showProblem(parseProblem(error)),
+      error: (error: HttpErrorResponse) =>
+        this.toast.showTranslatedProblem(parseProblem(error), this.transloco),
     });
   }
 

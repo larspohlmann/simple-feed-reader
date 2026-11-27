@@ -41,6 +41,16 @@ describe('LabelsStore (#2581)', () => {
     expect(store.unlabeled()).toEqual({ favoriteCount: 4, keptCount: 5 });
   });
 
+  it('reports loaded only once the first tallies have been adopted', () => {
+    expect(store.loaded()).toBe(false);
+
+    store.reload();
+    expect(store.loaded()).toBe(false);
+    answerTallies([work]);
+
+    expect(store.loaded()).toBe(true);
+  });
+
   it('orders the tallies by name, accents aside, not in the server’s binary order', () => {
     const later: LabelTally = { ...work, id: 4, name: 'À lire plus tard' };
     store.reload();

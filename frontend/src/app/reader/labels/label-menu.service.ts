@@ -3,7 +3,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { TranslocoService } from '@jsverse/transloco';
-import { filter, finalize, merge, take, takeUntil } from 'rxjs';
+import { Observable, filter, finalize, merge, take, takeUntil } from 'rxjs';
 import {
   ACTION_SHEET_DIVIDER,
   ActionSheetCheck,
@@ -104,16 +104,26 @@ export class LabelMenu {
       { id: NEW_LABEL, label: this.transloco.translate('reader.labels.newLabel'), symbol: 'add' },
     ];
     const anchor = this.openAnchor();
+    let handedToDialog = false;
     this.sheet
       .open({ title: this.transloco.translate('reader.labels.menu'), actions: items })
-      .pipe(finalize(() => this.forget(null, anchor)))
+      .pipe(
+        finalize(() => {
+          if (!handedToDialog) this.forget(null, anchor);
+        }),
+      )
       .subscribe((choice) => {
-        if (choice === NEW_LABEL) this.openNewLabelDialog(row);
+        if (choice !== NEW_LABEL) return;
+        handedToDialog = true;
+        this.openNewLabelDialog(row)
+          .pipe(take(1))
+          .subscribe(() => this.forget(null, anchor));
       });
   }
 
-  private openNewLabelDialog(row: LabelledRow): void {
-    this.dialog.open(NewLabelDialogComponent, { panelClass: 'app-dialog', data: { row } });
+  private openNewLabelDialog(row: LabelledRow): Observable<unknown> {
+    return this.dialog.open(NewLabelDialogComponent, { panelClass: 'app-dialog', data: { row } })
+      .closed;
   }
 
   private forget(popover: OverlayRef | null, anchor: HTMLElement | null): void {

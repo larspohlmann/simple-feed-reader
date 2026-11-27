@@ -31,7 +31,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
   const rename = jest.fn();
   const remove = jest.fn();
   const ask = jest.fn();
-  const showProblem = jest.fn();
   const showTranslatedProblem = jest.fn();
   const openSheet = jest.fn();
   const menuFor = signal<string | null>(null);
@@ -52,7 +51,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
           useValue: { favoritesCount: signal(7), keptCount: signal(0) },
         },
         { provide: ConfirmService, useValue: { ask } },
-        { provide: ToastService, useValue: { showProblem, showTranslatedProblem } },
+        { provide: ToastService, useValue: { showTranslatedProblem } },
         { provide: ActionSheet, useValue: { open: openSheet } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },
         {
@@ -470,7 +469,10 @@ describe('SidebarCollectionComponent (#2581)', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }));
+      expect(showTranslatedProblem).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 500 }),
+        TestBed.inject(TranslocoService),
+      );
       expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
       expect(router.url).toBe('/?view=favorites&label=1');
     });

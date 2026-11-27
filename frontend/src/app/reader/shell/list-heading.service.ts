@@ -174,8 +174,9 @@ export class ListHeading {
     },
   };
 
-  /** Null for the whole collection, and for a label that no longer exists (a stale bookmark). */
+  /** Null for the whole collection, before the tallies first load, and for a label that no longer exists. */
   private labelFolder(selection: SelectionOf<LabelCollection>): LabelFolder | null {
+    if (!this.labels.loaded()) return null;
     const countIn = COLLECTION_COUNT_FIELD[selection.kind];
     if (selection.label === 'unlabeled') {
       return {

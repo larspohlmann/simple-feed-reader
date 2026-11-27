@@ -38,7 +38,7 @@ describe('LabelMenu', () => {
   beforeEach(() => {
     coarse = signal(false);
     sheet = { open: jest.fn(() => NEVER) };
-    dialog = { open: jest.fn() };
+    dialog = { open: jest.fn(() => ({ closed: NEVER })) };
     actions = { attachLabel: jest.fn(), detachLabel: jest.fn(), createLabel: jest.fn(() => of()) };
     anchor = document.createElement('button');
     document.body.appendChild(anchor);
@@ -167,6 +167,23 @@ describe('LabelMenu', () => {
           data: { row: expect.any(LabelledRow) },
         }),
       );
+    });
+
+    it('keeps its anchor open while the new-label dialog is up, and forgets it when that closes', () => {
+      const choice = new Subject<string | undefined>();
+      const closed = new Subject<void>();
+      sheet.open.mockReturnValue(choice);
+      dialog.open.mockReturnValue({ closed });
+      TestBed.overrideProvider(Dialog, { useValue: dialog });
+      const menu = TestBed.inject(LabelMenu);
+      menu.open(anEntry(), anchor, handler());
+
+      choice.next('new');
+      choice.complete();
+
+      expect(menu.isOpenAt(anchor)).toBe(true);
+      closed.next();
+      expect(menu.isOpenAt(anchor)).toBe(false);
     });
   });
 });

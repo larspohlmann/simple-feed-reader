@@ -20,6 +20,9 @@ export class LabelsStore {
   private readonly storedLabels = signal<LabelTally[]>([]);
   private readonly storedUnlabeled = signal<UnlabeledTally>(NO_UNLABELED);
 
+  private readonly hasLoaded = signal(false);
+
+  readonly loaded = this.hasLoaded.asReadonly();
   readonly labels = this.storedLabels.asReadonly();
   readonly unlabeled = this.storedUnlabeled.asReadonly();
 
@@ -28,6 +31,7 @@ export class LabelsStore {
       this.loads.forget();
       this.storedLabels.set([]);
       this.storedUnlabeled.set(NO_UNLABELED);
+      this.hasLoaded.set(false);
     });
   }
 
@@ -35,6 +39,7 @@ export class LabelsStore {
     this.loads.run(this.api.tallies(), (response) => {
       this.storedLabels.set([...response.labels].sort(byLabelName));
       this.storedUnlabeled.set(response.unlabeled);
+      this.hasLoaded.set(true);
     });
   }
 

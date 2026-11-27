@@ -422,9 +422,10 @@ describe('ListHeading for a Favorites or Kept label (#2581)', () => {
   const work: LabelTally = { id: 3, name: 'Work', favoriteCount: 3, keptCount: 1, articleCount: 4 };
   const collectionCounts = { favoritesCount: signal(42), keptCount: signal(7) };
 
-  function labelledHeading(selection: Selection): ListHeading {
+  function labelledHeading(selection: Selection, loaded = true): ListHeading {
     TestBed.overrideProvider(LabelsStore, {
       useValue: {
+        loaded: signal(loaded),
         labels: signal([work]),
         unlabeled: signal({ favoriteCount: 5, keptCount: 2 }),
       },
@@ -452,6 +453,13 @@ describe('ListHeading for a Favorites or Kept label (#2581)', () => {
 
     expect(heading.title()).toBe('Unlabeled');
     expect(heading.titleCount()).toEqual({ value: 5, counts: 'items' });
+  });
+
+  it('shows the collection count for Unlabeled until the tallies have loaded', () => {
+    const heading = labelledHeading({ kind: 'favorites', label: 'unlabeled' }, false);
+
+    expect(heading.title()).toBe('Favorites');
+    expect(heading.titleCount()).toEqual({ value: 42, counts: 'items' });
   });
 
   it('falls back to the whole collection for a label that no longer exists', () => {
