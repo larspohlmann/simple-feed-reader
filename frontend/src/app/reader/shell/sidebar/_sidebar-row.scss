@@ -47,7 +47,7 @@
 }
 
 // The hairline an indented run of rows hangs on, under the parent row's icon.
-@mixin airy-rail($top, $color: var(--airy-rule)) {
+@mixin rail($top, $color: var(--airy-rule)) {
   content: '';
   position: absolute;
   top: $top;
@@ -73,7 +73,7 @@
   padding-left: var(--space-5);
 
   &::before {
-    @include airy-rail(var(--space-0), $rail-color);
+    @include rail(var(--space-0), $rail-color);
   }
 }
 
@@ -407,8 +407,7 @@
   }
 }
 
-/* A view group's head — All items, Favorites, Kept, Saved searches, Followed stories: a view row with a chevron,
-   no band when open (#2593). Its label and count take their look from row-parts. */
+/* A view head: a row with a chevron, no band when open (#2593). */
 @mixin folder-head {
   .folder-head {
     @include row-geometry;

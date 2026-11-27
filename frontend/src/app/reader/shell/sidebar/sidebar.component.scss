@@ -200,7 +200,7 @@
 
 /* An open tag hangs its children on a hairline instead of a recessed box; a drop cue keeps the pseudo-element. */
 :host-context(.sidebar-airy) .tag-group.open:not(.drop-after)::after {
-  @include row.airy-rail(calc(var(--sidebar-row-h) + var(--space-0)));
+  @include row.rail(calc(var(--sidebar-row-h) + var(--space-0)));
 }
 
 .feedrow.cdk-drag,
