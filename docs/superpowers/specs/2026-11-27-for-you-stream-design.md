@@ -89,9 +89,8 @@ pure refactor with no behaviour change.
   stored in cut form and those entries still match (my call: unsharp is fine).
 - Score: sum over matched distinct stems of `AI weight × rarity × position weight`. Rarity is the term's
   inverse frequency over the newest N entries of the last 30 days in the user's For-you-included feeds, per
-  language (my
-  call), computed for the user's terms only when a term set is
-  stored and refreshed daily (cheap: one pass per term set, not per entry).
+  language (my call), computed for the user's terms only when a term set is stored and refreshed daily (cheap:
+  one pass per term set, not per entry).
 - An entry enters when its score clears a deliberately low threshold, a constant. Ship a loose first value and
   adjust it later from the scores stored on the rows (my call; no dry-run command).
 - Store the score and the matched stems on the membership row for debugging. Nothing shows them in the UI.
