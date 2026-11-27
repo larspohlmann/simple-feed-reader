@@ -11,6 +11,7 @@ use App\Enum\InclusionSurface;
 use App\Service\Curation\Recommendation\Stream\Model\StreamCandidateModel;
 use App\Service\Curation\Recommendation\Stream\Model\StreamEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 
 /** What the For you stream reads about the feeds an account has switched into For you. */
 final readonly class ForYouStreamSourceRepository
@@ -57,16 +58,7 @@ final readonly class ForYouStreamSourceRepository
     /** @return list<StreamEntryModel> ascending by id, from the For you feeds the account is subscribed to */
     public function findRecentEntries(int $userId, \DateTimeImmutable $since, int $afterId, int $limit): array
     {
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select(
-                'entry.id AS id',
-                'entry.text.language AS entryLanguage',
-                'feed.traits.language AS feedLanguage',
-                'entry.headline.title AS title',
-                'SUBSTRING(entry.text.summary, 1, 2000) AS summary',
-            )
-            ->from(Entry::class, 'entry')
-            ->join('entry.feed', 'feed')
+        $qb = $this->selectEntries()
             ->join(Subscription::class, 'subscription', 'WITH', 'subscription.feed = feed')
             ->where('IDENTITY(subscription.user) = :user')
             ->andWhere('entry.dates.effectiveDate >= :since')
@@ -81,15 +73,7 @@ final readonly class ForYouStreamSourceRepository
         /** @var list<array{id: int, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
 
-        return array_map(
-            static fn (array $row): StreamEntryModel => new StreamEntryModel(
-                $row['id'],
-                $row['entryLanguage'] ?? $row['feedLanguage'],
-                $row['title'],
-                $row['summary'],
-            ),
-            $rows,
-        );
+        return array_map(self::buildEntry(...), $rows);
     }
 
     /**
@@ -101,49 +85,82 @@ final readonly class ForYouStreamSourceRepository
      */
     public function findCandidates(array $userIds, array $entryIds, \DateTimeImmutable $publishedSince): array
     {
+        $userIdsByFeed = $this->findUserIdsByFeed($userIds);
+        if ([] === $userIdsByFeed) {
+            return [];
+        }
+
+        $qb = $this->selectEntries()
+            ->addSelect('IDENTITY(entry.feed) AS feedId')
+            ->where('entry.id IN (:entryIds)')
+            ->andWhere('IDENTITY(entry.feed) IN (:feeds)')
+            ->andWhere('entry.dates.effectiveDate >= :since')
+            ->orderBy('entry.id', 'ASC')
+            ->setParameter('entryIds', $entryIds)
+            ->setParameter('feeds', array_keys($userIdsByFeed))
+            ->setParameter('since', $publishedSince);
+
+        /** @var list<array{id: int, feedId: int|string, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        return array_map(
+            static fn (array $row): StreamCandidateModel => new StreamCandidateModel(
+                self::buildEntry($row),
+                $userIdsByFeed[(int) $row['feedId']],
+            ),
+            $rows,
+        );
+    }
+
+    /**
+     * @param list<int> $userIds
+     *
+     * @return array<int, non-empty-list<int>> feed id => the accounts whose For you subscriptions carry it
+     */
+    private function findUserIdsByFeed(array $userIds): array
+    {
         $qb = $this->entityManager->createQueryBuilder()
+            ->select('IDENTITY(subscription.user) AS userId', 'IDENTITY(subscription.feed) AS feedId')
+            ->from(Subscription::class, 'subscription')
+            ->where('IDENTITY(subscription.user) IN (:users)')
+            ->orderBy('subscription.id', 'ASC')
+            ->setParameter('users', $userIds);
+        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
+
+        /** @var list<array{userId: int|string, feedId: int|string}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        $userIdsByFeed = [];
+        foreach ($rows as $row) {
+            $userId = (int) $row['userId'];
+            $userIdsByFeed[(int) $row['feedId']][$userId] = $userId;
+        }
+
+        return array_map(array_values(...), $userIdsByFeed);
+    }
+
+    private function selectEntries(): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()
             ->select(
                 'entry.id AS id',
-                'IDENTITY(subscription.user) AS userId',
                 'entry.text.language AS entryLanguage',
                 'feed.traits.language AS feedLanguage',
                 'entry.headline.title AS title',
                 'SUBSTRING(entry.text.summary, 1, 2000) AS summary',
             )
             ->from(Entry::class, 'entry')
-            ->join('entry.feed', 'feed')
-            ->join(Subscription::class, 'subscription', 'WITH', 'subscription.feed = feed')
-            ->where('IDENTITY(subscription.user) IN (:users)')
-            ->andWhere('entry.id IN (:entryIds)')
-            ->andWhere('entry.dates.effectiveDate >= :since')
-            ->orderBy('entry.id', 'ASC')
-            ->addOrderBy('subscription.id', 'ASC')
-            ->setParameter('users', $userIds)
-            ->setParameter('entryIds', $entryIds)
-            ->setParameter('since', $publishedSince);
-        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
+            ->join('entry.feed', 'feed');
+    }
 
-        /** @var list<array{id: int, userId: int|string, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */
-        $rows = $qb->getQuery()->getArrayResult();
-
-        $entries = [];
-        $userIdsByEntry = [];
-        foreach ($rows as $row) {
-            $entries[$row['id']] ??= new StreamEntryModel(
-                $row['id'],
-                $row['entryLanguage'] ?? $row['feedLanguage'],
-                $row['title'],
-                $row['summary'],
-            );
-            $userIdsByEntry[$row['id']][(int) $row['userId']] = (int) $row['userId'];
-        }
-
-        return array_values(array_map(
-            static fn (StreamEntryModel $entry): StreamCandidateModel => new StreamCandidateModel(
-                $entry,
-                array_values($userIdsByEntry[$entry->id]),
-            ),
-            $entries,
-        ));
+    /** @param array{id: int, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string} $row */
+    private static function buildEntry(array $row): StreamEntryModel
+    {
+        return new StreamEntryModel(
+            $row['id'],
+            $row['entryLanguage'] ?? $row['feedLanguage'],
+            $row['title'],
+            $row['summary'],
+        );
     }
 }
