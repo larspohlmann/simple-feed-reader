@@ -27,6 +27,17 @@ export const NO_FOR_YOU_STREAM_TALLY: ForYouStreamTallyDto = {
   entryCount: 0,
 };
 
+export function sameForYouStreamTally(
+  left: ForYouStreamTallyDto,
+  right: ForYouStreamTallyDto,
+): boolean {
+  return (
+    left.available === right.available &&
+    left.unreadCount === right.unreadCount &&
+    left.entryCount === right.entryCount
+  );
+}
+
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
  *  plus the totals, without the feeds, tags or descriptions the
  *  full list carries. A feed absent from `subscriptions` has no entries. */

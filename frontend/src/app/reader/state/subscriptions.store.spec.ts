@@ -403,6 +403,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 2,
       sharedCount: 3,
       trending: { window: 'day', unopened: 2 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.trendingUnopened()).toEqual({ window: 'day', unopened: 2 });
     expect(store.totalUnread()).toBe(4);
@@ -427,6 +428,24 @@ describe('SubscriptionsStore', () => {
     expect(store.forYouStream()).toEqual(tally);
   });
 
+  it('keeps the same For you stream tally across a counts poll that changed nothing', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(
+        counts([sub(1, 3)], { forYouStream: { available: true, unreadCount: 3, entryCount: 8 } }),
+      );
+    const held = store.forYouStream();
+
+    store.reloadCountsQuietly();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+      ...counts([{ id: 1, unreadCount: 3, entryCount: 3 }]),
+      forYouStream: { available: true, unreadCount: 3, entryCount: 8 },
+    });
+
+    expect(store.forYouStream()).toBe(held);
+  });
+
   it('holds the notification counts the full load carries', () => {
     store.load();
     ctrl
@@ -449,6 +468,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto({ allItems: 5 }),
       notifications: [],
     });
@@ -468,6 +488,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -488,6 +509,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       viewedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.resolved()).toBe(true);
 
@@ -503,6 +525,7 @@ describe('SubscriptionsStore', () => {
       sharedCount: 0,
       viewedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     expect(store.resolved()).toBe(true);
   });
@@ -519,6 +542,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 2,
         viewedCount: 4,
         trending: { window: 'day', unopened: 2 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
 
       tokens.clear();
@@ -569,6 +593,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
 
       tokens.clear();
@@ -585,6 +610,7 @@ describe('SubscriptionsStore', () => {
         sharedCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
+        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
       expect(store.subscriptions().map((subscription) => subscription.id)).toEqual([2]);
       jest.useRealTimers();
@@ -603,6 +629,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.loadIfStale();
     ctrl.expectNone('https://api.test/api/subscriptions');
@@ -621,6 +648,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
 
     jest.useRealTimers();
@@ -634,6 +662,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -653,6 +682,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: unreadTotalsDto(),
       notifications: [],
     });
@@ -672,6 +702,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
@@ -737,6 +768,7 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
       sharedCount: 0,
       trending: { window: 'day', unopened: 0 },
+      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     store.patchLocal(1, { includeInAllItems: false });
     expect(
@@ -1117,6 +1149,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     sharedCount: 0,
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
+    forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
   });
 
   it('keeps ticking after a response that never left the process', () => {

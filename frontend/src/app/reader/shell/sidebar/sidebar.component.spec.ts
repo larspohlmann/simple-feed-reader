@@ -316,6 +316,19 @@ describe('SidebarComponent', () => {
       expect(streamNav(element)?.getAttribute('href')).toContain('view=for-you-stream');
     });
 
+    it('keeps the discover card when only the stream is available', () => {
+      const fixture = mount({
+        forYouStream: { available: true, unreadCount: 2, entryCount: 9 },
+      });
+      TestBed.inject(PreferencesService).setTrendingEnabled(false);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(TestBed.inject(AiAvailabilityService).ready()).toBe(false);
+      expect(element.querySelector('.nav.trending')).toBeNull();
+      expect(streamNav(element)).not.toBeNull();
+    });
+
     it('is active on the stream selection and shows no count at zero', () => {
       const element = mount({
         forYouStream: { available: true, unreadCount: 0, entryCount: 9 },
