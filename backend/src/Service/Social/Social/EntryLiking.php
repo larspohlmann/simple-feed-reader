@@ -32,7 +32,6 @@ final readonly class EntryLiking
         return null;
     }
 
-    /** A network unlike takes any local like back too, so no like outlives the thumb that shows it. */
     public function unlike(User $user, EntryListRow $row): ?int
     {
         $likeCount = $this->allowsNetworkLike($user, $row->entry)
@@ -43,11 +42,10 @@ final readonly class EntryLiking
         return $likeCount;
     }
 
-    /** The rule ConnectedAccountStates shows as `canLike`: a post, and an account in any status on its network. */
     private function allowsNetworkLike(User $user, Entry $entry): bool
     {
         $post = $this->postAddresses->findPost($entry);
 
-        return null !== $post && null !== $this->socialAccounts->findActingOnNetwork($user, $post->network);
+        return null !== $post && $post->allowsLikeFrom($this->socialAccounts->findAllForUser($user));
     }
 }
