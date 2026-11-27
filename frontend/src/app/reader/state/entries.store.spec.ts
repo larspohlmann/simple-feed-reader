@@ -1596,7 +1596,7 @@ describe('EntriesStore', () => {
       });
     });
 
-    it('sends nothing for an entry that is no social post', () => {
+    it('keeps a like of an entry that is no social post as a local like', () => {
       store.load({ view: 'all' });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1604,10 +1604,14 @@ describe('EntriesStore', () => {
 
       rows.setLiked(store.entries()[0], true, () => undefined);
 
-      ctrl.expectNone('https://api.test/api/entries/1/like');
+      expect(store.entries()[0].isLiked).toBe(true);
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush({ isLiked: true, likeCount: null });
+      expect(store.entries()[0].isLiked).toBe(true);
     });
 
-    it('sends nothing for a post the user has no account to like from (#1615)', () => {
+    it('keeps a local like for a post the user has no account to like from (#1615)', () => {
       store.load({ view: 'all' });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1627,7 +1631,10 @@ describe('EntriesStore', () => {
 
       rows.setLiked(store.entries()[0], true, () => undefined);
 
-      ctrl.expectNone('https://api.test/api/entries/1/like');
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush({ isLiked: true, likeCount: null });
+      expect(store.entries()[0].isLiked).toBe(true);
       expect(store.entries()[0].social?.isLiked).toBe(false);
     });
   });

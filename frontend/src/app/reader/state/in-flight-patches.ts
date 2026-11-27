@@ -1,6 +1,7 @@
 import { EntryDto, EntryStatePatch } from '../models';
 
-export type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
+export type RowPatch = EntryStatePatch &
+  Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score' | 'isLiked'>;
 
 interface InFlightPatch {
   entryId: number;

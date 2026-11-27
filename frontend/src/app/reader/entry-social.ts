@@ -56,3 +56,16 @@ export interface SocialCountsDto {
 export function likeableSocial(entry: { social: EntrySocialDto | null }): EntrySocialDto | null {
   return entry.social?.canLike ? entry.social : null;
 }
+
+/** Whether the reader likes the entry, on its network where they can like there, else here. */
+export function isEntryLiked(entry: { social: EntrySocialDto | null; isLiked: boolean }): boolean {
+  return likeableSocial(entry)?.isLiked ?? entry.isLiked;
+}
+
+/** Whether the entry takes the like kept here: not one the reader likes on its network, not a voted Lemmy post. */
+export function takesLocalLike(entry: {
+  social: EntrySocialDto | null;
+  myVote: number | null;
+}): boolean {
+  return likeableSocial(entry) === null && entry.myVote === null;
+}

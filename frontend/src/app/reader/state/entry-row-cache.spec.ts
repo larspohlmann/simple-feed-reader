@@ -131,6 +131,78 @@ describe('EntryRowCache', () => {
     expect(settled).toHaveBeenCalled();
   });
 
+  describe('a local like', () => {
+    const buildArticle = (id: number, overrides: Partial<EntryDto> = {}) =>
+      anEntry({ id, social: null, myVote: null, ...overrides });
+
+    it('flips isLiked at once and leaves the network like and the count alone', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, jest.fn());
+
+      expect(readShownEntry(1)).toEqual(
+        expect.objectContaining({
+          isLiked: true,
+          likeCount: 7,
+          social: { ...social, canLike: false },
+        }),
+      );
+    });
+
+    it('keeps the count when the server answers a local like', () => {
+      socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: null }));
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, jest.fn());
+
+      expect(readShownEntry(1).likeCount).toBe(7);
+    });
+
+    it('puts the like back and reports the problem when the request fails', () => {
+      const failing = new Subject<never>();
+      socialPosts.like.mockReturnValue(failing);
+      holdEntries(buildArticle(1));
+      const onError = jest.fn();
+
+      cache.setLiked(readShownEntry(1), true, onError);
+      expect(readShownEntry(1).isLiked).toBe(true);
+      failing.error(new HttpErrorResponse({ status: 500 }));
+
+      expect(readShownEntry(1).isLiked).toBe(false);
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('unlikes through the unlike request', () => {
+      holdEntries(buildArticle(1, { isLiked: true }));
+
+      cache.setLiked(readShownEntry(1), false, jest.fn());
+
+      expect(socialPosts.unlike).toHaveBeenCalledWith(1);
+      expect(readShownEntry(1).isLiked).toBe(false);
+    });
+
+    it('drops a second tap while the first is on the wire', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildArticle(1));
+
+      cache.setLiked(readShownEntry(1), true, jest.fn());
+      cache.setLiked(readShownEntry(1), false, jest.fn());
+
+      expect(socialPosts.like).toHaveBeenCalledTimes(1);
+      expect(socialPosts.unlike).not.toHaveBeenCalled();
+      expect(readShownEntry(1).isLiked).toBe(true);
+    });
+
+    it('likes every copy of the post', () => {
+      holdEntries(buildArticle(1, { canonicalItemId: 7 }), buildArticle(2, { canonicalItemId: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, jest.fn());
+
+      expect(readShownEntry(2).isLiked).toBe(true);
+    });
+  });
+
   it('a like leaves an unknown like count unknown', () => {
     holdEntries(buildCopy(1, 7));
 

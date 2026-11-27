@@ -36,7 +36,7 @@ import { entryMediumRatio } from '../../entry-medium';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
-import { PostActionsView } from '../../entry-social';
+import { PostActionsView, likeableSocial } from '../../entry-social';
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { ArticlePostActions } from '../post-actions/article-post-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -100,6 +100,7 @@ const LEMMY_ACTIONS: PostActionsView = {
 })
 export class ReaderViewComponent implements OnChanges {
   protected readonly ratio = entryMediumRatio;
+  protected readonly likeableSocial = likeableSocial;
 
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);

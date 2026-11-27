@@ -106,9 +106,12 @@ describe('EntryMetaComponent', () => {
 
     it('shows nothing without a score, a like or a comment count', () => {
       expect(
-        discussionMeta({ score: null, commentCount: null, likeCount: null }).querySelector(
-          '.discussion',
-        ),
+        discussionMeta({
+          score: null,
+          commentCount: null,
+          likeCount: null,
+          myVote: 0,
+        }).querySelector('.discussion'),
       ).toBeNull();
     });
 
@@ -127,10 +130,20 @@ describe('EntryMetaComponent', () => {
       expect(element.querySelector('app-entry-actions app-entry-like')).toBeNull();
     });
 
-    it('shows a bare like count where the reader cannot like', () => {
-      const element = discussionMeta({ score: null, commentCount: null, likeCount: 4 });
-      const likes = element.querySelector('.discussion app-entry-like .likes');
-      expect(likes?.getAttribute('aria-label')).toBe('4 likes');
+    it('keeps the like count beside the local toggle where the reader cannot like on the network', () => {
+      const element = discussionMeta({
+        score: null,
+        commentCount: null,
+        likeCount: 4,
+        social: { network: 'bluesky', isLiked: false, canLike: false, isOwn: false },
+      });
+      const like = element.querySelector('.discussion app-entry-like button');
+      expect(like?.getAttribute('aria-label')).toBe('Like, 4 likes');
+    });
+
+    it('gives an article the local toggle in the discussion cluster', () => {
+      const element = discussionMeta({ score: null, commentCount: null, likeCount: null });
+      expect(element.querySelector('.discussion app-entry-like button')).not.toBeNull();
     });
 
     it('shows the opened thread’s total over the stored count (#2433)', () => {

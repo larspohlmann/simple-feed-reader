@@ -1648,11 +1648,13 @@
     "favorite": "Favorite",
     "like": {
       "bluesky": "Like on Bluesky",
-      "mastodon": "Like on Mastodon"
+      "mastodon": "Like on Mastodon",
+      "local": "Like"
     },
     "unlike": {
       "bluesky": "Unlike on Bluesky",
-      "mastodon": "Unlike on Mastodon"
+      "mastodon": "Unlike on Mastodon",
+      "local": "Unlike"
     },
     "repost": {
       "bluesky": "Repost on Bluesky",
@@ -1682,11 +1684,13 @@
       "favoriteRemove": "Remove from favourites",
       "like": {
         "bluesky": "Like on Bluesky — a public like the author sees",
-        "mastodon": "Like on Mastodon — a public like the author sees"
+        "mastodon": "Like on Mastodon — a public like the author sees",
+        "local": "Like — kept here, it shapes your For you picks"
       },
       "unlike": {
         "bluesky": "Take back your like on Bluesky",
-        "mastodon": "Take back your like on Mastodon"
+        "mastodon": "Take back your like on Mastodon",
+        "local": "Take back your like"
       },
       "keepAdd": "Keep — never deleted when old entries are cleaned up",
       "keepRemove": "Stop keeping — old-entry cleanup may delete it again",

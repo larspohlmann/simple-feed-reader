@@ -1648,11 +1648,13 @@
     "favorite": "Favorito",
     "like": {
       "bluesky": "Me gusta en Bluesky",
-      "mastodon": "Me gusta en Mastodon"
+      "mastodon": "Me gusta en Mastodon",
+      "local": "Me gusta"
     },
     "unlike": {
       "bluesky": "Quitar me gusta en Bluesky",
-      "mastodon": "Quitar me gusta en Mastodon"
+      "mastodon": "Quitar me gusta en Mastodon",
+      "local": "Ya no me gusta"
     },
     "repost": {
       "bluesky": "Republicar en Bluesky",
@@ -1682,11 +1684,13 @@
       "favoriteRemove": "Quitar de favoritos",
       "like": {
         "bluesky": "Me gusta en Bluesky: un me gusta público que ve el autor",
-        "mastodon": "Me gusta en Mastodon: un me gusta público que ve el autor"
+        "mastodon": "Me gusta en Mastodon: un me gusta público que ve el autor",
+        "local": "Me gusta — se guarda aquí y orienta tus sugerencias Para ti"
       },
       "unlike": {
         "bluesky": "Retirar tu me gusta en Bluesky",
-        "mastodon": "Retirar tu me gusta en Mastodon"
+        "mastodon": "Retirar tu me gusta en Mastodon",
+        "local": "Quitar tu me gusta"
       },
       "keepAdd": "Conservar: nunca se elimina al limpiar las entradas antiguas",
       "keepRemove": "Dejar de conservar: la limpieza de entradas antiguas podrá volver a eliminarla",

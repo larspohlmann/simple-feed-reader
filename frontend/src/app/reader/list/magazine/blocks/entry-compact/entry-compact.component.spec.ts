@@ -208,13 +208,13 @@ describe('EntryCompactComponent', () => {
     expect(actions!.closest('app-entry-meta')).toBeNull();
   });
 
-  it('renders the three actions with showSource false and no tag pills to sit beside', () => {
+  it('renders the four actions with showSource false and no tag pills to sit beside', () => {
     const fixture = mount();
     fixture.componentRef.setInput('showSource', false);
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('app-entry-pills .pill')).toBeNull();
-    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(4);
   });
 
   it('emits keep without opening the entry', () => {

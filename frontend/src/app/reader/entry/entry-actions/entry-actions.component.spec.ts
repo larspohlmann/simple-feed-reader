@@ -33,7 +33,7 @@ class HostComponent implements EntryActionHandler {
   entry: EntryDto = anEntry();
   size: 'sm' | 'md' = 'sm';
   audio = true;
-  likeShown = true;
+  likeShown = false;
   labelMenu: 'list' | 'article' = 'list';
   likeAnswer = new Subject<void>();
   cardOpened = false;
@@ -103,6 +103,14 @@ function pressSpace(target: HTMLElement): void {
 function mount(testEntry: EntryDto = anEntry()) {
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.entry = testEntry;
+  fixture.detectChanges();
+  return fixture;
+}
+
+function mountLiking(testEntry: EntryDto) {
+  const fixture = TestBed.createComponent(HostComponent);
+  fixture.componentInstance.entry = testEntry;
+  fixture.componentInstance.likeShown = true;
   fixture.detectChanges();
   return fixture;
 }
@@ -410,13 +418,13 @@ describe('EntryActionsComponent', () => {
       ['mastodon', true, 'Take back your like on Mastodon'],
     ] as const)('words the %s like (liked: %s) for its network', (network, isLiked, title) => {
       const like = buttons(
-        mount(anEntry({ social: { network, isLiked, canLike: true, isOwn: false } })),
+        mountLiking(anEntry({ social: { network, isLiked, canLike: true, isOwn: false } })),
       )[1];
       expect(like.getAttribute('title')).toBe(title);
     });
 
     it('translates them', () => {
-      const fixture = mount(
+      const fixture = mountLiking(
         anEntry({
           social: {
             network: 'bluesky',
@@ -534,14 +542,14 @@ describe('EntryActionsComponent', () => {
       });
 
     it('offers the like right after favorite, named for the network', () => {
-      const labels = buttons(mount(blueskyPost())).map((button) =>
+      const labels = buttons(mountLiking(blueskyPost())).map((button) =>
         button.getAttribute('aria-label'),
       );
       expect(labels).toEqual(['Favorite', 'Like on Bluesky', 'Keep', 'Toggle read']);
     });
 
     it('names the undo once liked, pressed and filled', () => {
-      const fixture = mount(
+      const fixture = mountLiking(
         anEntry({
           social: {
             network: 'mastodon',
@@ -561,7 +569,7 @@ describe('EntryActionsComponent', () => {
     });
 
     it('likes without opening the card', () => {
-      const fixture = mount(blueskyPost());
+      const fixture = mountLiking(blueskyPost());
 
       buttons(fixture)[1].click();
 
@@ -570,18 +578,18 @@ describe('EntryActionsComponent', () => {
     });
 
     it('shows the like count on the like button', () => {
-      const like = buttons(mount({ ...blueskyPost(), likeCount: 47 }))[1];
+      const like = buttons(mountLiking({ ...blueskyPost(), likeCount: 47 }))[1];
       expect(like.querySelector('.count')?.textContent?.trim()).toBe('47');
       expect(like.getAttribute('aria-label')).toBe('Like on Bluesky, 47 likes');
     });
 
     it('shows a zero like count on the like button', () => {
-      const like = buttons(mount({ ...blueskyPost(), likeCount: 0 }))[1];
+      const like = buttons(mountLiking({ ...blueskyPost(), likeCount: 0 }))[1];
       expect(like.querySelector('.count')?.textContent?.trim()).toBe('0');
     });
 
     it('shows the pending dots in place of the thumb until the like settles', () => {
-      const fixture = mount({ ...blueskyPost(), likeCount: 4 });
+      const fixture = mountLiking({ ...blueskyPost(), likeCount: 4 });
       const like = () => buttons(fixture)[1];
 
       like().click();
@@ -599,7 +607,7 @@ describe('EntryActionsComponent', () => {
     });
 
     it('drops the dots when the like fails and sends nothing while pending', () => {
-      const fixture = mount(blueskyPost());
+      const fixture = mountLiking(blueskyPost());
       const like = () => buttons(fixture)[1];
       const sent = jest.spyOn(fixture.componentInstance, 'like');
 
@@ -612,28 +620,37 @@ describe('EntryActionsComponent', () => {
     });
 
     it('shows no number on the like button while the count is unknown', () => {
-      const like = buttons(mount(blueskyPost()))[1];
+      const like = buttons(mountLiking(blueskyPost()))[1];
       expect(like.querySelector('.count')).toBeNull();
       expect(like.getAttribute('aria-label')).toBe('Like on Bluesky');
     });
 
-    it('shows a known count without a button on a post the user cannot like', () => {
+    it('keeps a known count beside the local toggle on a post the user cannot like on its network', () => {
       const post = anEntry({
         likeCount: 1,
         social: { network: 'mastodon', isLiked: false, canLike: false, isOwn: false },
       });
-      const element = mount(post).nativeElement as HTMLElement;
+      const like = buttons(mountLiking(post))[1];
 
-      const likes = element.querySelector('.likes') as HTMLElement;
-      expect(likes.tagName).toBe('SPAN');
-      expect(likes.getAttribute('role')).toBe('img');
-      expect(likes.getAttribute('aria-label')).toBe('1 like');
-      expect(likes.textContent).toContain('thumb_up');
-      expect(element.querySelectorAll('button .count, .likes')).toHaveLength(1);
+      expect(like.getAttribute('aria-label')).toBe('Like, 1 like');
+      expect(like.querySelector('.count')?.textContent?.trim()).toBe('1');
     });
 
-    it('offers no like on an entry that is no social post', () => {
-      expect(mount().nativeElement.textContent).not.toContain('thumb_up');
+    it('offers the local like on an entry that is no social post', () => {
+      const fixture = mountLiking(anEntry({ social: null, myVote: null }));
+
+      expect(buttons(fixture).map((button) => button.getAttribute('aria-label'))).toEqual([
+        'Favorite',
+        'Like',
+        'Keep',
+        'Toggle read',
+      ]);
+    });
+
+    it('offers no like on a Lemmy post the reader voted on', () => {
+      expect(
+        mountLiking(anEntry({ social: null, myVote: 1 })).nativeElement.textContent,
+      ).not.toContain('thumb_up');
     });
 
     it('leaves the like to the article view’s counts row when told to (#1615)', () => {
@@ -643,19 +660,6 @@ describe('EntryActionsComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).not.toContain('thumb_up');
-    });
-
-    it('offers no like on a post the user has no account to like from (#1615)', () => {
-      const post = anEntry({
-        social: {
-          network: 'mastodon',
-          isLiked: false,
-          canLike: false,
-          isOwn: false,
-        },
-      });
-
-      expect(mount(post).nativeElement.textContent).not.toContain('thumb_up');
     });
   });
 

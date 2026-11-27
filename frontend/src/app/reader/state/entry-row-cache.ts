@@ -86,28 +86,26 @@ export class EntryRowCache {
     });
   }
 
-  /** Optimistic like apart from `saveState`; dropped unless the post can be liked and no like is on the wire. */
+  /** Optimistic like apart from `saveState`, on the network where the reader can like there, else here; dropped while a like is on the wire. */
   setLiked(
     entry: EntryDto,
     isLiked: boolean,
     onError: (problem: Problem) => void,
   ): Observable<void> {
     const social = likeableSocial(entry);
-    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return EMPTY;
+    const patch: RowPatch = social ? { social: { ...social, isLiked } } : { isLiked };
+    if (this.inFlight.onTheWire(entry.id, social ? 'social' : 'isLiked')) return EMPTY;
     const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    return subscribeUntilSettled(
-      this.optimistic(entry, { social: { ...social, isLiked } }, request$),
-      {
-        next: (answer) => {
-          if (answer.likeCount === null) return;
-          this.patch(this.collectCopyIds(entry), (row) => ({
-            ...row,
-            likeCount: answer.likeCount,
-          }));
-        },
-        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+    return subscribeUntilSettled(this.optimistic(entry, patch, request$), {
+      next: (answer) => {
+        if (answer.likeCount === null) return;
+        this.patch(this.collectCopyIds(entry), (row) => ({
+          ...row,
+          likeCount: answer.likeCount,
+        }));
       },
-    );
+      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+    });
   }
 
   /** The label shows on the entry at once, its copies keep their own; a failure takes back this label alone. */
@@ -328,7 +326,7 @@ export class EntryRowCache {
   }
 }
 
-const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
+const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score', 'isLiked'] as const;
 
 /** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {

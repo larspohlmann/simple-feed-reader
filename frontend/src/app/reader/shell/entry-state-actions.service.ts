@@ -14,6 +14,7 @@ import { Selection } from '../query/query';
 import { entryParam } from '../query/slug';
 import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
+import { isEntryLiked } from '../entry-social';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
@@ -84,7 +85,7 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   like(entry: EntryDto): Observable<void> {
-    return this.rows.setLiked(entry, !entry.social?.isLiked, (problem) =>
+    return this.rows.setLiked(entry, !isEntryLiked(entry), (problem) =>
       this.toast.showProblem(problem),
     );
   }

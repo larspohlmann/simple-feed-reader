@@ -260,6 +260,8 @@ export interface EntryDto {
   /** The entry's post on a network the reader has an account on, and whether they liked it there; null for an
    *  article or a post on a network without an account (#1600). */
   social: EntrySocialDto | null;
+  /** The reader's own like, kept here; a network like lives in `social.isLiked` (#2587). */
+  isLiked: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   discussionHomeUrl: string | null;

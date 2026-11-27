@@ -170,8 +170,8 @@ describe('SourceGroupComponent', () => {
     entryActions.toggleRead.mockImplementation(read);
 
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
-    (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();
+    (buttons[3] as HTMLElement).click();
 
     expect(keep).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
