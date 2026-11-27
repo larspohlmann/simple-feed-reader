@@ -10,6 +10,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 import { EntryLikeComponent } from '../entry-like/entry-like.component';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { LabelMenu } from '../../labels/label-menu.service';
+import { isLabellable } from '../../labels/labellable';
 
 /**
  * The per-entry actions — favorite, like on the post's network with its count (#1600), keep,
@@ -56,7 +57,7 @@ export class EntryActionsComponent {
   );
   protected readonly actions = inject(EntryActionHandler);
   protected readonly labelPicker = inject(LabelMenu);
-  protected readonly labelsShown = computed(() => this.entry().isFavorite || this.entry().isKept);
+  protected readonly labelsShown = computed(() => isLabellable(this.entry()));
 
   constructor() {
     const host: HTMLElement = inject(ElementRef).nativeElement;

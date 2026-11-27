@@ -7,6 +7,7 @@ import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component
 import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { byLabelName } from '../../labels/label-order';
 import { LabelMenu } from '../../labels/label-menu.service';
+import { isLabellable } from '../../labels/labellable';
 import { LabelPill } from '../../labels/labels.models';
 import { EntryDto, SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
@@ -53,7 +54,7 @@ export class EntryPillsComponent {
 
   private readonly labelledEntry = computed(() => {
     const entry = this.labelled();
-    return entry !== null && (entry.isFavorite || entry.isKept) ? entry : null;
+    return entry !== null && isLabellable(entry) ? entry : null;
   });
   protected readonly labelPills = computed<LabelPill[]>(() =>
     [...(this.labelledEntry()?.labels ?? [])].sort(byLabelName).slice(0, LABELS_SHOWN),
