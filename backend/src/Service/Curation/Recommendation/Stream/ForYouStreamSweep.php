@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream;
 
-use App\Entity\InterestTermSet;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
@@ -55,15 +54,15 @@ final readonly class ForYouStreamSweep
     }
 
     /**
-     * @param list<InterestTermSet> $due
+     * @param array<int, int> $marksByUserId
      *
      * @return array<int, non-empty-list<int>> mark => the user ids at it, ascending
      */
-    private static function groupByMark(array $due): array
+    private static function groupByMark(array $marksByUserId): array
     {
         $groups = [];
-        foreach ($due as $set) {
-            $groups[$set->matchedUpToEntryId()][] = $set->getUser()->requireId();
+        foreach ($marksByUserId as $userId => $mark) {
+            $groups[$mark][] = $userId;
         }
         ksort($groups);
 
