@@ -12,7 +12,7 @@ import { ListenLauncher } from '../../audio/listen-launcher';
 import { LabelMenu } from '../../labels/label-menu.service';
 import { isLabellable } from '../../labels/labellable';
 
-/** The per-entry action cluster shown on every entry row and magazine block. */
+/** The per-entry action cluster; its handlers stop propagation but never `preventDefault()`, which would cancel the button's own activation. */
 @Component({
   selector: 'app-entry-actions',
   imports: [
