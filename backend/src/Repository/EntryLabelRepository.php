@@ -36,4 +36,37 @@ final class EntryLabelRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return array<int, list<array{id: int, name: string}>> the user's own labels per entry, alphabetical
+     */
+    public function labelsByEntryIds(int $userId, array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<array{entryId: int|string, id: int|string, name: string}> $rows */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(entryLabel.entry) AS entryId', 'label.id AS id', 'label.name AS name')
+            ->from(EntryLabel::class, 'entryLabel')
+            ->join('entryLabel.label', 'label')
+            ->where('entryLabel.entry IN (:entryIds)')
+            ->andWhere('label.user = :user')
+            ->setParameter('entryIds', $entryIds)
+            ->setParameter('user', $userId)
+            ->orderBy('LOWER(label.name)')
+            ->addOrderBy('label.id')
+            ->getQuery()
+            ->getScalarResult();
+
+        $byEntry = [];
+        foreach ($rows as $row) {
+            $byEntry[(int) $row['entryId']][] = ['id' => (int) $row['id'], 'name' => $row['name']];
+        }
+
+        return $byEntry;
+    }
 }

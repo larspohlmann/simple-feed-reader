@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowGroupings;
 use App\Repository\EntryListRowMarks;
 use App\Repository\EntryListRowSubscription;
 use App\Service\Library\Search\Model\SavedSearchEntriesResultModel;
@@ -42,7 +43,7 @@ final class SavedSearchPageTest extends TestCase
     {
         $row = $this->row(
             7,
-            new EntryListRowEnrichment(savedSearches: [['id' => 3, 'slug' => 'climate', 'term' => 'climate']]),
+            new EntryListRowEnrichment(groupings: new EntryListRowGroupings([['id' => 3, 'slug' => 'climate', 'term' => 'climate']])),
         );
         $result = new SavedSearchEntriesResultModel([$row]);
 

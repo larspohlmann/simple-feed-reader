@@ -13,8 +13,8 @@ final readonly class EntryListRowEnrichment
     public function __construct(
         /** @var list<string> the feed-declared category labels, in declared order */
         public array $categories = [],
-        /** @var list<array{id: int, slug: string, term: string}> owned saved searches this entry belongs to, sidebar order */
-        public array $savedSearches = [],
+        /** the reader's own groupings the pill strip renders: saved searches and labels */
+        public EntryListRowGroupings $groupings = new EntryListRowGroupings(),
         /** @var list<LinkCardContent> the root post's links, in post order */
         public array $linkCards = [],
         /** a post whose embed or link cards are still to come, which a client may ask to complete */
