@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
@@ -26,11 +27,12 @@ const tally = (id: number, name: string, over: Partial<LabelTally> = {}): LabelT
 
 describe('SidebarCollectionComponent (#2581)', () => {
   const labels = signal<LabelTally[]>([]);
-  const unlabeled = signal<UnlabeledTally>({ favoriteCount: 0, keptCount: 0 });
+  const unlabeled = signal<UnlabeledTally>({ favoriteCount: 1, keptCount: 1 });
   const rename = jest.fn();
   const remove = jest.fn();
   const ask = jest.fn();
   const showProblem = jest.fn();
+  const showTranslatedProblem = jest.fn();
   const openSheet = jest.fn();
   const menuFor = signal<string | null>(null);
   const coarse = signal(false);
@@ -50,7 +52,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
           useValue: { favoritesCount: signal(7), keptCount: signal(0) },
         },
         { provide: ConfirmService, useValue: { ask } },
-        { provide: ToastService, useValue: { showProblem } },
+        { provide: ToastService, useValue: { showProblem, showTranslatedProblem } },
         { provide: ActionSheet, useValue: { open: openSheet } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },
         {
@@ -92,7 +94,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
     jest.clearAllMocks();
     localStorage.clear();
     labels.set([]);
-    unlabeled.set({ favoriteCount: 0, keptCount: 0 });
+    unlabeled.set({ favoriteCount: 1, keptCount: 1 });
     menuFor.set(null);
     coarse.set(false);
   });
@@ -154,17 +156,29 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(root(fixture).querySelectorAll('.sublist > .label-row')).toHaveLength(2);
   });
 
-  it('sorts the rows alphabetically regardless of case, Unlabeled last', () => {
+  it('keeps the store’s order, the one label order, Unlabeled last', () => {
     labels.set([tally(1, 'zebra'), tally(2, 'Apple'), tally(3, 'mango')]);
     unlabeled.set({ favoriteCount: 4, keptCount: 0 });
     const fixture = mount('favorites');
     toggle(fixture);
 
-    expect(rowNames(fixture)).toEqual(['Apple', 'mango', 'zebra', 'Unlabeled']);
+    expect(rowNames(fixture)).toEqual(['zebra', 'Apple', 'mango', 'Unlabeled']);
+  });
+
+  it('lists Unlabeled only while this collection holds a post without a label', () => {
+    labels.set([tally(1, 'Work')]);
+    unlabeled.set({ favoriteCount: 0, keptCount: 3 });
+    const favorites = mount('favorites');
+    toggle(favorites);
+    expect(rowNames(favorites)).toEqual(['Work']);
+
+    const kept = mount('kept');
+    toggle(kept);
+    expect(rowNames(kept)).toEqual(['Work', 'Unlabeled']);
   });
 
   it('lists a label only in the collection it has entries in', () => {
-    labels.set([tally(1, 'Work', { favoriteCount: 0, keptCount: 2 }), tally(2, 'Home')]);
+    labels.set([tally(2, 'Home'), tally(1, 'Work', { favoriteCount: 0, keptCount: 2 })]);
     const favorites = mount('favorites');
     toggle(favorites);
     expect(rowNames(favorites)).toEqual(['Home', 'Unlabeled']);
@@ -184,7 +198,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
 
   it('links each row to its label and shows its count in this collection', () => {
     labels.set([tally(3, 'Work', { favoriteCount: 4, keptCount: 9 })]);
-    unlabeled.set({ favoriteCount: 0, keptCount: 0 });
+    unlabeled.set({ favoriteCount: 2, keptCount: 0 });
     const fixture = mount('favorites');
     toggle(fixture);
 
@@ -195,7 +209,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
     ]);
     expect(links.map((link) => link.querySelector('.count')?.textContent?.trim())).toEqual([
       '4',
-      undefined,
+      '2',
     ]);
   });
 
@@ -229,7 +243,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
   it('marks the row the selection is filtered by', () => {
     labels.set([tally(1, 'Home'), tally(2, 'Work')]);
     const fixture = mount('favorites', { kind: 'favorites', label: 2 });
-    toggle(fixture);
 
     const active = Array.from(root(fixture).querySelectorAll('.label-row')).map((row) =>
       row.classList.contains('active'),
@@ -240,7 +253,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
   it('marks Unlabeled on the unlabeled selection, and nothing in the other collection', () => {
     labels.set([tally(1, 'Home')]);
     const fixture = mount('favorites', { kind: 'favorites', label: 'unlabeled' });
-    toggle(fixture);
     const kept = mount('kept', { kind: 'favorites', label: 1 });
     toggle(kept);
 
@@ -250,6 +262,34 @@ describe('SidebarCollectionComponent (#2581)', () => {
       );
     expect(activeIn(fixture)).toEqual([false, true]);
     expect(activeIn(kept)).toEqual([false, false]);
+  });
+
+  it('opens a collapsed block on a selection of one of its subfolders, without storing it', () => {
+    labels.set([tally(1, 'Home'), tally(2, 'Work')]);
+    const fixture = mount('favorites', { kind: 'favorites', label: 2 });
+
+    expect(rowNames(fixture)).toEqual(['Home', 'Work', 'Unlabeled']);
+    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBeNull();
+    expect(root(mount('favorites')).querySelector('.label-row')).toBeNull();
+  });
+
+  it('leaves the other collection collapsed on a subfolder selection', () => {
+    labels.set([tally(1, 'Home')]);
+
+    expect(
+      root(mount('kept', { kind: 'favorites', label: 1 })).querySelector('.label-row'),
+    ).toBeNull();
+  });
+
+  it('opens on a pill followed into a subfolder after it was drawn collapsed', () => {
+    labels.set([tally(1, 'Home')]);
+    const fixture = mount('favorites');
+    expect(root(fixture).querySelector('.label-row')).toBeNull();
+
+    fixture.componentRef.setInput('selection', { kind: 'favorites', label: 1 });
+    fixture.detectChanges();
+
+    expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
   });
 
   it('offers Rename and Delete on a label row, and nothing on Unlabeled', () => {
@@ -336,7 +376,10 @@ describe('SidebarCollectionComponent (#2581)', () => {
 
       press(fixture, 'Enter', 'Work');
 
-      expect(showProblem).toHaveBeenCalledWith(expect.objectContaining({ status: 409 }));
+      expect(showTranslatedProblem).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'label_name_taken' }),
+        TestBed.inject(TranslocoService),
+      );
       expect(input(fixture)).not.toBeNull();
     });
   });
@@ -381,7 +424,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
       const fixture = mount('favorites', { kind: 'favorites', label: 2 });
       const router = TestBed.inject(Router);
       await router.navigateByUrl('/?view=favorites&label=2');
-      toggle(fixture);
       openMenu(fixture, 1);
 
       menuItem(fixture, 'Delete').click();
@@ -422,7 +464,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
       const fixture = mount('favorites', { kind: 'favorites', label: 1 });
       const router = TestBed.inject(Router);
       await router.navigateByUrl('/?view=favorites&label=1');
-      toggle(fixture);
       openMenu(fixture, 1);
 
       menuItem(fixture, 'Delete').click();

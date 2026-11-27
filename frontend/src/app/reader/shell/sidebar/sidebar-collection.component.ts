@@ -9,6 +9,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,7 +23,6 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { LayoutService } from '../../layout.service';
-import { byLabelName } from '../../labels/label-order';
 import {
   LABEL_NAME_MAX,
   LabelCollection,
@@ -109,10 +109,10 @@ export class SidebarCollectionComponent {
     const labelled = this.labels
       .labels()
       .filter((label) => label[countIn] > 0)
-      .sort(byLabelName)
       .map((label) => folder(label.id, label[countIn], label));
-    if (labelled.length === 0) return [];
-    return [...labelled, folder('unlabeled', this.labels.unlabeled()[countIn], null)];
+    const unlabeled = this.labels.unlabeled()[countIn];
+    if (labelled.length === 0 || unlabeled === 0) return labelled;
+    return [...labelled, folder('unlabeled', unlabeled, null)];
   });
 
   /** The label the list is narrowed to, when it is this collection's list. */
@@ -120,6 +120,11 @@ export class SidebarCollectionComponent {
     const selection = this.selection();
     if (!isCollectionSelection(selection) || selection.kind !== this.collection()) return null;
     return selection.label ?? null;
+  });
+
+  /** Following a pill into a subfolder opens its block for this visit; the stored collapse stays. */
+  private readonly revealActiveFolder = effect(() => {
+    if (this.activeFilter() !== null) untracked(() => this.open.reveal());
   });
 
   protected readonly headCurrent = computed(
@@ -156,7 +161,8 @@ export class SidebarCollectionComponent {
     }
     this.labels.rename(label.id, name).subscribe({
       next: () => this.cancelRename(),
-      error: (error: HttpErrorResponse) => this.toast.showProblem(parseProblem(error)),
+      error: (error: HttpErrorResponse) =>
+        this.toast.showTranslatedProblem(parseProblem(error), this.transloco),
     });
   }
 
