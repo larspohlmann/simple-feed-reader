@@ -117,11 +117,14 @@ final class LabelControllerTest extends ApiTestCase
         $entryA = $this->entry($subscription->getFeed(), 'a');
         $entryB = $this->entry($subscription->getFeed(), 'b');
         $entryC = $this->entry($subscription->getFeed(), 'c');
+        $leftBoth = $this->entry($subscription->getFeed(), 'd');
         $this->state($user, $entryA, favorite: true, kept: true);
         $this->state($user, $entryB, favorite: false, kept: true);
         $this->state($user, $entryC, favorite: true, kept: false);
+        $this->state($user, $leftBoth, favorite: false, kept: false);
         $entityManager->persist(new EntryLabel($work, $entryA));
         $entityManager->persist(new EntryLabel($work, $entryC));
+        $entityManager->persist(new EntryLabel($work, $leftBoth));
         $entityManager->flush();
 
         $body = $this->send($client, 'GET', '/api/labels', $headers);

@@ -89,7 +89,10 @@ final class LabelRepository extends ServiceEntityRepository
             ->select('l.id AS id', 'l.name AS name')
             ->addSelect('SUM(CASE WHEN s.id IS NOT NULL AND es.isFavorite = :true THEN 1 ELSE 0 END) AS favorites')
             ->addSelect('SUM(CASE WHEN s.id IS NOT NULL AND es.isKept = :true THEN 1 ELSE 0 END) AS kept')
-            ->addSelect('COUNT(DISTINCT NULLIF(CASE WHEN s.id IS NOT NULL THEN e.id ELSE 0 END, 0)) AS articles')
+            ->addSelect(
+                'COUNT(DISTINCT NULLIF(CASE WHEN s.id IS NOT NULL AND (es.isFavorite = :true OR es.isKept = :true) '
+                . 'THEN e.id ELSE 0 END, 0)) AS articles',
+            )
             ->leftJoin(EntryLabel::class, 'el', Join::WITH, 'el.label = l')
             ->leftJoin('el.entry', 'e')
             ->leftJoin(EntryState::class, 'es', Join::WITH, 'es.entry = e AND IDENTITY(es.user) = :user')
