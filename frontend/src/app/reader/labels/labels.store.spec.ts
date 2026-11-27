@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../../core/api';
 import { LabelsStore } from './labels.store';
 import { LabelTally } from './labels.models';
+import { EntryRowCache } from '../state/entry-row-cache';
 
 const work: LabelTally = { id: 3, name: 'Work', favoriteCount: 2, keptCount: 1, articleCount: 3 };
 const LABELS_URL = 'https://api.test/api/labels';
@@ -11,10 +12,13 @@ const LABELS_URL = 'https://api.test/api/labels';
 describe('LabelsStore (#2581)', () => {
   let store: LabelsStore;
   let ctrl: HttpTestingController;
+  let rows: { renameLabelLocally: jest.Mock; dropLabelLocally: jest.Mock };
 
   beforeEach(() => {
+    rows = { renameLabelLocally: jest.fn(), dropLabelLocally: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
+        { provide: EntryRowCache, useValue: rows },
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
@@ -67,6 +71,7 @@ describe('LabelsStore (#2581)', () => {
     answerTallies([{ ...work, name: 'Job' }]);
 
     expect(store.labels()[0].name).toBe('Job');
+    expect(rows.renameLabelLocally).toHaveBeenCalledWith(3, 'Job');
   });
 
   it('removes a label and reloads the tallies', () => {
@@ -75,6 +80,17 @@ describe('LabelsStore (#2581)', () => {
     answerTallies([]);
 
     expect(store.labels()).toEqual([]);
+    expect(rows.dropLabelLocally).toHaveBeenCalledWith(3);
+  });
+
+  it('leaves the rows alone when a rename or delete fails', () => {
+    store.rename(3, 'Job').subscribe({ error: jest.fn() });
+    ctrl.expectOne(`${LABELS_URL}/3`).flush(null, { status: 409, statusText: 'Conflict' });
+    store.remove(3).subscribe({ error: jest.fn() });
+    ctrl.expectOne(`${LABELS_URL}/3`).flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(rows.renameLabelLocally).not.toHaveBeenCalled();
+    expect(rows.dropLabelLocally).not.toHaveBeenCalled();
   });
 
   it('attaches and detaches a label on an entry without touching the tallies', () => {

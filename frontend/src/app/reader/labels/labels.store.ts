@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
+import { EntryRowCache } from '../state/entry-row-cache';
 import { StaleGatedLoad } from '../state/stale-gated-load';
 import { LabelsApi } from './labels.api';
 import { LabelPill, LabelTally, UnlabeledTally } from './labels.models';
@@ -8,10 +9,12 @@ import { LabelPill, LabelTally, UnlabeledTally } from './labels.models';
 const NO_UNLABELED: UnlabeledTally = { favoriteCount: 0, keptCount: 0 };
 
 /** The reader's labels, alphabetical, with how many favorites and kept posts each sorts, and how many carry none.
- *  Every change to a label reloads the tallies; a row's own labels change through `EntryActionHandler`. */
+ *  Every change to a label reloads the tallies and reaches the rows on screen; a row's own labels change through
+ *  `EntryActionHandler`. */
 @Injectable({ providedIn: 'root' })
 export class LabelsStore {
   private readonly api = inject(LabelsApi);
+  private readonly rows = inject(EntryRowCache);
   private readonly loads = new StaleGatedLoad();
   private readonly storedLabels = signal<LabelTally[]>([]);
   private readonly storedUnlabeled = signal<UnlabeledTally>(NO_UNLABELED);
@@ -39,11 +42,13 @@ export class LabelsStore {
   }
 
   rename(id: number, name: string): Observable<void> {
-    return this.reloadAfter(this.api.rename(id, name));
+    return this.reloadAfter(
+      this.api.rename(id, name).pipe(tap((label) => this.rows.renameLabelLocally(id, label.name))),
+    );
   }
 
   remove(id: number): Observable<void> {
-    return this.reloadAfter(this.api.remove(id));
+    return this.reloadAfter(this.api.remove(id).pipe(tap(() => this.rows.dropLabelLocally(id))));
   }
 
   attach(entryId: number, labelId: number): Observable<void> {

@@ -10,6 +10,7 @@ import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { LabelPill } from '../labels/labels.models';
+import { byLabelName } from '../labels/label-order';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { HeldItem, heldItem } from './held-item';
@@ -171,6 +172,18 @@ export class EntryRowCache {
     this.patch([id], (entry) => (entry.isShared ? entry : { ...entry, isShared: true }));
   }
 
+  /** Shows a label renamed on the server under its new name on every row; no request. */
+  renameLabelLocally(labelId: number, name: string): void {
+    this.patchLabelled(labelId, (labels) =>
+      labels.map((label) => (label.id === labelId ? { ...label, name } : label)).sort(byLabelName),
+    );
+  }
+
+  /** Takes a label deleted on the server off every row; no request. */
+  dropLabelLocally(labelId: number): void {
+    this.patchLabelled(labelId, (labels) => labels.filter((label) => label.id !== labelId));
+  }
+
   private write(entry: EntryDto): Signal<EntryDto> {
     const shown = this.inFlight.overlay(entry);
     const record = this.records.get(entry.id);
@@ -268,6 +281,14 @@ export class EntryRowCache {
       idsByItem.set(itemId, [...(idsByItem.get(itemId) ?? []), id]);
     }
     return idsByItem;
+  }
+
+  private patchLabelled(labelId: number, change: (labels: LabelPill[]) => LabelPill[]): void {
+    this.patch(this.records.keys(), (entry) =>
+      entry.labels.some((label) => label.id === labelId)
+        ? { ...entry, labels: change(entry.labels) }
+        : entry,
+    );
   }
 
   /** An entry keeps its identity when `patch` hands it back, so nothing derived from it recomputes. */

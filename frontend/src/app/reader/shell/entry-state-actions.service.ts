@@ -23,6 +23,7 @@ import { VoteValue } from '../vote-pill/vote';
 import { injectListOnScreen } from './list-cover';
 import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
+import { byLabelName } from '../labels/label-order';
 import { parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
@@ -274,8 +275,4 @@ function leavesLabelledView(selection: Selection, labels: LabelPill[]): boolean 
   if (selection.label === undefined) return false;
   if (selection.label === 'unlabeled') return labels.length > 0;
   return !labels.some((label) => label.id === selection.label);
-}
-
-function byLabelName(left: LabelPill, right: LabelPill): number {
-  return left.name.toLowerCase().localeCompare(right.name.toLowerCase());
 }

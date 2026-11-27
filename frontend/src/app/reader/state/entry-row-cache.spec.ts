@@ -260,4 +260,30 @@ describe('EntryRowCache', () => {
       expect(readShownEntry(1).labels).toEqual([work]);
     });
   });
+
+  describe('a label renamed or deleted elsewhere (#2581)', () => {
+    const work = { id: 3, name: 'Work' };
+    const home = { id: 4, name: 'Home' };
+
+    it('shows the new name on every held row, in name order', () => {
+      holdEntries(buildCopy(1, null, { labels: [home, work] }), buildCopy(2, null));
+
+      cache.renameLabelLocally(3, 'Errands');
+
+      expect(readShownEntry(1).labels).toEqual([{ id: 3, name: 'Errands' }, home]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
+
+    it('drops the pill from every held row', () => {
+      holdEntries(
+        buildCopy(1, null, { labels: [home, work] }),
+        buildCopy(2, null, { labels: [work] }),
+      );
+
+      cache.dropLabelLocally(3);
+
+      expect(readShownEntry(1).labels).toEqual([home]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
+  });
 });
