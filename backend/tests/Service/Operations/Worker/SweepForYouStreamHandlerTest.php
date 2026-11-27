@@ -9,10 +9,14 @@ use App\Service\Operations\Worker\Handler\SweepForYouStreamHandler;
 use App\Service\Operations\Worker\Message\SweepForYouStream;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\SeedsForYouStreamBacklog;
+use App\Tests\Support\TickingClock;
 
 final class SweepForYouStreamHandlerTest extends DbTestCase
 {
-    public function testTheHandlerSweepsWithASixtySecondBudgetAndLogsTheReport(): void
+    use SeedsForYouStreamBacklog;
+
+    public function testTheHandlerSweepsAndLogsTheReport(): void
     {
         $logger = new RecordingLogger();
         $sweep = self::getContainer()->get(ForYouStreamSweep::class);
@@ -26,5 +30,30 @@ final class SweepForYouStreamHandlerTest extends DbTestCase
             ['usersSwept' => 0, 'entriesScanned' => 0, 'matchesInserted' => 0, 'caughtUp' => true],
             $logger->records[0]['context']['report'],
         );
+    }
+
+    public function testTheBudgetIsSixtySeconds(): void
+    {
+        $this->seedOneEntryBacklog('handler-budget-a@example.test');
+        $withinBudget = $this->scannedAfterStepSeconds(59);
+        $this->seedOneEntryBacklog('handler-budget-b@example.test');
+        $atBudget = $this->scannedAfterStepSeconds(60);
+
+        self::assertSame(1, $withinBudget);
+        self::assertSame(0, $atBudget);
+    }
+
+    private function scannedAfterStepSeconds(int $step): int
+    {
+        $logger = new RecordingLogger();
+        $sweep = $this->sweepOnClock(new TickingClock(new \DateTimeImmutable('2026-11-27 10:00:00'), $step));
+
+        (new SweepForYouStreamHandler($sweep, $logger))(new SweepForYouStream());
+
+        $report = $logger->records[0]['context']['report'];
+        self::assertIsArray($report);
+        self::assertIsInt($report['entriesScanned']);
+
+        return $report['entriesScanned'];
     }
 }

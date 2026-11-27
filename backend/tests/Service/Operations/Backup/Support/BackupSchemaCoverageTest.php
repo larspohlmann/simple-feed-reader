@@ -224,10 +224,11 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'provider calls.',
         InterestTerm::class => 'The weighted terms the For you stream matches entries on (#2582); derived from the '
             . 'profile, which a backup drops, and extracted again by the term refresh.',
-        InterestTermSet::class => 'The stream\'s sweep mark and term stamp (#2582); derived, and rebuilt by the term '
-            . 'refresh after a restore.',
+        InterestTermSet::class => 'The stream\'s sweep mark and term stamp (#2582); derived, and not restored: a new '
+            . 'set is stored once a profile exists, with its mark at the then-current ceiling, so nothing is '
+            . 'backfilled.',
         ForYouStreamEntry::class => 'A derived For you stream match (#2582); a restore replaces the entries it '
-            . 'points at, and the sweep matches the new ones again.',
+            . 'points at, and the stream refills only from articles arriving after new terms exist.',
         InterestTermRun::class => 'The history of the term extraction calls (#2582); meaningless without its '
             . 'provider calls.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',

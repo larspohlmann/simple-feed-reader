@@ -6,17 +6,31 @@ namespace App\Tests\Service\Curation\Recommendation\Stream;
 
 use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
+use App\Repository\ForYouStreamSourceRepository;
+use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
+use App\Service\Curation\Recommendation\Stream\DueInterestTermFinder;
+use App\Service\Curation\Recommendation\Stream\Factory\EntryStemmingFactory;
+use App\Service\Curation\Recommendation\Stream\InterestTermRarity;
+use App\Service\Curation\Recommendation\Stream\InterestTermRefresh;
 use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RequiresServices;
 use App\Tests\Support\SeedsProfiledAccounts;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\StubChatClient;
+use Psr\Log\NullLogger;
+use Symfony\Component\Clock\MockClock;
 
 final class InterestTermSweepTest extends DbTestCase
 {
+    use RequiresServices;
     use SeedsProfiledAccounts;
     use SeedsUsers;
+
+    private const string EDGE_NOW = '2026-11-27 10:00:00';
 
     private const string USABLE_REPLY = '{"terms":[{"language":"en","term":"solar","weight":8}]}';
 
@@ -60,6 +74,39 @@ final class InterestTermSweepTest extends DbTestCase
         $sets = self::getContainer()->get(InterestTermSetRepository::class);
         self::assertInstanceOf(InterestTermSetRepository::class, $sets);
         self::assertCount(1, $sets->findAll());
+    }
+
+    public function testAnAccountDueExactlyAtTheDeadlineIsNotStarted(): void
+    {
+        $this->profiledAccount('terms-sweep-edge@example.test');
+        $this->chat()->queueContent(self::USABLE_REPLY);
+
+        $atDeadline = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)
+            ->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW . ' +1 second'));
+
+        self::assertSame(0, $atDeadline->stored);
+        self::assertSame(1, $beforeDeadline->stored);
+    }
+
+    public function testASetStaleExactlyAtTheDeadlineIsNotRefreshed(): void
+    {
+        $set = new InterestTermSet(
+            $this->user('terms-sweep-stale-edge@example.test'),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            new \DateTimeImmutable('2026-10-03 06:00:00'),
+            0,
+        );
+        $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-26 08:00:00'));
+        $this->entityManager->persist($set);
+        $this->entityManager->flush();
+
+        $atDeadline = $this->sweepAt(self::EDGE_NOW)->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW));
+        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)
+            ->refreshDueBefore(new \DateTimeImmutable(self::EDGE_NOW . ' +1 second'));
+
+        self::assertSame(0, $atDeadline->raritiesRefreshed);
+        self::assertSame(1, $beforeDeadline->raritiesRefreshed);
     }
 
     public function testStaleRaritiesAreRefreshedOnceADay(): void
@@ -142,6 +189,26 @@ final class InterestTermSweepTest extends DbTestCase
         self::assertInstanceOf(InterestTermSweep::class, $sweep);
 
         return $sweep;
+    }
+
+    private function sweepAt(string $now): InterestTermSweep
+    {
+        $clock = new NaiveUtcClock(new MockClock($now));
+
+        return new InterestTermSweep(
+            $this->requireFromContainer(DueInterestTermFinder::class),
+            $this->requireFromContainer(InterestTermRefresh::class),
+            $this->requireFromContainer(InterestTermSetRepository::class),
+            new InterestTermRarity(
+                new ForYouStreamSourceRepository($this->entityManager),
+                $this->requireFromContainer(InterestTermRepository::class),
+                new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
+                $this->entityManager,
+                $clock,
+            ),
+            $clock,
+            new NullLogger(),
+        );
     }
 
     private function chat(): StubChatClient
