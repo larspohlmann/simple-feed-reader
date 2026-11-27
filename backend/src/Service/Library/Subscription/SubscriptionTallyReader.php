@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Library\Subscription;
 
 use App\Entity\User;
+use App\Repository\EntryListRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\ForYouStreamEntryRepository;
@@ -25,6 +26,7 @@ final readonly class SubscriptionTallyReader
         private UnreadCountRepository $unreadCounts,
         private RecommendationItemRepository $recommendationItems,
         private EntryShareRepository $entryShares,
+        private EntryListRepository $entryList,
         private SocialNotificationRepository $socialNotifications,
         private InterestTermSetRepository $interestTermSets,
         private ForYouStreamEntryRepository $streamEntries,
@@ -62,12 +64,13 @@ final readonly class SubscriptionTallyReader
         return $this->streamEntries->countMembersAndUnread($userId);
     }
 
-    /** @return array{favorites: int, kept: int, shared: int, viewed: int} */
+    /** @return array{favorites: int, kept: int, shared: int, viewed: int, liked: int} */
     private function flagCounts(int $userId): array
     {
         return [
             ...$this->entryStates->stateCountsForUser($userId),
             'shared' => $this->entryShares->countForUser($userId),
+            'liked' => $this->entryList->countLikedForUser($userId),
         ];
     }
 }

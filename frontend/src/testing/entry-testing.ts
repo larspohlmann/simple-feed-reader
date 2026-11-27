@@ -36,6 +36,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     isHidden: false,
     isFavorite: false,
     isKept: false,
+    isLiked: false,
     isShared: false,
     isViewed: false,
     labels: [],

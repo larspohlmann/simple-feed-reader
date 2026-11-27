@@ -21,7 +21,11 @@ export class RetryableFailure {
   }
 
   report(error: HttpErrorResponse, retry: () => void): void {
-    this.shown.set(parseProblem(error));
+    this.reportProblem(parseProblem(error), retry);
+  }
+
+  reportProblem(problem: Problem, retry: () => void): void {
+    this.shown.set(problem);
     this.failedOperation.set(retry);
   }
 

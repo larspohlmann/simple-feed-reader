@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Library\Reading;
 
 use App\Entity\Entry;
+use App\Entity\EntryMarks;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -202,6 +203,30 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertFalse($this->readStateOrDefault($user, $target)->isKept());
     }
 
+    public function testKeepingAloneLeavesTheLikeAndTheFavorite(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $likedAt = new \DateTimeImmutable('2026-07-06 09:00:00');
+        $this->persistMarks($user, $target, new EntryMarks(true, false, $likedAt));
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isKept: true));
+
+        self::assertEquals(new EntryMarks(true, true, $likedAt), $this->readStateOrDefault($user, $target)->marks());
+    }
+
+    public function testFavoritingAloneLeavesTheLikeAndKept(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $likedAt = new \DateTimeImmutable('2026-07-06 09:00:00');
+        $this->persistMarks($user, $target, new EntryMarks(false, true, $likedAt));
+        $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
+
+        $this->updater()->apply($user, $row, $this->change(isFavorite: true));
+
+        self::assertEquals(new EntryMarks(true, true, $likedAt), $this->readStateOrDefault($user, $target)->marks());
+    }
+
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
@@ -320,6 +345,14 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertTrue($this->readStateOrDefault($user, $copies->localCopy)->isHidden());
         self::assertTrue($this->readStateOrDefault($user, $copies->allCopy)->isHidden());
         self::assertNull($this->findPersistedState($user, $unlinkedArticle));
+    }
+
+    private function persistMarks(User $user, Entry $entry, EntryMarks $marks): void
+    {
+        $state = new EntryState($user, $entry);
+        $state->replaceMarks($marks);
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
     }
 
     private function persistReader(): User

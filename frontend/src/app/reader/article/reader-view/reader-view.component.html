@@ -74,7 +74,7 @@
       labelMenu="article"
       [entry]="e"
       [audio]="false"
-      [like]="false"
+      [like]="e.social === null"
     />
     @if (audio.attachment()) {
       <app-listen-row [audio]="audio" />

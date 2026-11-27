@@ -6,8 +6,12 @@ namespace App\Repository;
 
 use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
+use App\Entity\DiscussionVote;
 use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\SocialLike;
 use App\Entity\Subscription;
+use App\Enum\EntryView;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
@@ -84,6 +88,56 @@ final class EntryListRepository extends ServiceEntityRepository
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
         return $this->attachDuplicates($survivors, $collapseScope, $query->userId);
+    }
+
+    /**
+     * What the liked view lists, through the same scope and copy collapse so the badge matches the list. The poll asks
+     * this every tick, so it starts from the reader's like rows, never from every subscribed entry.
+     */
+    public function countLikedForUser(int $userId): int
+    {
+        $likedEntryIds = $this->findLikedEntryIds($userId);
+        if ($likedEntryIds === []) {
+            return 0;
+        }
+        $applyScope = $this->buildListScope(new EntryQuery($userId, EntryView::Liked), null);
+        $qb = $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user');
+        $this->scope->applyIds($qb, EntryAliases::primary(), $likedEntryIds);
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, CollapseScope::fromScope($applyScope), $userId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /** @return list<int> the subscribed entries a local like, a network like or an up-vote of the reader reaches */
+    private function findLikedEntryIds(int $userId): array
+    {
+        $likeRows = [
+            $this->buildLikedEntryQuery(EntryState::class, 'liked.entry = e')
+                ->andWhere(EntryLikeDql::buildLocalLikeCondition('liked')),
+            $this->buildLikedEntryQuery(SocialLike::class, 'e.canonicalItem = liked.canonicalItem'),
+            $this->buildLikedEntryQuery(DiscussionVote::class, 'e.canonicalItem = liked.canonicalItem')
+                ->andWhere(EntryLikeDql::buildUpvoteCondition('liked')),
+        ];
+        $entryIds = array_merge(...array_map(
+            fn (QueryBuilder $qb): array => $this->projection->scalarIds($qb->setParameter('user', $userId)),
+            $likeRows,
+        ));
+
+        return array_values(array_unique($entryIds));
+    }
+
+    /** @param class-string $likeClass */
+    private function buildLikedEntryQuery(string $likeClass, string $entryCondition): QueryBuilder
+    {
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('e.id')
+            ->from($likeClass, 'liked')
+            ->join(Entry::class, 'e', 'WITH', $entryCondition)
+            ->join(Subscription::class, 's', 'WITH', 's.feed = e.feed AND s.user = :user')
+            ->andWhere('liked.user = :user');
     }
 
     /**

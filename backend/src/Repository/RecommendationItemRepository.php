@@ -73,6 +73,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isHidden AS esHidden')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
+            ->addSelect('CASE WHEN es.likedAt IS NOT NULL THEN 1 ELSE 0 END AS esLiked')
             ->addSelect('es.viewedAt AS esViewedAt')
             ->addSelect('esh.sharedAt AS eshSharedAt')
             ->addSelect('s.markedReadUntil AS markedReadUntil')

@@ -6,14 +6,17 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { StateSaveOutcome } from '../state/entries.store';
-import { EntryRowCache, localStatePatch } from '../state/entry-row-cache';
-import { countFirstShare } from '../state/first-share';
+import { ActOutcome, EntryRowCache } from '../state/entry-row-cache';
+import { buildLikePatch, buildVotePatch, localStatePatch } from '../state/optimistic-patches';
+import { RowPatch } from '../state/in-flight-patches';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
+import { MARKS, MARK_NAMES, isMark } from '../state/marks';
 import { entryParam } from '../query/slug';
 import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
+import { isEntryLiked } from '../entry-social';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
@@ -24,7 +27,7 @@ import { injectListOnScreen } from './list-cover';
 import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
 import { LabelChange, withLabelChange } from '../state/in-flight-label-changes';
-import { parseProblem } from '../../core/problem';
+import { Problem, parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
 @Injectable()
@@ -46,6 +49,9 @@ export class EntryStateActions implements EntryActionHandler {
   });
 
   private readonly viewedOnOpen = new Set<number>();
+  private readonly toastFailure = {
+    onFailed: (problem: Problem) => this.toast.showProblem(problem),
+  };
 
   constructor() {
     // Once per session, even when the PATCH fails and rolls back.
@@ -71,67 +77,45 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   favorite(entry: EntryDto): void {
-    const delta = entry.isFavorite ? -1 : 1;
-    this.subscriptions.bumpFavorites(delta);
-    this.patchInList(
+    this.saveState(
       entry,
       { isFavorite: !entry.isFavorite },
-      {
-        onSaved: () => this.labels.reload(),
-        onFailed: () => this.subscriptions.bumpFavorites(-delta),
-      },
+      { onSaved: () => this.labels.reload() },
     );
   }
 
   like(entry: EntryDto): Observable<void> {
-    return this.rows.setLiked(entry, !entry.social?.isLiked, (problem) =>
-      this.toast.showProblem(problem),
-    );
+    const isLiked = !isEntryLiked(entry);
+    const move = this.buildMarkMove(entry, buildLikePatch(entry, isLiked), this.toastFailure);
+    return this.rows.setLiked(entry, isLiked, move);
   }
 
   vote(entry: EntryDto, to: VoteValue): Observable<void> {
-    return this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+    return this.rows.setVote(
+      entry,
+      to,
+      this.buildMarkMove(entry, buildVotePatch(to), this.toastFailure),
+    );
   }
 
   keep(entry: EntryDto): void {
-    const delta = entry.isKept ? -1 : 1;
-    this.subscriptions.bumpKept(delta);
-    this.patchInList(
-      entry,
-      { isKept: !entry.isKept },
-      { onSaved: () => this.labels.reload(), onFailed: () => this.subscriptions.bumpKept(-delta) },
-    );
+    this.saveState(entry, { isKept: !entry.isKept }, { onSaved: () => this.labels.reload() });
   }
 
   share(entry: EntryDto): void {
-    const counted = countFirstShare(this.subscriptions, entry);
-    const undoCount = () => {
-      if (counted) this.subscriptions.bumpShared(-1);
-    };
-    this.list().entries.setStateQuietly(entry.id, { isShared: true }, { onFailed: undoCount });
+    const patch = { isShared: true };
+    this.list().entries.setStateQuietly(entry.id, patch, this.buildMarkMove(entry, patch, {}));
   }
 
   unshare(entry: EntryDto): void {
-    this.subscriptions.bumpShared(-1);
-    this.patchInList(
-      entry,
-      { isShared: false },
-      { onFailed: () => this.subscriptions.bumpShared(1) },
-    );
+    this.saveState(entry, { isShared: false }, {});
   }
 
   /** Ticking also reads the entry; un-ticking lets a later reopen mark it viewed again. */
   toggleRead(entry: EntryDto): void {
     const viewed = !entry.isViewed;
-    const viewedDelta = viewed ? 1 : -1;
-    this.subscriptions.bumpViewed(viewedDelta);
     if (!viewed) this.viewedOnOpen.delete(entry.id);
-    const undoViewed = () => this.subscriptions.bumpViewed(-viewedDelta);
-    this.patchInList(
-      entry,
-      { isViewed: viewed },
-      viewed ? this.viewOptimistically(entry, undoViewed) : { onFailed: undoViewed },
-    );
+    this.saveState(entry, { isViewed: viewed }, viewed ? this.viewOptimistically(entry) : {});
   }
 
   open(entry: EntryDto): void {
@@ -179,6 +163,34 @@ export class EntryStateActions implements EntryActionHandler {
     this.markOpenedViewed(entry);
   };
 
+  /** Moves the entry's counts and its place in the view on screen from what it shows to what `patch` makes of it,
+   *  each time the change goes out; a failure takes both back. */
+  private buildMarkMove(entry: EntryDto, patch: RowPatch, outcome: StateSaveOutcome): ActOutcome {
+    const changed = { ...entry, ...patch };
+    const moves = MARK_NAMES.map((mark) => ({
+      mark,
+      by: Number(MARKS[mark](changed)) - Number(MARKS[mark](entry)),
+    })).filter((move) => move.by !== 0);
+    const bump = (sign: 1 | -1) =>
+      moves.forEach((move) => this.subscriptions.bumpCount(move.mark, sign * move.by));
+    const list = this.list();
+    const kind = list.selection().kind;
+    const leaves = isMark(kind) && MARKS[kind](entry) && !MARKS[kind](changed);
+    return {
+      onStarted: () => {
+        bump(1);
+        if (leaves) list.markLeaving(entry.id);
+        outcome.onStarted?.();
+      },
+      onSaved: outcome.onSaved,
+      onFailed: (problem) => {
+        bump(-1);
+        if (leaves) list.stayInList(entry.id);
+        outcome.onFailed?.(problem);
+      },
+    };
+  }
+
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */
   private leaveGonePost(id: number): void {
     this.list().markLeaving(id);
@@ -196,23 +208,17 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   private markOpenedViewed(entry: EntryDto): void {
-    this.subscriptions.bumpViewed(1);
-    this.list().entries.setState(
-      entry.id,
-      { isViewed: true },
-      this.viewOptimistically(entry, () => this.subscriptions.bumpViewed(-1)),
-    );
+    this.saveState(entry, { isViewed: true }, this.viewOptimistically(entry));
   }
 
   /** Viewing a visible entry reads it too: read it now, recount once saved, put it back if the save fails. */
-  private viewOptimistically(entry: EntryDto, undoViewed: () => void): StateSaveOutcome {
-    if (entry.isHidden) return { onFailed: undoViewed };
+  private viewOptimistically(entry: EntryDto): StateSaveOutcome {
+    if (entry.isHidden) return {};
     this.subscriptions.markArticleRead(entry);
     this.savedSearches.markEntryRead(entry.id);
     return {
       onSaved: () => this.subscriptions.reloadCountsQuietly(),
       onFailed: () => {
-        undoViewed();
         this.subscriptions.markArticleUnread(entry);
         this.savedSearches.markEntryUnread(entry.id);
       },
@@ -237,40 +243,9 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
-  private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
-    const list = this.list();
-    const leaves = leavesSavedView(list.selection(), entry, patch);
-    list.entries.setState(entry.id, patch, {
-      ...outcome,
-      onStarted: leaves ? () => list.markLeaving(entry.id) : undefined,
-      onFailed: () => {
-        outcome.onFailed?.();
-        if (leaves) list.stayInList(entry.id);
-      },
-    });
-  }
-}
-
-function leavesSavedView(selection: Selection, entry: EntryDto, patch: EntryStatePatch): boolean {
-  const flag = savedViewMembership(selection.kind);
-  return flag !== null && (localStatePatch(patch)[flag] ?? entry[flag]) !== true;
-}
-
-/** The flag a saved view filters on; an entry whose patch clears it leaves the view. */
-function savedViewMembership(
-  kind: Selection['kind'],
-): 'isFavorite' | 'isKept' | 'isShared' | 'isViewed' | null {
-  switch (kind) {
-    case 'favorites':
-      return 'isFavorite';
-    case 'kept':
-      return 'isKept';
-    case 'shared':
-      return 'isShared';
-    case 'viewed':
-      return 'isViewed';
-    default:
-      return null;
+  private saveState(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
+    const move = this.buildMarkMove(entry, localStatePatch(patch), outcome);
+    this.list().entries.setState(entry.id, patch, move);
   }
 }
 

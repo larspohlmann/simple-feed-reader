@@ -127,7 +127,8 @@ final readonly class ConnectedAccountStates
         }
         $likeable = array_filter(
             $posts,
-            static fn (SocialPostAddressModel $post): bool => isset($accountsByNetwork[$post->network->value]),
+            static fn (SocialPostAddressModel $post): bool
+                => $post->allowsLikeFrom($accountsByNetwork[$post->network->value] ?? []),
         );
         $likedItemIds = $this->socialLikes->findLikedItemIds(
             $userId,
@@ -137,7 +138,7 @@ final readonly class ConnectedAccountStates
         $states = [];
         foreach ($posts as $entryId => $post) {
             $networkAccounts = $accountsByNetwork[$post->network->value] ?? [];
-            $canLike = [] !== $networkAccounts;
+            $canLike = $post->allowsLikeFrom($networkAccounts);
             $states[$entryId] = new EntryListRowSocial(
                 $post->network,
                 isLiked: self::isLikedAmong($entries[$entryId], $likedItemIds),

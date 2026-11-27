@@ -1366,6 +1366,7 @@
     "favorites": "Favoriten",
     "kept": "Gemerkt",
     "shared": "Geteilt",
+    "liked": "Gefällt mir",
     "viewed": "Zuletzt gelesen",
     "forYou": "Für dich",
     "forYouStream": "Für-dich-Stream",
@@ -1650,11 +1651,13 @@
     "favorite": "Favorit",
     "like": {
       "bluesky": "Auf Bluesky liken",
-      "mastodon": "Auf Mastodon liken"
+      "mastodon": "Auf Mastodon liken",
+      "local": "Gefällt mir"
     },
     "unlike": {
       "bluesky": "Like auf Bluesky zurücknehmen",
-      "mastodon": "Like auf Mastodon zurücknehmen"
+      "mastodon": "Like auf Mastodon zurücknehmen",
+      "local": "Gefällt mir nicht mehr"
     },
     "repost": {
       "bluesky": "Auf Bluesky reposten",
@@ -1684,11 +1687,13 @@
       "favoriteRemove": "Aus Favoriten entfernen",
       "like": {
         "bluesky": "Auf Bluesky liken — ein öffentliches Like, das der Autor sieht",
-        "mastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht"
+        "mastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht",
+        "local": "Gefällt mir — bleibt hier und prägt deine Vorschläge unter Für dich"
       },
       "unlike": {
         "bluesky": "Dein Like auf Bluesky zurücknehmen",
-        "mastodon": "Dein Like auf Mastodon zurücknehmen"
+        "mastodon": "Dein Like auf Mastodon zurücknehmen",
+        "local": "Dein Gefällt mir zurücknehmen"
       },
       "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
       "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",

@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StateMarks;
 
 final class EntryStateRepositoryTest extends DbTestCase
 {
@@ -64,7 +65,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-set');
 
         $state = new EntryState($this->user, $withState);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -98,11 +99,11 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-guid');
 
         $mineState = new EntryState($this->user, $shared);
-        $mineState->markFavorite();
+        StateMarks::markFavorite($mineState);
         $this->entityManager->persist($mineState);
 
         $theirState = new EntryState($otherUser, $shared);
-        $theirState->markKept();
+        StateMarks::markKept($theirState);
         $this->entityManager->persist($theirState);
         $this->entityManager->flush();
 
@@ -138,7 +139,7 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $state = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $this->entityManager->flush();
 
         $this->repository()->ensureRow($userId, $entryId, null);

@@ -1,6 +1,7 @@
 import { EntryDto, EntryStatePatch } from '../models';
 
-export type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score'>;
+export type RowPatch = EntryStatePatch &
+  Pick<Partial<EntryDto>, 'social' | 'myVote' | 'score' | 'isLiked'>;
 
 interface InFlightPatch {
   entryId: number;
@@ -23,9 +24,10 @@ export class InFlightPatches {
     this.patches.clear();
   }
 
-  onTheWire(entryId: number, field: keyof RowPatch): boolean {
+  onTheWire(entryId: number, ...fields: (keyof RowPatch)[]): boolean {
     for (const inFlight of this.patches) {
-      if (inFlight.entryId === entryId && inFlight.patch[field] !== undefined) return true;
+      if (inFlight.entryId !== entryId) continue;
+      if (fields.some((field) => inFlight.patch[field] !== undefined)) return true;
     }
     return false;
   }

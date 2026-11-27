@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EntryStateRepository::class)]
 #[ORM\Table(name: 'entry_state')]
+#[ORM\Index(name: 'idx_entry_state_user_liked_at', columns: ['user_id', 'liked_at'])]
 final class EntryState
 {
     // No `nullable: false` on these identifier join columns: Doctrine forces them NOT NULL and deprecates saying so.
@@ -41,6 +42,9 @@ final class EntryState
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $viewedAt = null;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $likedAt = null;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry)
     {
@@ -68,29 +72,31 @@ final class EntryState
         return $this->isFavorite;
     }
 
-    public function markFavorite(): void
-    {
-        $this->isFavorite = true;
-    }
-
-    public function clearFavorite(): void
-    {
-        $this->isFavorite = false;
-    }
-
     public function isKept(): bool
     {
         return $this->isKept;
     }
 
-    public function markKept(): void
+    public function marks(): EntryMarks
     {
-        $this->isKept = true;
+        return new EntryMarks($this->isFavorite, $this->isKept, $this->likedAt);
     }
 
-    public function clearKept(): void
+    public function replaceMarks(EntryMarks $marks): void
     {
-        $this->isKept = false;
+        $this->isFavorite = $marks->isFavorite;
+        $this->isKept = $marks->isKept;
+        $this->likedAt = $marks->likedAt;
+    }
+
+    public function isLiked(): bool
+    {
+        return null !== $this->likedAt;
+    }
+
+    public function getLikedAt(): ?\DateTimeImmutable
+    {
+        return $this->likedAt;
     }
 
     public function getHiddenAt(): ?\DateTimeImmutable

@@ -18,6 +18,7 @@ use App\Service\Library\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\StateMarks;
 
 final class CrossPostCollapseTest extends DbTestCase
 {
@@ -117,7 +118,7 @@ final class CrossPostCollapseTest extends DbTestCase
         $this->persistCrossPost($this->feedA, 'https://lemmy.example/post/1', 'h1', '2026-11-14T09:00:00Z');
         $member = $this->persistCrossPost($this->feedB, 'https://lemmy.example/post/2', 'h1', '2026-11-14T10:00:00Z');
         $favourite = new EntryState($this->user, $member);
-        $favourite->markFavorite();
+        StateMarks::markFavorite($favourite);
         $this->entityManager->persist($favourite);
         $this->entityManager->flush();
 

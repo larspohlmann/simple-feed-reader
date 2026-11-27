@@ -60,6 +60,7 @@ const entryActions = {
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
+  like: jest.fn(),
 };
 
 beforeEach(() => {
@@ -1278,6 +1279,31 @@ describe('ReaderViewComponent', () => {
 
       expect(element.querySelector('.actions')!.textContent).not.toContain('thumb_up');
       expect(element.querySelector('app-social-counts button.like')).not.toBeNull();
+    });
+
+    it('carries the one thumb of a post the reader cannot like on its network, as a local like', () => {
+      counts.state = () =>
+        signal<SocialCountsState>({
+          status: 'ok',
+          counts: { likes: 41, reposts: 5, replies: 7, quotes: 2 },
+          likedAtLoad: false,
+          actions: null,
+          loadedAt: 0,
+        });
+      entryActions.like.mockReturnValue(of(undefined));
+      const unconnected = post({
+        social: { network: 'bluesky', isLiked: false, canLike: false, isOwn: false },
+      });
+      const element = mount(unconnected).nativeElement as HTMLElement;
+      const thumbs = Array.from(element.querySelectorAll('.material-symbols-outlined')).filter(
+        (glyph) => glyph.textContent?.trim() === 'thumb_up',
+      );
+
+      expect(thumbs).toHaveLength(1);
+      const like = element.querySelector<HTMLButtonElement>('app-social-counts button.like')!;
+      expect(like.getAttribute('aria-label')).toBe('Like');
+      like.click();
+      expect(entryActions.like).toHaveBeenCalledWith(unconnected);
     });
 
     it('is absent from an ordinary article', () => {

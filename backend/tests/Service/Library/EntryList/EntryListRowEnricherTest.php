@@ -777,7 +777,14 @@ final class EntryListRowEnricherTest extends DbTestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'S'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
             $duplicates,
         );

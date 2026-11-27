@@ -1,12 +1,19 @@
 import { TestBed } from '@angular/core/testing';
-import { DestroyRef, Signal, signal } from '@angular/core';
+import { DestroyRef, Signal, inject, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { API_BASE_URL } from '../../core/api';
+import { TokenStore } from '../../core/auth/token.store';
 import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
-import { EntryRowCache } from '../state/entry-row-cache';
+import { EntryRowCache, ActOutcome } from '../state/entry-row-cache';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
@@ -16,15 +23,19 @@ import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ToastService } from '../../shared/toast/toast.service';
-import { Problem } from '../../core/problem';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
+import { VoteValue } from '../vote-pill/vote';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RemovedPosts } from '../removed-posts.service';
 import { TestListContext, provideRouteListForTest } from '../../../testing/list-context-testing';
 import { ListCover } from './list-cover';
 import type { ListHeading } from './list-heading.service';
+import { Mark } from '../state/marks';
+import { Problem } from '../../core/problem';
+
+const aProblem: Problem = { title: 'Nope', status: 500, type: 'about:blank' };
 
 interface Collaborators {
   entries: object;
@@ -62,21 +73,34 @@ function createActions(collaborators: Collaborators): EntryStateActions {
 }
 
 describe('EntryStateActions liking (#1600)', () => {
-  const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
+  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, ActOutcome]>(() => EMPTY);
+  const bumpCount = jest.fn();
   const showProblem = jest.fn();
+  const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
+  const outcome = (call = 0): ActOutcome => setLiked.mock.calls[call][2];
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+  const problem = {
+    type: 'social_post_not_found',
+    title: 'Post no longer available',
+    status: 404,
+    detail: 'The post is no longer on Mastodon.',
+  };
+
   beforeEach(() => {
-    setLiked.mockReset();
+    setLiked.mockClear();
+    bumpCount.mockReset();
     showProblem.mockReset();
+    selection.set({ kind: 'all', unread: false });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({}),
+        ...provideRouteListForTest({}, selection),
         { provide: EntryRowCache, useValue: { setLiked } },
-        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { bumpCount } },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: LabelsStore, useValue: {} },
         {
@@ -113,17 +137,66 @@ describe('EntryStateActions liking (#1600)', () => {
         social: { network: 'mastodon', isLiked: false, canLike: true, isOwn: false },
       }),
     );
-    const onError = setLiked.mock.calls[0][2];
 
-    const problem = {
-      type: 'social_post_not_found',
-      title: 'Post no longer available',
-      status: 404,
-      detail: 'The post is no longer on Mastodon.',
-    };
-    onError(problem);
+    outcome().onFailed(problem);
 
     expect(showProblem).toHaveBeenCalledWith(problem);
+  });
+
+  it('counts a like up and an unlike down once each goes out', () => {
+    actions.like(anEntry({ id: 1, isLiked: false }));
+    actions.like(anEntry({ id: 2, isLiked: true }));
+    expect(bumpCount).not.toHaveBeenCalled();
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpCount.mock.calls).toEqual([
+      ['liked', 1],
+      ['liked', -1],
+    ]);
+  });
+
+  it('counts a network like of a locally liked entry nothing, and its unlike out once (#2587)', () => {
+    const network = { network: 'bluesky' as const, canLike: true, isOwn: false };
+    actions.like(anEntry({ id: 1, isLiked: true, social: { ...network, isLiked: false } }));
+    actions.like(anEntry({ id: 2, isLiked: true, social: { ...network, isLiked: true } }));
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpCount.mock.calls).toEqual([['liked', -1]]);
+  });
+
+  it('takes the count back when the like fails', () => {
+    actions.like(anEntry({ id: 1, isLiked: false }));
+
+    outcome().onStarted?.();
+    outcome().onFailed(problem);
+
+    expect(bumpCount.mock.calls).toEqual([
+      ['liked', 1],
+      ['liked', -1],
+    ]);
+  });
+
+  it('leaves the Liked list when unliked there and comes back when that fails', () => {
+    selection.set({ kind: 'liked' });
+    actions.like(anEntry({ id: 9, isLiked: true }));
+
+    outcome().onStarted?.();
+    expect(isLeaving(9)).toBe(true);
+
+    outcome().onFailed(problem);
+    expect(isLeaving(9)).toBe(false);
+  });
+
+  it('stays in any other list when unliked', () => {
+    actions.like(anEntry({ id: 9, isLiked: true }));
+
+    outcome().onStarted?.();
+
+    expect(isLeaving(9)).toBe(false);
   });
 });
 
@@ -177,7 +250,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
     actions = createActions({
       entries: { setState },
       subscriptions: {
-        bumpViewed: jest.fn(),
+        bumpCount: jest.fn(),
         markArticleRead,
         markArticleUnread,
         reloadCountsQuietly,
@@ -196,7 +269,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    outcome().onFailed?.();
+    outcome().onFailed?.(aProblem);
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
@@ -210,7 +283,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    outcome().onFailed?.();
+    outcome().onFailed?.(aProblem);
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
     expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
@@ -248,20 +321,20 @@ describe('EntryStateActions reading counts (#1679)', () => {
 });
 
 describe('EntryStateActions sharing (#2007)', () => {
-  const bumpShared = jest.fn();
+  const bumpCount = jest.fn();
   const show = jest.fn();
   const setStateQuietly = jest.fn<void, [number, EntryStatePatch, StateSaveOutcome?]>();
   const setState = jest.fn();
   let actions: EntryStateActions;
 
   beforeEach(() => {
-    bumpShared.mockReset();
+    bumpCount.mockReset();
     show.mockReset();
     setStateQuietly.mockReset();
     setState.mockReset();
     actions = createActions({
       entries: { setState, setStateQuietly },
-      subscriptions: { bumpShared },
+      subscriptions: { bumpCount },
       routeState: {
         openEntryId: signal(null),
         openEntry: signal(null),
@@ -273,58 +346,63 @@ describe('EntryStateActions sharing (#2007)', () => {
 
   it('shares an unshared entry: counts it and patches isShared', () => {
     actions.share(anEntry({ id: 7, isShared: false }));
+    setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    expect(bumpShared).toHaveBeenCalledWith(1);
+    expect(bumpCount).toHaveBeenCalledWith('shared', 1);
     expect(setStateQuietly).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
   });
 
   it('re-sharing a shared entry refreshes it without counting it twice', () => {
     actions.share(anEntry({ id: 7, isShared: true }));
+    setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    expect(bumpShared).not.toHaveBeenCalled();
+    expect(bumpCount).not.toHaveBeenCalled();
     expect(setStateQuietly).toHaveBeenCalledWith(7, { isShared: true }, expect.anything());
   });
 
   it('restores the count without a toast when the save of a first share fails', () => {
     actions.share(anEntry({ id: 7, isShared: false }));
+    setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+    setStateQuietly.mock.calls[0][2]?.onFailed?.(aProblem);
 
-    expect(bumpShared).toHaveBeenLastCalledWith(-1);
+    expect(bumpCount).toHaveBeenLastCalledWith('shared', -1);
     expect(show).not.toHaveBeenCalled();
     expect(setState).not.toHaveBeenCalled();
   });
 
   it('leaves the count alone when the save of a re-share fails', () => {
     actions.share(anEntry({ id: 7, isShared: true }));
+    setStateQuietly.mock.calls[0][2]?.onStarted?.();
 
-    setStateQuietly.mock.calls[0][2]?.onFailed?.();
+    setStateQuietly.mock.calls[0][2]?.onFailed?.(aProblem);
 
-    expect(bumpShared).not.toHaveBeenCalled();
+    expect(bumpCount).not.toHaveBeenCalled();
   });
 });
 
 describe('EntryStateActions unsharing (#2007)', () => {
-  const bumpShared = jest.fn();
+  const bumpCount = jest.fn();
   const setState = jest.fn();
   const selection = signal<{ kind: string }>({ kind: 'all' });
   let actions: EntryStateActions;
 
   beforeEach(() => {
-    bumpShared.mockReset();
+    bumpCount.mockReset();
     setState.mockReset();
     selection.set({ kind: 'all' });
     actions = createActions({
       entries: { setState },
-      subscriptions: { bumpShared },
+      subscriptions: { bumpCount },
       routeState: { openEntryId: signal(null), openEntry: signal(null), selection },
     });
   });
 
   it('uncounts the entry and clears isShared', () => {
     actions.unshare(anEntry({ id: 9, isShared: true }));
+    setState.mock.calls[0][2]?.onStarted?.();
 
-    expect(bumpShared).toHaveBeenCalledWith(-1);
+    expect(bumpCount).toHaveBeenCalledWith('shared', -1);
     expect(setState).toHaveBeenCalledWith(9, { isShared: false }, expect.anything());
     expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
   });
@@ -357,7 +435,7 @@ describe('EntryStateActions unsharing (#2007)', () => {
 
     setState.mock.calls[0][2]?.onFailed?.();
 
-    expect(bumpShared).toHaveBeenLastCalledWith(1);
+    expect(bumpCount).toHaveBeenLastCalledWith('shared', 1);
     expect(TestBed.inject(ListContext).leavingIds().has(9)).toBe(false);
   });
 });
@@ -483,23 +561,29 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
 });
 
 describe('EntryStateActions voting (#2218)', () => {
-  const setVote = jest.fn();
+  const setVote = jest.fn<Observable<void>, [EntryDto, VoteValue, ActOutcome]>(() => EMPTY);
   const refreshVote = jest.fn();
   const showProblem = jest.fn();
+  const bumpCount = jest.fn();
   const openEntry = signal<EntryDto | null>(null);
+  const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
+  const outcome = (call = 0): ActOutcome => setVote.mock.calls[call][2];
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+
   beforeEach(() => {
-    [setVote, refreshVote, showProblem].forEach((spy) => spy.mockReset());
+    [setVote, refreshVote, showProblem, bumpCount].forEach((spy) => spy.mockClear());
     openEntry.set(null);
+    selection.set({ kind: 'all', unread: false });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({}),
+        ...provideRouteListForTest({}, selection),
         { provide: EntryRowCache, useValue: { setVote, refreshVote } },
-        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { bumpCount } },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: LabelsStore, useValue: {} },
         {
@@ -516,12 +600,76 @@ describe('EntryStateActions voting (#2218)', () => {
   it('votesThroughTheStoreAndToastsAFailure', () => {
     const entry = anEntry({ score: 3, myVote: 0 });
 
-    actions.vote(entry, 1);
-    const onError = setVote.mock.calls[0][2];
-    onError({ title: 'Nope' });
+    actions.vote(entry, -1);
+    const problem = { title: 'Nope', status: 500, type: 'about:blank' };
+    outcome().onFailed(problem);
 
-    expect(setVote).toHaveBeenCalledWith(entry, 1, expect.any(Function));
-    expect(showProblem).toHaveBeenCalledWith({ title: 'Nope' });
+    expect(setVote).toHaveBeenCalledWith(entry, -1, expect.anything());
+    expect(showProblem).toHaveBeenCalledWith(problem);
+    expect(bumpCount).not.toHaveBeenCalled();
+  });
+
+  it('counts an up-vote into Liked and an un-vote out, once each goes out (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), 1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: 1 }), 0);
+    expect(bumpCount).not.toHaveBeenCalled();
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpCount.mock.calls).toEqual([
+      ['liked', 1],
+      ['liked', -1],
+    ]);
+  });
+
+  it('counts nothing for a vote that neither reaches nor leaves an up-vote (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), -1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: -1 }), 0);
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpCount).not.toHaveBeenCalled();
+  });
+
+  it('counts a vote that replaces a local like out of Liked unless it is an up-vote (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0, isLiked: true }), 1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: 0, isLiked: true }), -1);
+    actions.vote(anEntry({ id: 3, score: 3, myVote: 1, isLiked: true }), 0);
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+    outcome(2).onStarted?.();
+
+    expect(bumpCount.mock.calls).toEqual([
+      ['liked', -1],
+      ['liked', -1],
+    ]);
+  });
+
+  it('takes the count back and toasts when the up-vote fails (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), 1);
+
+    outcome().onStarted?.();
+    outcome().onFailed({ title: 'Nope', status: 500, type: 'about:blank' });
+
+    expect(bumpCount.mock.calls).toEqual([
+      ['liked', 1],
+      ['liked', -1],
+    ]);
+    expect(showProblem).toHaveBeenCalled();
+  });
+
+  it('leaves the Liked list on a down-vote there and comes back when that fails (#2587)', () => {
+    selection.set({ kind: 'liked' });
+    actions.vote(anEntry({ id: 9, score: 3, myVote: 1 }), -1);
+
+    outcome().onStarted?.();
+    expect(isLeaving(9)).toBe(true);
+
+    outcome().onFailed({ title: 'Nope', status: 500, type: 'about:blank' });
+    expect(isLeaving(9)).toBe(false);
   });
 
   it('refreshesTheVoteOnceWhenAVotableEntryOpens', () => {
@@ -562,7 +710,7 @@ describe('EntryStateActions voting (#2218)', () => {
 describe("EntryStateActions with a story's list over the reader's (#2329)", () => {
   const routeSetState = jest.fn();
   const storySetState = jest.fn();
-  const bumpKept = jest.fn();
+  const bumpCount = jest.fn();
   let story: TestListContext;
   let actions: EntryStateActions;
 
@@ -571,7 +719,7 @@ describe("EntryStateActions with a story's list over the reader's (#2329)", () =
     storySetState.mockReset();
     actions = createActions({
       entries: { setState: routeSetState },
-      subscriptions: { bumpKept },
+      subscriptions: { bumpCount },
       routeState: {
         openEntryId: signal(null),
         openEntry: signal(null),
@@ -813,7 +961,7 @@ describe('EntryStateActions saving a flag the labels count (#2581)', () => {
     jest.clearAllMocks();
     actions = createActions({
       entries: { setState },
-      subscriptions: { bumpFavorites: jest.fn(), bumpKept: jest.fn() },
+      subscriptions: { bumpCount: jest.fn() },
       routeState: { openEntryId: signal(null), openEntry: signal(null) },
       labels: { reload },
     });
@@ -834,5 +982,209 @@ describe('EntryStateActions saving a flag the labels count (#2581)', () => {
     (setState.mock.calls[0][2] as StateSaveOutcome).onSaved?.();
 
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('EntryStateActions moving an entry into and out of each mark (#2587)', () => {
+  interface MoveHooks {
+    onStarted?: () => void;
+    onFailed?: (problem: Problem) => void;
+  }
+  const moves: MoveHooks[] = [];
+  const capture = (outcome: MoveHooks) => {
+    moves.push(outcome);
+    return EMPTY;
+  };
+  const bumpCount = jest.fn();
+  const selection = signal<Selection>({ kind: 'all', unread: false });
+  let actions: EntryStateActions;
+
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+  const lastMove = () => moves[moves.length - 1];
+
+  const cases: {
+    mark: Mark;
+    action: string;
+    joins: (actions: EntryStateActions) => void;
+    leaves: (actions: EntryStateActions) => void;
+  }[] = [
+    {
+      mark: 'favorites',
+      action: 'favorite',
+      joins: (on) => on.favorite(anEntry({ id: 9 })),
+      leaves: (on) => on.favorite(anEntry({ id: 9, isFavorite: true })),
+    },
+    {
+      mark: 'kept',
+      action: 'keep',
+      joins: (on) => on.keep(anEntry({ id: 9 })),
+      leaves: (on) => on.keep(anEntry({ id: 9, isKept: true })),
+    },
+    {
+      mark: 'shared',
+      action: 'share and unshare',
+      joins: (on) => on.share(anEntry({ id: 9 })),
+      leaves: (on) => on.unshare(anEntry({ id: 9, isShared: true })),
+    },
+    {
+      mark: 'liked',
+      action: 'like',
+      joins: (on) => on.like(anEntry({ id: 9 })),
+      leaves: (on) => on.like(anEntry({ id: 9, isLiked: true })),
+    },
+    {
+      mark: 'liked',
+      action: 'vote',
+      joins: (on) => on.vote(anEntry({ id: 9, score: 3, myVote: 0 }), 1),
+      leaves: (on) => on.vote(anEntry({ id: 9, score: 3, myVote: 1 }), 0),
+    },
+    {
+      mark: 'viewed',
+      action: 'toggleRead',
+      joins: (on) => on.toggleRead(anEntry({ id: 9, isHidden: true })),
+      leaves: (on) => on.toggleRead(anEntry({ id: 9, isViewed: true, isHidden: true })),
+    },
+  ];
+
+  beforeEach(() => {
+    moves.length = 0;
+    bumpCount.mockReset();
+    selection.set({ kind: 'all', unread: false });
+    actions = createActions({
+      entries: {
+        setState: (_id: number, _patch: EntryStatePatch, outcome: MoveHooks) => capture(outcome),
+        setStateQuietly: (_id: number, _patch: EntryStatePatch, outcome: MoveHooks) =>
+          capture(outcome),
+      },
+      rows: {
+        setLiked: (_entry: EntryDto, _isLiked: boolean, outcome: MoveHooks) => capture(outcome),
+        setVote: (_entry: EntryDto, _to: VoteValue, outcome: MoveHooks) => capture(outcome),
+      },
+      subscriptions: { bumpCount },
+      routeState: { openEntryId: signal(null), openEntry: signal(null), selection },
+      toast: { showProblem: jest.fn() },
+    });
+  });
+
+  it.each(cases)('$action counts the entry into $mark once it goes out', ({ mark, joins }) => {
+    joins(actions);
+    expect(bumpCount).not.toHaveBeenCalled();
+
+    lastMove().onStarted?.();
+
+    expect(bumpCount.mock.calls).toEqual([[mark, 1]]);
+  });
+
+  it.each(cases)('$action takes $mark back when joining fails', ({ mark, joins }) => {
+    joins(actions);
+
+    lastMove().onStarted?.();
+    lastMove().onFailed?.(aProblem);
+
+    expect(bumpCount.mock.calls).toEqual([
+      [mark, 1],
+      [mark, -1],
+    ]);
+  });
+
+  it.each(cases)('$action leaves the $mark view and comes back on failure', ({ mark, leaves }) => {
+    selection.set({ kind: mark } as Selection);
+    leaves(actions);
+
+    lastMove().onStarted?.();
+    expect(bumpCount.mock.calls).toEqual([[mark, -1]]);
+    expect(isLeaving(9)).toBe(true);
+
+    lastMove().onFailed?.(aProblem);
+    expect(bumpCount.mock.calls).toEqual([
+      [mark, -1],
+      [mark, 1],
+    ]);
+    expect(isLeaving(9)).toBe(false);
+  });
+
+  it("runs the caller's own start along with the move's", () => {
+    const onStarted = jest.fn();
+    const mover = actions as unknown as {
+      buildMarkMove: (
+        entry: EntryDto,
+        patch: EntryStatePatch,
+        outcome: StateSaveOutcome,
+      ) => MoveHooks;
+    };
+
+    mover.buildMarkMove(anEntry({ id: 9 }), { isFavorite: true }, { onStarted }).onStarted?.();
+
+    expect(bumpCount).toHaveBeenCalledWith('favorites', 1);
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(cases)('$action stays in a view of another kind', ({ leaves }) => {
+    leaves(actions);
+
+    lastMove().onStarted?.();
+
+    expect(isLeaving(9)).toBe(false);
+  });
+});
+
+describe('EntryStateActions retrying a failed favorite from the banner (#2587)', () => {
+  const bumpCount = jest.fn();
+  let store: EntriesStore;
+  let ctrl: HttpTestingController;
+  let actions: EntryStateActions;
+
+  const failWith500 = (request: TestRequest) =>
+    request.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+  const netFavorites = () =>
+    bumpCount.mock.calls
+      .filter(([mark]) => mark === 'favorites')
+      .reduce((net, [, by]) => net + (by as number), 0);
+
+  beforeEach(() => {
+    bumpCount.mockReset();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        EntryStateActions,
+        provideRouter([]),
+        ListCover,
+        { provide: ListContext, useFactory: () => new TestListContext(inject(EntriesStore)) },
+        { provide: SubscriptionsStore, useValue: { bumpCount } },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: LabelsStore, useValue: { reload: jest.fn() } },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null) },
+        },
+        { provide: ToastService, useValue: {} },
+        { provide: ArticlePostActions, useValue: {} },
+      ],
+    });
+    TestBed.inject(TokenStore).set('account-a.jwt');
+    store = TestBed.inject(EntriesStore);
+    ctrl = TestBed.inject(HttpTestingController);
+    actions = TestBed.inject(EntryStateActions);
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [anEntry({ id: 1 })], nextCursor: null });
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('counts the favorite once net when the retry succeeds', () => {
+    actions.favorite(store.entries()[0]);
+    failWith500(ctrl.expectOne('https://api.test/api/entries/1/state'));
+    expect(netFavorites()).toBe(0);
+
+    store.retry();
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({ state: {} });
+
+    expect(netFavorites()).toBe(1);
+    expect(store.entries()[0].isFavorite).toBe(true);
   });
 });

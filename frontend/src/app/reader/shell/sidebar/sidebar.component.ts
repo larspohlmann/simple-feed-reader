@@ -141,6 +141,7 @@ export class SidebarComponent {
   readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
   readonly sharedCount = input(0);
+  readonly likedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);

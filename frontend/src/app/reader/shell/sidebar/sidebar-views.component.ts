@@ -10,7 +10,7 @@ import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 
-/** The smart views: the first card holds All items, Shared and Recently read; the discover card, below the collections, Trending and For you. */
+/** The smart views: the first card holds All items, Shared, Liked and Recently read; the discover card, below the collections, Trending and For you. */
 @Component({
   selector: 'app-sidebar-views',
   imports: [IconComponent, RouterLink, TranslocoPipe],
@@ -31,6 +31,7 @@ export class SidebarViewsComponent {
   readonly selection = input.required<Selection>();
   readonly totalUnread = input.required<number>();
   readonly sharedCount = input(0);
+  readonly likedCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
   /** Unopened stories in the window the Trending link opens (#2017, decision 8). */

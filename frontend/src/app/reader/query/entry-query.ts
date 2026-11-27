@@ -18,6 +18,7 @@ const VIEW_QUERY: BySelectionKind<EntryQuery | null> = {
   favorites: (selection) => withLabel({ view: 'favorites' }, selection.label),
   kept: (selection) => withLabel({ view: 'kept' }, selection.label),
   shared: () => ({ view: 'shared' }),
+  liked: () => ({ view: 'liked' }),
   viewed: () => ({ view: 'viewed' }),
   // The one list whose unread filter is not a view of its own: the ranked
   // feed IS the view, so the filter travels beside it (#710).

@@ -28,6 +28,7 @@ use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -136,7 +137,7 @@ final class AccountBackupExporterTest extends DbTestCase
         $entry->recordText($entry->getText()->withContentHtml('<p>body</p>'));
         $this->entityManager->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
         $this->entityManager->persist($state);
         $this->entityManager->persist(new EntryShare($user, $entry, new \DateTimeImmutable('2026-08-04T00:00:00Z')));
@@ -247,7 +248,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->entityManager->persist($subscribedEntry);
         $subscribedState = new EntryState($user, $subscribedEntry);
-        $subscribedState->markFavorite();
+        StateMarks::markFavorite($subscribedState);
         $this->entityManager->persist($subscribedState);
 
         // No subscription for this feed: the state SubscriptionService::unsubscribe() leaves, which keeps entry_state.
@@ -263,7 +264,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->entityManager->persist($orphanEntry);
         $orphanState = new EntryState($user, $orphanEntry);
-        $orphanState->markFavorite();
+        StateMarks::markFavorite($orphanState);
         $this->entityManager->persist($orphanState);
 
         $this->entityManager->flush();

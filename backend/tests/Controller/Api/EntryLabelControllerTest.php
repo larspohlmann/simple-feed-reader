@@ -12,6 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NamesLabels;
+use App\Tests\Support\StateMarks;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -86,7 +87,7 @@ final class EntryLabelControllerTest extends ApiTestCase
         $user = $this->factory()->create('entry-label-survive@example.com');
         $entry = $this->subscribedEntry($user);
         $state = new EntryState($user, $entry);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $this->entityManager()->persist($state);
         $this->entityManager()->flush();
         $label = $this->readLater($user);

@@ -603,6 +603,26 @@ final class EntryJsonTest extends TestCase
         self::assertNull($json['discussionUrl']);
     }
 
+    public function testListRowCarriesTheLocalLike(): void
+    {
+        $liked = new EntryListRow(
+            $this->entryTitled('Liked'),
+            new EntryListRowSubscription(1, 'Source'),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: true,
+                viewedAt: null,
+                sharedAt: null,
+            ),
+            null,
+        );
+
+        self::assertTrue(JsonMappers::entryJson()->listRow($liked)['isLiked']);
+        self::assertFalse(JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Plain')))['isLiked']);
+    }
+
     public function testListRowKeepsItsShapeAndCarriesTheEnrichment(): void
     {
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
@@ -611,7 +631,14 @@ final class EntryJsonTest extends TestCase
         $row = new EntryListRow(
             $this->entryTitled('Enriched'),
             new EntryListRowSubscription(1, 'Source'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
             enrichment: new EntryListRowEnrichment(
                 ['Politics'],
@@ -631,7 +658,7 @@ final class EntryJsonTest extends TestCase
                 'comments', 'score', 'commentCount', 'likeCount',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
-                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isShared', 'isViewed',
+                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isLiked', 'isShared', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'labels', 'social', 'myVote', 'community',
                 'duplicates',
             ],
@@ -1010,7 +1037,14 @@ final class EntryJsonTest extends TestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Source'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
             enrichment: $enrichment,
         );

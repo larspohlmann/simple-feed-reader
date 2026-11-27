@@ -2,7 +2,8 @@
   <app-social-counts-row
     [network]="social.network"
     [counts]="counts()"
-    [liked]="likeable() ? social.isLiked : null"
+    [liked]="thumb()?.isLiked ?? null"
+    [likeTarget]="thumb()?.target ?? null"
     [actions]="viewer()"
     [like]="likeEntry"
     (repostToggled)="toggleRepost()"

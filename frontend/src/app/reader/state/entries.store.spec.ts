@@ -1158,7 +1158,7 @@ describe('EntriesStore', () => {
     it('setsAVoteAtOnceAndTakesTheScoreFromTheAnswer', () => {
       loadVotable();
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
 
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
       const request = ctrl.expectOne(votePath);
@@ -1171,7 +1171,7 @@ describe('EntriesStore', () => {
     it('takes a flipped vote’s score from the answer', () => {
       loadVotable(1);
 
-      rows.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, { onFailed: () => undefined });
       ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
 
       expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 8 });
@@ -1181,7 +1181,7 @@ describe('EntriesStore', () => {
       loadVotable();
       const problems: string[] = [];
 
-      rows.setVote(store.entries()[0], 1, (problem) => problems.push(problem.title));
+      rows.setVote(store.entries()[0], 1, { onFailed: (problem) => problems.push(problem.title) });
       ctrl
         .expectOne(votePath)
         .flush(
@@ -1195,10 +1195,10 @@ describe('EntriesStore', () => {
 
     it('dropsAVoteWhileOneIsOnTheWire', () => {
       loadVotable();
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const first = ctrl.expectOne(votePath);
 
-      rows.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, { onFailed: () => undefined });
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
@@ -1208,7 +1208,7 @@ describe('EntriesStore', () => {
     it('ignoresAnEntryWithoutAVote', () => {
       loadVotable(null);
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: null, score: 10 });
@@ -1255,7 +1255,7 @@ describe('EntriesStore', () => {
     it('lets a vote on the wire win over the network report', () => {
       loadVotable(0);
       rows.refreshVote(store.entries()[0]);
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
 
       ctrl.expectOne({ method: 'GET', url: votePath }).flush({ myVote: -1, score: 9 });
@@ -1278,7 +1278,7 @@ describe('EntriesStore', () => {
     it('adoptsTheHomeAddressEvenWhenAVoteIsOnTheWire', () => {
       loadVotable(0);
       rows.refreshVote(store.entries()[0]);
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
 
       ctrl
@@ -1333,7 +1333,7 @@ describe('EntriesStore', () => {
     it('adoptsTheHomeAddressACastVoteReports', () => {
       loadVotable(0);
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       ctrl.expectOne(votePath).flush({ myVote: 1, score: 11, discussionHomeUrl: homeUrl });
 
       expect(store.entries()[0].discussionHomeUrl).toBe(homeUrl);
@@ -1372,7 +1372,7 @@ describe('EntriesStore', () => {
     it('likes optimistically on its own route and keeps the like once the server agrees', () => {
       loadPost();
 
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       expect(store.entries()[0].social?.isLiked).toBe(true);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
       expect(like.request.method).toBe('PUT');
@@ -1389,7 +1389,7 @@ describe('EntriesStore', () => {
     it('unlikes on DELETE', () => {
       loadPost(true);
 
-      rows.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, { onFailed: () => undefined });
 
       expect(store.entries()[0].social?.isLiked).toBe(false);
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
@@ -1414,7 +1414,7 @@ describe('EntriesStore', () => {
 
     it('lets a like on the wire win over the network report', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
       rows.adoptLike(1, { from: true, to: false });
@@ -1425,7 +1425,7 @@ describe('EntriesStore', () => {
 
     it('leaves a like settled since the network was asked alone', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
 
       rows.adoptLike(1, { from: false, to: false });
@@ -1444,7 +1444,7 @@ describe('EntriesStore', () => {
 
     it('keeps an in-flight like across a list reload that lands first', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
       store.load({ view: 'all' });
@@ -1458,7 +1458,7 @@ describe('EntriesStore', () => {
 
     it('stops overlaying the like once the request has finished', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
 
       store.load({ view: 'all' });
@@ -1473,7 +1473,9 @@ describe('EntriesStore', () => {
       loadPost();
       const problems: string[] = [];
 
-      rows.setLiked(store.entries()[0], true, (problem) => problems.push(problem.title));
+      rows.setLiked(store.entries()[0], true, {
+        onFailed: (problem) => problems.push(problem.title),
+      });
       ctrl
         .expectOne('https://api.test/api/entries/1/like')
         .flush(
@@ -1488,7 +1490,7 @@ describe('EntriesStore', () => {
 
     it('stops overlaying the like once the request has failed', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       ctrl
         .expectOne('https://api.test/api/entries/1/like')
         .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
@@ -1503,15 +1505,15 @@ describe('EntriesStore', () => {
 
     it('drops a second click while the first like is still on the wire', () => {
       loadPost();
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
-      rows.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, { onFailed: () => undefined });
 
       ctrl.expectNone('https://api.test/api/entries/1/like');
       expect(store.entries()[0].social?.isLiked).toBe(true);
       like.flush({ isLiked: true });
-      rows.setLiked(store.entries()[0], false, () => undefined);
+      rows.setLiked(store.entries()[0], false, { onFailed: () => undefined });
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
     });
 
@@ -1531,7 +1533,7 @@ describe('EntriesStore', () => {
       it('likes the copy inside the row that holds it', () => {
         loadRowWithCopy();
 
-        rows.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, { onFailed: () => undefined });
 
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
         ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
@@ -1549,7 +1551,7 @@ describe('EntriesStore', () => {
       it('puts the copy back when the network refuses the like', () => {
         loadRowWithCopy();
 
-        rows.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, { onFailed: () => undefined });
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
         ctrl
           .expectOne('https://api.test/api/entries/2/like')
@@ -1573,7 +1575,7 @@ describe('EntriesStore', () => {
 
       it("keeps the copy's in-flight like across a list reload that lands first", () => {
         loadRowWithCopy();
-        rows.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, { onFailed: () => undefined });
         const like = ctrl.expectOne('https://api.test/api/entries/2/like');
 
         loadRowWithCopy();
@@ -1589,25 +1591,29 @@ describe('EntriesStore', () => {
           .flush({ entries: [entry(1, { duplicates: [entry(3)] }), entry(4)], nextCursor: null });
         const before = store.entries();
 
-        rows.setLiked(copy(), true, () => undefined);
+        rows.setLiked(copy(), true, { onFailed: () => undefined });
         ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
 
         expect(store.entries()).toBe(before);
       });
     });
 
-    it('sends nothing for an entry that is no social post', () => {
+    it('keeps a like of an entry that is no social post as a local like', () => {
       store.load({ view: 'all' });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1)], nextCursor: null });
 
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
 
-      ctrl.expectNone('https://api.test/api/entries/1/like');
+      expect(store.entries()[0].isLiked).toBe(true);
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush({ isLiked: true, likeCount: null });
+      expect(store.entries()[0].isLiked).toBe(true);
     });
 
-    it('sends nothing for a post the user has no account to like from (#1615)', () => {
+    it('keeps a local like for a post the user has no account to like from (#1615)', () => {
       store.load({ view: 'all' });
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -1625,9 +1631,12 @@ describe('EntriesStore', () => {
           nextCursor: null,
         });
 
-      rows.setLiked(store.entries()[0], true, () => undefined);
+      rows.setLiked(store.entries()[0], true, { onFailed: () => undefined });
 
-      ctrl.expectNone('https://api.test/api/entries/1/like');
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush({ isLiked: true, likeCount: null });
+      expect(store.entries()[0].isLiked).toBe(true);
       expect(store.entries()[0].social?.isLiked).toBe(false);
     });
   });

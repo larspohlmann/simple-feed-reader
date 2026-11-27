@@ -21,6 +21,7 @@ final class EntryViewTest extends TestCase
         self::assertSame(EntryView::Unread, EntryView::fromRequestValue('unread'));
         self::assertSame(EntryView::Favorites, EntryView::fromRequestValue('favorites'));
         self::assertSame(EntryView::Kept, EntryView::fromRequestValue('kept'));
+        self::assertSame(EntryView::Liked, EntryView::fromRequestValue('liked'));
         self::assertSame(EntryView::Viewed, EntryView::fromRequestValue('viewed'));
         self::assertSame(EntryView::ForYou, EntryView::fromRequestValue('for-you'));
     }
@@ -33,7 +34,9 @@ final class EntryViewTest extends TestCase
                 self::fail("The view '{$value}' must be rejected.");
             } catch (ValidationException $exception) {
                 self::assertSame(
-                    ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, shared, viewed, for-you.']],
+                    ['view' => [
+                        'Unknown view. Use one of: all, unread, favorites, kept, shared, liked, viewed, for-you.',
+                    ]],
                     $exception->errors,
                 );
             }

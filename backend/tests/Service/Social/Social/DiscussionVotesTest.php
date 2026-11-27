@@ -10,18 +10,22 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Enum\VoteScore;
 use App\Repository\DiscussionVoteRepository;
+use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Service\Content\Comments\CommentsCache;
 use App\Service\Content\Comments\CommentsLoader;
 use App\Service\Content\Comments\CommentsSource\LemmyCommentsSource;
 use App\Service\Content\Comments\Model\CommentsAnswerModel;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Crypto\InstanceSecretCipher;
+use App\Service\Library\Reading\LocalLikes;
 use App\Service\Outbound\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Social\Social\ActingAccountChooser;
 use App\Service\Social\Social\Crypto\SocialCredentialCipher;
@@ -70,7 +74,7 @@ final class DiscussionVotesTest extends DbTestCase
         $account = $this->lemmyAccount();
         $entry = $this->lemmyPost();
 
-        $result = $votes->vote($this->owner, $entry, VoteScore::Up);
+        $result = $votes->vote($this->owner, $this->rowOf($entry), VoteScore::Up);
 
         self::assertEquals(new DiscussionVoteResultModel(VoteScore::Up, 43, self::HOME_PAGE), $result);
         self::assertSame([self::LIKE], $this->http->requestLines());
@@ -85,7 +89,7 @@ final class DiscussionVotesTest extends DbTestCase
         $entry = $this->lemmyPost();
         $this->storeVote($account, VoteScore::Up);
 
-        $result = $votes->vote($this->owner, $entry, VoteScore::None);
+        $result = $votes->vote($this->owner, $this->rowOf($entry), VoteScore::None);
 
         self::assertEquals(new DiscussionVoteResultModel(VoteScore::None, 43, self::HOME_PAGE), $result);
         self::assertSame('{"post_id":42,"score":0}', $this->http->requests[0]['body']);
@@ -109,7 +113,7 @@ final class DiscussionVotesTest extends DbTestCase
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Down, 3));
         $votes = $this->buildVotes([SocialNetwork::Lemmy->value => $voter]);
 
-        $votes->vote($this->owner, $copy, VoteScore::Down);
+        $votes->vote($this->owner, $this->rowOf($copy), VoteScore::Down);
         $votes->syncFromNetwork($this->owner, $copy);
 
         self::assertSame([[VoteScore::Down, $caster->requireId()]], $this->storedVotes());
@@ -125,8 +129,9 @@ final class DiscussionVotesTest extends DbTestCase
         $voter->expects($this->once())->method('castVoteOnPost')
             ->with(self::identicalTo($homeOwner), self::identicalTo($copy), VoteScore::Up)
             ->willReturn(new DiscussionVoteResultModel(VoteScore::Up, 3));
+        $votes = $this->buildVotes([SocialNetwork::Lemmy->value => $voter]);
 
-        $this->buildVotes([SocialNetwork::Lemmy->value => $voter])->vote($this->owner, $copy, VoteScore::Up);
+        $votes->vote($this->owner, $this->rowOf($copy), VoteScore::Up);
 
         self::assertSame([[VoteScore::Up, $homeOwner->requireId()]], $this->storedVotes());
     }
@@ -161,7 +166,7 @@ final class DiscussionVotesTest extends DbTestCase
 
         $this->expectExceptionObject(new NotASocialPostException('This entry is not a Lemmy post.'));
 
-        $votes->vote($this->owner, $entry, VoteScore::Up);
+        $votes->vote($this->owner, $this->rowOf($entry), VoteScore::Up);
     }
 
     public function testACommentVoteForgetsTheCachedComments(): void
@@ -207,7 +212,7 @@ final class DiscussionVotesTest extends DbTestCase
         $this->lemmyAccount();
         $entry = $this->lemmyPost();
 
-        $votes->vote($this->owner, $entry, VoteScore::Up);
+        $votes->vote($this->owner, $this->rowOf($entry), VoteScore::Up);
 
         $this->entityManager->clear();
         $stored = $this->entityManager->find(Entry::class, $entry->requireId());
@@ -221,7 +226,7 @@ final class DiscussionVotesTest extends DbTestCase
 
         $this->expectExceptionObject(new NotASocialPostException('This entry is not a Lemmy post.'));
 
-        $votes->vote($this->owner, $this->rssEntry(), VoteScore::Up);
+        $votes->vote($this->owner, $this->rowOf($this->rssEntry()), VoteScore::Up);
     }
 
     public function testACommentAddressThatIsNotHttpsIsRefusedWithTheLemmyText(): void
@@ -242,7 +247,7 @@ final class DiscussionVotesTest extends DbTestCase
             new NotASocialPostException('This entry is not a Bluesky, Mastodon or Lemmy post.'),
         );
 
-        $votes->vote($this->owner, $this->rssEntry(), VoteScore::Up);
+        $votes->vote($this->owner, $this->rowOf($this->rssEntry()), VoteScore::Up);
     }
 
     public function testWithSeveralVotersTheCommentRefusalNamesEveryVotingNetwork(): void
@@ -283,6 +288,7 @@ final class DiscussionVotesTest extends DbTestCase
             $this->entityManager,
             self::service($container, NaiveUtcClock::class),
             self::service($container, CommentsLoader::class),
+            self::service($container, LocalLikes::class),
         );
     }
 
@@ -388,8 +394,16 @@ final class DiscussionVotesTest extends DbTestCase
     {
         $feed = new Feed($url);
         $this->entityManager->persist($feed);
+        $subscribedAt = new \DateTimeImmutable('2026-10-01 10:00:00');
+        $this->entityManager->persist(new Subscription($this->owner, $feed, $subscribedAt));
 
         return $feed;
+    }
+
+    private function rowOf(Entry $entry): EntryListRow
+    {
+        return self::service(self::getContainer(), EntryListRepository::class)
+            ->getRowForUser($this->owner->requireId(), $entry->requireId());
     }
 
     private function storeVote(SocialAccount $account, VoteScore $score): void

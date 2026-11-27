@@ -15,7 +15,7 @@ import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.
 import { CompactCount } from '../../../core/i18n/compact-count';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { SocialNetworkName } from '../../../core/social-network';
-import { PostActionsView, SocialCountsDto } from '../../entry-social';
+import { LikeTarget, PostActionsView, SocialCountsDto, formatLikeKey } from '../../entry-social';
 import { RepostButtonComponent } from './repost-button.component';
 import { VotePillComponent } from '../../vote-pill/vote-pill.component';
 import { VoteValue } from '../../vote-pill/vote';
@@ -67,6 +67,7 @@ export class SocialCountsRowComponent {
   readonly myVote = input<VoteValue | null>(null);
   readonly vote = input<((to: VoteValue) => Observable<unknown>) | null>(null);
   readonly like = input<(() => Observable<unknown>) | null>(null);
+  readonly likeTarget = input<LikeTarget | null>(null);
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
   readonly quoteRequested = output<void>();
@@ -108,8 +109,8 @@ export class SocialCountsRowComponent {
     ];
     return this.shares() ? pills : pills.slice(0, 1);
   });
-  protected readonly likeKey = computed(
-    () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
+  protected readonly likeKey = computed(() =>
+    formatLikeKey(this.liked() === true, this.likeTarget() ?? this.network()),
   );
   protected readonly shownCounts = computed<ShownCount[]>(() => {
     const counts = this.counts();

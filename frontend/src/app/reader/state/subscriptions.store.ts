@@ -53,6 +53,7 @@ import {
   sameUnreadTotals,
   unreadTotalsFrom,
 } from './unread-totals';
+import { MARK_NAMES, Mark, toCountField } from './marks';
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -64,10 +65,12 @@ export class SubscriptionsStore {
   readonly subscriptions = this.rows.all;
   /** The rows as the server sent them, which an optimistic edit patches. */
   readonly storedSubscriptions = this.rows.stored;
-  readonly favoritesCount = signal(0);
-  readonly keptCount = signal(0);
-  readonly sharedCount = signal(0);
-  readonly viewedCount = signal(0);
+  private readonly markCounts = buildMarkCounts();
+  readonly favoritesCount = this.markCounts.favorites.asReadonly();
+  readonly keptCount = this.markCounts.kept.asReadonly();
+  readonly sharedCount = this.markCounts.shared.asReadonly();
+  readonly likedCount = this.markCounts.liked.asReadonly();
+  readonly viewedCount = this.markCounts.viewed.asReadonly();
   /** Unopened Trending stories in the window the sidebar links to; only the server moves them (#2017). */
   readonly trendingUnopened = signal<TrendingUnopened>(NO_TRENDING_UNOPENED, {
     equal: sameTrendingUnopened,
@@ -167,10 +170,7 @@ export class SubscriptionsStore {
   private invalidate(): void {
     this.loads.forget();
     this.storedSubscriptions.set([]);
-    this.favoritesCount.set(0);
-    this.keptCount.set(0);
-    this.sharedCount.set(0);
-    this.viewedCount.set(0);
+    MARK_NAMES.forEach((mark) => this.markCounts[mark].set(0));
     this.trendingUnopened.set(NO_TRENDING_UNOPENED);
     this.forYouStream.set(NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set([]);
@@ -280,10 +280,7 @@ export class SubscriptionsStore {
 
   private applyCounts(response: SubscriptionsResponse): void {
     this.storedSubscriptions.set(response.subscriptions);
-    this.favoritesCount.set(response.favoritesCount);
-    this.keptCount.set(response.keptCount);
-    this.sharedCount.set(response.sharedCount);
-    this.viewedCount.set(response.viewedCount);
+    MARK_NAMES.forEach((mark) => this.markCounts[mark].set(response[toCountField(mark)]));
     this.trendingUnopened.set(response.trending);
     this.forYouStream.set(response.forYouStream ?? NO_FOR_YOU_STREAM_TALLY);
     this.socialAccounts.set(response.socialAccounts);
@@ -307,40 +304,18 @@ export class SubscriptionsStore {
     });
     if (moved) this.storedSubscriptions.set(next);
 
-    this.setIfMoved(this.favoritesCount, response.favoritesCount);
-    this.setIfMoved(this.keptCount, response.keptCount);
-    this.setIfMoved(this.sharedCount, response.sharedCount);
-    this.setIfMoved(this.viewedCount, response.viewedCount);
+    MARK_NAMES.forEach((mark) => {
+      const count = this.markCounts[mark];
+      const value = response[toCountField(mark)];
+      if (count() !== value) count.set(value);
+    });
   }
 
-  private setIfMoved(count: WritableSignal<number>, value: number): void {
-    if (count() !== value) count.set(value);
-  }
-
-  /** Keep the sidebar favourite/kept badges live after a toggle without a reload;
-   *  the next load() reconciles with the server. Clamped so it never goes negative. */
-  bumpFavorites(by: number): void {
-    this.bumpCount(this.favoritesCount, by);
-  }
-
-  bumpKept(by: number): void {
-    this.bumpCount(this.keptCount, by);
-  }
-
-  bumpShared(by: number): void {
-    this.bumpCount(this.sharedCount, by);
-  }
-
-  /** Keep the Recently-read badge live after an article is opened, without a
-   *  reload; the next load() reconciles with the server. The viewed flag is
-   *  one-way, so this only ever grows, but it is clamped for symmetry. */
-  bumpViewed(by: number): void {
-    this.bumpCount(this.viewedCount, by);
-  }
-
-  private bumpCount(count: WritableSignal<number>, by: number): void {
+  /** Keeps a mark's sidebar badge live after a change without a reload; the next load() reconciles with the
+   *  server. Clamped so it never goes negative. */
+  bumpCount(mark: Mark, by: number): void {
     ++this.localEdits;
-    count.update((current) => Math.max(0, current + by));
+    this.markCounts[mark].update((current) => Math.max(0, current + by));
   }
 
   markArticleRead(entry: EntryDto): void {
@@ -378,4 +353,11 @@ export class SubscriptionsStore {
     ++this.localEdits;
     this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
   }
+}
+
+function buildMarkCounts(): Record<Mark, WritableSignal<number>> {
+  return Object.fromEntries(MARK_NAMES.map((mark) => [mark, signal(0)])) as Record<
+    Mark,
+    WritableSignal<number>
+  >;
 }

@@ -36,11 +36,11 @@ final readonly class EntryVoteController
     #[Route('/{id}/vote', name: 'api_entries_vote', methods: ['PUT'], requirements: ['id' => '\d+'])]
     public function vote(int $id, #[MapRequestPayload] VoteRequest $request, #[CurrentUser] User $user): JsonResponse
     {
-        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
+        $row = $this->entryList->getRowForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialLikeLimiter, $user);
 
         return new JsonResponse(
-            DiscussionVoteJson::result($this->discussionVotes->vote($user, $entry, $request->toScore())),
+            DiscussionVoteJson::result($this->discussionVotes->vote($user, $row, $request->toScore())),
         );
     }
 

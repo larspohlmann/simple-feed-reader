@@ -28,6 +28,19 @@
     }
     <a
       class="nav"
+      [class.active]="selection().kind === 'liked'"
+      [routerLink]="['/']"
+      [queryParams]="selectionQueryParams({ view: 'liked' })"
+      queryParamsHandling="merge"
+    >
+      <app-icon name="thumb_up" size="md" />
+      <span class="name">{{ 'reader.liked' | transloco }}</span>
+      @if (likedCount() > 0) {
+        <span class="count">{{ likedCount() }}</span>
+      }
+    </a>
+    <a
+      class="nav"
       [class.active]="selection().kind === 'viewed'"
       [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ view: 'viewed' })"

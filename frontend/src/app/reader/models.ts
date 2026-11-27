@@ -165,7 +165,7 @@ export interface SubscriptionDto {
 }
 
 /** The sidebar bootstrap payload: the feed list plus the totals shown as badges on the
- *  Favorites/Kept/Shared/Recently-read nav items. */
+ *  Favorites/Kept/Shared/Liked/Recently-read nav items. */
 export interface SubscriptionsResponse extends SidebarTotalsDto {
   subscriptions: SubscriptionDto[];
   socialAccounts: SocialAccountRefDto[];
@@ -260,6 +260,8 @@ export interface EntryDto {
   /** The entry's post on a network the reader has an account on, and whether they liked it there; null for an
    *  article or a post on a network without an account (#1600). */
   social: EntrySocialDto | null;
+  /** The reader's own like, kept here; a network like lives in `social.isLiked` (#2587). */
+  isLiked: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   discussionHomeUrl: string | null;
@@ -359,6 +361,7 @@ export type EntryView =
   | 'favorites'
   | 'kept'
   | 'shared'
+  | 'liked'
   | 'viewed'
   | 'for-you'
   | 'for-you-stream'

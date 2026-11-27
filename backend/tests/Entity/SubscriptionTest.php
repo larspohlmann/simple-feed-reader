@@ -13,6 +13,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\InclusionSurface;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StateMarks;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 final class SubscriptionTest extends DbTestCase
@@ -148,8 +149,8 @@ final class SubscriptionTest extends DbTestCase
         $this->entityManager->flush();
 
         $state = new EntryState($user, $entry);
-        $state->markFavorite();
-        $state->markKept();
+        StateMarks::markFavorite($state);
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
         $this->entityManager->clear();

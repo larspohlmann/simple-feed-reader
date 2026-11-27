@@ -215,7 +215,14 @@ final class TrendingStoryCardModelTest extends DbTestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription($entry->getFeed()->requireId(), 'Feed'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
             [],
             new EntryListRowEnrichment(linkCards: $linkCards),

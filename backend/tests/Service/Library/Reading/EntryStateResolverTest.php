@@ -17,6 +17,7 @@ use App\Repository\EntryStateRepository;
 use App\Service\Library\Reading\EntryStateResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\StateMarks;
 
 final class EntryStateResolverTest extends DbTestCase
 {
@@ -91,6 +92,7 @@ final class EntryStateResolverTest extends DbTestCase
                 isHidden: $isHidden,
                 isFavorite: false,
                 isKept: false,
+                isLiked: false,
                 viewedAt: null,
                 sharedAt: null,
             ),
@@ -108,7 +110,7 @@ final class EntryStateResolverTest extends DbTestCase
         $row = $this->rows()->getRowForUser($this->user->requireId(), $entry->requireId());
 
         $state = $this->resolver()->resolve($this->user, $row);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
 
         $this->repository()->ensureRow($this->user->requireId(), $entry->requireId(), null);
 
@@ -140,7 +142,7 @@ final class EntryStateResolverTest extends DbTestCase
     {
         $entry = $this->entry('existing');
         $existing = new EntryState($this->user, $entry);
-        $existing->markKept();
+        StateMarks::markKept($existing);
         $this->entityManager->persist($existing);
         $this->entityManager->flush();
 

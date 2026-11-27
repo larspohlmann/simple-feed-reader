@@ -11,7 +11,7 @@ describe('NetworkShares', () => {
   const recordsShares = signal(true);
   let listed: EntryDto | null;
   let rows: { entry: jest.Mock; markSharedLocally: jest.Mock };
-  let subscriptions: { bumpShared: jest.Mock };
+  let subscriptions: { bumpCount: jest.Mock };
 
   function shares(): NetworkShares {
     TestBed.configureTestingModule({
@@ -28,7 +28,7 @@ describe('NetworkShares', () => {
     recordsShares.set(true);
     listed = anEntry({ id: 4, isShared: false });
     rows = { entry: jest.fn(() => listed), markSharedLocally: jest.fn() };
-    subscriptions = { bumpShared: jest.fn() };
+    subscriptions = { bumpCount: jest.fn() };
   });
 
   it('marks the entry shared and counts it once', () => {
@@ -36,8 +36,8 @@ describe('NetworkShares', () => {
 
     expect(rows.entry).toHaveBeenCalledWith(4);
     expect(rows.markSharedLocally).toHaveBeenCalledWith(4);
-    expect(subscriptions.bumpShared).toHaveBeenCalledTimes(1);
-    expect(subscriptions.bumpShared).toHaveBeenCalledWith(1);
+    expect(subscriptions.bumpCount).toHaveBeenCalledTimes(1);
+    expect(subscriptions.bumpCount).toHaveBeenCalledWith('shared', 1);
   });
 
   it('does not count an entry already shared again', () => {
@@ -46,7 +46,7 @@ describe('NetworkShares', () => {
     shares().reflect(4);
 
     expect(rows.markSharedLocally).toHaveBeenCalledWith(4);
-    expect(subscriptions.bumpShared).not.toHaveBeenCalled();
+    expect(subscriptions.bumpCount).not.toHaveBeenCalled();
   });
 
   it('changes nothing while shares are not recorded', () => {
@@ -55,6 +55,6 @@ describe('NetworkShares', () => {
     shares().reflect(4);
 
     expect(rows.markSharedLocally).not.toHaveBeenCalled();
-    expect(subscriptions.bumpShared).not.toHaveBeenCalled();
+    expect(subscriptions.bumpCount).not.toHaveBeenCalled();
   });
 });

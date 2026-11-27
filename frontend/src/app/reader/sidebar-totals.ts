@@ -7,6 +7,7 @@ export interface SidebarTotalsDto {
   favoritesCount: number;
   keptCount: number;
   sharedCount: number;
+  likedCount: number;
   viewedCount: number;
   unreadTotals: UnreadTotalsDto;
   /** Unopened Trending stories in the window the request asked for (#2017). */

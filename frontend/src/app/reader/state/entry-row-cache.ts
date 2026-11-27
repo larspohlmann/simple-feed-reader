@@ -6,13 +6,13 @@ import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi, VoteAnswer } from '../social-post-api';
-import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
 import { LabelPill } from '../labels/labels.models';
 import { byLabelName } from '../labels/label-order';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
+import { buildLikePatch, buildVotePatch, localStatePatch } from './optimistic-patches';
 import {
   InFlightLabelChanges,
   LabelChange,
@@ -22,13 +22,22 @@ import {
 import { HeldItem, heldItem } from './held-item';
 import { ListItem } from './list-item';
 
-/** A failed state change has already rolled its row back when `onFailed` runs. */
-export interface RowSaveOutcome {
-  /** Runs as each attempt starts, a retry's included. */
+/** What the caller of a row change hears: each attempt that goes on the wire (a dropped one never does), a retry's
+ *  included; its save; and why it failed, once the row is rolled back. */
+export interface ActOutcome {
   readonly onStarted?: () => void;
   readonly onSaved?: () => void;
-  readonly onFailed?: (error: HttpErrorResponse) => void;
+  readonly onFailed: (problem: Problem) => void;
 }
+
+/** A like or a vote: what shows at once, its request, and what its answer lays over the entry and its copies. */
+interface LikeAct<T> {
+  readonly patch: RowPatch;
+  readonly request: () => Observable<T>;
+  readonly adopt: (row: EntryDto, answer: T) => EntryDto;
+}
+
+const LIKE_FIELDS: (keyof RowPatch)[] = ['social', 'isLiked', 'myVote'];
 
 const NONE: ReadonlySet<number> = new Set();
 
@@ -75,38 +84,28 @@ export class EntryRowCache {
   }
 
   /** Optimistic patch of one entry's flags; puts it back if the PATCH fails, and reports to `outcome`. */
-  saveState(entryId: number, patch: EntryStatePatch, outcome: RowSaveOutcome): void {
+  saveState(entryId: number, patch: EntryStatePatch, outcome: ActOutcome): void {
     const target = this.entry(entryId);
     if (!target) return;
     outcome.onStarted?.();
     const request$ = this.readerApi.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
       next: () => outcome.onSaved?.(),
-      error: (error: HttpErrorResponse) => outcome.onFailed?.(error),
+      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
     });
   }
 
-  /** Optimistic like apart from `saveState`; dropped unless the post can be liked and no like is on the wire. */
-  setLiked(
-    entry: EntryDto,
-    isLiked: boolean,
-    onError: (problem: Problem) => void,
-  ): Observable<void> {
-    const social = likeableSocial(entry);
-    if (!social || this.inFlight.onTheWire(entry.id, 'social')) return EMPTY;
-    const request$ = isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id);
-    return subscribeUntilSettled(
-      this.optimistic(entry, { social: { ...social, isLiked } }, request$),
+  setLiked(entry: EntryDto, isLiked: boolean, outcome: ActOutcome): Observable<void> {
+    return this.runLikeAct(
+      entry,
       {
-        next: (answer) => {
-          if (answer.likeCount === null) return;
-          this.patch(this.collectCopyIds(entry), (row) => ({
-            ...row,
-            likeCount: answer.likeCount,
-          }));
-        },
-        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+        patch: buildLikePatch(entry, isLiked),
+        request: () =>
+          isLiked ? this.socialPosts.like(entry.id) : this.socialPosts.unlike(entry.id),
+        adopt: (row, answer) =>
+          answer.likeCount === null ? row : { ...row, likeCount: answer.likeCount },
       },
+      outcome,
     );
   }
 
@@ -129,26 +128,21 @@ export class EntryRowCache {
   }
 
   /** The vote shows at once; its score waits for the answer. */
-  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): Observable<void> {
-    if (
-      entry.myVote === null ||
-      entry.score === null ||
-      this.inFlight.onTheWire(entry.id, 'myVote')
-    )
-      return EMPTY;
-    return subscribeUntilSettled(
-      this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)),
+  setVote(entry: EntryDto, to: VoteValue, outcome: ActOutcome): Observable<void> {
+    if (entry.myVote === null || entry.score === null) return EMPTY;
+    return this.runLikeAct(
+      entry,
       {
-        next: (answer) => {
-          this.patch(this.collectCopyIds(entry), (row) => ({
-            ...row,
-            myVote: answer.myVote,
-            score: answer.score,
-            discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
-          }));
-        },
-        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+        patch: buildVotePatch(to),
+        request: () => this.socialPosts.vote(entry.id, to),
+        adopt: (row, answer) => ({
+          ...row,
+          myVote: answer.myVote,
+          score: answer.score,
+          discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
+        }),
       },
+      outcome,
     );
   }
 
@@ -213,6 +207,19 @@ export class EntryRowCache {
     const created = signal(shown);
     this.records.set(entry.id, created);
     return created;
+  }
+
+  /** Dropped while any like or vote of the entry is on the wire, so the two never race over its liked state. */
+  private runLikeAct<T>(entry: EntryDto, act: LikeAct<T>, outcome: ActOutcome): Observable<void> {
+    if (this.inFlight.onTheWire(entry.id, ...LIKE_FIELDS)) return EMPTY;
+    outcome.onStarted?.();
+    return subscribeUntilSettled(this.optimistic(entry, act.patch, act.request()), {
+      next: (answer) => {
+        this.patch(this.collectCopyIds(entry), (row) => act.adopt(row, answer));
+        outcome.onSaved?.();
+      },
+      error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
+    });
   }
 
   private dropUnlessHeld(id: number): void {
@@ -330,7 +337,7 @@ export class EntryRowCache {
 
 const SHARED_KEYS = ['isHidden', 'isViewed', 'myVote', 'score'] as const;
 
-/** What of `patch` the copies of one item share: the read flags, the score and vote, and the like. */
+/** What of `patch` the copies of one item share: the read flags, the score and vote, and a network like. */
 function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
   const shared: RowPatch = {};
   for (const key of SHARED_KEYS) {
@@ -340,13 +347,4 @@ function buildSharedPatch(copy: EntryDto, patch: RowPatch): RowPatch {
     shared.social = { ...copy.social, isLiked: patch.social.isLiked };
   }
   return shared;
-}
-
-/** Mirrors the backend's flag coupling (#482): viewing also hides
- *  (ViewedImpliesHiddenListener), un-hiding clears viewed (EntryState::markUnread).
- *  Un-ticking isViewed alone leaves hidden set — hiding from the unread list is sticky. */
-export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
-  if (patch.isViewed === true) return { ...patch, isHidden: true };
-  if (patch.isHidden === false) return { ...patch, isViewed: false };
-  return patch;
 }

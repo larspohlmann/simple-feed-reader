@@ -42,6 +42,7 @@ use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -283,10 +284,10 @@ final class AccountRestorerTest extends DbTestCase
 
         $read = new EntryState($user, $entryA);
         $read->hide(new \DateTimeImmutable('2026-08-05 10:00:00'));
-        $read->markFavorite();
+        StateMarks::markFavorite($read);
         $this->entityManager->persist($read);
         $viewed = new EntryState($user, $entryC);
-        $viewed->markKept();
+        StateMarks::markKept($viewed);
         $viewed->markViewed(new \DateTimeImmutable('2026-08-06 11:00:00'));
         $this->entityManager->persist($viewed);
 
@@ -1133,7 +1134,7 @@ final class AccountRestorerTest extends DbTestCase
         for ($index = 0; $index < $entryCount; ++$index) {
             $entry = $this->makeEntry($feed, 'wide-guid-' . $index, 'Wide ' . $index, '2026-08-02');
             $state = new EntryState($user, $entry);
-            $state->markFavorite();
+            StateMarks::markFavorite($state);
             $this->entityManager->persist($state);
         }
         $this->entityManager->flush();

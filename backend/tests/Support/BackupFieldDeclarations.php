@@ -138,6 +138,7 @@ final class BackupFieldDeclarations
             'entry' => ['feedUrl', 'guidHash'],
             'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
+            'likedAt' => 'likedAt',
         ],
         EntryShare::class => [
             'entry' => ['feedUrl', 'guidHash'],

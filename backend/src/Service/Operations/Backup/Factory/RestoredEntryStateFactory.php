@@ -6,6 +6,7 @@ namespace App\Service\Operations\Backup\Factory;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
+use App\Entity\EntryMarks;
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
@@ -21,12 +22,7 @@ final readonly class RestoredEntryStateFactory
     {
         $state = new EntryState($user, $entry);
         $state->restoreReadMark(new BackedUpReadMark($line->isHidden, $line->hiddenAt));
-        if ($line->isFavorite) {
-            $state->markFavorite();
-        }
-        if ($line->isKept) {
-            $state->markKept();
-        }
+        $state->replaceMarks(new EntryMarks($line->isFavorite, $line->isKept, $line->likedAt));
         if ($line->isViewed) {
             // A "viewed" line without its timestamp keeps the flag and takes the restore's own time.
             $state->markViewed($line->viewedAt ?? $this->clock->now());

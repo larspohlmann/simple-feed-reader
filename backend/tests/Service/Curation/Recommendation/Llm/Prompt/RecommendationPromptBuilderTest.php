@@ -974,7 +974,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheDistillRoleSaysWhatLikedHolds(): void
     {
         self::assertStringContainsString(
-            'LIKED holds the posts the reader liked or upvoted on a social network.',
+            'LIKED holds the posts and articles the reader liked.',
             RecommendationPromptText::DISTILL_ROLE,
         );
     }

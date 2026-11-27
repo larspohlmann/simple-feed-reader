@@ -16,6 +16,7 @@ use App\Repository\EntryReadMarkRepository;
 use App\Repository\ReadMarking;
 use App\Tests\DbTestCase;
 use App\Tests\Support\CanonicalItems;
+use App\Tests\Support\StateMarks;
 
 final class EntryReadMarkRepositoryTest extends DbTestCase
 {
@@ -96,8 +97,8 @@ final class EntryReadMarkRepositoryTest extends DbTestCase
         $first = $this->persistCopy($this->swept, 'first', $item);
         $second = $this->persistCopy($this->other, 'second', $item);
         $marked = new EntryState($this->user, $second);
-        $marked->markFavorite();
-        $marked->markKept();
+        StateMarks::markFavorite($marked);
+        StateMarks::markKept($marked);
         $this->entityManager->persist($marked);
         $this->entityManager->flush();
 

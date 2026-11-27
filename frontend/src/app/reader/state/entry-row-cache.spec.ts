@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { anEntry } from '../../../testing/entry-testing';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
@@ -43,7 +43,7 @@ describe('EntryRowCache', () => {
   it('setVote on a copy patches the other copy’s myVote and score', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7), buildCopy(3, 8));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 11 }));
     expect(readShownEntry(3)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -55,7 +55,7 @@ describe('EntryRowCache', () => {
     const failing = new Subject<never>();
     socialPosts.vote.mockReturnValue(failing);
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
     failing.error(new Error('no'));
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -64,16 +64,38 @@ describe('EntryRowCache', () => {
   it('setLiked on a copy patches the other copy and keeps its own network facts', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7, { social: { ...social, isOwn: true } }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(2).social).toEqual({ ...social, isLiked: true, isOwn: true });
+  });
+
+  it('takes the local like with a network unlike, and puts it back when that fails (#2587)', () => {
+    const failing = new Subject<never>();
+    socialPosts.unlike.mockReturnValue(failing);
+    holdEntries(buildCopy(1, null, { isLiked: true, social: { ...social, isLiked: true } }));
+
+    cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
+    expect(readShownEntry(1)).toEqual(expect.objectContaining({ isLiked: false }));
+
+    failing.error(new Error('no'));
+    expect(readShownEntry(1)).toEqual(
+      expect.objectContaining({ isLiked: true, social: { ...social, isLiked: true } }),
+    );
+  });
+
+  it('keeps the local like through a network like (#2587)', () => {
+    holdEntries(buildCopy(1, null, { isLiked: true }));
+
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+
+    expect(readShownEntry(1).isLiked).toBe(true);
   });
 
   it('leaves the like count alone until the network answers', () => {
     socialPosts.like.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(4);
     expect(readShownEntry(2).likeCount).toBe(4);
@@ -82,7 +104,7 @@ describe('EntryRowCache', () => {
     socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: 12 }));
     holdEntries(buildCopy(1, 7, { likeCount: 4 }), buildCopy(2, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(12);
     expect(readShownEntry(2).likeCount).toBe(12);
@@ -91,7 +113,7 @@ describe('EntryRowCache', () => {
   it('keeps the stored like count when the network answers none', () => {
     holdEntries(buildCopy(1, 7, { likeCount: 4 }));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBe(4);
   });
@@ -99,7 +121,7 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(of({ myVote: 1, score: 40 }));
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).score).toBe(40);
     expect(readShownEntry(2).score).toBe(40);
@@ -111,7 +133,9 @@ describe('EntryRowCache', () => {
     holdEntries(buildCopy(1, 7));
     const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
+    cache
+      .setLiked(readShownEntry(1), true, { onFailed: jest.fn() })
+      .subscribe({ complete: settled });
 
     expect(settled).not.toHaveBeenCalled();
     answer.next({ isLiked: true, likeCount: 5 });
@@ -125,18 +149,127 @@ describe('EntryRowCache', () => {
     holdEntries(buildCopy(1, 7));
     const settled = jest.fn();
 
-    cache.setLiked(readShownEntry(1), true, jest.fn()).subscribe({ complete: settled });
+    cache
+      .setLiked(readShownEntry(1), true, { onFailed: jest.fn() })
+      .subscribe({ complete: settled });
     failing.error(new Error('no'));
 
     expect(settled).toHaveBeenCalled();
   });
 
+  describe('a local like', () => {
+    const buildArticle = (id: number, overrides: Partial<EntryDto> = {}) =>
+      anEntry({ id, social: null, myVote: null, ...overrides });
+
+    it('flips isLiked at once and leaves the network like and the count alone', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+
+      expect(readShownEntry(1)).toEqual(
+        expect.objectContaining({
+          isLiked: true,
+          likeCount: 7,
+          social: { ...social, canLike: false },
+        }),
+      );
+    });
+
+    it('keeps the count when the server answers a local like', () => {
+      socialPosts.like.mockReturnValue(of({ isLiked: true, likeCount: null }));
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false }, likeCount: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+
+      expect(readShownEntry(1).likeCount).toBe(7);
+    });
+
+    it('puts the like back and reports the problem when the request fails', () => {
+      const failing = new Subject<never>();
+      socialPosts.like.mockReturnValue(failing);
+      holdEntries(buildArticle(1));
+      const onError = jest.fn();
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: onError });
+      expect(readShownEntry(1).isLiked).toBe(true);
+      failing.error(new HttpErrorResponse({ status: 500 }));
+
+      expect(readShownEntry(1).isLiked).toBe(false);
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('unlikes through the unlike request', () => {
+      holdEntries(buildArticle(1, { isLiked: true }));
+
+      cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
+
+      expect(socialPosts.unlike).toHaveBeenCalledWith(1);
+      expect(readShownEntry(1).isLiked).toBe(false);
+    });
+
+    it('drops a second tap while the first is on the wire', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildArticle(1));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+      cache.setLiked(readShownEntry(1), false, { onFailed: jest.fn() });
+
+      expect(socialPosts.like).toHaveBeenCalledTimes(1);
+      expect(socialPosts.unlike).not.toHaveBeenCalled();
+      expect(readShownEntry(1).isLiked).toBe(true);
+    });
+
+    it('drops a network like while a local one is on the wire, though the post turned likeable', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildCopy(1, null, { social: { ...social, canLike: false } }));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+      const likeable = { ...readShownEntry(1), social: { ...social, canLike: true } };
+      cache.setLiked(likeable, true, { onFailed: jest.fn() });
+
+      expect(socialPosts.like).toHaveBeenCalledTimes(1);
+      expect(readShownEntry(1).social?.isLiked).toBe(false);
+    });
+
+    it('says it started only for the like that goes on the wire', () => {
+      socialPosts.like.mockReturnValue(new Subject());
+      holdEntries(buildArticle(1));
+      const started = jest.fn();
+
+      cache.setLiked(readShownEntry(1), true, { onStarted: started, onFailed: jest.fn() });
+      cache.setLiked(readShownEntry(1), false, { onStarted: started, onFailed: jest.fn() });
+
+      expect(started).toHaveBeenCalledTimes(1);
+    });
+
+    it('likes the entry alone, not its copies', () => {
+      holdEntries(buildArticle(1, { canonicalItemId: 7 }), buildArticle(2, { canonicalItemId: 7 }));
+
+      cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+
+      expect(readShownEntry(1).isLiked).toBe(true);
+      expect(readShownEntry(2).isLiked).toBe(false);
+    });
+  });
+
   it('a like leaves an unknown like count unknown', () => {
     holdEntries(buildCopy(1, 7));
 
-    cache.setLiked(readShownEntry(1), true, jest.fn());
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).likeCount).toBeNull();
+  });
+
+  it('says a vote started only when it goes on the wire', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7));
+    const started = jest.fn();
+
+    cache.setVote(readShownEntry(1), 1, { onStarted: started, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(1), -1, { onStarted: started, onFailed: jest.fn() });
+
+    expect(started).toHaveBeenCalledTimes(1);
   });
 
   it('settles a vote once its answer lands, and a dropped vote at once', () => {
@@ -146,8 +279,8 @@ describe('EntryRowCache', () => {
     const settled = jest.fn();
     const dropped = jest.fn();
 
-    cache.setVote(readShownEntry(1), 1, jest.fn()).subscribe({ complete: settled });
-    cache.setVote(readShownEntry(1), -1, jest.fn()).subscribe({ complete: dropped });
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() }).subscribe({ complete: settled });
+    cache.setVote(readShownEntry(1), -1, { onFailed: jest.fn() }).subscribe({ complete: dropped });
 
     expect(settled).not.toHaveBeenCalled();
     expect(dropped).toHaveBeenCalled();
@@ -160,10 +293,23 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
+  });
+
+  it('drops the local like of the voted entry alone, and puts it back when the vote fails', () => {
+    const failing = new Subject<never>();
+    socialPosts.vote.mockReturnValue(failing);
+    holdEntries(buildCopy(1, 7, { isLiked: true }), buildCopy(2, 7, { isLiked: true }));
+
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
+    expect(readShownEntry(1).isLiked).toBe(false);
+    expect(readShownEntry(2).isLiked).toBe(true);
+
+    failing.error(new Error('no'));
+    expect(readShownEntry(1).isLiked).toBe(true);
   });
 
   it('restores the vote when the vote fails', () => {
@@ -171,7 +317,7 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(failing);
     holdEntries(buildCopy(1, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
     failing.error(new Error('no'));
 
     expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -181,25 +327,64 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
-    cache.setVote(readShownEntry(2), -1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), -1, { onFailed: jest.fn() });
 
     expect(socialPosts.vote).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds back a vote while a like of the entry is on the wire, and a like while a vote is (#2587)', () => {
+    socialPosts.like.mockReturnValue(new Subject());
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, null), buildCopy(2, null));
+    const started = jest.fn();
+
+    cache.setLiked(readShownEntry(1), true, { onFailed: jest.fn() });
+    cache.setVote(readShownEntry(1), 1, { onStarted: started, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), 1, { onFailed: jest.fn() });
+    cache.setLiked(readShownEntry(2), true, { onStarted: started, onFailed: jest.fn() });
+
+    expect(socialPosts.vote).toHaveBeenCalledTimes(1);
+    expect(socialPosts.like).toHaveBeenCalledTimes(1);
+    expect(started).not.toHaveBeenCalled();
+  });
+
+  it('says a like and a vote saved once their answers land', () => {
+    holdEntries(buildCopy(1, null), buildCopy(2, null));
+    const saved = jest.fn();
+
+    cache.setLiked(readShownEntry(1), true, { onSaved: saved, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), 1, { onSaved: saved, onFailed: jest.fn() });
+
+    expect(saved).toHaveBeenCalledTimes(2);
   });
 
   it('saveState read on a copy patches the other copy and sends one request', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.saveState(1, { isViewed: true }, {});
+    cache.saveState(1, { isViewed: true }, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ isViewed: true, isHidden: true }));
     expect(readerApi.updateState).toHaveBeenCalledTimes(1);
   });
 
+  it('saveState rolls the row back and reports the parsed problem when the save fails', () => {
+    readerApi.updateState.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    holdEntries(buildCopy(1, null));
+    const onFailed = jest.fn();
+
+    cache.saveState(1, { isFavorite: true }, { onFailed });
+
+    expect(readShownEntry(1).isFavorite).toBe(false);
+    expect(onFailed).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 500, type: 'about:blank' }),
+    );
+  });
+
   it('saveState leaves the other copy’s favourite alone', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.saveState(1, { isFavorite: true }, {});
+    cache.saveState(1, { isFavorite: true }, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).isFavorite).toBe(true);
     expect(readShownEntry(2).isFavorite).toBe(false);
@@ -220,8 +405,8 @@ describe('EntryRowCache', () => {
   it('an article’s patch touches only itself', () => {
     holdEntries(buildCopy(1, null), buildCopy(2, null));
 
-    cache.saveState(1, { isViewed: true }, {});
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.saveState(1, { isViewed: true }, { onFailed: jest.fn() });
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(
       expect.objectContaining({ isViewed: false, isHidden: false, myVote: 0, score: 10 }),

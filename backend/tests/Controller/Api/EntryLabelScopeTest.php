@@ -13,6 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NamesLabels;
+use App\Tests\Support\StateMarks;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -187,10 +188,10 @@ final class EntryLabelScopeTest extends ApiTestCase
     {
         $state = new EntryState($user, $entry);
         if ($favorite) {
-            $state->markFavorite();
+            StateMarks::markFavorite($state);
         }
         if ($kept) {
-            $state->markKept();
+            StateMarks::markKept($state);
         }
         $this->entityManager()->persist($state);
         $this->entityManager()->flush();

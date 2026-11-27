@@ -37,6 +37,7 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -196,7 +197,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
-        $state->clearFavorite();
+        StateMarks::clearFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -406,7 +407,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->makeEntry($feed, 'b', 'B');
         $this->entityManager->flush();
         $existingState = new EntryState($user, $entryA);
-        $existingState->clearFavorite();
+        StateMarks::clearFavorite($existingState);
         $this->entityManager->persist($existingState);
         $this->entityManager->flush();
 

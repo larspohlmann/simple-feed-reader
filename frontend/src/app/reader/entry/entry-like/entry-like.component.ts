@@ -7,12 +7,12 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { PendingDotsComponent } from '../../../shared/pending-dots/pending-dots.component';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../../models';
-import { likeableSocial } from '../../entry-social';
+import { formatLikeKey, likeToggle } from '../../entry-social';
 import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 
 /**
- * A social post's like on its network with the like count (#1600), or the bare count
- * when the reader cannot like there. Renders nothing for an entry with neither.
+ * The like of an entry: on its network with the like count where the reader can like there (#1600),
+ * kept here otherwise (#2587). A bare count shows where the like cannot be given.
  */
 @Component({
   selector: 'app-entry-like',
@@ -24,7 +24,11 @@ import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 export class EntryLikeComponent {
   readonly entry = input.required<EntryDto>();
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
-  protected readonly likeable = computed(() => likeableSocial(this.entry()));
+  protected readonly toggle = computed(() => likeToggle(this.entry()));
+  protected readonly likeKey = computed(() => {
+    const toggle = this.toggle();
+    return toggle === null ? null : formatLikeKey(toggle.isLiked, toggle.target);
+  });
   private readonly compactCount = inject(CompactCount);
   protected readonly likes = computed(() =>
     buildDiscussionCount(this.compactCount, this.entry().likeCount, 'reader.socialCounts.likes'),

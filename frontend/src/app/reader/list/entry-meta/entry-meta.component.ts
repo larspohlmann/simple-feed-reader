@@ -4,7 +4,7 @@ import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.compone
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryLikeComponent } from '../../entry/entry-like/entry-like.component';
-import { likeableSocial } from '../../entry-social';
+import { likeToggle } from '../../entry-social';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { CompactCount } from '../../../core/i18n/compact-count';
@@ -54,7 +54,7 @@ export class EntryMetaComponent {
     ),
   );
   protected readonly showsLike = computed(
-    () => likeableSocial(this.entry()) !== null || this.entry().likeCount !== null,
+    () => likeToggle(this.entry()) !== null || this.entry().likeCount !== null,
   );
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.imageShown()));
 }

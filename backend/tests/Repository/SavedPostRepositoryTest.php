@@ -34,6 +34,7 @@ use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -57,8 +58,8 @@ final class SavedPostRepositoryTest extends DbTestCase
         $favourite = $this->entry($feed, 'fav', 'https://flagged.example/1');
         $kept = $this->entry($feed, 'kept', null);
         $readOnly = $this->entry($feed, 'read', 'https://flagged.example/3');
-        $this->state($favourite)->markFavorite();
-        $this->state($kept)->markKept();
+        StateMarks::markFavorite($this->state($favourite));
+        StateMarks::markKept($this->state($kept));
         $this->state($readOnly)->hide(new \DateTimeImmutable(self::AT));
         $this->entityManager->flush();
 
@@ -395,12 +396,12 @@ final class SavedPostRepositoryTest extends DbTestCase
         $feed = $this->subscribedFeed('https://shared-feed.example/feed.xml');
         $mine = $this->entry($feed, 'mine', 'https://shared-feed.example/1');
         $theirs = $this->entry($feed, 'theirs', 'https://shared-feed.example/2');
-        $this->state($mine)->markFavorite();
+        StateMarks::markFavorite($this->state($mine));
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $other = (new UserFactory($this->entityManager, $hasher))->create('saved-posts-other@example.test');
         $otherState = new EntryState($other, $theirs);
-        $otherState->markKept();
+        StateMarks::markKept($otherState);
         $this->entityManager->persist($otherState);
         $this->entityManager->flush();
 

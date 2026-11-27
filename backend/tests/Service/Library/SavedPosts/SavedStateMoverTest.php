@@ -18,6 +18,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\NamesLabels;
 use App\Tests\Support\SavedPostFixtures;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -49,8 +50,8 @@ final class SavedStateMoverTest extends DbTestCase
     public function testTheTargetTakesTheFlagsAndTheSourceLosesThemWithoutTheCallerFlushing(): void
     {
         $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        $state->markFavorite();
-        $state->markKept();
+        StateMarks::markFavorite($state);
+        StateMarks::markKept($state);
         $this->entityManager->flush();
         $sourceId = $this->source->requireId();
         $targetId = $this->target->requireId();
@@ -64,6 +65,55 @@ final class SavedStateMoverTest extends DbTestCase
         $source = $this->stateOf($sourceId);
         self::assertFalse($source->isFavorite());
         self::assertFalse($source->isKept());
+    }
+
+    public function testALocalLikeMovesToTheSavedCopy(): void
+    {
+        $likedAt = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+        StateMarks::markLiked(SavedPostFixtures::state($this->entityManager, $this->user, $this->source), $likedAt);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($likedAt, $this->stateOf($targetId)->getLikedAt());
+        self::assertFalse($this->stateOf($sourceId)->isLiked());
+    }
+
+    public function testTheEarlierLikeSurvivesWhenBothCopiesAreLiked(): void
+    {
+        $earlier = new \DateTimeImmutable('2026-11-20T10:00:00Z');
+        $later = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+        StateMarks::markLiked(SavedPostFixtures::state($this->entityManager, $this->user, $this->source), $later);
+        StateMarks::markLiked(SavedPostFixtures::state($this->entityManager, $this->user, $this->target), $earlier);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($earlier, $this->stateOf($targetId)->getLikedAt());
+    }
+
+    public function testASourceLikedEarlierReplacesALaterLikeOnTheTarget(): void
+    {
+        $earlier = new \DateTimeImmutable('2026-11-20T10:00:00Z');
+        StateMarks::markLiked(SavedPostFixtures::state($this->entityManager, $this->user, $this->source), $earlier);
+        StateMarks::markLiked(
+            SavedPostFixtures::state($this->entityManager, $this->user, $this->target),
+            new \DateTimeImmutable('2026-11-27T10:00:00Z'),
+        );
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        self::assertEquals($earlier, $this->stateOf($targetId)->getLikedAt());
     }
 
     public function testTheTargetTakesTheSharedInstantAndTheSourceLosesIt(): void
@@ -150,7 +200,7 @@ final class SavedStateMoverTest extends DbTestCase
     {
         $hiddenAt = new \DateTimeImmutable('2026-10-16 08:30:00');
         $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $state->hide($hiddenAt);
         $this->entityManager->flush();
         $sourceId = $this->source->requireId();
@@ -167,7 +217,7 @@ final class SavedStateMoverTest extends DbTestCase
     public function testAnUnhiddenSourceLeavesTheNewTargetUnhidden(): void
     {
         $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        $state->markKept();
+        StateMarks::markKept($state);
         $this->entityManager->flush();
         $sourceId = $this->source->requireId();
         $targetId = $this->target->requireId();
@@ -223,7 +273,7 @@ final class SavedStateMoverTest extends DbTestCase
     public function testATargetAlreadySavedStaysSaved(): void
     {
         SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
-        SavedPostFixtures::state($this->entityManager, $this->user, $this->target)->markFavorite();
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $this->target));
         $this->entityManager->flush();
 
         $this->moveSourceToTarget();

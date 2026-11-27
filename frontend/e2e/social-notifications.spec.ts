@@ -143,6 +143,7 @@ async function stubNotifications(page: Page, unseen = UNSEEN) {
     favoritesCount: 0,
     keptCount: 0,
     sharedCount: 0,
+    likedCount: 0,
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
     unreadTotals: UNREAD_TOTALS,

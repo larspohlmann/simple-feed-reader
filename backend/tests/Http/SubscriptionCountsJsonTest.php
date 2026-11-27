@@ -21,7 +21,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             new SubscriptionTalliesModel(
                 [12 => 3],
                 [12 => 40, 8 => 5],
-                ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41],
+                ['favorites' => 8, 'kept' => 2, 'shared' => 6, 'viewed' => 41, 'liked' => 3],
                 new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
                 [],
                 ForYouStreamTallyModel::available(4, 9),
@@ -37,6 +37,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             'favoritesCount' => 8,
             'keptCount' => 2,
             'sharedCount' => 6,
+            'likedCount' => 3,
             'viewedCount' => 41,
             'trending' => ['window' => 'week', 'unopened' => 7],
             'unreadTotals' => [
@@ -58,7 +59,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 new SubscriptionTalliesModel(
                     [],
                     [],
-                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
                     ForYouStreamTallyModel::unavailable(),
@@ -81,7 +82,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             new SubscriptionTalliesModel(
                 [],
                 [],
-                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                 new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 ['mastodon' => 2, 'bluesky' => 1],
                 ForYouStreamTallyModel::unavailable(),

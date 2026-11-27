@@ -22,6 +22,7 @@ use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordsQueries;
+use App\Tests\Support\StateMarks;
 
 final class SubscriptionTallyReaderTest extends DbTestCase
 {
@@ -40,7 +41,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $this->entry($feed, 'unread');
         $state = new EntryState($user, $read);
         $state->hide($when);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -51,7 +52,10 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertSame([$subscription->requireId() => 1], $tallies->unreadCounts);
         self::assertSame(1, $tallies->unreadTotals->allItems);
         self::assertSame([$subscription->requireId() => 2], $tallies->entryCounts);
-        self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 0, 'shared' => 0], $tallies->flagCounts);
+        self::assertSame(
+            ['favorites' => 1, 'kept' => 0, 'viewed' => 0, 'shared' => 0, 'liked' => 0],
+            $tallies->flagCounts,
+        );
         self::assertNotSame($tallies->entryCounts, $tallies->unreadCounts);
     }
 

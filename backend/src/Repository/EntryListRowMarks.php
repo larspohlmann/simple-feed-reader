@@ -11,6 +11,7 @@ final readonly class EntryListRowMarks
         public bool $isHidden,
         public bool $isFavorite,
         public bool $isKept,
+        public bool $isLiked,
         public ?\DateTimeImmutable $viewedAt,
         public ?\DateTimeImmutable $sharedAt,
     ) {

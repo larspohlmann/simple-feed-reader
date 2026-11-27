@@ -33,6 +33,7 @@ final readonly class EntryListRowHydrator
                 isHidden: $this->rowIsHidden($row, $entry, $markedReadUntil),
                 isFavorite: (bool) ($row['esFavorite'] ?? false),
                 isKept: (bool) ($row['esKept'] ?? false),
+                isLiked: (bool) ($row['esLiked'] ?? false),
                 viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
                 sharedAt: $row['eshSharedAt'] instanceof \DateTimeImmutable ? $row['eshSharedAt'] : null,
             ),

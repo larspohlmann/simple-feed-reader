@@ -130,6 +130,7 @@ final class SearchPageTest extends TestCase
                 isHidden: false,
                 isFavorite: false,
                 isKept: false,
+                isLiked: false,
                 viewedAt: null,
                 sharedAt: null,
             ),

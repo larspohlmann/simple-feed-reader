@@ -22,6 +22,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\StateMarks;
 
 final class RecommendationCandidateLoaderTest extends DbTestCase
 {
@@ -88,7 +89,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $favorited);
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -101,7 +102,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $kept);
-        $state->markKept();
+        StateMarks::markKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -127,6 +128,19 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $liked = $this->entry('liked-post', '2026-07-10T00:00:00Z');
         $this->likeAs($this->user, $liked);
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
+    public function testALocallyLikedEntryIsNoCandidate(): void
+    {
+        $liked = $this->entry('locally-liked', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $liked);
+        StateMarks::markLiked($state, new \DateTimeImmutable('2026-07-11T00:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -200,8 +214,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $untouched);
-        $state->clearFavorite();
-        $state->clearKept();
+        StateMarks::clearFavorite($state);
+        StateMarks::clearKept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

@@ -1366,6 +1366,7 @@
     "favorites": "Favoris",
     "kept": "Mis de côté",
     "shared": "Partagés",
+    "liked": "J'aime",
     "viewed": "Lus récemment",
     "forYou": "Pour vous",
     "forYouStream": "Flux Pour vous",
@@ -1650,11 +1651,13 @@
     "favorite": "Favori",
     "like": {
       "bluesky": "Aimer sur Bluesky",
-      "mastodon": "Aimer sur Mastodon"
+      "mastodon": "Aimer sur Mastodon",
+      "local": "J'aime"
     },
     "unlike": {
       "bluesky": "Ne plus aimer sur Bluesky",
-      "mastodon": "Ne plus aimer sur Mastodon"
+      "mastodon": "Ne plus aimer sur Mastodon",
+      "local": "Je n'aime plus"
     },
     "repost": {
       "bluesky": "Republier sur Bluesky",
@@ -1684,11 +1687,13 @@
       "favoriteRemove": "Retirer des favoris",
       "like": {
         "bluesky": "Aimer sur Bluesky — un j'aime public que l'auteur voit",
-        "mastodon": "Aimer sur Mastodon — un j'aime public que l'auteur voit"
+        "mastodon": "Aimer sur Mastodon — un j'aime public que l'auteur voit",
+        "local": "J'aime — gardé ici, cela oriente vos suggestions Pour vous"
       },
       "unlike": {
         "bluesky": "Retirer votre j'aime sur Bluesky",
-        "mastodon": "Retirer votre j'aime sur Mastodon"
+        "mastodon": "Retirer votre j'aime sur Mastodon",
+        "local": "Retirer votre j'aime"
       },
       "keepAdd": "Mettre de côté — jamais supprimé lors du nettoyage des anciens articles",
       "keepRemove": "Ne plus mettre de côté — le nettoyage des anciens articles pourra le supprimer",

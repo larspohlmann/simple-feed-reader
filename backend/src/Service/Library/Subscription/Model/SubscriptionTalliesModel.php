@@ -7,10 +7,10 @@ namespace App\Service\Library\Subscription\Model;
 final readonly class SubscriptionTalliesModel
 {
     /**
-     * @param array<int, int>                                            $unreadCounts subscription id => unread
-     * @param array<int, int>                                            $entryCounts  subscription id => entries
-     * @param array{favorites: int, kept: int, shared: int, viewed: int} $flagCounts
-     * @param array<string, int>                                         $notificationsUnseen network => unseen groups
+     * @param array<int, int> $unreadCounts subscription id => unread
+     * @param array<int, int> $entryCounts subscription id => entries
+     * @param array{favorites: int, kept: int, shared: int, viewed: int, liked: int} $flagCounts
+     * @param array<string, int> $notificationsUnseen network => unseen groups
      */
     public function __construct(
         public array $unreadCounts,

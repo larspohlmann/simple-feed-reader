@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Tests\Support\BackupLineRecords;
+use App\Tests\Support\StateMarks;
 use PHPUnit\Framework\TestCase;
 
 final class EntryStateLineTest extends TestCase
@@ -16,14 +17,14 @@ final class EntryStateLineTest extends TestCase
     {
         $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00+02:00'));
-        $state->markFavorite();
+        StateMarks::markFavorite($state);
         $state->markViewed(new \DateTimeImmutable('2026-08-04T08:30:00Z'));
 
         self::assertSame(
             sprintf(
                 '{"kind":"entryState","feedUrl":"https://one.example/rss","guidHash":"%s","isHidden":true,'
                 . '"isFavorite":true,"isKept":false,"hiddenAt":"2026-08-04T08:00:00+00:00","isViewed":true,'
-                . '"viewedAt":"2026-08-04T08:30:00+00:00","labels":["Read later","Work"]}',
+                . '"viewedAt":"2026-08-04T08:30:00+00:00","likedAt":null,"labels":["Read later","Work"]}',
                 $state->getEntry()->getGuidHash(),
             ),
             EntryStateLine::fromState($state, 'https://one.example/rss', ['Read later', 'Work'])->toBackupLine(),
@@ -33,16 +34,36 @@ final class EntryStateLineTest extends TestCase
     public function testAKeptStateWritesNoInstants(): void
     {
         $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
-        $state->markKept();
+        StateMarks::markKept($state);
 
         self::assertSame(
             sprintf(
                 '{"kind":"entryState","feedUrl":"https://one.example/rss","guidHash":"%s","isHidden":false,'
-                . '"isFavorite":false,"isKept":true,"hiddenAt":null,"isViewed":false,"viewedAt":null,"labels":[]}',
+                . '"isFavorite":false,"isKept":true,"hiddenAt":null,"isViewed":false,"viewedAt":null,'
+                . '"likedAt":null,"labels":[]}',
                 $state->getEntry()->getGuidHash(),
             ),
             EntryStateLine::fromState($state, 'https://one.example/rss', [])->toBackupLine(),
         );
+    }
+
+    public function testALikedStateRoundTripsItsInstant(): void
+    {
+        $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
+        StateMarks::markLiked($state, new \DateTimeImmutable('2026-11-27T10:00:00+01:00'));
+
+        $written = EntryStateLine::fromState($state, 'https://one.example/rss', [])->toBackupLine();
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($written, true, flags: JSON_THROW_ON_ERROR);
+        $line = EntryStateLine::fromLine($decoded);
+
+        self::assertStringContainsString('"likedAt":"2026-11-27T09:00:00+00:00"', $written);
+        self::assertEquals(new \DateTimeImmutable('2026-11-27T09:00:00Z'), $line->likedAt);
+    }
+
+    public function testALineWrittenBeforeLikesHaveNoLikedAt(): void
+    {
+        self::assertNull(EntryStateLine::fromLine(self::lineWith([]))->likedAt);
     }
 
     public function testLineWithoutLabelsRestores(): void

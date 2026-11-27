@@ -130,6 +130,9 @@ final readonly class EntryScopePredicates
             case EntryView::Shared:
                 $qb->andWhere($aliases->share . '.sharedAt IS NOT NULL');
                 break;
+            case EntryView::Liked:
+                $qb->andWhere(EntryLikeDql::exists($aliases));
+                break;
             case EntryView::Viewed:
                 $this->stateFlagIsSet($qb, $aliases, 'isViewed');
                 break;

@@ -130,7 +130,14 @@ final class TrendingJsonTest extends TestCase
         return new EntryListRow(
             $entry,
             new EntryListRowSubscription(1, 'Source'),
-            new EntryListRowMarks(isHidden: false, isFavorite: false, isKept: false, viewedAt: null, sharedAt: null),
+            new EntryListRowMarks(
+                isHidden: false,
+                isFavorite: false,
+                isKept: false,
+                isLiked: false,
+                viewedAt: null,
+                sharedAt: null,
+            ),
             null,
         );
     }
