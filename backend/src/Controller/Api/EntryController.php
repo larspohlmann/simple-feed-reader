@@ -17,6 +17,7 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
+use App\Repository\LabelScope;
 use App\Repository\NetworkScope;
 use App\Service\Curation\Recommendation\Feed\ForYouFeed;
 use App\Service\Library\EntryList\EntryListRowEnricher;
@@ -51,6 +52,7 @@ final readonly class EntryController
         #[MapQueryParameter] ?string $network = null,
         #[MapQueryParameter] ?string $feedKind = null,
         #[MapQueryParameter] ?string $group = null,
+        #[MapQueryParameter] ?string $label = null,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
@@ -59,6 +61,7 @@ final readonly class EntryController
         $entryView = EntryView::fromRequestValue($view);
         $listOrder = ListOrder::fromRequestValue($page->order);
         $networkScope = NetworkScope::fromRequestValues($network, $feedKind);
+        $labelScope = LabelScope::fromRequestValue($label, $entryView);
 
         // Score-ranked, with its own cursor.
         if ($entryView === EntryView::ForYou) {
@@ -79,6 +82,9 @@ final readonly class EntryController
             networkScope: $networkScope,
             feedGroup: FeedGroup::fromRequestValue($group),
         );
+        if ($labelScope !== null) {
+            $query = $query->withLabelScope($labelScope);
+        }
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 

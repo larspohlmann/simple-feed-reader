@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryLabel;
 use App\Entity\Feed;
 use App\Entity\SavedSearchNetworkInclusion;
 use App\Enum\EntryView;
@@ -34,6 +35,9 @@ final readonly class EntryScopePredicates
         if ($query->networkScope !== null) {
             $this->joinNetworkFeeds($qb, $aliases);
             NetworkScopeDql::restrict($qb, $aliases->networkFeed, $query->networkScope);
+        }
+        if ($query->labelScope !== null) {
+            $this->inLabelScope($qb, $aliases, $query->labelScope);
         }
         if ($query->hidesExcludedFeeds()) {
             InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::AllItems);
@@ -72,6 +76,27 @@ final readonly class EntryScopePredicates
             SavedSearchNetworkInclusion::class,
             $inclusion,
         ));
+    }
+
+    /** Only the caller's labels count, through the `:user` every list-row query binds. */
+    private function inLabelScope(QueryBuilder $qb, EntryAliases $aliases, LabelScope $scope): void
+    {
+        $entryLabel = 'entryLabel' . ucfirst($aliases->entry);
+        $label = 'label' . ucfirst($aliases->entry);
+        $labeled = \sprintf(
+            'SELECT 1 FROM %1$s %2$s JOIN %2$s.label %3$s WITH %3$s.user = :user WHERE %2$s.entry = %4$s',
+            EntryLabel::class,
+            $entryLabel,
+            $label,
+            $aliases->entry,
+        );
+        if ($scope->labelId === null) {
+            $qb->andWhere(\sprintf('NOT EXISTS (%s)', $labeled));
+
+            return;
+        }
+        $qb->andWhere(\sprintf('EXISTS (%s AND %s.id = :labelScopeId)', $labeled, $label))
+            ->setParameter('labelScopeId', $scope->labelId);
     }
 
     public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void
