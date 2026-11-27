@@ -37,6 +37,12 @@ final readonly class InterestTermRarity
         $userId = $set->getUser()->requireId();
         $terms = $this->storedTerms->findForUser($userId);
         $now = $this->clock->now();
+        if ($terms === []) {
+            $set->recordRaritiesRefreshed($now);
+            $this->entityManager->flush();
+
+            return;
+        }
         $tally = $this->tally($userId, $now->modify(\sprintf('-%d days', self::WINDOW_DAYS)), $terms);
 
         foreach ($terms as $term) {

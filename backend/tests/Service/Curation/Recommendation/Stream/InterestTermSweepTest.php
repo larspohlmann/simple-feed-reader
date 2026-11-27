@@ -108,6 +108,34 @@ final class InterestTermSweepTest extends DbTestCase
         }
     }
 
+    public function testReplacingStoredTermsLeavesOnlyTheNewOnesWithTheirRarities(): void
+    {
+        $user = $this->profiledAccount('terms-sweep-replaced@example.test');
+        $this->chat()->queueContent(self::USABLE_REPLY);
+        $this->sweep()->refreshDue();
+        $terms = $this->entityManager->getRepository(InterestTerm::class);
+        $oldTerms = $terms->findBy(['user' => $user]);
+        self::assertNotSame([], $oldTerms);
+
+        $this->fixtures()->storeProfileGeneratedAt($user, 'Likes wind power.', '2026-10-04 06:00:00');
+        $this->chat()->queueContent('{"terms":[{"language":"en","term":"wind","weight":8}]}');
+        $report = $this->sweep()->refreshDue();
+
+        self::assertSame(1, $report->stored);
+        foreach ($oldTerms as $oldTerm) {
+            self::assertFalse($this->entityManager->contains($oldTerm));
+        }
+        $stems = [];
+        foreach ($terms->findBy(['user' => $user]) as $term) {
+            $stems[] = $term->getStem();
+            self::assertEqualsWithDelta(log(502 / 1), $term->getRarity(), 1e-9);
+        }
+        self::assertEqualsCanonicalizing(['wind', 'wind'], array_map(
+            static fn (string $stem): string => substr($stem, 0, 4),
+            $stems,
+        ));
+    }
+
     private function sweep(): InterestTermSweep
     {
         $sweep = self::getContainer()->get(InterestTermSweep::class);
