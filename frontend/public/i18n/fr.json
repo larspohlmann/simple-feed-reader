@@ -1912,7 +1912,11 @@
       "deleteConfirmOther": "Supprimer « {{name}} » ? Il figure sur {{count}} articles.",
       "toggleFavorites": "Afficher ou masquer les libellés de « Favoris »",
       "toggleKept": "Afficher ou masquer les libellés de « Mis de côté »",
-      "nameField": "Nom du libellé"
+      "nameField": "Nom du libellé",
+      "menu": "Libellés",
+      "newLabel": "Nouveau libellé…",
+      "newLabelTitle": "Nouveau libellé",
+      "filter": "Filtrer les libellés"
     }
   },
   "social": {

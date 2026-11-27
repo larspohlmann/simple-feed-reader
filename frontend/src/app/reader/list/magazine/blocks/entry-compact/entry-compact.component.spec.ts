@@ -10,6 +10,7 @@ import {
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 import { INCLUDED_EVERYWHERE } from '../../../../tag-inclusion';
 
@@ -47,6 +48,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -91,6 +93,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -115,6 +118,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
       ],
       imports: [EntryCompactComponent, provideTranslocoTesting()],
@@ -134,6 +138,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],
@@ -153,6 +158,7 @@ describe('EntryCompactComponent', () => {
       providers: [
         provideSocialAccounts(),
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],

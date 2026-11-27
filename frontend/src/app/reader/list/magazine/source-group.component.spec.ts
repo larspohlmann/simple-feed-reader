@@ -9,6 +9,7 @@ import { holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 
 const entryActions = {
@@ -43,6 +44,7 @@ describe('SourceGroupComponent', () => {
       imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],

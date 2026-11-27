@@ -30,6 +30,9 @@
     />
   </button>
 }
+@if (labelsLeadStar()) {
+  <ng-container [ngTemplateOutlet]="labelButton" />
+}
 <button
   type="button"
   [attr.aria-label]="'reader.favorite' | transloco"
@@ -86,6 +89,9 @@
 >
   <app-icon name="check" [size]="size()" />
 </button>
+@if (labelsFollowTick()) {
+  <ng-container [ngTemplateOutlet]="labelButton" />
+}
 @if (entry().social?.isOwn) {
   <button
     type="button"
@@ -99,3 +105,18 @@
     <app-icon name="delete" [size]="size()" />
   </button>
 }
+<ng-template #labelButton>
+  <button
+    #labelTrigger
+    type="button"
+    aria-haspopup="menu"
+    [attr.aria-label]="'reader.labels.menu' | transloco"
+    [attr.title]="'reader.labels.menu' | transloco"
+    [appFlagToggle]="entry().labels.length > 0"
+    (click)="$event.stopPropagation(); labelPicker.open(entry(), labelTrigger, actions)"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="label" [size]="size()" [fill]="entry().labels.length > 0" />
+  </button>
+</ng-template>

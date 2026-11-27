@@ -1912,7 +1912,11 @@
       "deleteConfirmOther": "¿Eliminar “{{name}}”? Está en {{count}} artículos.",
       "toggleFavorites": "Mostrar u ocultar los rótulos de Favoritos",
       "toggleKept": "Mostrar u ocultar los rótulos de Conservados",
-      "nameField": "Nombre del rótulo"
+      "nameField": "Nombre del rótulo",
+      "menu": "Rótulos",
+      "newLabel": "Nuevo rótulo…",
+      "newLabelTitle": "Nuevo rótulo",
+      "filter": "Filtrar rótulos"
     }
   },
   "social": {

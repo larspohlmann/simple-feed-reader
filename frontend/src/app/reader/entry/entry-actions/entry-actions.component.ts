@@ -1,4 +1,5 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -8,6 +9,8 @@ import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { EntryLikeComponent } from '../entry-like/entry-like.component';
 import { ListenLauncher } from '../../audio/listen-launcher';
+import { LabelMenu } from '../../labels/label-menu.service';
+import { injectListOnScreen } from '../../shell/list-cover';
 
 /**
  * The per-entry actions — favorite, like on the post's network with its count (#1600), keep,
@@ -24,7 +27,13 @@ import { ListenLauncher } from '../../audio/listen-launcher';
  */
 @Component({
   selector: 'app-entry-actions',
-  imports: [IconComponent, EntryLikeComponent, TranslocoPipe, FlagToggleDirective],
+  imports: [
+    IconComponent,
+    EntryLikeComponent,
+    TranslocoPipe,
+    FlagToggleDirective,
+    NgTemplateOutlet,
+  ],
   templateUrl: './entry-actions.component.html',
   styleUrl: './entry-actions.component.scss',
   host: { '[class.glyph-md]': "size() === 'md'" },
@@ -39,10 +48,22 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   /** Off where another row carries the like: the article's counts row (#1615), the meta row's discussion cluster (#2431). */
   readonly like = input(true);
+  /** Where the label button goes: `list` leads the star in Favorites and Kept, `article` follows the tick on a
+   *  favorite or kept entry (#2581). */
+  readonly labelMenu = input<'list' | 'article'>('list');
   protected readonly entryAudio = new EntryAudio(
     { entry: this.entry },
     inject(AudioPlayerService),
     inject(ListenLauncher),
   );
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly labelPicker = inject(LabelMenu);
+  private readonly list = injectListOnScreen();
+  protected readonly labelsLeadStar = computed(() => {
+    const kind = this.list().selection().kind;
+    return this.labelMenu() === 'list' && (kind === 'favorites' || kind === 'kept');
+  });
+  protected readonly labelsFollowTick = computed(
+    () => this.labelMenu() === 'article' && (this.entry().isFavorite || this.entry().isKept),
+  );
 }

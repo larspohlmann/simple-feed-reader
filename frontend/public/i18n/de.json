@@ -1912,7 +1912,11 @@
       "deleteConfirmOther": "„{{name}}“ löschen? Es ist {{count}} Artikeln zugeordnet.",
       "toggleFavorites": "Labels in „Favoriten“ ein- oder ausklappen",
       "toggleKept": "Labels in „Gemerkt“ ein- oder ausklappen",
-      "nameField": "Name des Labels"
+      "nameField": "Name des Labels",
+      "menu": "Labels",
+      "newLabel": "Neues Label…",
+      "newLabelTitle": "Neues Label",
+      "filter": "Labels filtern"
     }
   },
   "social": {

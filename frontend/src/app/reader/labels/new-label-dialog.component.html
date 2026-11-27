@@ -1,0 +1,14 @@
+<form [formGroup]="form" (ngSubmit)="create()" cdkTrapFocus>
+  <app-overlay-panel [heading]="'reader.labels.newLabelTitle' | transloco">
+    <app-field [label]="'reader.labels.nameField' | transloco">
+      <input id="new-label-name" formControlName="name" maxlength="60" cdkFocusInitial />
+    </app-field>
+
+    <app-button footer (click)="ref.close()">
+      {{ 'common.cancel' | transloco }}
+    </app-button>
+    <app-button footer type="submit" variant="primary" [disabled]="form.invalid || saving()">
+      {{ 'common.add' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+</form>

@@ -1,4 +1,4 @@
-import { Component, forwardRef } from '@angular/core';
+import { Component, forwardRef, signal } from '@angular/core';
 import { EMPTY, Observable, Subject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -13,12 +13,21 @@ import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
+import { provideRouteListForTest } from '../../../../testing/list-context-testing';
+import { Selection } from '../../query/query';
+import { LabelMenu } from '../../labels/label-menu.service';
 
 /** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
 @Component({
   imports: [EntryActionsComponent, OpensEntryDirective],
   template: `<article class="card" [appOpensEntry]="entry">
-    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" [like]="likeShown" />
+    <app-entry-actions
+      [entry]="entry"
+      [size]="size"
+      [audio]="audio"
+      [like]="likeShown"
+      [labelMenu]="labelMenu"
+    />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
@@ -27,6 +36,7 @@ class HostComponent implements EntryActionHandler {
   size: 'sm' | 'md' = 'sm';
   audio = true;
   likeShown = true;
+  labelMenu: 'list' | 'article' = 'list';
   likeAnswer = new Subject<void>();
   cardOpened = false;
   favoriteCount = 0;
@@ -113,15 +123,100 @@ const episode = (): EntryDto =>
 
 describe('EntryActionsComponent', () => {
   let player: StubAudioPlayer;
+  let selection: ReturnType<typeof signal<Selection>>;
+  let labelMenu: { open: jest.Mock };
 
   beforeEach(() => {
     player = new StubAudioPlayer();
+    selection = signal<Selection>({ kind: 'all', unread: false });
+    labelMenu = { open: jest.fn() };
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
       providers: [
         { provide: AudioPlayerService, useValue: player.asService() },
+        { provide: LabelMenu, useValue: labelMenu },
         provideAccountIdentity(),
+        provideRouteListForTest({}, selection),
       ],
+    });
+  });
+
+  describe('the label button (#2581)', () => {
+    const labels = (fixture: ReturnType<typeof mount>) =>
+      buttons(fixture).map((button) => button.getAttribute('aria-label'));
+
+    it('leads the star on a row in Favorites', () => {
+      selection.set({ kind: 'favorites' });
+
+      expect(labels(mount(anEntry({ isFavorite: true })))).toEqual([
+        'Labels',
+        'Favorite',
+        'Keep',
+        'Toggle read',
+      ]);
+    });
+
+    it('leads the star on a row in Kept', () => {
+      selection.set({ kind: 'kept', label: 3 });
+
+      expect(labels(mount(anEntry({ isKept: true })))[0]).toBe('Labels');
+    });
+
+    it('is absent from a row in any other list', () => {
+      expect(labels(mount(anEntry({ isFavorite: true })))).not.toContain('Labels');
+    });
+
+    it('follows the tick in the article header of a kept entry', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = anEntry({ isKept: true });
+      fixture.componentInstance.labelMenu = 'article';
+      fixture.detectChanges();
+
+      expect(labels(fixture)).toEqual(['Favorite', 'Keep', 'Toggle read', 'Labels']);
+    });
+
+    it('appears in the article header once the entry turns favorite', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = anEntry({ isFavorite: false, isKept: false });
+      fixture.componentInstance.labelMenu = 'article';
+      fixture.detectChanges();
+      expect(labels(fixture)).not.toContain('Labels');
+
+      fixture.componentInstance.entry = anEntry({ isFavorite: true });
+      fixture.detectChanges();
+
+      expect(labels(fixture)).toContain('Labels');
+    });
+
+    it('fills its glyph only while the entry carries a label', () => {
+      selection.set({ kind: 'favorites' });
+      const fill = (testEntry: EntryDto) =>
+        mount(testEntry)
+          .debugElement.queryAll(By.directive(IconComponent))
+          .find((icon) => icon.componentInstance.name() === 'label')!
+          .componentInstance.fill();
+
+      expect(fill(anEntry({ isFavorite: true, labels: [] }))).toBe(false);
+      expect(fill(anEntry({ isFavorite: true, labels: [{ id: 1, name: 'Work' }] }))).toBe(true);
+    });
+
+    it('opens the menu at itself with the handler, by click, Enter or Space, without opening the card', () => {
+      selection.set({ kind: 'favorites' });
+      const fixture = mount(anEntry({ isFavorite: true }));
+      const [button] = buttons(fixture);
+
+      button.click();
+      pressEnter(button);
+      pressSpace(button);
+
+      expect(labelMenu.open).toHaveBeenCalledTimes(3);
+      expect(labelMenu.open).toHaveBeenCalledWith(
+        fixture.componentInstance.entry,
+        button,
+        fixture.componentInstance,
+      );
+      expect(button.getAttribute('title')).toBe('Labels');
+      expect(fixture.componentInstance.cardOpened).toBe(false);
     });
   });
 

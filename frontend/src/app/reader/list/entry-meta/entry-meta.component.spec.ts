@@ -10,6 +10,7 @@ import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { INCLUDED_EVERYWHERE } from '../../tag-inclusion';
 import { CommentTotals } from '../../state/comment-totals';
 
@@ -41,6 +42,7 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imag
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],
@@ -205,6 +207,7 @@ describe('EntryMetaComponent', () => {
       imports: [EntryMetaComponent, provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
+        ...provideEntryActionsContext(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
       ],

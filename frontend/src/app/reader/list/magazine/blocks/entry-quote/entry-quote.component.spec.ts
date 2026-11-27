@@ -7,6 +7,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { describeShortPill } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../../../testing/social-accounts-testing';
 
 const entryActions = {
@@ -35,6 +36,7 @@ function mount(testEntry: EntryDto) {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       provideRouter([]),
     ],

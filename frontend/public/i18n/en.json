@@ -1912,7 +1912,11 @@
       "deleteConfirmOther": "Delete “{{name}}”? It's on {{count}} articles.",
       "toggleFavorites": "Show or hide the labels in Favorites",
       "toggleKept": "Show or hide the labels in Kept",
-      "nameField": "Label name"
+      "nameField": "Label name",
+      "menu": "Labels",
+      "newLabel": "New label…",
+      "newLabelTitle": "New label",
+      "filter": "Filter labels"
     }
   },
   "social": {

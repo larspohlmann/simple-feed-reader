@@ -1,0 +1,49 @@
+<div
+  class="menu"
+  role="menu"
+  tabindex="-1"
+  cdkTrapFocus
+  [cdkTrapFocusAutoCapture]="true"
+  [attr.aria-label]="'reader.labels.menu' | transloco"
+>
+  @if (filterable()) {
+    <input
+      #filterField
+      class="filter"
+      type="search"
+      [placeholder]="'reader.labels.filter' | transloco"
+      [attr.aria-label]="'reader.labels.filter' | transloco"
+      [value]="query()"
+      (input)="query.set(filterField.value)"
+    />
+  }
+  <div class="labels">
+    @for (label of listed(); track label.id) {
+      <app-menu-checkbox
+        [label]="label.name"
+        [checked]="checkedIds().has(label.id)"
+        (toggled)="toggle(label)"
+      />
+    }
+  </div>
+  @if (listed().length > 0) {
+    <hr role="separator" />
+  }
+  @if (naming()) {
+    <input
+      #nameField
+      class="new-label"
+      type="text"
+      maxlength="60"
+      [readOnly]="saving()"
+      [placeholder]="'reader.labels.nameField' | transloco"
+      [attr.aria-label]="'reader.labels.nameField' | transloco"
+      (keydown.enter)="create(nameField.value)"
+    />
+  } @else {
+    <button role="menuitem" type="button" (click)="naming.set(true)">
+      <app-icon name="add" size="sm" />
+      {{ 'reader.labels.newLabel' | transloco }}
+    </button>
+  }
+</div>

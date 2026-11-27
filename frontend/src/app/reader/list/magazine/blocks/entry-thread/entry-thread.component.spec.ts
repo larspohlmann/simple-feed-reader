@@ -11,6 +11,7 @@ import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../../../testing/thread-testing';
 import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../../../testing/entry-actions-testing';
 import {
   aMastodonAccount,
   provideSocialAccounts,
@@ -50,6 +51,7 @@ function mount(testEntry: EntryDto): HTMLElement {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: LinkReaderNavigation, useValue: navigation },
       { provide: PreviewProgress, useValue: { isLoading: () => true } },

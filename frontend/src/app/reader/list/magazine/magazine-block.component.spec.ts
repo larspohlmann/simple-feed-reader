@@ -10,6 +10,7 @@ import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { aQuotedPost, anEntry, aStory, aStoryArticle } from '../../../../testing/entry-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { provideEntryActionsContext } from '../../../../testing/entry-actions-testing';
 import { provideSocialAccounts } from '../../../../testing/social-accounts-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
@@ -34,6 +35,7 @@ function mount(block: MagazineBlock): HTMLElement {
     providers: [
       provideSocialAccounts(),
       provideAccountIdentity(),
+      ...provideEntryActionsContext(),
       { provide: EntryActionHandler, useValue: { open: jest.fn() } },
       { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },
       { provide: LinkReaderNavigation, useValue: { openAlone: jest.fn() } },

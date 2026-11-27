@@ -1429,6 +1429,23 @@ checkbox outside a menu.
 
 ---
 
+### Label menu (via the `LabelMenu` service, #2581)
+
+`LabelMenu.open(entry, anchor, actions)` puts labels on an entry and takes them
+off. On a fine pointer it opens `app-label-menu-panel` as a popover at `anchor`
+(`TOOLBAR_MENU_POSITIONS`): an `<app-menu-checkbox>` per label, a filter field
+above them from nine labels on, and a "New label…" item that turns into a name
+field (Enter creates and attaches; a taken name toasts and keeps the field). On
+a coarse pointer it opens the `<app-action-sheet>` with an `ActionSheetCheck` per
+label and a "New label…" action that opens `NewLabelDialogComponent` in
+`<app-overlay-panel>`. Every box reads the entry's row in `EntryRowCache`, so it
+follows each toggle at once. `actions` is the caller's `EntryActionHandler`: the
+menu renders outside the trigger's injector.
+
+**Not for:** tags — a feed's tags are edited in its own dialog.
+
+---
+
 ### `<app-feed-exclusion-marker>`
 
 The eye badge on a hidden row's lead (see *Hidden-feed favicon*): `role="img"`,
@@ -1730,6 +1747,7 @@ child to choke on where the component lands inside a `<p>`.
 |---|---|---|
 | `entry` | `EntryDto` (required) | — |
 | `size` | `'sm' \| 'md'` | `'sm'` |
+| `labelMenu` | `'list' \| 'article'` | `'list'` — where the label button goes (#2581) |
 
 | Output | Type | Fires |
 |---|---|---|
@@ -1753,6 +1771,12 @@ by `frontend/src/styles/_flag-toggle.scss`. Favourite and keep also fill their
 glyph while on; the tick has no hollow form. The reader view's article row is
 this component at `size="md"`, and its toolbar Keep/Favorite reuse the same
 directive, so every keep and favourite toggle in the app looks the same.
+
+The label button (glyph `label`, filled while the entry carries a label) opens
+the label menu through the `LabelMenu` service. It has two placements: with
+`labelMenu="list"` (list rows and compact magazine tiles) it leads the star, and
+only in Favorites or Kept; with `labelMenu="article"` (the reader view's action
+row) it follows the tick whenever the entry is a favorite or kept.
 
 On a coarse pointer the buttons grow to `--tap-target` height on negative
 margins alone, so a card never gets taller on a phone, and the gap between
