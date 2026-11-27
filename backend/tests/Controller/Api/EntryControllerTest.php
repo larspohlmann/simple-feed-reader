@@ -39,6 +39,7 @@ use App\Tests\Support\SignsReaderUrls;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\HttpFoundation\Response;
 
 final class EntryControllerTest extends ApiTestCase
 {
@@ -137,7 +138,7 @@ final class EntryControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->request('GET', '/api/entries');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testListsNewestFirstWithState(): void
@@ -567,7 +568,7 @@ final class EntryControllerTest extends ApiTestCase
         $headers = $this->bearerFor($this->factory()->create('e-view@example.com'));
 
         $client->request('GET', '/api/entries?view=bogus', server: $headers);
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']); // uniform with every other invalid field
@@ -617,7 +618,7 @@ final class EntryControllerTest extends ApiTestCase
 
         $client->request('GET', $url, server: $headers);
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']);
@@ -906,7 +907,7 @@ final class EntryControllerTest extends ApiTestCase
         $headers = $this->bearerFor($this->factory()->create('e-cursor@example.com'));
 
         $client->request('GET', '/api/entries?cursor=not-a-cursor', server: $headers);
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']);
@@ -1052,7 +1053,7 @@ final class EntryControllerTest extends ApiTestCase
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['scope' => 'all', 'until' => '2026-08-01T00:00:00Z'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         self::assertSame(0, $this->unreadCountOf($client, $headers, $subscription->requireId()));
 
         // The sweep leaves these entries sparse: they are read by the
@@ -1097,7 +1098,7 @@ final class EntryControllerTest extends ApiTestCase
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['scope' => 'all', 'until' => '2026-07-02T00:00:00Z'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
 
         $onTheWatermark = $this->entryIdOf($subscription, 'g2');
         $aboveTheWatermark = $this->entryIdOf($subscription, 'g3');
@@ -1267,7 +1268,7 @@ final class EntryControllerTest extends ApiTestCase
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testGetReturnsOwnedEntry(): void
@@ -1402,7 +1403,7 @@ final class EntryControllerTest extends ApiTestCase
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
     }
 
@@ -1458,7 +1459,7 @@ final class EntryControllerTest extends ApiTestCase
 
         $client->request('GET', '/api/entries/99999999', server: $headers);
 
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testMarkingACopyUnreadMarksItsCopyUnread(): void
