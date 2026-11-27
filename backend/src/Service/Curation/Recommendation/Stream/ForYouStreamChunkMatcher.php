@@ -26,7 +26,11 @@ final readonly class ForYouStreamChunkMatcher
         foreach ($candidates as $candidate) {
             $stems = $pass->stemming->collectStems($candidate->entry);
             foreach ($candidate->userIds as $userId) {
-                $score = $this->scorer->findMatch($pass->requireTerms($userId), $stems);
+                $score = $this->scorer->findMatch(
+                    $pass->requireTerms($userId),
+                    $stems,
+                    $pass->readMinimumScore($userId),
+                );
                 if ($score !== null) {
                     $matches[] = new ForYouStreamMatchModel($userId, $candidate->entry->id, $score);
                 }

@@ -43,6 +43,7 @@ final readonly class ForYouStreamSweep
         $ceiling = $this->ceiling->readSettledCeiling();
         $now = $this->clock->now();
         $publishedSince = $now->modify(\sprintf('-%d hours', self::PUBLISHED_WINDOW_HOURS));
+        $this->sets->advanceMarks($this->sets->findDisabledBelowMark($ceiling, $now), $ceiling);
         $marksByUserId = $this->raiseLaggards($this->sets->findBelowMark($ceiling, $now), $ceiling, $publishedSince);
         $groups = MarkGroupsModel::fromMembers(
             $ceiling,

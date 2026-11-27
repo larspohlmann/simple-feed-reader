@@ -10,10 +10,11 @@ use App\Service\Curation\Recommendation\Stream\Model\StreamScoreModel;
 
 final readonly class ForYouStreamScorer
 {
-    public const float MIN_SCORE = 1.5;
-
-    public function findMatch(InterestTermsModel $terms, EntryStemsModel $stems): ?StreamScoreModel
-    {
+    public function findMatch(
+        InterestTermsModel $terms,
+        EntryStemsModel $stems,
+        float $minimumScore,
+    ): ?StreamScoreModel {
         $strengths = $terms->readStrengths($stems->language);
         $contributions = [];
         foreach ($stems->positionWeights as $stem => $positionWeight) {
@@ -23,7 +24,7 @@ final readonly class ForYouStreamScorer
             }
         }
         $score = array_sum($contributions);
-        if ($score < self::MIN_SCORE) {
+        if ($score < $minimumScore) {
             return null;
         }
         arsort($contributions);

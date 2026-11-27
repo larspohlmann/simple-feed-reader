@@ -33,7 +33,10 @@ final readonly class ForYouStreamMarkGroupWalk implements MarkGroupWalkInterface
 
     public function joinGroup(array $group): void
     {
-        $this->pass->join($this->storedTerms->findTermsForUsers($group));
+        $this->pass->join(
+            $this->storedTerms->findTermsForUsers($group),
+            $this->sets->findStreamPrecisions($group),
+        );
     }
 
     public function matchChunk(array $chunk): array

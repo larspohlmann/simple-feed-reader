@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Stream;
 
+use App\Entity\ForYouStreamTuning;
 use App\Entity\InterestTermRun;
 use App\Entity\InterestTermSet;
 use App\Entity\User;
+use App\Enum\ForYouStreamPrecision;
 use App\Service\Curation\Recommendation\Stream\DueInterestTermFinder;
 use App\Service\Curation\Recommendation\Stream\Model\DueInterestTermsModel;
 use App\Tests\DbTestCase;
@@ -85,6 +87,18 @@ final class DueInterestTermFinderTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([], $this->findDue());
+    }
+
+    public function testADisabledAccountIsNeverDueForTerms(): void
+    {
+        $this->profiledAccount('terms-due-enabled@example.test');
+        $disabled = $this->profiledAccount('terms-due-disabled@example.test');
+        $this->fixtures()->storeForYouStreamTuning(
+            $disabled,
+            new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow),
+        );
+
+        self::assertSame(['terms-due-enabled@example.test'], $this->dueEmails());
     }
 
     /** @return list<DueInterestTermsModel> */

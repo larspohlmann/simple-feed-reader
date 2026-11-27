@@ -59,8 +59,8 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every active account holding a stored profile newer than its interest terms, or without any; the finder
-     * decides which of them are due.
+     * Every active, stream-enabled account holding a stored profile newer than its interest terms, or without any; the
+     * finder decides which of them are due.
      *
      * @return list<RecommendationSettings>
      */
@@ -69,6 +69,7 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
         $qb = $this->withOwner()
             ->andWhere('s.storedProfile.text IS NOT NULL')
             ->andWhere('s.storedProfile.generatedAt IS NOT NULL')
+            ->andWhere('s.forYouStream.enabled = true')
             ->andWhere(\sprintf(
                 'NOT EXISTS (SELECT 1 FROM %s termSet WHERE termSet.user = s.user'
                 . ' AND termSet.profileGeneratedAt >= s.storedProfile.generatedAt)',
