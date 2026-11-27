@@ -25,7 +25,7 @@ import { injectListOnScreen } from './list-cover';
 import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
 import { LabelChange, withLabelChange } from '../state/in-flight-label-changes';
-import { Problem, parseProblem } from '../../core/problem';
+import { parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
 @Injectable()
@@ -89,13 +89,10 @@ export class EntryStateActions implements EntryActionHandler {
     return this.rows.setLiked(entry, isLiked, this.buildLikedMove(entry, isLiked));
   }
 
-  /** The vote replaces a local like, so only an up-vote keeps the entry in Liked. */
   vote(entry: EntryDto, to: VoteValue): Observable<void> {
     const isUp = to === 1;
-    const outcome =
-      (entry.myVote === 1 || entry.isLiked) === isUp
-        ? { onFailed: (problem: Problem) => this.toast.showProblem(problem) }
-        : this.buildLikedMove(entry, isUp);
+    const wasLiked = entry.myVote === 1 || entry.isLiked;
+    const outcome = wasLiked === isUp ? this.failureToast() : this.buildLikedMove(entry, isUp);
     return this.rows.setVote(entry, to, outcome);
   }
 
@@ -202,6 +199,10 @@ export class EntryStateActions implements EntryActionHandler {
         this.toast.showProblem(problem);
       },
     };
+  }
+
+  private failureToast(): SocialActOutcome {
+    return { onFailed: (problem) => this.toast.showProblem(problem) };
   }
 
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */
