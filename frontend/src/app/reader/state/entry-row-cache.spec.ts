@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of } from 'rxjs';
 import { anEntry } from '../../../testing/entry-testing';
 import { ReaderApi } from '../reader-api';
@@ -225,5 +226,38 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(2)).toEqual(
       expect.objectContaining({ isViewed: false, isHidden: false, myVote: 0, score: 10 }),
     );
+  });
+
+  describe('saveLabels (#2581)', () => {
+    const work = { id: 3, name: 'Work' };
+    const home = { id: 4, name: 'Home' };
+
+    it('shows the labels at once, on the entry alone and not on its copies', () => {
+      holdEntries(buildCopy(1, 7), buildCopy(2, 7));
+
+      cache.saveLabels(readShownEntry(1), [work], new Subject()).subscribe();
+
+      expect(readShownEntry(1).labels).toEqual([work]);
+      expect(readShownEntry(2).labels).toEqual([]);
+    });
+
+    it('puts the labels back when the save fails', () => {
+      holdEntries(buildCopy(1, null, { labels: [home] }));
+      const failing = new Subject<never>();
+
+      cache.saveLabels(readShownEntry(1), [home, work], failing).subscribe({ error: jest.fn() });
+      failing.error(new HttpErrorResponse({ status: 500 }));
+
+      expect(readShownEntry(1).labels).toEqual([home]);
+    });
+
+    it('keeps the labels on the wire over a reload that lands meanwhile', () => {
+      holdEntries(buildCopy(1, null));
+
+      cache.saveLabels(readShownEntry(1), [work], new Subject()).subscribe();
+      holdEntries(buildCopy(1, null));
+
+      expect(readShownEntry(1).labels).toEqual([work]);
+    });
   });
 });

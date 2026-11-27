@@ -139,6 +139,7 @@ describe('RecommendationsService', () => {
         link: null,
         q: null,
         window: null,
+        label: null,
       },
     });
   });

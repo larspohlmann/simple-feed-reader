@@ -9,6 +9,7 @@ import { SocialPostApi, VoteAnswer } from '../social-post-api';
 import { likeableSocial } from '../entry-social';
 import { VoteValue } from '../vote-pill/vote';
 import { EntryDto, EntryStatePatch } from '../models';
+import { LabelPill } from '../labels/labels.models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 import { InFlightPatches, RowPatch, valuesBefore } from './in-flight-patches';
 import { HeldItem, heldItem } from './held-item';
@@ -96,6 +97,15 @@ export class EntryRowCache {
         error: (error: HttpErrorResponse) => onError(parseProblem(error)),
       },
     );
+  }
+
+  /** The entry's labels show at once and are put back if `request$` fails; its copies keep their own. */
+  saveLabels(
+    entry: EntryDto,
+    labels: LabelPill[],
+    request$: Observable<unknown>,
+  ): Observable<unknown> {
+    return this.optimistic(entry, { labels }, request$);
   }
 
   /** The vote shows at once; its score waits for the answer. */

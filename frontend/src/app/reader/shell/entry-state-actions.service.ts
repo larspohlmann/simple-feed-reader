@@ -1,4 +1,5 @@
-import { Observable } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, map, tap, throwError } from 'rxjs';
 import { Injectable, computed, effect, inject, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -20,6 +21,9 @@ import { SOCIAL_NETWORK_NAMES } from '../../core/social-network';
 import { RemovedPost, RemovedPosts } from '../removed-posts.service';
 import { VoteValue } from '../vote-pill/vote';
 import { injectListOnScreen } from './list-cover';
+import { LabelsStore } from '../labels/labels.store';
+import { LabelPill } from '../labels/labels.models';
+import { parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
 @Injectable()
@@ -30,6 +34,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly rows = inject(EntryRowCache);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly labels = inject(LabelsStore);
   private readonly routeState = inject(ReaderRouteState);
   private readonly toast = inject(ToastService);
   private readonly postActions = inject(ArticlePostActions);
@@ -70,7 +75,10 @@ export class EntryStateActions implements EntryActionHandler {
     this.patchInList(
       entry,
       { isFavorite: !entry.isFavorite },
-      { onFailed: () => this.subscriptions.bumpFavorites(-delta) },
+      {
+        onSaved: () => this.labels.reload(),
+        onFailed: () => this.subscriptions.bumpFavorites(-delta),
+      },
     );
   }
 
@@ -90,7 +98,7 @@ export class EntryStateActions implements EntryActionHandler {
     this.patchInList(
       entry,
       { isKept: !entry.isKept },
-      { onFailed: () => this.subscriptions.bumpKept(-delta) },
+      { onSaved: () => this.labels.reload(), onFailed: () => this.subscriptions.bumpKept(-delta) },
     );
   }
 
@@ -145,6 +153,25 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
+  attachLabel(entry: EntryDto, label: LabelPill): void {
+    if (entry.labels.some((held) => held.id === label.id)) return;
+    const labels = [...entry.labels, label].sort(byLabelName);
+    this.saveLabels(entry, labels, this.labels.attach(entry.id, label.id));
+  }
+
+  detachLabel(entry: EntryDto, label: LabelPill): void {
+    const labels = entry.labels.filter((held) => held.id !== label.id);
+    this.saveLabels(entry, labels, this.labels.detach(entry.id, label.id));
+  }
+
+  createLabel(entry: EntryDto, name: string): Observable<void> {
+    return this.labels.create(name).pipe(
+      catchError((error: HttpErrorResponse) => throwError(() => parseProblem(error))),
+      tap((label) => this.attachLabel(entry, label)),
+      map(() => undefined),
+    );
+  }
+
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
     this.markOpenedViewed(entry);
@@ -190,6 +217,20 @@ export class EntryStateActions implements EntryActionHandler {
     };
   }
 
+  /** The row shows `labels` at once and leaves a list narrowed to a label it no longer fits. */
+  private saveLabels(entry: EntryDto, labels: LabelPill[], request$: Observable<void>): void {
+    const list = this.list();
+    const leaves = leavesLabelledView(list.selection(), labels);
+    if (leaves) list.markLeaving(entry.id);
+    this.rows.saveLabels(entry, labels, request$).subscribe({
+      next: () => this.labels.reload(),
+      error: (error: HttpErrorResponse) => {
+        if (leaves) list.stayInList(entry.id);
+        this.toast.showProblem(parseProblem(error));
+      },
+    });
+  }
+
   private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
     const list = this.list();
     const leaves = leavesSavedView(list.selection(), entry, patch);
@@ -225,4 +266,16 @@ function savedViewMembership(
     default:
       return null;
   }
+}
+
+/** Whether a row with `labels` falls out of the label or unlabeled selection on screen. */
+function leavesLabelledView(selection: Selection, labels: LabelPill[]): boolean {
+  if (selection.kind !== 'favorites' && selection.kind !== 'kept') return false;
+  if (selection.label === undefined) return false;
+  if (selection.label === 'unlabeled') return labels.length > 0;
+  return !labels.some((label) => label.id === selection.label);
+}
+
+function byLabelName(left: LabelPill, right: LabelPill): number {
+  return left.name.toLowerCase().localeCompare(right.name.toLowerCase());
 }

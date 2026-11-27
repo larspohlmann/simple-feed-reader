@@ -1,4 +1,5 @@
 import { EntryQuery } from '../models';
+import { LabelFilter } from '../labels/labels.models';
 import {
   BySelectionKind,
   FilteredSelection,
@@ -14,8 +15,8 @@ export function queryFromSelection(selection: Selection): EntryQuery | null {
 }
 
 const VIEW_QUERY: BySelectionKind<EntryQuery | null> = {
-  favorites: () => ({ view: 'favorites' }),
-  kept: () => ({ view: 'kept' }),
+  favorites: (selection) => withLabel({ view: 'favorites' }, selection.label),
+  kept: (selection) => withLabel({ view: 'kept' }, selection.label),
   shared: () => ({ view: 'shared' }),
   viewed: () => ({ view: 'viewed' }),
   // The one list whose unread filter is not a view of its own: the ranked
@@ -47,4 +48,8 @@ function unreadAsView(selection: FilteredSelection): EntryQuery['view'] {
 
 function unreadAsFlag(query: EntryQuery, selection: FilteredSelection): EntryQuery {
   return selection.unread ? { ...query, unread: true } : query;
+}
+
+function withLabel(query: EntryQuery, label: LabelFilter | undefined): EntryQuery {
+  return label === undefined ? query : { ...query, label };
 }

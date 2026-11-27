@@ -267,6 +267,9 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl.expectOne('https://api.test/api/trending/followed').flush({ stories: [] });
     ctrl
+      .expectOne('https://api.test/api/labels')
+      .flush({ labels: [], unlabeled: { favoriteCount: 0, keptCount: 0 } });
+    ctrl
       .expectOne('https://api.test/api/for-you/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
@@ -2442,6 +2445,7 @@ describe('ReaderShellComponent', () => {
             link: null,
             q: null,
             window: null,
+            label: null,
           },
         }),
       );

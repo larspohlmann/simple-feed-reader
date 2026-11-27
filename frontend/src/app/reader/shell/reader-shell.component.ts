@@ -39,6 +39,7 @@ import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { NetworkSurfaceSwitches } from '../state/network-surface-switches.service';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
+import { LabelsStore } from '../labels/labels.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
@@ -151,6 +152,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly followedStoriesStore = inject(FollowedStoriesStore);
+  private readonly labelsStore = inject(LabelsStore);
   private readonly networkSwitches = inject(NetworkSurfaceSwitches);
   readonly ai = inject(AiAvailabilityService);
   readonly digest = inject(DigestService);
@@ -291,6 +293,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.savedSearchesStore.load();
     this.followedStoriesStore.load();
+    this.labelsStore.reload();
     this.networkSwitches.loadExclusions();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     // Reopening the app resumes a for-you run left in flight by an earlier session.

@@ -28,6 +28,17 @@ describe('queryFromSelection', () => {
       view: 'favorites',
     });
     expect(queryFromSelection({ kind: 'kept' })).toEqual({ view: 'kept' });
+  });
+  it('narrows a favorites or kept list to its label (#2581)', () => {
+    expect(queryFromSelection({ kind: 'favorites', label: 3 })).toEqual({
+      view: 'favorites',
+      label: 3,
+    });
+    expect(queryFromSelection({ kind: 'kept', label: 'unlabeled', order: 'oldest' })).toEqual({
+      view: 'kept',
+      label: 'unlabeled',
+      order: 'oldest',
+    });
     expect(queryFromSelection({ kind: 'shared' })).toEqual({
       view: 'shared',
     });

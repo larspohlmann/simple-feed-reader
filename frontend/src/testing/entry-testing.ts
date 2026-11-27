@@ -38,6 +38,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     isKept: false,
     isShared: false,
     isViewed: false,
+    labels: [],
     shortPlayerUrl: null,
     titleDerived: false,
     share: null,

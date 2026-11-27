@@ -37,6 +37,9 @@ class HostComponent implements EntryActionHandler {
   deleted: EntryDto | null = null;
 
   readonly vote = (): Observable<void> => EMPTY;
+  readonly attachLabel = (): void => undefined;
+  readonly detachLabel = (): void => undefined;
+  readonly createLabel = (): Observable<void> => EMPTY;
 
   favorite(): void {
     this.favoriteCount++;

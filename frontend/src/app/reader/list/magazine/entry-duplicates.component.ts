@@ -5,6 +5,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../../models';
 import { VoteValue } from '../../vote-pill/vote';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { LabelPill } from '../../labels/labels.models';
 import { CompactCount } from '../../../core/i18n/compact-count';
 import { buildDiscussionCount, DiscussionCount } from '../../../core/i18n/discussion-count';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -152,6 +153,18 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
 
   toggleRead(copy: EntryDto): void {
     this.shellActions.toggleRead(copy);
+  }
+
+  attachLabel(copy: EntryDto, label: LabelPill): void {
+    this.shellActions.attachLabel(copy, label);
+  }
+
+  detachLabel(copy: EntryDto, label: LabelPill): void {
+    this.shellActions.detachLabel(copy, label);
+  }
+
+  createLabel(copy: EntryDto, name: string): Observable<void> {
+    return this.shellActions.createLabel(copy, name);
   }
 
   deletePost(): void {
