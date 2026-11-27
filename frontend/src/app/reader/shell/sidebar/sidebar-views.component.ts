@@ -11,6 +11,14 @@ import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 
+/** A view the All items folder holds. */
+interface AllItemsChild {
+  view: 'viewed' | 'liked' | 'shared';
+  icon: string;
+  labelKey: string;
+  count: number;
+}
+
 /** A slice of the smart views (#2593): the All items folder with Recently read, Liked and Shared, the For you pair, or Trending. */
 @Component({
   selector: 'app-sidebar-views',
@@ -36,6 +44,18 @@ export class SidebarViewsComponent {
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
   readonly forYouStream = input<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY);
 
+  protected readonly children = computed((): AllItemsChild[] => {
+    const children: AllItemsChild[] = [
+      { view: 'viewed', icon: 'history', labelKey: 'reader.viewed', count: this.viewedCount() },
+      { view: 'liked', icon: 'thumb_up', labelKey: 'reader.liked', count: this.likedCount() },
+    ];
+    const shared = this.sharedCount();
+    if (shared <= 0) return children;
+    return [
+      ...children,
+      { view: 'shared', icon: 'share', labelKey: 'reader.shared', count: shared },
+    ];
+  });
   private readonly childActive = computed(() =>
     ['viewed', 'liked', 'shared'].includes(this.selection().kind),
   );

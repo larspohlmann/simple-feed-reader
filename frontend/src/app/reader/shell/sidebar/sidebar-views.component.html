@@ -26,47 +26,19 @@
     </div>
     @if (folder.expanded()) {
       <div class="sublist">
-        <a
-          class="nav"
-          [class.active]="selection().kind === 'viewed'"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ view: 'viewed' })"
-          queryParamsHandling="merge"
-        >
-          <app-icon name="history" size="md" />
-          <span class="name">{{ 'reader.viewed' | transloco }}</span>
-          @if (viewedCount() > 0) {
-            <span class="count">{{ viewedCount() }}</span>
-          }
-          <span class="slot" aria-hidden="true"></span>
-          <span class="trail" aria-hidden="true"></span>
-        </a>
-        <a
-          class="nav"
-          [class.active]="selection().kind === 'liked'"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ view: 'liked' })"
-          queryParamsHandling="merge"
-        >
-          <app-icon name="thumb_up" size="md" />
-          <span class="name">{{ 'reader.liked' | transloco }}</span>
-          @if (likedCount() > 0) {
-            <span class="count">{{ likedCount() }}</span>
-          }
-          <span class="slot" aria-hidden="true"></span>
-          <span class="trail" aria-hidden="true"></span>
-        </a>
-        @if (sharedCount() > 0) {
+        @for (child of children(); track child.view) {
           <a
             class="nav"
-            [class.active]="selection().kind === 'shared'"
+            [class.active]="selection().kind === child.view"
             [routerLink]="['/']"
-            [queryParams]="selectionQueryParams({ view: 'shared' })"
+            [queryParams]="selectionQueryParams({ view: child.view })"
             queryParamsHandling="merge"
           >
-            <app-icon name="share" size="md" />
-            <span class="name">{{ 'reader.shared' | transloco }}</span>
-            <span class="count">{{ sharedCount() }}</span>
+            <app-icon [name]="child.icon" size="md" />
+            <span class="name">{{ child.labelKey | transloco }}</span>
+            @if (child.count > 0) {
+              <span class="count">{{ child.count }}</span>
+            }
             <span class="slot" aria-hidden="true"></span>
             <span class="trail" aria-hidden="true"></span>
           </a>
