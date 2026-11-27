@@ -26,6 +26,7 @@ use Symfony\Component\Clock\MockClock;
 final class InterestTermRarityTest extends DbTestCase
 {
     private const string NOW = '2026-11-27 10:00:00';
+    private const int BATCH = 500;
 
     private User $user;
     private Feed $feed;
@@ -118,7 +119,7 @@ final class InterestTermRarityTest extends DbTestCase
     public function testAWindowLargerThanTheSampleCountsOnlyItsNewestEntries(): void
     {
         $this->term('solar', FeedLanguage::English);
-        $this->entries(InterestTermRarity::SAMPLE_ENTRIES + 1, FeedLanguage::English, [1 => 'solar']);
+        $this->entriesInBatches(InterestTermRarity::SAMPLE_ENTRIES + 1, [1 => 'solar']);
 
         $this->refreshRarities();
 
@@ -189,6 +190,47 @@ final class InterestTermRarityTest extends DbTestCase
             $this->entityManager->persist($entry);
         }
         $this->entityManager->flush();
+    }
+
+    /**
+     * English entries as entries() writes them, flushed and cleared every BATCH so the unit of work never holds the
+     * whole window; the fixtures are found again afterwards.
+     *
+     * @param array<int, string> $wordFor
+     */
+    private function entriesInBatches(int $count, array $wordFor): void
+    {
+        $feedId = $this->feed->requireId();
+        for ($written = 0; $written < $count; $written += self::BATCH) {
+            $feed = $this->entityManager->getReference(Feed::class, $feedId);
+            $carriers = array_map(static fn (int $carrier): int => $carrier - $written, array_keys($wordFor));
+            $this->entries(
+                min(self::BATCH, $count - $written),
+                FeedLanguage::English,
+                array_combine($carriers, array_values($wordFor)),
+                null,
+                $feed,
+            );
+            $this->entityManager->clear();
+        }
+        $this->user = $this->requireFound(User::class, $this->user->requireId());
+        $this->feed = $this->requireFound(Feed::class, $feedId);
+        $this->set = $this->requireFound(InterestTermSet::class, $this->user->requireId());
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T
+     */
+    private function requireFound(string $class, int $id): object
+    {
+        $found = $this->entityManager->find($class, $id);
+        self::assertInstanceOf($class, $found);
+
+        return $found;
     }
 
     private function termRarity(string $word, ?FeedLanguage $language): float
