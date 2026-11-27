@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\EntryLabel;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\KnownSocialCollection;
-use App\Entity\Label;
 use App\Entity\NetworkExclusion;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
@@ -36,6 +34,7 @@ final readonly class AccountWipeRepository
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RecommendationRunLogRepository $logs,
+        private EntryLabelRepository $entryLabels,
     ) {
     }
 
@@ -62,11 +61,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(EntryState::class, $user);
         $this->deleteByUser(EntryShare::class, $user);
         // The labels themselves stay, the default one included: a restore resolves the file's names onto them.
-        $this->entityManager->createQuery(sprintf(
-            'DELETE FROM %s x WHERE x.label IN (SELECT l.id FROM %s l WHERE l.user = :user)',
-            EntryLabel::class,
-            Label::class,
-        ))->setParameter('user', $user)->execute();
+        $this->entryLabels->deleteForUser($user->requireId());
         $this->deleteByUser(TrendingStoryFollow::class, $user);
         $this->deleteByUser(TrendingStoryHide::class, $user);
         // Members, placements, follows and hides of these stories die through story_id's CASCADE.

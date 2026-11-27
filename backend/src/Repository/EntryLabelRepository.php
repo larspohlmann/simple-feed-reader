@@ -99,6 +99,18 @@ final class EntryLabelRepository extends ServiceEntityRepository
             ->execute();
     }
 
+    public function deleteForUser(int $userId): void
+    {
+        $this->getEntityManager()->createQuery(sprintf(
+            'DELETE FROM %s entryLabel '
+            . 'WHERE entryLabel.label IN (SELECT label.id FROM %s label WHERE label.user = :user)',
+            EntryLabel::class,
+            Label::class,
+        ))
+            ->setParameter('user', $userId)
+            ->execute();
+    }
+
     /**
      * Attaches each label to its entry, skipping a pair already stored or repeated.
      *

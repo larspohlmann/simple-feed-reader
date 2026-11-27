@@ -98,12 +98,12 @@ final readonly class EntryStateLine
         }
 
         return array_values(array_filter(
-            array_map(self::parseTrimmedName(...), $names),
+            array_map(self::requireTrimmedName(...), $names),
             static fn (string $name): bool => '' !== $name && mb_strlen($name) <= Label::NAME_MAX_LENGTH,
         ));
     }
 
-    private static function parseTrimmedName(mixed $name): string
+    private static function requireTrimmedName(mixed $name): string
     {
         return \is_string($name) ? trim($name) : throw self::buildNotANameListException();
     }
