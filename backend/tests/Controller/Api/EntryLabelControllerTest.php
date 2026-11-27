@@ -31,7 +31,7 @@ final class EntryLabelControllerTest extends ApiTestCase
         self::assertSame(1, $this->countEntryLabels($label));
     }
 
-    public function testDetachOfAbsentLabelIs204(): void
+    public function testDetachingAnAbsentLabelIs204(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('entry-label-absent@example.com');

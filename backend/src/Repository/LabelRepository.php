@@ -8,10 +8,12 @@ use App\Entity\EntryLabel;
 use App\Entity\EntryState;
 use App\Entity\Label;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Library\Label\Model\LabelTalliesModel;
 use App\Service\Library\Label\Model\LabelTallyModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\Persistence\ManagerRegistry;
@@ -24,6 +26,18 @@ final class LabelRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Label::class);
+    }
+
+    /** Locks the user's row until the transaction ends, so label names for one user are claimed one at a time. */
+    public function lockLabelNames(int $userId): void
+    {
+        $this->getEntityManager()->createQueryBuilder()
+            ->select('u.id')
+            ->from(User::class, 'u')
+            ->andWhere('u.id = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getScalarResult();
     }
 
     public function findOneForUser(int $userId, int $labelId): ?Label
@@ -128,14 +142,14 @@ final class LabelRepository extends ServiceEntityRepository
             ->join(Subscription::class, 's', Join::ON, 's.feed = e.feed AND IDENTITY(s.user) = :user')
             ->andWhere('IDENTITY(es.user) = :user')
             ->andWhere('es.' . $flag . ' = :true')
-            ->andWhere($this->noLabelOfUserOn('es'))
+            ->andWhere($this->buildNoUserLabelPredicate('es'))
             ->setParameter('user', $userId)
             ->setParameter('true', true, Types::BOOLEAN);
 
         return (int) $query->getQuery()->getSingleScalarResult();
     }
 
-    private function noLabelOfUserOn(string $stateAlias): string
+    private function buildNoUserLabelPredicate(string $stateAlias): string
     {
         $labelled = $this->getEntityManager()->createQueryBuilder()
             ->select('1')

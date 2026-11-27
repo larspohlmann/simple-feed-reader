@@ -101,7 +101,7 @@ final class BackupPartWalk
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
         $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
         $sharedAtByEntryId = $this->entryShares->sharedAtByEntryIds($this->userId, $entryIds);
-        $labelsByEntryId = $this->entryLabels->labelsByEntryIds($this->userId, $entryIds);
+        $labelsByEntryId = $this->entryLabels->findLabelsByEntryIds($this->userId, $entryIds);
         $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
         $originsByEntryId = $this->savedOrigins->originsByEntryIds($entryIds);
 

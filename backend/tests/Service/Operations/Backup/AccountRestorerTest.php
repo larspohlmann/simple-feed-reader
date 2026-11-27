@@ -738,7 +738,7 @@ final class AccountRestorerTest extends DbTestCase
         $entryId = $targetRows['entry']->requireId();
         self::assertSame(
             ['Read later', 'Work'],
-            array_column($this->entryLabels()->labelsByEntryIds($targetId, [$entryId])[$entryId] ?? [], 'name'),
+            array_column($this->entryLabels()->findLabelsByEntryIds($targetId, [$entryId])[$entryId] ?? [], 'name'),
         );
         self::assertSame(
             1,
@@ -772,7 +772,7 @@ final class AccountRestorerTest extends DbTestCase
         $targetRows = $this->fixtureRowsOf($this->reload($target));
         self::assertTrue($targetRows['entryState']->isFavorite());
         $entryId = $targetRows['entry']->requireId();
-        self::assertSame([], $this->entryLabels()->labelsByEntryIds($target->requireId(), [$entryId]));
+        self::assertSame([], $this->entryLabels()->findLabelsByEntryIds($target->requireId(), [$entryId]));
     }
 
     public function testAReplaceRestoreDropsTheAccountsOldEntryLabelsAndKeepsItsLabels(): void
@@ -797,7 +797,7 @@ final class AccountRestorerTest extends DbTestCase
             $this->entryPartRestorer()->load($this->reload($account), $entryPart);
         }
 
-        self::assertSame([], $this->entryLabels()->labelsByEntryIds($accountId, [$entryId]));
+        self::assertSame([], $this->entryLabels()->findLabelsByEntryIds($accountId, [$entryId]));
         self::assertSame(
             1,
             $this->scalarInt('SELECT COUNT(*) FROM label WHERE user_id = ? AND name = ?', [$accountId, 'Work']),

@@ -20,11 +20,6 @@ final class EntryLabelRepository extends ServiceEntityRepository
         parent::__construct($registry, EntryLabel::class);
     }
 
-    public function exists(Label $label, Entry $entry): bool
-    {
-        return null !== $this->findOneBy(['label' => $label, 'entry' => $entry]);
-    }
-
     public function removeFor(Label $label, Entry $entry): void
     {
         $this->getEntityManager()->createQueryBuilder()
@@ -42,7 +37,7 @@ final class EntryLabelRepository extends ServiceEntityRepository
      *
      * @return array<int, list<array{id: int, name: string}>> the user's own labels per entry, alphabetical
      */
-    public function labelsByEntryIds(int $userId, array $entryIds): array
+    public function findLabelsByEntryIds(int $userId, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];

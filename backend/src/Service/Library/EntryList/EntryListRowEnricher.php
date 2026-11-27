@@ -62,7 +62,7 @@ final readonly class EntryListRowEnricher
         $entryIds = array_keys($entries);
         $categories = $this->categories->labelsByEntryIds($entryIds);
         $savedSearches = $this->memberships->savedSearchesByEntry($userId, $entryIds);
-        $labels = $this->entryLabels->labelsByEntryIds($userId, $entryIds);
+        $labels = $this->entryLabels->findLabelsByEntryIds($userId, $entryIds);
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->findPendingEntryIds(self::collectTopLevelEntryIds($rows)));

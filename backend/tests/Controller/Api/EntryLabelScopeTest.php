@@ -98,7 +98,7 @@ final class EntryLabelScopeTest extends ApiTestCase
         $firstPageQuery = 'view=favorites&limit=2&label=' . $work->requireId();
         $this->client->request('GET', '/api/entries?' . $firstPageQuery, server: $headers);
         $firstPage = $this->payload($this->client);
-        self::assertSame(['p1', 'p2'], $this->titlesOf($firstPage));
+        self::assertSame(['p1', 'p2'], $this->collectTitles($firstPage));
         self::assertIsString($firstPage['nextCursor']);
 
         $nextPageQuery = $firstPageQuery . '&cursor=' . urlencode($firstPage['nextCursor']);
@@ -138,7 +138,7 @@ final class EntryLabelScopeTest extends ApiTestCase
         $this->client->request('GET', '/api/entries?' . $queryString, server: $headers);
         self::assertResponseIsSuccessful();
 
-        return $this->titlesOf($this->payload($this->client));
+        return $this->collectTitles($this->payload($this->client));
     }
 
     /**
@@ -146,7 +146,7 @@ final class EntryLabelScopeTest extends ApiTestCase
      *
      * @return list<string>
      */
-    private function titlesOf(array $body): array
+    private function collectTitles(array $body): array
     {
         $entries = $body['entries'];
         self::assertIsArray($entries);

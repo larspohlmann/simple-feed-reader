@@ -329,7 +329,7 @@ final class SavedStateMoverTest extends DbTestCase
         /** @var EntryLabelRepository $entryLabels */
         $entryLabels = $this->entityManager->getRepository(EntryLabel::class);
 
-        return array_column($entryLabels->labelsByEntryIds($user->requireId(), [$entryId])[$entryId] ?? [], 'name');
+        return array_column($entryLabels->findLabelsByEntryIds($user->requireId(), [$entryId])[$entryId] ?? [], 'name');
     }
 
     private function mover(): SavedStateMover

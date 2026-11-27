@@ -18,6 +18,7 @@ use App\Service\Ingestion\Language\LanguageGuess;
 use App\Service\Ingestion\Language\PreviewLanguage;
 use App\Service\Library\Label\EntryLabeling;
 use App\Service\Library\Label\LabelEditor;
+use App\Service\Library\Label\LabelNameLock;
 use App\Service\Operations\Backup\Dto\EntryLine;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
@@ -130,9 +131,12 @@ final class RestoreEntryLoaderTest extends TestCase
                 new EntryLabelRepository($this->createStub(ManagerRegistry::class)),
                 new LabelEditor(
                     new LabelRepository($this->createStub(ManagerRegistry::class)),
+                    new LabelNameLock(
+                        $this->createStub(EntityManagerInterface::class),
+                        new LabelRepository($this->createStub(ManagerRegistry::class)),
+                    ),
                     $this->createStub(EntityManagerInterface::class),
                 ),
-                $this->createStub(EntityManagerInterface::class),
             ),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),

@@ -15,7 +15,7 @@ final class UserDefaultLabelListenerTest extends DbTestCase
     {
         $user = $this->persistUserWithLocale('en');
 
-        self::assertSame(['Read later'], $this->labelNamesOf($user));
+        self::assertSame(['Read later'], $this->findLabelNames($user));
     }
 
     #[DataProvider('provideLocalizedNames')]
@@ -23,7 +23,7 @@ final class UserDefaultLabelListenerTest extends DbTestCase
     {
         $user = $this->persistUserWithLocale($locale);
 
-        self::assertSame([$expectedName], $this->labelNamesOf($user));
+        self::assertSame([$expectedName], $this->findLabelNames($user));
     }
 
     /**
@@ -58,7 +58,7 @@ final class UserDefaultLabelListenerTest extends DbTestCase
     /**
      * @return list<string>
      */
-    private function labelNamesOf(User $user): array
+    private function findLabelNames(User $user): array
     {
         $this->entityManager->clear();
 

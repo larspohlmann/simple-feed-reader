@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Library\Label;
 
 use App\Repository\LabelRepository;
+use App\Service\Library\Label\Exception\LabelNameTakenException;
 use App\Service\Library\Label\LabelEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -33,6 +34,18 @@ final class LabelEditorTest extends DbTestCase
         self::assertSame('Fresh', $ensured->getName());
         $found = $this->labels()->findForUserByName($user->requireId(), 'fresh');
         self::assertSame($ensured->requireId(), $found?->requireId());
+    }
+
+    public function testCreateAndRenameWorkThroughTheNameLock(): void
+    {
+        $user = $this->user('label-lock-flow@example.com');
+        $created = $this->editor()->create($user, 'Work');
+
+        $this->editor()->rename($created, 'Office');
+
+        self::assertSame('Office', $created->getName());
+        $this->expectException(LabelNameTakenException::class);
+        $this->editor()->create($user, 'office');
     }
 
     private function editor(): LabelEditor

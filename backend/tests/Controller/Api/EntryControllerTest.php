@@ -1538,7 +1538,7 @@ final class EntryControllerTest extends ApiTestCase
         self::assertSame([], $oldest['labels']);
     }
 
-    public function testLabelsOfAnotherUserNeverShow(): void
+    public function testAnotherUsersLabelsNeverShow(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->bearerAndUser('e-list-labels-mine@example.com');
