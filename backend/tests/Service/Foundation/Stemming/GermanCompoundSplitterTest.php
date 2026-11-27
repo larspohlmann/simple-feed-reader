@@ -18,7 +18,7 @@ final class GermanCompoundSplitterTest extends TestCase
     #[DataProvider('fixtureCompounds')]
     public function testSplitsAWordIntoItsLexiconParts(string $word, array $expectedParts): void
     {
-        $splitter = new GermanCompoundSplitter(StemmingWiring::germanLexicon());
+        $splitter = StemmingWiring::compoundSplitter();
 
         $this->assertSame($expectedParts, $splitter->splitParts($word));
     }

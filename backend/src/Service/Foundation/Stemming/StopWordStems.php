@@ -24,24 +24,24 @@ final readonly class StopWordStems
 
     public function isStopWordStem(string $stem, ?FeedLanguage $language): bool
     {
-        $stopWordStems = $language === null ? $this->cutStems : $this->stemsByLanguage[$language->value];
+        $stems = $language === null ? $this->cutStems : $this->stemsByLanguage[$language->value];
 
-        return isset($stopWordStems[$stem]);
+        return isset($stems[$stem]);
     }
 
     /** @return array<string, array<string, true>> */
     private static function stemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
     {
-        $stopWordStems = [];
+        $stemsByLanguage = [];
         foreach (FeedLanguage::cases() as $language) {
             $stems = array_map(
                 static fn (string $word): string => $stemmer->stem($word, $language),
                 $stopWords->listWords($language),
             );
-            $stopWordStems[$language->value] = array_fill_keys($stems, true);
+            $stemsByLanguage[$language->value] = array_fill_keys($stems, true);
         }
 
-        return $stopWordStems;
+        return $stemsByLanguage;
     }
 
     /** @return array<string, true> */
@@ -51,11 +51,11 @@ final readonly class StopWordStems
         foreach (FeedLanguage::cases() as $language) {
             foreach ($stopWords->listWords($language) as $word) {
                 if (WordStems::isKept(WordStems::bare($word))) {
-                    $cutStems[WordStems::cut($word)] = true;
+                    $cutStems[] = WordStems::cut($word);
                 }
             }
         }
 
-        return $cutStems;
+        return array_fill_keys($cutStems, true);
     }
 }

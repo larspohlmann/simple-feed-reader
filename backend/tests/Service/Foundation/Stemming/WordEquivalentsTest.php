@@ -177,7 +177,7 @@ final class WordEquivalentsTest extends TestCase
         self::assertCount(1, $this->stemsOf('नमस्ते', null));
     }
 
-    public function testEveryCanonicalIsAnOpaqueIdNoMapKeysAndNoLanguageSeeds(): void
+    public function testEveryCanonicalIsAnOpaqueIdNoMapKeysAndNoStopWordStems(): void
     {
         $stopWordStems = StemmingWiring::stopWordStems();
         $stemKeys = self::allStemKeys();
@@ -191,7 +191,7 @@ final class WordEquivalentsTest extends TestCase
         }
     }
 
-    public function testEveryStemKeyIsBareAndNoSeedOfItsLanguage(): void
+    public function testEveryStemKeyIsBareAndNoStopWordStemOfItsLanguage(): void
     {
         $stopWordStems = StemmingWiring::stopWordStems();
         foreach (FeedLanguage::cases() as $language) {

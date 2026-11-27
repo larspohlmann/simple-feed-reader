@@ -42,6 +42,8 @@ interests lands in it, soon after it arrives. Volume matters more than precision
 
 ### 1. Stemming moves to a shared lower module
 
+Landed as `Service/Foundation/Stemming`: `WordStemmer`, `Support/WordStems`, `WordEquivalents`, `GermanCompoundSplitter` and `StopWordStems` (#2583).
+
 `Curation/Trending` already depends on `Curation/Recommendation` (Trending's `StoryTitleParser`/`StoryTitleTask`
 import Recommendation's `ModelReplyJsonDecoder` and `CallPromptModel`), so the stream (owned by Recommendation)
 cannot import Trending. Move the language-aware word handling out of Trending

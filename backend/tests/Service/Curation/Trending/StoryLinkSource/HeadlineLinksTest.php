@@ -30,7 +30,7 @@ final class HeadlineLinksTest extends TestCase
         self::assertFalse((new HeadlineLinks())->admits(new HeadlineOverlapModel(1, 2, 14.0, 35.01)));
     }
 
-    public function testThreeSharedRareWordStemsLinkTwoFeeds(): void
+    public function testThreeSharedRareHeadlineStemsLinkTwoFeeds(): void
     {
         $run = self::dayPair(10, 20, '2031-05-14 09:00:00');
 
