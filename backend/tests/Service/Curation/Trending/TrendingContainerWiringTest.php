@@ -6,13 +6,13 @@ namespace App\Tests\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
 use App\Enum\TrendingWindow;
-use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
-use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\SnapshotBuilder\TrendingSnapshotBuilder;
 use App\Service\Curation\Trending\StoryBuildPolicy\DayStoryBuildPolicy;
 use App\Service\Curation\Trending\StoryBuildPolicy\WeekStoryBuildPolicy;
 use App\Service\Curation\Trending\TrendingRebuild;
+use App\Service\Foundation\Stemming\GermanLexicon\BundledGermanLexicon;
+use App\Service\Foundation\Stemming\GermanLexicon\GermanLexiconInterface;
 use App\Service\Foundation\Text\StopWords\BundledStopWords;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 use App\Tests\DbTestCase;

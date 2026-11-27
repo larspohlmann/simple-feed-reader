@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Curation\Trending;
+namespace App\Service\Foundation\Stemming;
 
-use App\Service\Curation\Trending\GermanLexicon\GermanLexiconInterface;
-use App\Service\Curation\Trending\Model\CompoundSplitModel;
-use App\Service\Curation\Trending\Model\GermanLexiconEntryModel;
-use App\Service\Curation\Trending\Pass\CompoundSplitSearch;
+use App\Service\Foundation\Stemming\GermanLexicon\GermanLexiconInterface;
+use App\Service\Foundation\Stemming\Model\CompoundSplitModel;
+use App\Service\Foundation\Stemming\Model\GermanLexiconEntryModel;
+use App\Service\Foundation\Stemming\Pass\CompoundSplitSearch;
 
 final readonly class GermanCompoundSplitter
 {

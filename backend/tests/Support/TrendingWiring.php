@@ -14,8 +14,6 @@ use App\Repository\TrendingStoryHistoryRepository;
 use App\Service\Curation\Trending\CardLanguage;
 use App\Service\Curation\Trending\FallbackChoice;
 use App\Service\Curation\Trending\FallbackTitles;
-use App\Service\Curation\Trending\GermanCompoundSplitter;
-use App\Service\Curation\Trending\GermanLexicon\BundledGermanLexicon;
 use App\Service\Curation\Trending\HeadlineEquivalents;
 use App\Service\Curation\Trending\HeadlineFiller;
 use App\Service\Curation\Trending\HeadlineMarkers;
@@ -123,12 +121,7 @@ final class TrendingWiring
 
     public static function equivalents(): HeadlineEquivalents
     {
-        return new HeadlineEquivalents(StemmingWiring::stemmer(), new GermanCompoundSplitter(self::germanLexicon()));
-    }
-
-    public static function germanLexicon(): BundledGermanLexicon
-    {
-        return new BundledGermanLexicon(dirname(__DIR__) . '/Fixtures/german-lexicon');
+        return new HeadlineEquivalents(StemmingWiring::stemmer(), StemmingWiring::compoundSplitter());
     }
 
     public static function storyLinks(): StoryLinks

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Trending;
 
 use App\Enum\FeedLanguage;
+use App\Service\Foundation\Stemming\GermanCompoundSplitter;
 use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Foundation\Stemming\WordStemmer;
 use App\Service\Foundation\Text\Support\CasefoldedWords;

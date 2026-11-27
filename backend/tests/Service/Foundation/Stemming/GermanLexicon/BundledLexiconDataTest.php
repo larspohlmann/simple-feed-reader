@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Curation\Trending\GermanLexicon;
+namespace App\Tests\Service\Foundation\Stemming\GermanLexicon;
 
 use PHPUnit\Framework\TestCase;
 
