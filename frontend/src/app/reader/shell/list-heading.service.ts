@@ -27,6 +27,16 @@ import { TrendingBuiltAt } from '../trending/trending-built-at';
 import { TrendingWindowService } from '../trending/trending-window.service';
 import { ListContext } from '../state/list-context';
 import { networkFeedKindLabels, SocialSection, feedAvatarUrl } from '../state/social-sections';
+import { LabelsStore } from '../labels/labels.store';
+import { LabelCollection } from '../labels/labels.models';
+
+/** The label subfolder a Favorites or Kept list is narrowed to, as the heading names and counts it. */
+interface LabelFolder {
+  name: string;
+  count: number;
+}
+
+const COLLECTION_COUNT_FIELD = { favorites: 'favoriteCount', kept: 'keptCount' } as const;
 
 /** The title, counts and refresh times heading one host's list (#2329). */
 @Injectable()
@@ -45,6 +55,7 @@ export class ListHeading {
   private readonly visibilitySwitches = inject(VisibilitySwitchesStore);
   private readonly trendingWindow = inject(TrendingWindowService);
   private readonly trendingBuiltAt = inject(TrendingBuiltAt);
+  private readonly labels = inject(LabelsStore);
 
   private readonly allItemsEntries = computed(() =>
     sumEntries(this.subscriptions.subscriptions(), this.visibilitySwitches.switches()),
@@ -134,8 +145,9 @@ export class ListHeading {
 
   /** Keyed by every kind: a new selection kind must fail to compile here. */
   private readonly titleByKind: BySelectionKind<string> = {
-    favorites: () => this.i18n.translate('reader.favorites'),
-    kept: () => this.i18n.translate('reader.kept'),
+    favorites: (selection) =>
+      this.labelFolder(selection)?.name ?? this.i18n.translate('reader.favorites'),
+    kept: (selection) => this.labelFolder(selection)?.name ?? this.i18n.translate('reader.kept'),
     shared: () => this.i18n.translate('reader.shared'),
     viewed: () => this.i18n.translate('reader.viewed'),
     'for-you': () => this.i18n.translate('reader.forYou'),
@@ -161,6 +173,19 @@ export class ListHeading {
         : this.i18n.translate('reader.feedFallback');
     },
   };
+
+  /** Null for the whole collection, and for a label that no longer exists (a stale bookmark). */
+  private labelFolder(selection: SelectionOf<LabelCollection>): LabelFolder | null {
+    const countIn = COLLECTION_COUNT_FIELD[selection.kind];
+    if (selection.label === 'unlabeled') {
+      return {
+        name: this.i18n.translate('reader.labels.unlabeled'),
+        count: this.labels.unlabeled()[countIn],
+      };
+    }
+    const label = this.labels.labels().find((tally) => tally.id === selection.label);
+    return label === undefined ? null : { name: label.name, count: label[countIn] };
+  }
 
   private networkTitle(selection: SelectionOf<'network'>): string {
     const network = this.networkName(selection.network);
@@ -220,8 +245,10 @@ export class ListHeading {
       const subscription = this.selectedSubscription();
       return bySwitch(selection, subscription?.unreadCount ?? 0, subscription?.entryCount ?? 0);
     },
-    favorites: () => items(this.subscriptions.favoritesCount()),
-    kept: () => items(this.subscriptions.keptCount()),
+    favorites: (selection) =>
+      items(this.labelFolder(selection)?.count ?? this.subscriptions.favoritesCount()),
+    kept: (selection) =>
+      items(this.labelFolder(selection)?.count ?? this.subscriptions.keptCount()),
     shared: () => items(this.subscriptions.sharedCount()),
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>

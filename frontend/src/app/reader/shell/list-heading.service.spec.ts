@@ -29,6 +29,8 @@ import { OpenStory } from '../state/open-story';
 import { StoryCard } from '../trending/trending.models';
 import { FollowedStoriesStore } from '../state/followed-stories.store';
 import { TestListContext } from '../../../testing/list-context-testing';
+import { LabelsStore } from '../labels/labels.store';
+import { LabelTally } from '../labels/labels.models';
 
 const home = (accountId: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =>
   makeSubscription({
@@ -68,6 +70,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       { provide: VisibilitySwitchesStore, useValue: {} },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      { provide: LabelsStore, useValue: {} },
     ],
   });
   return TestBed.inject(ListHeading);
@@ -339,6 +342,7 @@ function headingWith(
       { provide: VisibilitySwitchesStore, useValue: { switches: signal(switches) } },
       { provide: TrendingWindowService, useValue: { window: signal('day') } },
       { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      { provide: LabelsStore, useValue: {} },
     ],
   });
   return TestBed.inject(ListHeading);
@@ -414,6 +418,57 @@ describe('ListHeading for the Shared list (#2007)', () => {
   });
 });
 
+describe('ListHeading for a Favorites or Kept label (#2581)', () => {
+  const work: LabelTally = { id: 3, name: 'Work', favoriteCount: 3, keptCount: 1, articleCount: 4 };
+  const collectionCounts = { favoritesCount: signal(42), keptCount: signal(7) };
+
+  function labelledHeading(selection: Selection): ListHeading {
+    TestBed.overrideProvider(LabelsStore, {
+      useValue: {
+        labels: signal([work]),
+        unlabeled: signal({ favoriteCount: 5, keptCount: 2 }),
+      },
+    });
+    return headingWith(selection, collectionCounts);
+  }
+
+  it('names and counts the label inside Favorites', () => {
+    const heading = labelledHeading({ kind: 'favorites', label: 3 });
+
+    expect(heading.title()).toBe('Work');
+    expect(heading.tabTitle()).toBe('Work');
+    expect(heading.titleCount()).toEqual({ value: 3, counts: 'items' });
+  });
+
+  it('counts the same label by its kept tally inside Kept', () => {
+    expect(labelledHeading({ kind: 'kept', label: 3 }).titleCount()).toEqual({
+      value: 1,
+      counts: 'items',
+    });
+  });
+
+  it('names and counts the posts without a label', () => {
+    const heading = labelledHeading({ kind: 'favorites', label: 'unlabeled' });
+
+    expect(heading.title()).toBe('Unlabeled');
+    expect(heading.titleCount()).toEqual({ value: 5, counts: 'items' });
+  });
+
+  it('falls back to the whole collection for a label that no longer exists', () => {
+    const heading = labelledHeading({ kind: 'kept', label: 99 });
+
+    expect(heading.title()).toBe('Kept');
+    expect(heading.titleCount()).toEqual({ value: 7, counts: 'items' });
+  });
+
+  it('heads the whole collection when no label is chosen', () => {
+    const heading = labelledHeading({ kind: 'favorites' });
+
+    expect(heading.title()).toBe('Favorites');
+    expect(heading.titleCount()).toEqual({ value: 42, counts: 'items' });
+  });
+});
+
 describe('ListHeading for the Trending list (#2017)', () => {
   const storyOfThree = (id: number) =>
     aStory({
@@ -441,6 +496,7 @@ describe('ListHeading for the Trending list (#2017)', () => {
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: TrendingWindowService, useValue: { window: signal('day') } },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+        { provide: LabelsStore, useValue: {} },
       ],
     });
     return TestBed.inject(ListHeading);
@@ -481,6 +537,7 @@ describe('ListHeading last refreshed on Trending (#2264)', () => {
         { provide: SavedSearchesStore, useValue: {} },
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+        { provide: LabelsStore, useValue: {} },
       ],
     });
     return TestBed.inject(ListHeading);
@@ -525,6 +582,7 @@ describe("ListHeading over a Trending story's list (#2329)", () => {
         { provide: VisibilitySwitchesStore, useValue: {} },
         { provide: TrendingWindowService, useValue: { window: signal('day') } },
         { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+        { provide: LabelsStore, useValue: {} },
       ],
     });
     return TestBed.inject(ListHeading);
