@@ -121,8 +121,11 @@ describe('SocialCountsComponent', () => {
     expect(likeNumber(element)).toBeNull();
   });
 
-  it('shows nothing for a post the user cannot like until the counts arrive', () => {
-    expect(show(post({ canLike: false, isOwn: false })).querySelector('.row')).toBeNull();
+  it('offers the local like for a post the user cannot like there until the counts arrive', () => {
+    const element = show(post({ canLike: false, isOwn: false }));
+
+    expect(element.querySelectorAll('.count')).toHaveLength(0);
+    expect(likeButton(element)!.getAttribute('aria-label')).toBe('Like');
   });
 
   it('orders reposts, replies and quotes, then the like at the right end', () => {
@@ -182,12 +185,24 @@ describe('SocialCountsComponent', () => {
     expect(likeNumber(element)).toBeNull();
   });
 
-  it('shows the like count as a plain count to a user without an account there', () => {
-    show(post({ canLike: false, isOwn: false }));
+  it('gives a user without an account there the local like, with the live count and no second thumb', () => {
+    const entry = post({ canLike: false, isOwn: false });
+    show(entry);
     const element = settle(loaded());
+    const button = likeButton(element)!;
 
-    expect(likeButton(element)).toBeNull();
-    expect(labels(element)).toEqual(['5 reposts', '7 replies', '2 quotes', '41 likes']);
+    expect(labels(element)).toEqual(['5 reposts', '7 replies', '2 quotes']);
+    expect(likeNumber(element)).toBe('41');
+    expect(button.getAttribute('title')).toBe('Like — kept here, it shapes your For you picks');
+    button.click();
+    expect(actions.like).toHaveBeenCalledWith(entry);
+  });
+
+  it('marks a locally liked post the user cannot like there pressed', () => {
+    const element = show(anEntry({ ...post({ canLike: false }), isLiked: true }));
+
+    expect(likeButton(element)!.getAttribute('aria-pressed')).toBe('true');
+    expect(likeButton(element)!.getAttribute('aria-label')).toBe('Unlike');
   });
 
   it('likes through the entry actions, named and hinted for its network', () => {

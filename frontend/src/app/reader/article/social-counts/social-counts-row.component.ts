@@ -67,6 +67,7 @@ export class SocialCountsRowComponent {
   readonly myVote = input<VoteValue | null>(null);
   readonly vote = input<((to: VoteValue) => Observable<unknown>) | null>(null);
   readonly like = input<(() => Observable<unknown>) | null>(null);
+  readonly likeTarget = input<SocialNetworkName | 'local' | null>(null);
   readonly repostToggled = output<void>();
   readonly replyRequested = output<void>();
   readonly quoteRequested = output<void>();
@@ -109,7 +110,7 @@ export class SocialCountsRowComponent {
     return this.shares() ? pills : pills.slice(0, 1);
   });
   protected readonly likeKey = computed(
-    () => `${this.liked() ? 'unlike' : 'like'}.${this.network()}`,
+    () => `${this.liked() ? 'unlike' : 'like'}.${this.likeTarget() ?? this.network()}`,
   );
   protected readonly shownCounts = computed<ShownCount[]>(() => {
     const counts = this.counts();
