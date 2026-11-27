@@ -20,6 +20,7 @@ use App\Service\Operations\Backup\BackupInspector;
 use App\Service\Operations\Backup\EntryPartRestorer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SavedPostFixtures;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -157,7 +158,7 @@ final class SavedFeedBackupTest extends DbTestCase
         $origin = new EntryOrigin('Heise', 'https://heise.example/favicon.ico');
         $this->entityManager->persist(new SavedEntryOrigin($entry, $origin));
         $state = SavedPostFixtures::state($this->entityManager, $user, $entry);
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $this->entityManager->flush();
     }
 

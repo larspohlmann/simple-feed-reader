@@ -22,6 +22,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SharedLinks;
+use App\Tests\Support\StateMarks;
 
 final class RecommendationCandidateLoaderTest extends DbTestCase
 {
@@ -88,7 +89,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $favorited);
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -101,7 +102,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $kept);
-        $state->markKept();
+        StateMarks::kept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -200,8 +201,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $untouched);
-        $state->clearFavorite();
-        $state->clearKept();
+        StateMarks::unfavorite($state);
+        StateMarks::unkept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

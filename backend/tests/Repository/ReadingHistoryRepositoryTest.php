@@ -19,6 +19,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\SavedPostFixtures;
+use App\Tests\Support\StateMarks;
 
 /** The reader's history reads break a tie on the instant by the newest entry (#2007). */
 final class ReadingHistoryRepositoryTest extends DbTestCase
@@ -122,7 +123,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testADownvoteIsNotLiked(): void
     {
         $entry = $this->persistEntry('downvoted');
-        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         LikedPostFixtures::persistVote(
             $this->entityManager,
             $this->user,
@@ -139,7 +140,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testAnUpvoteRecastToADownvoteReturnsToKept(): void
     {
         $entry = $this->persistEntry('recast');
-        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         $vote = $this->upvoteEntry($entry, '2026-10-02 10:00:00');
         $this->entityManager->flush();
 
@@ -156,7 +157,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testALikedFavoriteIsNotInLiked(): void
     {
         $entry = $this->persistEntry('favorite');
-        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         $this->likeEntry($entry, '2026-10-02 10:00:00');
         $this->entityManager->flush();
 
@@ -190,7 +191,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         $kept = $this->persistEntry('kept');
         $viewed = $this->persistEntry('viewed');
-        SavedPostFixtures::state($this->entityManager, $this->user, $kept)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $kept));
         SavedPostFixtures::state($this->entityManager, $this->user, $viewed)
             ->markViewed(new \DateTimeImmutable('2026-10-02 09:00:00'));
         $this->likeEntry($kept, '2026-10-02 10:00:00');
@@ -205,7 +206,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         $kept = $this->persistEntry('kept');
         $viewed = $this->persistEntry('viewed');
-        SavedPostFixtures::state($this->entityManager, $this->user, $kept)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $kept));
         SavedPostFixtures::state($this->entityManager, $this->user, $viewed)
             ->markViewed(new \DateTimeImmutable('2026-10-02 09:00:00'));
         $this->likeEntry($this->persistEntry('liked'), '2026-10-02 10:00:00');
@@ -222,7 +223,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         $stranger = $this->persistStranger();
         $entry = $this->persistEntry('kept');
-        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         LikedPostFixtures::persistLike(
             $this->entityManager,
             $stranger,
@@ -335,7 +336,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
         $this->markViewed($lower, '2026-10-02 09:00:00');
-        $this->markViewed($higher, '2026-10-02 09:00:00')->markFavorite();
+        StateMarks::favorite($this->markViewed($higher, '2026-10-02 09:00:00'));
         $this->entityManager->flush();
 
         self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
@@ -349,7 +350,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
         $this->markViewed($lower, '2026-10-02 09:00:00');
-        $this->markViewed($higher, '2026-10-02 09:00:00')->markKept();
+        StateMarks::kept($this->markViewed($higher, '2026-10-02 09:00:00'));
         $this->entityManager->flush();
 
         self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
@@ -379,7 +380,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testAViewedAndKeptLowerCopyKeepsThePostOutOfViewed(): void
     {
         [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
-        $this->markViewed($lower, '2026-10-02 09:00:00')->markKept();
+        StateMarks::kept($this->markViewed($lower, '2026-10-02 09:00:00'));
         $this->markViewed($higher, '2026-10-02 09:00:00');
         $this->entityManager->flush();
 
@@ -391,7 +392,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     {
         [$followed, $left] = $this->persistPostInAFollowedAndALeftFeed();
         $this->markViewed($followed, '2026-10-02 09:00:00');
-        $this->markViewed($left, '2026-10-02 09:00:00')->markFavorite();
+        StateMarks::favorite($this->markViewed($left, '2026-10-02 09:00:00'));
         $this->entityManager->flush();
 
         self::assertSame(
@@ -403,7 +404,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testAFavoriteLowerCopyKeepsThePostOutOfViewed(): void
     {
         [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
-        SavedPostFixtures::state($this->entityManager, $this->user, $lower)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $lower));
         $this->markViewed($higher, '2026-10-02 09:00:00');
         $this->entityManager->flush();
 
@@ -435,7 +436,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testAFavoriteCopyInAFeedTheReaderLeftDoesNotHideTheLikedCopy(): void
     {
         [$followed, $left] = $this->persistPostInAFollowedAndALeftFeed();
-        SavedPostFixtures::state($this->entityManager, $this->user, $left)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $left));
         $this->likeItemOf($followed);
         $this->entityManager->flush();
 
@@ -462,7 +463,7 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     public function testALikedPostWithAFavoriteHigherCopyIsOnlyInFavorites(): void
     {
         [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
-        SavedPostFixtures::state($this->entityManager, $this->user, $higher)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $higher));
         $this->likeItemOf($lower);
         $this->entityManager->flush();
 

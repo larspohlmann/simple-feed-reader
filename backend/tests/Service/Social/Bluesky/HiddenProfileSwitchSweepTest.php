@@ -45,6 +45,7 @@ use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\StubHiddenProfiles;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -114,7 +115,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $rssId = $rss->requireId();
         $rssFeedId = $rss->getFeed()->requireId();
         $saved = new EntryState($user, $this->entry($rss->getFeed()));
-        $saved->markFavorite();
+        StateMarks::favorite($saved);
         $saved->hide(new \DateTimeImmutable(self::NOW));
         $this->entityManager->persist($saved);
         $this->entityManager->flush();
@@ -147,7 +148,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $older = new Entry($rss->getFeed(), self::RUSTY_OLDER_POST, null, 'Older than the first page', $at, $at);
         $this->entityManager->persist($older);
         $favourite = new EntryState($user, $older);
-        $favourite->markFavorite();
+        StateMarks::favorite($favourite);
         $this->entityManager->persist($favourite);
         $this->entityManager->flush();
         $this->sweep(1);

@@ -21,6 +21,7 @@ use App\Repository\RecommendationItemRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\StateMarks;
 
 final class RecommendationFeedTest extends DbTestCase
 {
@@ -204,9 +205,9 @@ final class RecommendationFeedTest extends DbTestCase
         $this->entityManager->flush();
 
         $favoriteState = new EntryState($this->user, $favoriteEntry);
-        $favoriteState->markFavorite();
+        StateMarks::favorite($favoriteState);
         $keptState = new EntryState($this->user, $entryKept);
-        $keptState->markKept();
+        StateMarks::kept($keptState);
         $viewedState = new EntryState($this->user, $entryViewed);
         $viewedState->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
         $this->entityManager->persist($favoriteState);
@@ -249,6 +250,27 @@ final class RecommendationFeedTest extends DbTestCase
 
         self::assertSame($this->subscription->getId(), $byGuid['old']->row->subscription->id);
         self::assertSame('Example', $byGuid['old']->row->subscription->title);
+    }
+
+    public function testALocallyLikedPickHydratesTheLikeMark(): void
+    {
+        $likedEntry = $this->entry('liked');
+        $plainEntry = $this->entry('plain');
+        $likedState = new EntryState($this->user, $likedEntry);
+        StateMarks::liked($likedState, new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        $this->entityManager->persist($likedState);
+        $this->entityManager->flush();
+        $run = $this->seedRun($this->user, RunStatus::Completed);
+        $this->item($run, $likedEntry, 1, 'reason liked');
+        $this->item($run, $plainEntry, 2, 'reason plain');
+
+        $rows = $this->repository()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
+
+        $likes = [];
+        foreach ($rows as $row) {
+            $likes[$row->row->entry->getGuid()] = $row->row->marks->isLiked;
+        }
+        self::assertEquals(['liked' => true, 'plain' => false], $likes);
     }
 
     public function testUnreadOnlyDropsEveryPickTheReaderHasAlreadyRead(): void

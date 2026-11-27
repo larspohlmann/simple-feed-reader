@@ -35,6 +35,7 @@ use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
 use Monolog\Handler\TestHandler;
@@ -397,7 +398,7 @@ final class SocialImporterTest extends DbTestCase
         self::assertNotNull($feed);
         $guid = 'at://did:plc:carol/app.bsky.feed.post/1';
         $post = SavedPostFixtures::entry($this->entityManager, $feed, $guid, null);
-        SavedPostFixtures::state($this->entityManager, $this->user, $post)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $post));
         $this->entityManager->flush();
 
         $result = $this->importer()->import(

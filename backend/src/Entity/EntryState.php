@@ -71,29 +71,21 @@ final class EntryState
         return $this->isFavorite;
     }
 
-    public function markFavorite(): void
-    {
-        $this->isFavorite = true;
-    }
-
-    public function clearFavorite(): void
-    {
-        $this->isFavorite = false;
-    }
-
     public function isKept(): bool
     {
         return $this->isKept;
     }
 
-    public function markKept(): void
+    public function marks(): EntryMarks
     {
-        $this->isKept = true;
+        return new EntryMarks($this->isFavorite, $this->isKept, $this->likedAt);
     }
 
-    public function clearKept(): void
+    public function replaceMarks(EntryMarks $marks): void
     {
-        $this->isKept = false;
+        $this->isFavorite = $marks->isFavorite;
+        $this->isKept = $marks->isKept;
+        $this->likedAt = $marks->likedAt;
     }
 
     public function isLiked(): bool
@@ -104,16 +96,6 @@ final class EntryState
     public function getLikedAt(): ?\DateTimeImmutable
     {
         return $this->likedAt;
-    }
-
-    public function markLiked(\DateTimeImmutable $when): void
-    {
-        $this->likedAt ??= $when;
-    }
-
-    public function clearLiked(): void
-    {
-        $this->likedAt = null;
     }
 
     public function getHiddenAt(): ?\DateTimeImmutable

@@ -35,6 +35,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\CanonicalItems;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\StateMarks;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -506,9 +507,9 @@ final class EntryListTest extends DbTestCase
         $this->entry('plain', '2026-07-07T00:00:00Z');
 
         $favoriteState = new EntryState($this->user, $favorite);
-        $favoriteState->markFavorite();
+        StateMarks::favorite($favoriteState);
         $keptState = new EntryState($this->user, $kept);
-        $keptState->markKept();
+        StateMarks::kept($keptState);
         $this->entityManager->persist($favoriteState);
         $this->entityManager->persist($keptState);
         $this->entityManager->flush();
@@ -533,7 +534,7 @@ final class EntryListTest extends DbTestCase
         $liked = $this->entry('liked', '2026-07-05T00:00:00Z');
         $this->entry('plain', '2026-07-06T00:00:00Z');
         $state = new EntryState($this->user, $liked);
-        $state->markLiked(new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        StateMarks::liked($state, new \DateTimeImmutable('2026-11-27T10:00:00Z'));
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -898,7 +899,7 @@ final class EntryListTest extends DbTestCase
         );
         $this->entityManager->persist($entryB);
         $favoriteState = new EntryState($this->user, $entryB);
-        $favoriteState->markFavorite();
+        StateMarks::favorite($favoriteState);
         $this->entityManager->persist($favoriteState);
         $this->entityManager->flush();
 
@@ -937,7 +938,7 @@ final class EntryListTest extends DbTestCase
         );
         $strangerState = new EntryState($stranger, $entry);
         $strangerState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $strangerState->markFavorite();
+        StateMarks::favorite($strangerState);
         $this->entityManager->persist($strangerState);
         $this->entityManager->flush();
 
@@ -1048,7 +1049,7 @@ final class EntryListTest extends DbTestCase
     private function favorited(Entry $entry): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $state->markFavorite();
+        StateMarks::favorite($state);
 
         return $state;
     }

@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -42,8 +43,8 @@ final class RetentionRepositoryTest extends DbTestCase
         $readIds = $this->idsOf([$plain, $read, $favourite, $kept, $shared]);
         $now = new \DateTimeImmutable(self::FETCHED_AT);
         $this->state($read)->hide($now);
-        $this->state($favourite)->markFavorite();
-        $this->state($kept)->markKept();
+        StateMarks::favorite($this->state($favourite));
+        StateMarks::kept($this->state($kept));
         $this->entityManager->persist(new EntryShare($this->user, $shared, $now));
         $this->entityManager->flush();
 

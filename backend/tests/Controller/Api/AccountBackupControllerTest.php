@@ -15,6 +15,7 @@ use App\Service\Operations\Backup\AccountBackupExporter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\BackupArchiveReader;
 use App\Tests\Support\CorruptGzip;
+use App\Tests\Support\StateMarks;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class AccountBackupControllerTest extends ApiTestCase
@@ -44,7 +45,7 @@ final class AccountBackupControllerTest extends ApiTestCase
         );
         $entityManager->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $entityManager->persist($state);
         $entityManager->flush();
     }

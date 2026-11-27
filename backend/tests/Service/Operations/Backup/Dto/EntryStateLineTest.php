@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Service\Operations\Backup\Dto\EntryStateLine;
 use App\Service\Operations\Backup\Exception\InvalidBackupException;
 use App\Tests\Support\BackupLineRecords;
+use App\Tests\Support\StateMarks;
 use PHPUnit\Framework\TestCase;
 
 final class EntryStateLineTest extends TestCase
@@ -16,7 +17,7 @@ final class EntryStateLineTest extends TestCase
     {
         $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00+02:00'));
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $state->markViewed(new \DateTimeImmutable('2026-08-04T08:30:00Z'));
 
         self::assertSame(
@@ -33,7 +34,7 @@ final class EntryStateLineTest extends TestCase
     public function testAKeptStateWritesNoInstants(): void
     {
         $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
-        $state->markKept();
+        StateMarks::kept($state);
 
         self::assertSame(
             sprintf(
@@ -49,7 +50,7 @@ final class EntryStateLineTest extends TestCase
     public function testALikedStateRoundTripsItsInstant(): void
     {
         $state = new EntryState(BackupLineRecords::user(), BackupLineRecords::entry());
-        $state->markLiked(new \DateTimeImmutable('2026-11-27T10:00:00+01:00'));
+        StateMarks::liked($state, new \DateTimeImmutable('2026-11-27T10:00:00+01:00'));
 
         $written = EntryStateLine::fromState($state, 'https://one.example/rss', [])->toBackupLine();
         /** @var array<string, mixed> $decoded */

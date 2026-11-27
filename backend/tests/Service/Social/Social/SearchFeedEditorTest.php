@@ -29,6 +29,7 @@ use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\SocialRuleWiring;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -165,9 +166,9 @@ final class SearchFeedEditorTest extends DbTestCase
         $gone = $this->post($subscription, 'gone', '<p>An rss gazette</p>', null)->requireId();
         $alsoGone = $this->post($subscription, 'also-gone', '<p>rss and atom</p>', null)->requireId();
         $favourite = $this->state($this->post($subscription, 'favourite', '<p>rss gazette</p>', null));
-        $favourite->markFavorite();
+        StateMarks::favorite($favourite);
         $kept = $this->state($this->post($subscription, 'kept', '<p>rss gazette</p>', null));
-        $kept->markKept();
+        StateMarks::kept($kept);
         $this->entityManager->flush();
 
         $this->editor()->requery($subscription, '"rss reader" -gazette');

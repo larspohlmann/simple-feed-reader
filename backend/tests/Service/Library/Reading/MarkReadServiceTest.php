@@ -24,6 +24,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RequiresServices;
+use App\Tests\Support\StateMarks;
 
 final class MarkReadServiceTest extends DbTestCase
 {
@@ -136,8 +137,8 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, , $old] = $this->seed();
         $state = new EntryState($user, $old);
         $state->markUnread();
-        $state->markFavorite();
-        $state->markKept();
+        StateMarks::favorite($state);
+        StateMarks::kept($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

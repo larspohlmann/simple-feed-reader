@@ -25,6 +25,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SavedPostFixtures;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -156,7 +157,7 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertNotNull($home);
         $guid = 'at://did:plc:x/app.bsky.feed.post/1';
         $post = SavedPostFixtures::entry($this->entityManager, $home->getFeed(), $guid, null);
-        SavedPostFixtures::state($this->entityManager, $this->user, $post)->markKept();
+        StateMarks::kept(SavedPostFixtures::state($this->entityManager, $this->user, $post));
         $this->entityManager->flush();
 
         $this->editor()->disconnect($account);

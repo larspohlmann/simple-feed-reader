@@ -54,12 +54,14 @@ final readonly class EntryStateUpdater
 
     private function applyMarks(EntryState $state, EntryStateChangeModel $change): void
     {
+        $marks = $state->marks();
         if ($change->isFavorite !== null) {
-            $change->isFavorite ? $state->markFavorite() : $state->clearFavorite();
+            $marks = $marks->withFavorite($change->isFavorite);
         }
         if ($change->isKept !== null) {
-            $change->isKept ? $state->markKept() : $state->clearKept();
+            $marks = $marks->withKept($change->isKept);
         }
+        $state->replaceMarks($marks);
     }
 
     private function applyShared(User $user, EntryListRow $row, EntryStateChangeModel $change): ?\DateTimeImmutable

@@ -23,6 +23,7 @@ use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\UserFactory;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -317,9 +318,9 @@ final class SocialFeedRepositoryTest extends DbTestCase
     {
         $search = $this->socialFeed($this->account, SocialFeedKind::Search, 'rss');
         $favourite = new EntryState($this->user, $this->post($search->getFeed(), 'favourite', null, null));
-        $favourite->markFavorite();
+        StateMarks::favorite($favourite);
         $kept = new EntryState($this->user, $this->post($search->getFeed(), 'kept', null, null));
-        $kept->markKept();
+        StateMarks::kept($kept);
         $this->entityManager->persist($favourite);
         $this->entityManager->persist($kept);
         $shared = $this->post($search->getFeed(), 'shared', null, null);

@@ -6,25 +6,27 @@ namespace App\Tests\Entity;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
+use App\Entity\EntryMarks;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\User;
+use App\Tests\Support\StateMarks;
 use PHPUnit\Framework\TestCase;
 
 final class EntryStateTest extends TestCase
 {
-    public function testMarkLikedKeepsTheFirstInstant(): void
+    public function testReplacingTheMarksSetsAndClearsTheLike(): void
     {
         $state = $this->makeState();
-        $first = new \DateTimeImmutable('2026-11-27T10:00:00Z');
+        $likedAt = new \DateTimeImmutable('2026-11-27T10:00:00Z');
 
-        $state->markLiked($first);
-        $state->markLiked(new \DateTimeImmutable('2026-11-27T11:00:00Z'));
+        $state->replaceMarks(new EntryMarks(false, false, $likedAt));
 
         self::assertTrue($state->isLiked());
-        self::assertEquals($first, $state->getLikedAt());
+        self::assertEquals($likedAt, $state->getLikedAt());
+        self::assertEquals(new EntryMarks(false, false, $likedAt), $state->marks());
 
-        $state->clearLiked();
+        $state->replaceMarks(EntryMarks::none());
 
         self::assertFalse($state->isLiked());
         self::assertNull($state->getLikedAt());
@@ -115,7 +117,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
 
-        $state->markFavorite();
+        StateMarks::favorite($state);
 
         self::assertTrue($state->isFavorite());
         self::assertFalse($state->isKept());
@@ -125,9 +127,9 @@ final class EntryStateTest extends TestCase
     public function testClearingAFavoriteUndoesIt(): void
     {
         $state = $this->makeState();
-        $state->markFavorite();
+        StateMarks::favorite($state);
 
-        $state->clearFavorite();
+        StateMarks::unfavorite($state);
 
         self::assertFalse($state->isFavorite());
     }
@@ -136,7 +138,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
 
-        $state->markKept();
+        StateMarks::kept($state);
 
         self::assertTrue($state->isKept());
         self::assertFalse($state->isFavorite());
@@ -146,9 +148,9 @@ final class EntryStateTest extends TestCase
     public function testClearingKeptUndoesIt(): void
     {
         $state = $this->makeState();
-        $state->markKept();
+        StateMarks::kept($state);
 
-        $state->clearKept();
+        StateMarks::unkept($state);
 
         self::assertFalse($state->isKept());
     }
@@ -177,7 +179,7 @@ final class EntryStateTest extends TestCase
     public function testRestoringAReadMarkLeavesTheOtherFlagsAlone(): void
     {
         $state = $this->makeState();
-        $state->markFavorite();
+        StateMarks::favorite($state);
 
         $readAt = new \DateTimeImmutable('2026-08-02T00:00:00Z');
 

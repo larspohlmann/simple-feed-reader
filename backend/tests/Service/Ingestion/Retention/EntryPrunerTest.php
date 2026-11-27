@@ -37,6 +37,7 @@ use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\LemmyPostEntries;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StateMarks;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
@@ -270,7 +271,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
         $state = new EntryState($user, $favorite);
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
@@ -390,9 +391,9 @@ final class EntryPrunerTest extends DbTestCase
         $oldButRead = $this->seedEntry($feed, 'old-read', $old);
 
         $favoriteState = new EntryState($user, $favorite);
-        $favoriteState->markFavorite();
+        StateMarks::favorite($favoriteState);
         $keptState = new EntryState($user, $kept);
-        $keptState->markKept();
+        StateMarks::kept($keptState);
         $readState = new EntryState($user, $oldButRead);
         $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->entityManager->persist($favoriteState);
@@ -447,7 +448,7 @@ final class EntryPrunerTest extends DbTestCase
         $aliceRead = new EntryState($alice, $shared);
         $aliceRead->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $bobKept = new EntryState($bob, $shared);
-        $bobKept->markKept();
+        StateMarks::kept($bobKept);
         $this->entityManager->persist($aliceRead);
         $this->entityManager->persist($bobKept);
         $this->entityManager->flush();
@@ -698,7 +699,7 @@ final class EntryPrunerTest extends DbTestCase
         $unfavourited = $this->persistEntry($saved, 'unfavourited', $this->clock->now());
         $this->persistEntry($otherSaved, 'unkept', $this->clock->now());
         $state = new EntryState($user, $kept);
-        $state->markKept();
+        StateMarks::kept($state);
         $this->entityManager->persist($state);
         $this->entityManager->persist(new EntryState($user, $unfavourited));
         $this->entityManager->flush();
@@ -728,7 +729,7 @@ final class EntryPrunerTest extends DbTestCase
         // One of the two is kept, so it survives despite being beyond the cap;
         // its unprotected sibling is the only entry this prune may delete.
         $keptState = new EntryState($user, $protected);
-        $keptState->markKept();
+        StateMarks::kept($keptState);
         $this->entityManager->persist($keptState);
         $this->entityManager->flush();
 
@@ -781,7 +782,7 @@ final class EntryPrunerTest extends DbTestCase
         $favorite = $this->seedEntry($feed, 'favorite-newest', $this->daysAgo(1));
 
         $favoriteState = new EntryState($user, $favorite);
-        $favoriteState->markFavorite();
+        StateMarks::favorite($favoriteState);
         $this->entityManager->persist($favoriteState);
         $this->entityManager->flush();
 

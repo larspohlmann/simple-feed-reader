@@ -6,6 +6,7 @@ namespace App\Service\Library\SavedPosts;
 
 use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
+use App\Entity\EntryMarks;
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Repository\EntryLabelRepository;
@@ -84,34 +85,14 @@ final readonly class SavedStateMover
         if (null === $source || null === $target) {
             return;
         }
-        self::moveFlags($source, $target);
-        self::moveLike($source, $target);
+        self::moveMarks($source, $target);
         self::copyReading($source, $target);
     }
 
-    private static function moveFlags(EntryState $source, EntryState $target): void
+    private static function moveMarks(EntryState $source, EntryState $target): void
     {
-        if ($source->isFavorite()) {
-            $target->markFavorite();
-        }
-        if ($source->isKept()) {
-            $target->markKept();
-        }
-        $source->clearFavorite();
-        $source->clearKept();
-    }
-
-    private static function moveLike(EntryState $source, EntryState $target): void
-    {
-        $sourceLikedAt = $source->getLikedAt();
-        if (null === $sourceLikedAt) {
-            return;
-        }
-        $targetLikedAt = $target->getLikedAt();
-        $earliest = null !== $targetLikedAt && $targetLikedAt < $sourceLikedAt ? $targetLikedAt : $sourceLikedAt;
-        $target->clearLiked();
-        $target->markLiked($earliest);
-        $source->clearLiked();
+        $target->replaceMarks($target->marks()->withMergedFrom($source->marks()));
+        $source->replaceMarks(EntryMarks::none());
     }
 
     private static function copyReading(EntryState $source, EntryState $target): void

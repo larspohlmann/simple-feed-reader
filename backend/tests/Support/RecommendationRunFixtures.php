@@ -164,7 +164,7 @@ final readonly class RecommendationRunFixtures
         for ($index = 0; $index < $count; $index++) {
             $entry = $this->entry($feed, $feedSlug . '-' . $user->getEmail() . '-' . $index, $count - $index);
             $state = new EntryState($user, $entry);
-            $state->markFavorite();
+            StateMarks::favorite($state);
             $this->entityManager->persist($state);
             $entries[] = $entry;
         }

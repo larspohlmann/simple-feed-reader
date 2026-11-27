@@ -41,6 +41,7 @@ use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StateMarks;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
 use Psr\Log\LogLevel;
@@ -440,7 +441,9 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         $entry = $this->favouriteIn($this->subscribedArtFeed(), 'at://did:plc:carol/app.bsky.feed.post/1');
         $this->stampAnHourAgo();
-        $this->stateOf($entry)?->clearFavorite();
+        $state = $this->stateOf($entry);
+        self::assertNotNull($state);
+        StateMarks::unfavorite($state);
         $logger = new RecordingLogger();
         $network = new StubSocialCandidates(self::noCandidates(), new \LogicException('Unexpected answer shape.'));
 
@@ -546,7 +549,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     private function favouriteIn(Feed $feed, string $guid): Entry
     {
         $entry = SavedPostFixtures::entry($this->entityManager, $feed, $guid, null);
-        SavedPostFixtures::state($this->entityManager, $this->user, $entry)->markFavorite();
+        StateMarks::favorite(SavedPostFixtures::state($this->entityManager, $this->user, $entry));
         $this->entityManager->flush();
 
         return $entry;

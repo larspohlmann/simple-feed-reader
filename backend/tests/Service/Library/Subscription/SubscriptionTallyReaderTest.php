@@ -18,6 +18,7 @@ use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\StateMarks;
 
 final class SubscriptionTallyReaderTest extends DbTestCase
 {
@@ -34,7 +35,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $this->entry($feed, 'unread');
         $state = new EntryState($user, $read);
         $state->hide($when);
-        $state->markFavorite();
+        StateMarks::favorite($state);
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 

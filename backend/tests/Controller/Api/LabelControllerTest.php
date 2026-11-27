@@ -12,6 +12,7 @@ use App\Entity\Label;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\StateMarks;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -231,10 +232,10 @@ final class LabelControllerTest extends ApiTestCase
     {
         $state = new EntryState($user, $entry);
         if ($favorite) {
-            $state->markFavorite();
+            StateMarks::favorite($state);
         }
         if ($kept) {
-            $state->markKept();
+            StateMarks::kept($state);
         }
         $this->entityManager()->persist($state);
         $this->entityManager()->flush();
