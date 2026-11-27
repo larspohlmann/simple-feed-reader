@@ -3581,7 +3581,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       (fixture.nativeElement as HTMLElement)
-        .querySelector<HTMLAnchorElement>('app-sidebar a.nav.active')!
+        .querySelector<HTMLAnchorElement>('app-sidebar .all-head.current > a.section-link')!
         .click();
       await fixture.whenStable();
 

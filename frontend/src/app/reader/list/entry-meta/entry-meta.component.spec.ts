@@ -128,10 +128,8 @@ describe('EntryMetaComponent', () => {
       expect(like.tagName).toBe('APP-ENTRY-LIKE');
       expect(like.querySelectorAll('app-entry-like').length).toBe(0);
       expect(actions.querySelectorAll('app-entry-like').length).toBe(1);
-      expect(
-        like.querySelector('.count')!.compareDocumentPosition(like.querySelector('app-icon')!) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      expect(like.classList).toContain('count-start');
+      expect(like.querySelectorAll('.count').length).toBe(1);
       expect(like.querySelector('button')?.getAttribute('aria-label')).toBe(
         'Like on Bluesky, 47 likes',
       );
