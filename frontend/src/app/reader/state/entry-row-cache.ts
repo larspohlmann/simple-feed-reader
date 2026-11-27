@@ -30,8 +30,8 @@ export interface RowSaveOutcome {
   readonly onFailed?: (error: HttpErrorResponse) => void;
 }
 
-/** What a like's caller hears: that it went on the wire (a dropped like never does), and why it failed. */
-export interface LikeOutcome {
+/** What a like's or vote's caller hears: that it went on the wire (a dropped one never does), and why it failed. */
+export interface SocialActOutcome {
   readonly onStarted?: () => void;
   readonly onFailed: (problem: Problem) => void;
 }
@@ -93,7 +93,7 @@ export class EntryRowCache {
   }
 
   /** Optimistic like apart from `saveState`, on the network where the reader can like there, else here; dropped while a like is on the wire. */
-  setLiked(entry: EntryDto, isLiked: boolean, outcome: LikeOutcome): Observable<void> {
+  setLiked(entry: EntryDto, isLiked: boolean, outcome: SocialActOutcome): Observable<void> {
     const social = likeableSocial(entry);
     const patch: RowPatch = social ? { social: { ...social, isLiked } } : { isLiked };
     if (this.inFlight.onTheWire(entry.id, social ? 'social' : 'isLiked')) return EMPTY;
@@ -130,13 +130,14 @@ export class EntryRowCache {
   }
 
   /** The vote shows at once; its score waits for the answer. */
-  setVote(entry: EntryDto, to: VoteValue, onError: (problem: Problem) => void): Observable<void> {
+  setVote(entry: EntryDto, to: VoteValue, outcome: SocialActOutcome): Observable<void> {
     if (
       entry.myVote === null ||
       entry.score === null ||
       this.inFlight.onTheWire(entry.id, 'myVote')
     )
       return EMPTY;
+    outcome.onStarted?.();
     return subscribeUntilSettled(
       this.optimistic(entry, { myVote: to }, this.socialPosts.vote(entry.id, to)),
       {
@@ -148,7 +149,7 @@ export class EntryRowCache {
             discussionHomeUrl: row.discussionHomeUrl ?? answer.discussionHomeUrl ?? null,
           }));
         },
-        error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+        error: (error: HttpErrorResponse) => outcome.onFailed(parseProblem(error)),
       },
     );
   }

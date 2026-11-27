@@ -1158,7 +1158,7 @@ describe('EntriesStore', () => {
     it('setsAVoteAtOnceAndTakesTheScoreFromTheAnswer', () => {
       loadVotable();
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
 
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
       const request = ctrl.expectOne(votePath);
@@ -1171,7 +1171,7 @@ describe('EntriesStore', () => {
     it('takes a flipped vote’s score from the answer', () => {
       loadVotable(1);
 
-      rows.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, { onFailed: () => undefined });
       ctrl.expectOne(votePath).flush({ myVote: -1, score: 8 });
 
       expect(store.entries()[0]).toMatchObject({ myVote: -1, score: 8 });
@@ -1181,7 +1181,7 @@ describe('EntriesStore', () => {
       loadVotable();
       const problems: string[] = [];
 
-      rows.setVote(store.entries()[0], 1, (problem) => problems.push(problem.title));
+      rows.setVote(store.entries()[0], 1, { onFailed: (problem) => problems.push(problem.title) });
       ctrl
         .expectOne(votePath)
         .flush(
@@ -1195,10 +1195,10 @@ describe('EntriesStore', () => {
 
     it('dropsAVoteWhileOneIsOnTheWire', () => {
       loadVotable();
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const first = ctrl.expectOne(votePath);
 
-      rows.setVote(store.entries()[0], -1, () => undefined);
+      rows.setVote(store.entries()[0], -1, { onFailed: () => undefined });
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: 1, score: 10 });
@@ -1208,7 +1208,7 @@ describe('EntriesStore', () => {
     it('ignoresAnEntryWithoutAVote', () => {
       loadVotable(null);
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
 
       ctrl.expectNone(votePath);
       expect(store.entries()[0]).toMatchObject({ myVote: null, score: 10 });
@@ -1255,7 +1255,7 @@ describe('EntriesStore', () => {
     it('lets a vote on the wire win over the network report', () => {
       loadVotable(0);
       rows.refreshVote(store.entries()[0]);
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
 
       ctrl.expectOne({ method: 'GET', url: votePath }).flush({ myVote: -1, score: 9 });
@@ -1278,7 +1278,7 @@ describe('EntriesStore', () => {
     it('adoptsTheHomeAddressEvenWhenAVoteIsOnTheWire', () => {
       loadVotable(0);
       rows.refreshVote(store.entries()[0]);
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       const cast = ctrl.expectOne({ method: 'PUT', url: votePath });
 
       ctrl
@@ -1333,7 +1333,7 @@ describe('EntriesStore', () => {
     it('adoptsTheHomeAddressACastVoteReports', () => {
       loadVotable(0);
 
-      rows.setVote(store.entries()[0], 1, () => undefined);
+      rows.setVote(store.entries()[0], 1, { onFailed: () => undefined });
       ctrl.expectOne(votePath).flush({ myVote: 1, score: 11, discussionHomeUrl: homeUrl });
 
       expect(store.entries()[0].discussionHomeUrl).toBe(homeUrl);

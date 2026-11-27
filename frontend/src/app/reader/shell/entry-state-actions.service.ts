@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
 import { StateSaveOutcome } from '../state/entries.store';
-import { EntryRowCache, localStatePatch } from '../state/entry-row-cache';
+import { EntryRowCache, SocialActOutcome, localStatePatch } from '../state/entry-row-cache';
 import { countFirstShare } from '../state/first-share';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
@@ -25,7 +25,7 @@ import { injectListOnScreen } from './list-cover';
 import { LabelsStore } from '../labels/labels.store';
 import { LabelPill } from '../labels/labels.models';
 import { LabelChange, withLabelChange } from '../state/in-flight-label-changes';
-import { parseProblem } from '../../core/problem';
+import { Problem, parseProblem } from '../../core/problem';
 
 /** A row's or the open article's actions, on the list on screen they belong to (#2329). */
 @Injectable()
@@ -86,24 +86,17 @@ export class EntryStateActions implements EntryActionHandler {
 
   like(entry: EntryDto): Observable<void> {
     const isLiked = !isEntryLiked(entry);
-    const delta = isLiked ? 1 : -1;
-    const list = this.list();
-    const leaves = !isLiked && list.selection().kind === 'liked';
-    return this.rows.setLiked(entry, isLiked, {
-      onStarted: () => {
-        this.subscriptions.bumpLiked(delta);
-        if (leaves) list.markLeaving(entry.id);
-      },
-      onFailed: (problem) => {
-        this.subscriptions.bumpLiked(-delta);
-        if (leaves) list.stayInList(entry.id);
-        this.toast.showProblem(problem);
-      },
-    });
+    return this.rows.setLiked(entry, isLiked, this.buildLikedMove(entry, isLiked));
   }
 
+  /** Only a move onto or off an up-vote changes what the Liked view holds. */
   vote(entry: EntryDto, to: VoteValue): Observable<void> {
-    return this.rows.setVote(entry, to, (problem) => this.toast.showProblem(problem));
+    const isUp = to === 1;
+    const outcome =
+      (entry.myVote === 1) === isUp
+        ? { onFailed: (problem: Problem) => this.toast.showProblem(problem) }
+        : this.buildLikedMove(entry, isUp);
+    return this.rows.setVote(entry, to, outcome);
   }
 
   keep(entry: EntryDto): void {
@@ -191,6 +184,25 @@ export class EntryStateActions implements EntryActionHandler {
     if (entry.isViewed) return;
     this.markOpenedViewed(entry);
   };
+
+  /** Counts the entry into or out of Liked once the change goes out, and out of the Liked list on screen; a failure
+   *  takes both back. */
+  private buildLikedMove(entry: EntryDto, joins: boolean): SocialActOutcome {
+    const delta = joins ? 1 : -1;
+    const list = this.list();
+    const leaves = !joins && list.selection().kind === 'liked';
+    return {
+      onStarted: () => {
+        this.subscriptions.bumpLiked(delta);
+        if (leaves) list.markLeaving(entry.id);
+      },
+      onFailed: (problem) => {
+        this.subscriptions.bumpLiked(-delta);
+        if (leaves) list.stayInList(entry.id);
+        this.toast.showProblem(problem);
+      },
+    };
+  }
 
   /** The gone post's row leaves the list as an excluded one does; its open article closes. */
   private leaveGonePost(id: number): void {

@@ -43,7 +43,7 @@ describe('EntryRowCache', () => {
   it('setVote on a copy patches the other copy’s myVote and score', () => {
     holdEntries(buildCopy(1, 7), buildCopy(2, 7), buildCopy(3, 8));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 11 }));
     expect(readShownEntry(3)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -55,7 +55,7 @@ describe('EntryRowCache', () => {
     const failing = new Subject<never>();
     socialPosts.vote.mockReturnValue(failing);
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
     failing.error(new Error('no'));
 
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -99,7 +99,7 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(of({ myVote: 1, score: 40 }));
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(1).score).toBe(40);
     expect(readShownEntry(2).score).toBe(40);
@@ -227,6 +227,17 @@ describe('EntryRowCache', () => {
     expect(readShownEntry(1).likeCount).toBeNull();
   });
 
+  it('says a vote started only when it goes on the wire', () => {
+    socialPosts.vote.mockReturnValue(new Subject());
+    holdEntries(buildCopy(1, 7));
+    const started = jest.fn();
+
+    cache.setVote(readShownEntry(1), 1, { onStarted: started, onFailed: jest.fn() });
+    cache.setVote(readShownEntry(1), -1, { onStarted: started, onFailed: jest.fn() });
+
+    expect(started).toHaveBeenCalledTimes(1);
+  });
+
   it('settles a vote once its answer lands, and a dropped vote at once', () => {
     const answer = new Subject<{ myVote: 1; score: number }>();
     socialPosts.vote.mockReturnValue(answer);
@@ -234,8 +245,8 @@ describe('EntryRowCache', () => {
     const settled = jest.fn();
     const dropped = jest.fn();
 
-    cache.setVote(readShownEntry(1), 1, jest.fn()).subscribe({ complete: settled });
-    cache.setVote(readShownEntry(1), -1, jest.fn()).subscribe({ complete: dropped });
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() }).subscribe({ complete: settled });
+    cache.setVote(readShownEntry(1), -1, { onFailed: jest.fn() }).subscribe({ complete: dropped });
 
     expect(settled).not.toHaveBeenCalled();
     expect(dropped).toHaveBeenCalled();
@@ -248,7 +259,7 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
     expect(readShownEntry(2)).toEqual(expect.objectContaining({ myVote: 1, score: 10 }));
@@ -259,7 +270,7 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(failing);
     holdEntries(buildCopy(1, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
     failing.error(new Error('no'));
 
     expect(readShownEntry(1)).toEqual(expect.objectContaining({ myVote: 0, score: 10 }));
@@ -269,8 +280,8 @@ describe('EntryRowCache', () => {
     socialPosts.vote.mockReturnValue(new Subject());
     holdEntries(buildCopy(1, 7), buildCopy(2, 7));
 
-    cache.setVote(readShownEntry(1), 1, jest.fn());
-    cache.setVote(readShownEntry(2), -1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
+    cache.setVote(readShownEntry(2), -1, { onFailed: jest.fn() });
 
     expect(socialPosts.vote).toHaveBeenCalledTimes(1);
   });
@@ -309,7 +320,7 @@ describe('EntryRowCache', () => {
     holdEntries(buildCopy(1, null), buildCopy(2, null));
 
     cache.saveState(1, { isViewed: true }, {});
-    cache.setVote(readShownEntry(1), 1, jest.fn());
+    cache.setVote(readShownEntry(1), 1, { onFailed: jest.fn() });
 
     expect(readShownEntry(2)).toEqual(
       expect.objectContaining({ isViewed: false, isHidden: false, myVote: 0, score: 10 }),

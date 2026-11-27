@@ -6,7 +6,7 @@ import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { ListContext } from '../state/list-context';
-import { EntryRowCache, LikeOutcome } from '../state/entry-row-cache';
+import { EntryRowCache, SocialActOutcome } from '../state/entry-row-cache';
 import { ReaderApi } from '../reader-api';
 import { SocialPostApi } from '../social-post-api';
 import { Selection } from '../query/query';
@@ -18,6 +18,7 @@ import { ReaderRouteState } from './reader-route-state.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
+import { VoteValue } from '../vote-pill/vote';
 import { ArticlePostActions } from '../article/post-actions/article-post-actions.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RemovedPosts } from '../removed-posts.service';
@@ -61,13 +62,13 @@ function createActions(collaborators: Collaborators): EntryStateActions {
 }
 
 describe('EntryStateActions liking (#1600)', () => {
-  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, LikeOutcome]>(() => EMPTY);
+  const setLiked = jest.fn<Observable<void>, [EntryDto, boolean, SocialActOutcome]>(() => EMPTY);
   const bumpLiked = jest.fn();
   const showProblem = jest.fn();
   const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
-  const outcome = (call = 0): LikeOutcome => setLiked.mock.calls[call][2];
+  const outcome = (call = 0): SocialActOutcome => setLiked.mock.calls[call][2];
   const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
   const problem = {
     type: 'social_post_not_found',
@@ -527,23 +528,29 @@ describe('EntryStateActions on a post deleted on its network (#1975)', () => {
 });
 
 describe('EntryStateActions voting (#2218)', () => {
-  const setVote = jest.fn();
+  const setVote = jest.fn<Observable<void>, [EntryDto, VoteValue, SocialActOutcome]>(() => EMPTY);
   const refreshVote = jest.fn();
   const showProblem = jest.fn();
+  const bumpLiked = jest.fn();
   const openEntry = signal<EntryDto | null>(null);
+  const selection = signal<Selection>({ kind: 'all', unread: false });
   let actions: EntryStateActions;
 
+  const outcome = (call = 0): SocialActOutcome => setVote.mock.calls[call][2];
+  const isLeaving = (id: number) => TestBed.inject(ListContext).leavingIds().has(id);
+
   beforeEach(() => {
-    [setVote, refreshVote, showProblem].forEach((spy) => spy.mockReset());
+    [setVote, refreshVote, showProblem, bumpLiked].forEach((spy) => spy.mockClear());
     openEntry.set(null);
+    selection.set({ kind: 'all', unread: false });
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         EntryStateActions,
         provideRouter([]),
-        ...provideRouteListForTest({}),
+        ...provideRouteListForTest({}, selection),
         { provide: EntryRowCache, useValue: { setVote, refreshVote } },
-        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: { bumpLiked } },
         { provide: SavedSearchesStore, useValue: {} },
         { provide: LabelsStore, useValue: {} },
         {
@@ -560,12 +567,55 @@ describe('EntryStateActions voting (#2218)', () => {
   it('votesThroughTheStoreAndToastsAFailure', () => {
     const entry = anEntry({ score: 3, myVote: 0 });
 
-    actions.vote(entry, 1);
-    const onError = setVote.mock.calls[0][2];
-    onError({ title: 'Nope' });
+    actions.vote(entry, -1);
+    const problem = { title: 'Nope', status: 500, type: 'about:blank' };
+    outcome().onFailed(problem);
 
-    expect(setVote).toHaveBeenCalledWith(entry, 1, expect.any(Function));
-    expect(showProblem).toHaveBeenCalledWith({ title: 'Nope' });
+    expect(setVote).toHaveBeenCalledWith(entry, -1, expect.anything());
+    expect(showProblem).toHaveBeenCalledWith(problem);
+    expect(bumpLiked).not.toHaveBeenCalled();
+  });
+
+  it('counts an up-vote into Liked and an un-vote out, once each goes out (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), 1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: 1 }), 0);
+    expect(bumpLiked).not.toHaveBeenCalled();
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpLiked.mock.calls).toEqual([[1], [-1]]);
+  });
+
+  it('counts nothing for a vote that neither reaches nor leaves an up-vote (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), -1);
+    actions.vote(anEntry({ id: 2, score: 3, myVote: -1 }), 0);
+
+    outcome(0).onStarted?.();
+    outcome(1).onStarted?.();
+
+    expect(bumpLiked).not.toHaveBeenCalled();
+  });
+
+  it('takes the count back and toasts when the up-vote fails (#2587)', () => {
+    actions.vote(anEntry({ id: 1, score: 3, myVote: 0 }), 1);
+
+    outcome().onStarted?.();
+    outcome().onFailed({ title: 'Nope', status: 500, type: 'about:blank' });
+
+    expect(bumpLiked.mock.calls).toEqual([[1], [-1]]);
+    expect(showProblem).toHaveBeenCalled();
+  });
+
+  it('leaves the Liked list on a down-vote there and comes back when that fails (#2587)', () => {
+    selection.set({ kind: 'liked' });
+    actions.vote(anEntry({ id: 9, score: 3, myVote: 1 }), -1);
+
+    outcome().onStarted?.();
+    expect(isLeaving(9)).toBe(true);
+
+    outcome().onFailed({ title: 'Nope', status: 500, type: 'about:blank' });
+    expect(isLeaving(9)).toBe(false);
   });
 
   it('refreshesTheVoteOnceWhenAVotableEntryOpens', () => {
