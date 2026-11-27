@@ -14,6 +14,7 @@ import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { SubscriptionReload } from '../../reader/feeds/manage/subscription-reload.service';
 import { FeedDirectoryApi } from './feed-directory-api';
 import {
   FeedDirectoryAccountState,
@@ -106,6 +107,7 @@ describe('FeedDirectorySectionComponent', () => {
         },
         { provide: Dialog, useValue: { open: dialogOpen } },
         { provide: ManageActions, useValue: { editSubscription: jest.fn() } },
+        { provide: SubscriptionReload, useValue: { afterMembershipChange: () => reloadQuietly() } },
         { provide: LayoutService, useValue: { isPhone: signal(false), isCoarse: signal(false) } },
         {
           provide: SubscriptionsStore,

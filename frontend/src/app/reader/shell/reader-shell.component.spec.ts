@@ -1824,6 +1824,8 @@ describe('ReaderShellComponent', () => {
             socialAccounts: [],
             keptCount: 0,
             tags: [],
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
           }),
         );
       ctrl.verify();
@@ -2451,7 +2453,14 @@ describe('ReaderShellComponent', () => {
       );
       ctrl
         .match(() => true)
-        .forEach((testRequest) => testRequest.flush({ entries: [], nextCursor: null }));
+        .forEach((testRequest) =>
+          testRequest.flush({
+            entries: [],
+            nextCursor: null,
+            labels: [],
+            unlabeled: { favoriteCount: 0, keptCount: 0 },
+          }),
+        );
     });
 
     it('layers a search over the current list, keeping view/tag/subscription in the URL to return to (#542)', () => {
