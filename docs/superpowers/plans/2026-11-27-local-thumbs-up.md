@@ -128,3 +128,31 @@
 - [ ] **Step 3: Implement.** `entry-state-actions.like` passes `!isEntryLiked(entry)` where `isEntryLiked = likeableSocial(entry)?.isLiked ?? entry.isLiked` (add next to `likeableSocial` in `entry-social.ts`). i18n keys: `reader.like.local` "Like" / fr "J'aime" / es "Me gusta"; `reader.unlike.local` "Unlike" / "Je n'aime plus" / "Ya no me gusta"; `reader.actionHint.like.local` "Like — kept here, it shapes your For you picks" / "J'aime — gardé ici, cela oriente vos suggestions Pour vous" / "Me gusta — se guarda aquí y orienta tus sugerencias Para ti"; `reader.actionHint.unlike.local` "Take back your like" / "Retirer votre j'aime" / "Quitar tu me gusta". Check the glossary for the For you name in fr/es before committing.
 - [ ] **Step 4: Run, expect PASS**; `./node_modules/.bin/eslint` + `prettier --check` on changed files.
 - [ ] **Step 5: Commit** `feat(#2587): the thumbs-up on every entry`
+
+### Task 5: A "Liked" view in the sidebar
+
+Added on Lars's request mid-run: "also add a 'liked' entry to the sidebar".
+
+**Files:**
+- Modify: `backend/src/Enum/EntryView.php` (`case Liked = 'liked';`)
+- Modify: `backend/src/Repository/EntryScopePredicates.php::applyView` (`EntryView::Liked` → `EntryLikeDql::exists($aliases)`, which after Task 3 covers network likes, Lemmy upvotes and local likes)
+- Modify: the sidebar counts query beside the shared count (`EntryStateRepository` / wherever `sharedCount` comes from) and its `*Json` mapper — a `likedCount`
+- Modify: `frontend/src/app/reader/shell/sidebar/sidebar-views.component.{ts,html}` (the first card: All items, Shared, **Liked**, Recently read), the view type/route union in the SPA, `subscriptions.store.ts` (`likedCount` + `bumpLiked(by)`), `entry-state-actions.service.ts::like` (bump ±1 with rollback on failure, like `keep`)
+- Modify: `frontend/public/i18n/{en,fr,es}.json`
+- Test: `tests/Repository/EntryScopePredicates*` or the entry-list functional test, the counts test, `sidebar-views.component.spec.ts`, `entry-state-actions.service.spec.ts`
+
+**Interfaces:** Consumes Task 1's `likedAt`, Task 3's `EntryLikeDql::exists`, Task 4's `isEntryLiked(entry)`. Produces `GET /api/entries?view=liked`, counts key `liked`.
+
+- [ ] **Step 1: Failing tests**
+  - `view=liked` lists a locally liked article, a network-liked post and an upvoted Lemmy post; it omits an unliked entry and another user's like.
+  - Order is the default published-date order (`EntryListSort::forView` default) — Ruling below.
+  - The sidebar counts answer `liked: 3` for that fixture.
+  - The sidebar renders "Liked" with the `thumb_up` icon between Shared and Recently read, links to `/?view=liked`, shows the count when > 0.
+  - Liking an entry bumps the count by 1, unliking by −1, a failed request takes the bump back.
+  - Unliking a row while in the Liked view removes it from the list, as un-favoriting does in Favorites.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Implement.** i18n: en "Liked", fr "J'aime" (check the glossary; "Mentions J'aime" if the glossary uses it), es "Me gusta".
+- [ ] **Step 4: Run, expect PASS**; backend cs/stan; frontend eslint/prettier on changed files.
+- [ ] **Step 5: Commit** `feat(#2587): a liked view in the sidebar`
+
+Ruling: Liked orders by published date, not like time — three like sources (network, upvote, local) have no single instant column to keyset on; cost if wrong: a follow-up adding a liked-at sort.
