@@ -62,14 +62,15 @@ final readonly class ReadingHistoryRepository
             ->andWhere('liking.score = :upvote')
             ->setParameter('upvote', VoteScore::Up)
             ->setMaxResults($cap);
-        $rows = [...$this->readLikedRows($likes), ...$this->readLikedRows($upvotes)];
-        usort(
-            $rows,
-            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
-                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
-        );
+        $rows = [
+            ...$this->readLikedRows($likes),
+            ...$this->readLikedRows($upvotes),
+            ...$this->readLikedRows($this->locallyLikedEntriesQueryBuilder($userId)->setMaxResults($cap)),
+        ];
 
-        return array_column(array_slice($rows, 0, $cap), 'titled');
+        $newestFirst = self::sortNewestLikeFirst(self::keepNewestLikePerEntry($rows));
+
+        return array_column(array_slice($newestFirst, 0, $cap), 'titled');
     }
 
     /** @return list<TitledEntry> */
@@ -132,6 +133,17 @@ final readonly class ReadingHistoryRepository
             ->setParameter('user', $userId);
     }
 
+    private function candidateEntriesQueryBuilder(int $userId): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('e', 'f')
+            ->addSelect('s.customTitle AS customTitle')
+            ->from(Entry::class, 'e')
+            ->join('e.feed', 'f')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->setParameter('user', $userId);
+    }
+
     /** @param class-string<SocialLike|DiscussionVote> $rootClass */
     private function likedEntriesQueryBuilder(int $userId, string $rootClass, string $instantField): QueryBuilder
     {
@@ -159,6 +171,57 @@ final readonly class ReadingHistoryRepository
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('user', $userId)
             ->setParameter('true', true, Types::BOOLEAN);
+    }
+
+    private function locallyLikedEntriesQueryBuilder(int $userId): QueryBuilder
+    {
+        return $this->candidateEntriesQueryBuilder($userId)
+            ->join(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->addSelect('es.likedAt AS likedAt')
+            ->andWhere('es.likedAt IS NOT NULL AND es.isFavorite = :false')
+            ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
+            ->andWhere('NOT ' . self::buildFollowedCopyCondition(
+                'copy',
+                'e.canonicalItem',
+                self::buildCopyStateCondition('copy', static fn (string $state): string => "$state.isFavorite = :true")
+                    . ' OR ' . EntryShareDql::buildSharedCondition('copy'),
+            ))
+            ->orderBy('es.likedAt', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setParameter('true', true, Types::BOOLEAN)
+            ->setParameter('false', false, Types::BOOLEAN);
+    }
+
+    /**
+     * @param list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> $rows
+     * @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}>
+     */
+    private static function keepNewestLikePerEntry(array $rows): array
+    {
+        $newest = [];
+        foreach ($rows as $row) {
+            $entryId = $row['titled']->entry->requireId();
+            if (!isset($newest[$entryId]) || $newest[$entryId]['likedAt'] < $row['likedAt']) {
+                $newest[$entryId] = $row;
+            }
+        }
+
+        return array_values($newest);
+    }
+
+    /**
+     * @param list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> $rows
+     * @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}>
+     */
+    private static function sortNewestLikeFirst(array $rows): array
+    {
+        usort(
+            $rows,
+            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
+                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
+        );
+
+        return $rows;
     }
 
     /** A copy of the item, in a feed the reader follows, that meets $copyCondition. */

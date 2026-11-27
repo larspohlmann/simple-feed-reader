@@ -134,6 +134,19 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
+    public function testALocallyLikedEntryIsNoCandidate(): void
+    {
+        $liked = $this->entry('locally-liked', '2026-07-10T00:00:00Z');
+        $state = new EntryState($this->user, $liked);
+        StateMarks::liked($state, new \DateTimeImmutable('2026-07-11T00:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
+    }
+
     public function testAnUnreadUpvotedPostIsExcluded(): void
     {
         $this->voteOn($this->entry('upvoted-post', '2026-07-10T00:00:00Z'), VoteScore::Up);

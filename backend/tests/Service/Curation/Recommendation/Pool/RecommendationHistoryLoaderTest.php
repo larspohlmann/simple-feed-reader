@@ -55,14 +55,14 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    /** The run-path pins rely on these patterns: favorites once, and each of the other five statements. */
+    /** The run-path pins rely on these patterns: favorites once, and each of the other six statements. */
     public function testTheHistoryPatternsTellFavoritesFromEveryOtherSectionQuery(): void
     {
         $this->startRecordingQueries();
         $this->loader()->load($this->userId(), $this->settings());
 
         self::assertCount(1, $this->recordedQueriesMatching(self::FAVORITES_SQL));
-        self::assertCount(5, $this->recordedHistorySectionQueries());
+        self::assertCount(6, $this->recordedHistorySectionQueries());
     }
 
     public function testEachEntryAppearsOnlyInItsHighestSection(): void

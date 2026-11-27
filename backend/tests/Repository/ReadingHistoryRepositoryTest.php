@@ -187,6 +187,84 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
     }
 
+    public function testALocallyLikedArticleIsLiked(): void
+    {
+        $network = $this->persistEntry('network');
+        $local = $this->persistEntry('local');
+        $older = $this->persistEntry('older');
+        $this->likeEntry($network, '2026-10-02 10:00:00');
+        $this->likeLocally($local, '2026-10-02 11:00:00');
+        $this->likeLocally($older, '2026-10-02 09:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$local->requireId(), $network->requireId(), $older->requireId()], $this->entryIds($liked));
+    }
+
+    public function testAFavoriteOrSharedLocalLikeStaysOutOfLiked(): void
+    {
+        $favorite = $this->persistEntry('favorite');
+        $shared = $this->persistEntry('shared');
+        StateMarks::favorite($this->likeLocally($favorite, '2026-10-02 10:00:00'));
+        $this->likeLocally($shared, '2026-10-02 10:00:00');
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $shared,
+            new \DateTimeImmutable('2026-10-02 09:00:00'),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+    }
+
+    public function testAnEntryLikedLocallyAndOnTheNetworkIsListedOnce(): void
+    {
+        $entry = $this->persistEntry('both');
+        $this->likeLocally($entry, '2026-10-02 12:00:00');
+        $this->likeEntry($entry, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$entry->requireId()], $this->entryIds($liked));
+    }
+
+    public function testALocalLikeOnOneOfTwoFollowedCopiesListsOnlyThatCopy(): void
+    {
+        [$lower, $higher] = $this->persistPostInTwoFollowedFeeds();
+        $this->likeLocally($higher, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        $liked = $this->history()->liked($this->user->requireId(), 10);
+
+        self::assertSame([$higher->requireId()], $this->entryIds($liked));
+        self::assertNotSame($lower->requireId(), $higher->requireId());
+    }
+
+    public function testALocalLikeInAFeedTheReaderLeftHasNoLine(): void
+    {
+        [, $left] = $this->persistPostInAFollowedAndALeftFeed();
+        $this->likeLocally($left, '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->liked($this->user->requireId(), 10));
+    }
+
+    public function testALocallyLikedEntryLeavesKeptAndViewed(): void
+    {
+        $kept = $this->persistEntry('kept');
+        $viewed = $this->persistEntry('viewed');
+        StateMarks::kept($this->likeLocally($kept, '2026-10-02 10:00:00'));
+        $viewedState = $this->markViewed($viewed, '2026-10-02 09:00:00');
+        StateMarks::liked($viewedState, new \DateTimeImmutable('2026-10-02 11:00:00'));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->history()->kept($this->user->requireId(), 10));
+        self::assertSame([], $this->history()->viewed($this->user->requireId(), 10));
+    }
+
     public function testALikedEntryLeavesKeptAndViewed(): void
     {
         $kept = $this->persistEntry('kept');
@@ -582,6 +660,13 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
             $this->linkNewItem($entry, CanonicalItemKind::Mastodon),
             new \DateTimeImmutable($likedAt),
         );
+    }
+
+    private function likeLocally(Entry $entry, string $likedAt): EntryState
+    {
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $entry);
+
+        return StateMarks::liked($state, new \DateTimeImmutable($likedAt));
     }
 
     private function upvoteEntry(Entry $entry, string $votedAt): DiscussionVote
