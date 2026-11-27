@@ -22,6 +22,14 @@ describe('removeEnclosurePlayers', () => {
     expect(element.querySelector('audio')).toBeNull();
   });
 
+  it('removes the same file served from another host and path (#2577)', () => {
+    const element = host(
+      '<audio src="https://ondemand-mp3.dradio.de/file/dradio/2026/11/25/episode_6e6b4b99.mp3"></audio>',
+      'https://podcast-mp3.dradio.de/podcast/2026/11/25/episode_6e6b4b99.mp3?refId=hintergrund-102',
+    );
+    expect(element.querySelector('audio')).toBeNull();
+  });
+
   it('keeps the player of a different file', () => {
     const element = host(
       '<audio><source src="https://media.example.test/show/trailer.mp3"></audio>',

@@ -1,7 +1,8 @@
 /**
  * Removes an article-body player for the file the entry's Listen control
  * already plays (#1434): WordPress/PowerPress pages embed their own `<audio>`
- * for the episode, often with a `?_=N` cache-buster on the source.
+ * for the episode, often with a `?_=N` cache-buster on the source, and
+ * broadcasters serve it from another CDN host and path (#2577).
  */
 export function removeEnclosurePlayers(host: HTMLElement, enclosureUrl: string | null): void {
   const enclosure = enclosureUrl && fileOf(enclosureUrl);
@@ -20,8 +21,7 @@ function sourcesOf(player: HTMLAudioElement): string[] {
 
 function fileOf(url: string): string | null {
   try {
-    const parsed = new URL(url);
-    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    return new URL(url).pathname.split('/').pop() || null;
   } catch {
     return null;
   }
