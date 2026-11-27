@@ -16,7 +16,7 @@ final class SubscriptionCountsJson
     /**
      * @return array{
      *   subscriptions: list<array{id: int, unreadCount: int, entryCount: int}>,
-     *   favoritesCount: int, keptCount: int, sharedCount: int, viewedCount: int,
+     *   favoritesCount: int, keptCount: int, sharedCount: int, likedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
      *   notifications: list<array{network: string, unseenCount: int}>,
      *   unreadTotals: array{
@@ -43,7 +43,7 @@ final class SubscriptionCountsJson
 
     /**
      * @return array{
-     *   favoritesCount: int, keptCount: int, sharedCount: int, viewedCount: int,
+     *   favoritesCount: int, keptCount: int, sharedCount: int, likedCount: int, viewedCount: int,
      *   trending: array{window: string, unopened: int},
      *   notifications: list<array{network: string, unseenCount: int}>,
      *   unreadTotals: array{
@@ -60,6 +60,7 @@ final class SubscriptionCountsJson
             'favoritesCount' => $tallies->subscriptions->flagCounts['favorites'],
             'keptCount' => $tallies->subscriptions->flagCounts['kept'],
             'sharedCount' => $tallies->subscriptions->flagCounts['shared'],
+            'likedCount' => $tallies->subscriptions->flagCounts['liked'],
             'viewedCount' => $tallies->subscriptions->flagCounts['viewed'],
             'trending' => TrendingUnopenedJson::from($tallies->trending),
             'unreadTotals' => UnreadTotalsJson::from($tallies->subscriptions->unreadTotals),

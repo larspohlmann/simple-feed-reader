@@ -8,6 +8,7 @@ use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
+use App\Enum\EntryView;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
@@ -84,6 +85,19 @@ final class EntryListRepository extends ServiceEntityRepository
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
         return $this->attachDuplicates($survivors, $collapseScope, $query->userId);
+    }
+
+    /** What the liked view lists, counted through the same scope and copy collapse, so the badge matches the list. */
+    public function countLikedForUser(int $userId): int
+    {
+        $applyScope = $this->buildListScope(new EntryQuery($userId, EntryView::Liked), null);
+        $qb = $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user');
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, CollapseScope::fromScope($applyScope), $userId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

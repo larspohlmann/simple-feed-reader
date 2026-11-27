@@ -29,7 +29,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             new SubscriptionTalliesModel(
                 [$counted->requireId() => 3],
                 [$counted->requireId() => 40],
-                ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41],
+                ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41, 'liked' => 0],
                 new UnreadTotalsModel(7, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 [],
             ),
@@ -40,8 +40,8 @@ final class SubscriptionJsonListTest extends DbTestCase
 
         self::assertSame(
             [
-                'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'viewedCount', 'trending',
-                'unreadTotals', 'notifications', 'socialAccounts', 'lemmyHosts',
+                'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'likedCount', 'viewedCount',
+                'trending', 'unreadTotals', 'notifications', 'socialAccounts', 'lemmyHosts',
             ],
             array_keys($payload),
         );
@@ -73,7 +73,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 new SubscriptionTalliesModel(
                     [],
                     [],
-                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
                 ),
@@ -120,7 +120,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 new SubscriptionTalliesModel(
                     [],
                     [],
-                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0],
+                    ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
                 ),

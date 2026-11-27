@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CanonicalItem;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -18,6 +19,7 @@ use App\Enum\FeedGroup;
 use App\Enum\InclusionSurface;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
+use App\Enum\VoteScore;
 use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
 use App\Repository\DuplicateCollapseDql;
@@ -33,6 +35,7 @@ use App\Repository\SearchTermsPredicateBuilder;
 use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\CanonicalItems;
+use App\Tests\Support\LikedPostFixtures;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\StateMarks;
@@ -545,6 +548,91 @@ final class EntryListTest extends DbTestCase
             $byGuid[$row->entry->getGuid()] = $row->marks->isLiked;
         }
         self::assertEquals(['liked' => true, 'plain' => false], $byGuid);
+    }
+
+    public function testTheLikedViewListsLocalNetworkAndUpvotedLikesOnlyAndCountsWhatItLists(): void
+    {
+        $locallyLiked = $this->entry('locally-liked', '2026-07-05T00:00:00Z');
+        $networkLiked = $this->entry('network-liked', '2026-07-07T00:00:00Z');
+        $upvoted = $this->entry('upvoted', '2026-07-06T00:00:00Z');
+        $this->entry('plain', '2026-07-08T00:00:00Z');
+        $stranger = $this->newcomer();
+        $this->likeLocally($this->user, $locallyLiked);
+        $this->likeLocally($stranger, $this->entry('liked-by-stranger', '2026-07-09T00:00:00Z'));
+        $this->likeOnTheNetwork($stranger, $this->entry('network-liked-by-stranger', '2026-07-10T00:00:00Z'));
+        $this->likeOnTheNetwork($this->user, $networkLiked);
+        $this->upvote($upvoted);
+        $this->entityManager->flush();
+
+        $liked = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Liked));
+
+        self::assertSame(['network-liked', 'upvoted', 'locally-liked'], $this->guids($liked));
+        self::assertSame(3, $this->repository()->countLikedForUser($this->user->requireId()));
+    }
+
+    public function testALikedPostInTwoSubscribedFeedsListsAndCountsOnce(): void
+    {
+        [$otherFeed] = $this->secondSubscription('https://other.example.com/feed.xml');
+        $post = $this->entry('post', '2026-07-05T00:00:00Z');
+        $copy = $this->entryIn($otherFeed, 'post-copy', '2026-07-05T00:00:00Z');
+        $copy->linkTo($this->likeOnTheNetwork($this->user, $post));
+        $this->entityManager->flush();
+
+        $liked = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Liked));
+
+        self::assertSame(['post'], $this->guids($liked));
+        self::assertSame(1, $this->repository()->countLikedForUser($this->user->requireId()));
+    }
+
+    public function testTheLikedCountLeavesOutALikeInAFeedTheReaderLeft(): void
+    {
+        $unfollowed = new Feed('https://unfollowed.example.com/feed.xml');
+        $this->entityManager->persist($unfollowed);
+        $this->likeLocally($this->user, $this->entryIn($unfollowed, 'left-behind', '2026-07-05T00:00:00Z'));
+        $this->entityManager->flush();
+
+        self::assertSame(0, $this->repository()->countLikedForUser($this->user->requireId()));
+    }
+
+    private function likeLocally(User $reader, Entry $entry): void
+    {
+        $state = new EntryState($reader, $entry);
+        StateMarks::liked($state, new \DateTimeImmutable('2026-11-27T10:00:00Z'));
+        $this->entityManager->persist($state);
+    }
+
+    private function likeOnTheNetwork(User $reader, Entry $entry): CanonicalItem
+    {
+        $item = LikedPostFixtures::linkNewItem(
+            $this->entityManager,
+            $entry,
+            CanonicalItemKind::Mastodon,
+            'item-' . $entry->getGuid(),
+        );
+        LikedPostFixtures::persistLike(
+            $this->entityManager,
+            $reader,
+            $item,
+            new \DateTimeImmutable('2026-11-27T10:00:00Z'),
+        );
+
+        return $item;
+    }
+
+    private function upvote(Entry $entry): void
+    {
+        LikedPostFixtures::persistVote(
+            $this->entityManager,
+            $this->user,
+            LikedPostFixtures::linkNewItem(
+                $this->entityManager,
+                $entry,
+                CanonicalItemKind::Lemmy,
+                'item-' . $entry->getGuid(),
+            ),
+            VoteScore::Up,
+            new \DateTimeImmutable('2026-11-27T10:00:00Z'),
+        );
     }
 
     public function testAnEntryWithoutAStateRowCarriesNoMarks(): void

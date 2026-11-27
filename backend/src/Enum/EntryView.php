@@ -15,6 +15,7 @@ enum EntryView: string
     case Favorites = 'favorites';
     case Kept = 'kept';
     case Shared = 'shared';
+    case Liked = 'liked';
     case Viewed = 'viewed';
     case ForYou = 'for-you';
 
