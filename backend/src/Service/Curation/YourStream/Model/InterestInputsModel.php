@@ -8,16 +8,16 @@ namespace App\Service\Curation\YourStream\Model;
 final readonly class InterestInputsModel
 {
     /**
-     * @param list<StreamEntryModel> $articles
-     * @param list<string>           $searchTerms
+     * @param list<int>    $articleIds
+     * @param list<string> $searchTerms
      */
-    public function __construct(public int $userId, public array $articles, public array $searchTerms)
+    public function __construct(public int $userId, public array $articleIds, public array $searchTerms)
     {
     }
 
     public function fingerprint(): string
     {
-        $articleIds = array_map(static fn (StreamEntryModel $article): int => $article->id, $this->articles);
+        $articleIds = $this->articleIds;
         sort($articleIds);
         $searchTerms = $this->searchTerms;
         sort($searchTerms);

@@ -8,9 +8,7 @@ use App\Entity\SavedSearch;
 use App\Enum\InclusionSurface;
 use App\Repository\ReadingHistoryRepository;
 use App\Repository\SavedSearchRepository;
-use App\Repository\TitledEntry;
 use App\Service\Curation\YourStream\Model\InterestInputsModel;
-use App\Service\Curation\YourStream\Model\StreamEntryModel;
 
 /** The articles a reader marked as interesting in their Your stream feeds, viewed ones aside, and their saved searches. */
 final readonly class InterestArticles
@@ -23,19 +21,15 @@ final readonly class InterestArticles
 
     public function collectInputs(int $userId): InterestInputsModel
     {
-        $history = $this->history->withSurface(InclusionSurface::YourStream);
-        $sections = [
-            $history->favorites($userId, self::SECTION_CAP),
-            $history->kept($userId, self::SECTION_CAP),
-            $history->liked($userId, self::SECTION_CAP),
-            $history->shared($userId, self::SECTION_CAP),
-        ];
-        $articles = array_map(
-            static fn (TitledEntry $titled): StreamEntryModel => StreamEntryModel::fromEntry($titled->entry),
-            array_merge(...$sections),
-        );
+        $surface = InclusionSurface::YourStream;
+        $articleIds = array_unique([
+            ...$this->history->findFavoriteIds($userId, self::SECTION_CAP, $surface),
+            ...$this->history->findKeptIds($userId, self::SECTION_CAP, $surface),
+            ...$this->history->findLikedIds($userId, self::SECTION_CAP, $surface),
+            ...$this->history->findSharedIds($userId, self::SECTION_CAP, $surface),
+        ]);
 
-        return new InterestInputsModel($userId, $articles, $this->collectSearchTerms($userId));
+        return new InterestInputsModel($userId, array_values($articleIds), $this->collectSearchTerms($userId));
     }
 
     /** @return list<string> in position order */

@@ -15,7 +15,6 @@ use App\Repository\ReadingHistoryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Curation\YourStream\InterestArticles;
 use App\Service\Curation\YourStream\Model\InterestInputsModel;
-use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryShareFixtures;
 use App\Tests\Support\RequiresServices;
@@ -44,7 +43,7 @@ final class InterestArticlesTest extends DbTestCase
         $this->subscriptionTo($switchedOff)->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->flush();
 
-        self::assertSame([], $this->collectInputs()->articles);
+        self::assertSame([], $this->collectInputs()->articleIds);
     }
 
     public function testViewedArticlesAreNotInterests(): void
@@ -54,7 +53,7 @@ final class InterestArticlesTest extends DbTestCase
         StateMarks::markFavorite($this->state($favourite));
         $this->entityManager->flush();
 
-        self::assertSame([$favourite->requireId()], $this->articleIds($this->collectInputs()));
+        self::assertSame([$favourite->requireId()], $this->collectInputs()->articleIds);
     }
 
     public function testFavouritesKeptSharedAndLikedAreAllInterests(): void
@@ -71,7 +70,7 @@ final class InterestArticlesTest extends DbTestCase
 
         self::assertEqualsCanonicalizing(
             [$favourite->requireId(), $kept->requireId(), $shared->requireId(), $liked->requireId()],
-            $this->articleIds($this->collectInputs()),
+            $this->collectInputs()->articleIds,
         );
     }
 
@@ -85,7 +84,7 @@ final class InterestArticlesTest extends DbTestCase
         }
         $this->entityManager->flush();
 
-        $articles = $this->articleIds($this->collectInputs());
+        $articles = $this->collectInputs()->articleIds;
 
         self::assertCount(InterestArticles::SECTION_CAP, $articles);
         self::assertNotContains($oldest->requireId(), $articles);
@@ -99,22 +98,11 @@ final class InterestArticlesTest extends DbTestCase
         self::assertSame(['first', 'second'], $this->collectInputs()->searchTerms);
     }
 
-    public function testAnArticleCarriesItsEntrysWords(): void
-    {
-        $favourite = $this->entry($this->feed);
-        StateMarks::markFavorite($this->state($favourite));
-        $this->entityManager->flush();
-
-        self::assertEquals([StreamEntryModel::fromEntry($favourite)], $this->collectInputs()->articles);
-    }
-
     public function testTheFingerprintChangesWithANewFavouriteAndANewSearchButNotWithOrder(): void
     {
-        $first = new StreamEntryModel(1, null, 'one', null);
-        $second = new StreamEntryModel(2, null, 'two', null);
         self::assertSame(
-            (new InterestInputsModel(7, [$first, $second], ['solar', 'wind']))->fingerprint(),
-            (new InterestInputsModel(7, [$second, $first], ['wind', 'solar']))->fingerprint(),
+            (new InterestInputsModel(7, [1, 2], ['solar', 'wind']))->fingerprint(),
+            (new InterestInputsModel(7, [2, 1], ['wind', 'solar']))->fingerprint(),
         );
 
         StateMarks::markFavorite($this->state($this->entry($this->feed)));
@@ -141,12 +129,6 @@ final class InterestArticlesTest extends DbTestCase
         self::assertSame($this->user->requireId(), $inputs->userId);
 
         return $inputs;
-    }
-
-    /** @return list<int> */
-    private function articleIds(InterestInputsModel $inputs): array
-    {
-        return array_map(static fn (StreamEntryModel $article): int => $article->id, $inputs->articles);
     }
 
     private function subscribedFeed(string $url): Feed

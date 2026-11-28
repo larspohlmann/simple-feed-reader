@@ -56,6 +56,33 @@ final readonly class YourStreamSourceRepository
         return null === $lowest ? null : (int) $lowest;
     }
 
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<StreamEntryModel> in the order of $entryIds, those that exist
+     */
+    public function findEntries(array $entryIds): array
+    {
+        if ([] === $entryIds) {
+            return [];
+        }
+        /** @var list<array{id: int, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */
+        $rows = $this->selectEntries()
+            ->where('entry.id IN (:entryIds)')
+            ->setParameter('entryIds', $entryIds)
+            ->getQuery()
+            ->getArrayResult();
+        $entriesById = [];
+        foreach ($rows as $row) {
+            $entriesById[$row['id']] = self::buildEntry($row);
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $entryId): ?StreamEntryModel => $entriesById[$entryId] ?? null,
+            $entryIds,
+        )));
+    }
+
     /** @return list<StreamEntryModel> descending by id below $beforeId, from the account's Your stream feeds */
     public function findNewestEntries(int $userId, RarityWindowModel $window, int $beforeId, int $limit): array
     {

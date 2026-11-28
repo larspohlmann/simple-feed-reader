@@ -80,10 +80,10 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $tag->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->flush();
         $userId = $this->user->requireId();
-        $scoped = $this->history()->withSurface(InclusionSurface::YourStream);
+        $surface = InclusionSurface::YourStream;
 
-        self::assertSame([$inStream->requireId()], $this->entryIds($scoped->favorites($userId, 10)));
-        self::assertSame([], $scoped->shared($userId, 10));
+        self::assertSame([$inStream->requireId()], $this->history()->findFavoriteIds($userId, 10, $surface));
+        self::assertSame([], $this->history()->findSharedIds($userId, 10, $surface));
         self::assertSame(
             [$outOfStream->requireId(), $inStream->requireId()],
             $this->entryIds($this->history()->favorites($userId, 10)),
@@ -115,12 +115,42 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $userId = $this->user->requireId();
 
-        $liked = $this->history()->withSurface(InclusionSurface::YourStream)->liked($userId, 10);
+        $liked = $this->history()->findLikedIds($userId, 10, InclusionSurface::YourStream);
 
         self::assertCount(2, $liked);
-        self::assertNotContains($outOfStream->requireId(), $this->entryIds($liked));
-        self::assertNotContains($locallyOut->requireId(), $this->entryIds($liked));
+        self::assertNotContains($outOfStream->requireId(), $liked);
+        self::assertNotContains($locallyOut->requireId(), $liked);
         self::assertCount(4, $this->history()->liked($userId, 10));
+    }
+
+    public function testTheIdReadsListTheSameEntriesInTheSameOrderAsTheHistory(): void
+    {
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $this->persistEntry('f')));
+        StateMarks::markKept(SavedPostFixtures::state($this->entityManager, $this->user, $this->persistEntry('k')));
+        $shared = $this->persistEntry('s');
+        EntryShareFixtures::share($this->entityManager, $this->user, $shared, new \DateTimeImmutable('2026-10-02'));
+        [$lower] = $this->persistPostInTwoFollowedFeeds();
+        $this->likeItemOf($lower);
+        $this->likeLocally($this->persistEntry('local-old'), '2026-10-02 09:00:00');
+        $this->likeLocally($this->persistEntry('local-new'), '2026-10-02 11:00:00');
+        $this->upvoteEntry($this->persistEntry('upvoted'), '2026-10-02 10:00:00');
+        $this->entityManager->flush();
+        $userId = $this->user->requireId();
+        $history = $this->history();
+        $surface = InclusionSurface::YourStream;
+
+        self::assertCount(4, $history->findLikedIds($userId, 10, $surface));
+        self::assertSame($this->entryIds($history->liked($userId, 10)), $history->findLikedIds($userId, 10, $surface));
+        self::assertSame($this->entryIds($history->liked($userId, 2)), $history->findLikedIds($userId, 2, $surface));
+        self::assertSame(
+            $this->entryIds($history->favorites($userId, 10)),
+            $history->findFavoriteIds($userId, 10, $surface),
+        );
+        self::assertSame($this->entryIds($history->kept($userId, 10)), $history->findKeptIds($userId, 10, $surface));
+        self::assertSame(
+            $this->entryIds($history->shared($userId, 10)),
+            $history->findSharedIds($userId, 10, $surface),
+        );
     }
 
     public function testTwoViewsFromTheSameInstantComeBackHighestIdFirst(): void

@@ -13,7 +13,6 @@ use App\Enum\FeedLanguage;
 use App\Repository\YourStreamSourceRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
 use App\Service\Curation\YourStream\Model\InterestInputsModel;
-use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use App\Service\Curation\YourStream\Model\StreamWordModel;
 use App\Service\Curation\YourStream\SearchTermStems;
 use App\Service\Curation\YourStream\YourStreamBackground;
@@ -165,15 +164,15 @@ final class YourStreamWordBuilderTest extends DbTestCase
     }
 
     /**
-     * @param list<StreamEntryModel> $articles
-     * @param list<string>           $searchTerms
+     * @param list<int>    $articleIds
+     * @param list<string> $searchTerms
      *
      * @return list<StreamWordModel>
      */
-    private function buildWords(array $articles, array $searchTerms): array
+    private function buildWords(array $articleIds, array $searchTerms): array
     {
         return $this->builder->buildWords(
-            new InterestInputsModel($this->user->requireId(), $articles, $searchTerms),
+            new InterestInputsModel($this->user->requireId(), $articleIds, $searchTerms),
             $this->background->buildSweepPass(),
         );
     }
@@ -202,7 +201,7 @@ final class YourStreamWordBuilderTest extends DbTestCase
         return $feed;
     }
 
-    private function favourite(Feed $feed, string $title): StreamEntryModel
+    private function favourite(Feed $feed, string $title): int
     {
         $entry = $this->entry($feed, $title, '2026-09-01 10:00:00');
         $state = new EntryState($this->user, $entry);
@@ -210,7 +209,7 @@ final class YourStreamWordBuilderTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        return StreamEntryModel::fromEntry($entry);
+        return $entry->requireId();
     }
 
     private function entries(Feed $feed, int $count, string $title): void
