@@ -313,7 +313,13 @@ describe('OrganiseFeedRowComponent', () => {
     )[0].actions.filter((item): item is ActionSheetCheck => 'checked' in item);
     const forYou = checks.find(({ id }) => id === 'forYou');
 
-    expect(checks.map(({ id }) => id)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
+    expect(checks.map(({ id }) => id)).toEqual([
+      'allItems',
+      'forYou',
+      'yourStream',
+      'savedSearches',
+      'trending',
+    ]);
     expect(forYou?.checked()).toBe(true);
     coarse.componentRef.setInput('subscription', { ...SUBSCRIPTION, includeInForYou: false });
     expect(forYou?.checked()).toBe(false);
