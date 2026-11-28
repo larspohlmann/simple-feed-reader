@@ -306,7 +306,7 @@
         "fixedPrompt": "The role and output contract every run sends. They are fixed so the response stays machine-readable — the guidance prompt above is the place for your own instructions.",
         "debug": "When on, every run keeps its full request and response log. The log appears in the “Debug log” panel below once a run has produced entries. Debug mode does not change what the recommendation list shows — that is what “Show why articles were picked” controls.",
         "purge": "Deletes every recommended article from “For you” for this account. The articles themselves and their read state stay untouched. This cannot be undone — the next run builds a fresh list.",
-        "forYouStream": "The AI turns your profile into weighted words for each language. Every new entry's headline and text are matched against them, and words that are rare in your feeds count more. A change only affects entries that arrive afterwards."
+        "forYouStream": "The AI reads your profile and picks words and short phrases that describe your interests (listed below). Each new article is checked for them in its headline and text, and if enough of them appear, it lands in your stream. Words that are rare in your feeds count more than common ones. Precision sets how close the match must be: narrow lets in only strong matches, wide lets in more. Changes only affect new articles."
       },
       "guide": {
         "title": "Step-by-step setup",
@@ -348,6 +348,8 @@
           "precisionDesc": "How closely an entry must match your interests to appear.",
           "narrower": "Narrower",
           "wider": "Wider",
+          "narrowEnd": "Narrow",
+          "wideEnd": "Wide",
           "resetPrecision": "Reset precision",
           "precisionReadout": "Precision: {{label}}",
           "precisionLabel": {
@@ -358,7 +360,7 @@
             "widest": "Widest"
           },
           "phrases": "Words the AI picked",
-          "phrasesEmpty": "No word list yet. It appears after your next profile update."
+          "phrasesEmpty": "No word list yet. It appears a few minutes after your profile is updated."
         },
         "showScoreAndReasons": "Show score and reasons",
         "showScoreAndReasonsDesc": "Adds each pick's score and, where the model writes one, its reason.",

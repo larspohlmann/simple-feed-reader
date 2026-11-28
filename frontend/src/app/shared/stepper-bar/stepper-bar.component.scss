@@ -5,3 +5,10 @@
 :host {
   display: flex;
 }
+
+.seg .end.has-text {
+  width: auto;
+  padding-inline: var(--space-3);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}

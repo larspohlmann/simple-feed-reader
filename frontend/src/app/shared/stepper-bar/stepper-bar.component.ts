@@ -12,8 +12,10 @@ export class StepperBarComponent {
   readonly step = input.required<number>();
   readonly min = input.required<number>();
   readonly max = input.required<number>();
-  readonly decreaseIcon = input.required<string>();
-  readonly increaseIcon = input.required<string>();
+  readonly decreaseIcon = input<string>();
+  readonly increaseIcon = input<string>();
+  readonly decreaseText = input<string>();
+  readonly increaseText = input<string>();
   readonly groupLabel = input.required<string>();
   readonly decreaseLabel = input.required<string>();
   readonly increaseLabel = input.required<string>();

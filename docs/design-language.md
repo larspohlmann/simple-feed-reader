@@ -1228,7 +1228,8 @@ knows no translation keys, so every text arrives already translated.
 |---|---|---|
 | `step` | `number` (required) | — the current step |
 | `min`, `max` | `number` (required) | — the bar is empty at `min` and full at `max`; the end buttons disable there |
-| `decreaseIcon`, `increaseIcon` | `string` (required) | — icon names |
+| `decreaseIcon`, `increaseIcon` | `string` | — icon names; each end needs an icon or a text |
+| `decreaseText`, `increaseText` | `string` | — a word on that end instead of its icon (the For you precision reads "Narrow" / "Wide"); the button sizes to the word with the `--space-3` inline padding |
 | `groupLabel` | `string` (required) | — the group's accessible name |
 | `decreaseLabel`, `increaseLabel`, `resetLabel` | `string` (required) | — title and `aria-label` of the buttons |
 | `readout` | `string` (required) | — the sentence a screen reader hears on change |

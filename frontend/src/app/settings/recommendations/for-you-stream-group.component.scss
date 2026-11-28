@@ -1,5 +1,5 @@
 .precision-bar {
-  inline-size: 12rem;
+  inline-size: 16rem;
   max-inline-size: 100%;
 }
 
@@ -7,15 +7,22 @@
 .stream-phrases {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  align-items: flex-start;
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
-.stream-phrases-title,
-.stream-language-name {
+.stream-phrases-title {
   margin: 0;
   font-size: var(--fs-sm);
   font-weight: 550;
+}
+
+.stream-language-name {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 550;
+  line-height: inherit;
 }
 
 .stream-language-name,
@@ -28,25 +35,75 @@
   font-size: var(--fs-sm);
 }
 
+.stream-phrase-clip {
+  --phrase-lines: 5;
+
+  align-self: stretch;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  overflow: hidden;
+  max-block-size: calc(var(--phrase-lines) * 1lh);
+  position: relative;
+
+  &.expanded {
+    max-block-size: none;
+  }
+}
+
+.stream-phrase-limit {
+  position: absolute;
+  inline-size: 0;
+  block-size: calc(var(--phrase-lines) * 1lh);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stream-phrases-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .stream-language {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
 .stream-phrase-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+  gap: 0 var(--space-3);
   margin: 0;
   padding: 0;
+  font-size: inherit;
+  line-height: inherit;
   list-style: none;
 }
 
 .stream-phrase {
   display: inline-flex;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
+  align-items: baseline;
+}
+
+.stream-phrase-text,
+.stream-phrase-weight {
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .stream-phrase-weight {

@@ -32,8 +32,8 @@
         [step]="precisionIndex() + 1"
         [min]="1"
         [max]="precisionSteps"
-        decreaseIcon="zoom_in_map"
-        increaseIcon="zoom_out_map"
+        [decreaseText]="'settings.ai.recommendations.forYouStream.narrowEnd' | transloco"
+        [increaseText]="'settings.ai.recommendations.forYouStream.wideEnd' | transloco"
         decreaseClass="narrower"
         increaseClass="wider"
         [groupLabel]="'settings.ai.recommendations.forYouStream.precision' | transloco"
@@ -59,21 +59,45 @@
       <h3 class="stream-phrases-title">
         {{ 'settings.ai.recommendations.forYouStream.phrases' | transloco }}
       </h3>
-      @for (group of stream().phrases; track group.language) {
-        <div class="stream-language">
-          <h4 class="stream-language-name">
-            {{ 'reader.feedLanguage.' + group.language | transloco }}
-          </h4>
-          <ul class="stream-phrase-list">
-            @for (entry of group.phrases; track $index) {
-              <li class="stream-phrase">
-                <span class="stream-phrase-text">{{ entry.phrase }}</span>
-                <span class="stream-phrase-weight">{{ formatWeight(entry.weight) }}</span>
-              </li>
+      @if (stream().phrases.length > 0) {
+        <div
+          [id]="phraseClipId"
+          class="stream-phrase-clip"
+          data-testid="for-you-stream-phrases-clip"
+          [class.expanded]="phrasesExpanded()"
+        >
+          <span #phraseLimit class="stream-phrase-limit" aria-hidden="true"></span>
+          <div #phraseBody class="stream-phrase-body">
+            @for (group of stream().phrases; track group.language) {
+              <div class="stream-language">
+                <h4 class="stream-language-name">
+                  {{ 'reader.feedLanguage.' + group.language | transloco }}
+                </h4>
+                <ul class="stream-phrase-list">
+                  @for (entry of group.phrases; track $index) {
+                    <li class="stream-phrase">
+                      <span class="stream-phrase-text">{{ entry.phrase }}</span>
+                      <span class="stream-phrase-weight">{{ formatWeight(entry.weight) }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
             }
-          </ul>
+          </div>
         </div>
-      } @empty {
+        @if (phrasesOverflow()) {
+          <button
+            type="button"
+            class="stream-phrases-toggle"
+            data-testid="for-you-stream-phrases-toggle"
+            [attr.aria-controls]="phraseClipId"
+            [attr.aria-expanded]="phrasesExpanded()"
+            (click)="togglePhrases()"
+          >
+            {{ (phrasesExpanded() ? 'reader.showLess' : 'reader.showMore') | transloco }}
+          </button>
+        }
+      } @else {
         <p class="stream-phrases-empty">
           {{ 'settings.ai.recommendations.forYouStream.phrasesEmpty' | transloco }}
         </p>

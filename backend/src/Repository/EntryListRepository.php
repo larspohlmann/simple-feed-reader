@@ -15,6 +15,7 @@ use App\Enum\EntryView;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -135,8 +136,8 @@ final class EntryListRepository extends ServiceEntityRepository
         return $this->getEntityManager()->createQueryBuilder()
             ->select('e.id')
             ->from($likeClass, 'liked')
-            ->join(Entry::class, 'e', 'WITH', $entryCondition)
-            ->join(Subscription::class, 's', 'WITH', 's.feed = e.feed AND s.user = :user')
+            ->join(Entry::class, 'e', Join::ON, $entryCondition)
+            ->join(Subscription::class, 's', Join::ON, 's.feed = e.feed AND s.user = :user')
             ->andWhere('liked.user = :user');
     }
 

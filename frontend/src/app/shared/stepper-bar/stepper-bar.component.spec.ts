@@ -90,20 +90,35 @@ describe('StepperBarComponent', () => {
     bare.componentRef.setInput('step', 1);
     bare.componentRef.setInput('min', 0);
     bare.componentRef.setInput('max', 2);
-    for (const name of [
-      'decreaseIcon',
-      'increaseIcon',
-      'groupLabel',
-      'decreaseLabel',
-      'increaseLabel',
-      'resetLabel',
-      'readout',
-    ]) {
+    bare.componentRef.setInput('decreaseIcon', 'decreaseIcon');
+    bare.componentRef.setInput('increaseIcon', 'increaseIcon');
+    for (const name of ['groupLabel', 'decreaseLabel', 'increaseLabel', 'resetLabel', 'readout']) {
       bare.componentRef.setInput(name, name);
     }
     bare.detectChanges();
     const host = bare.nativeElement as HTMLElement;
     expect(host.querySelector('button.end.decrease')).not.toBeNull();
     expect(host.querySelector('button.end.increase')).not.toBeNull();
+  });
+
+  it('shows end text instead of the icon when given', () => {
+    const texty = TestBed.createComponent(StepperBarComponent);
+    texty.componentRef.setInput('step', 1);
+    texty.componentRef.setInput('min', 0);
+    texty.componentRef.setInput('max', 2);
+    for (const name of ['groupLabel', 'decreaseLabel', 'increaseLabel', 'resetLabel', 'readout']) {
+      texty.componentRef.setInput(name, name);
+    }
+    texty.componentRef.setInput('decreaseText', 'Narrow');
+    texty.componentRef.setInput('increaseText', 'Wide');
+    texty.detectChanges();
+    const host = texty.nativeElement as HTMLElement;
+    const decrease = host.querySelector('button.end.decrease')!;
+    const increase = host.querySelector('button.end.increase')!;
+    expect(decrease.textContent?.trim()).toBe('Narrow');
+    expect(increase.textContent?.trim()).toBe('Wide');
+    expect(host.querySelector('app-icon')).toBeNull();
+    expect(decrease.classList).toContain('has-text');
+    expect(decrease.getAttribute('aria-label')).toBe('decreaseLabel');
   });
 });
