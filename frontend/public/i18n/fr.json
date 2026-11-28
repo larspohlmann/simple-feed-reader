@@ -1960,6 +1960,16 @@
       "filter": "Filtrer les libellés",
       "filterBy": "Filtrer par le libellé « {{name}} »",
       "more": "+{{count}} autres libellés"
+    },
+    "export": {
+      "action": "Exporter",
+      "title": "Exporter {{name}}",
+      "format": "Format",
+      "bookmarksName": "Marque-pages (HTML)",
+      "bookmarksDescription": "Pour les navigateurs et les outils de marque-pages comme Raindrop, Linkding, Wallabag ou Pinboard.",
+      "googleReaderName": "JSON Google Reader",
+      "googleReaderDescription": "Pour les lecteurs de flux comme FreshRSS. Conserve le texte des articles et vos libellés. FreshRSS s’abonne au flux de chaque article lors de l’import.",
+      "submit": "Exporter"
     }
   },
   "social": {

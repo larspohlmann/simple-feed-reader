@@ -2715,6 +2715,16 @@ describe('organise mode', () => {
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
+  it('draws Favorites and Kept in their own card before Tags while organising (#2585)', () => {
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree });
+    const element = fixture.nativeElement as HTMLElement;
+    const card = element.querySelector('app-sidebar-collection')!.closest('.card')!;
+
+    expect(card.querySelectorAll('app-sidebar-collection')).toHaveLength(2);
+    expect(card.querySelectorAll('.collection-head .dots')).toHaveLength(2);
+    expect(card.nextElementSibling?.querySelector('.tags-head')).not.toBeNull();
+  });
+
   it('organise tag rows carry a handle, an inert body, ⋯ and a chevron that expands', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree });
     const element = fixture.nativeElement as HTMLElement;

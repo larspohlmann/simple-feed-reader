@@ -1960,6 +1960,16 @@
       "filter": "Filtrar rótulos",
       "filterBy": "Filtrar por el rótulo “{{name}}”",
       "more": "+{{count}} rótulos más"
+    },
+    "export": {
+      "action": "Exportar",
+      "title": "Exportar {{name}}",
+      "format": "Formato",
+      "bookmarksName": "Marcadores (HTML)",
+      "bookmarksDescription": "Para navegadores y herramientas de marcadores como Raindrop, Linkding, Wallabag o Pinboard.",
+      "googleReaderName": "JSON de Google Reader",
+      "googleReaderDescription": "Para lectores de feeds como FreshRSS. Conserva el texto de los artículos y tus rótulos. FreshRSS se suscribe al feed de cada artículo al importar.",
+      "submit": "Exportar"
     }
   },
   "social": {
