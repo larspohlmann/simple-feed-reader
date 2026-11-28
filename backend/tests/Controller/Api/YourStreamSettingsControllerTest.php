@@ -97,6 +97,18 @@ final class YourStreamSettingsControllerTest extends ApiTestCase
         $this->put($client, $headers, ['precision' => 'wide']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+    }
+
+    public function testAPutWithANonBooleanSwitchIsRejected(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('your-stream-string-switch@example.test'));
+
+        $this->put($client, $headers, ['enabled' => 'yes', 'precision' => 'wide']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
     public function testAPutWithAnUnknownPrecisionIsRejected(): void
