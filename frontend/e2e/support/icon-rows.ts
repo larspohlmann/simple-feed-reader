@@ -13,6 +13,8 @@ import {
   aStory,
   aStoryArticle,
 } from '../../src/testing/entry-testing';
+import { makeTag } from '../../src/app/reader/testing/tag.factory';
+import { DESKTOP, Surface } from './first-line';
 import { stubImageHost } from './images';
 import {
   entryDetailJson,
@@ -206,3 +208,20 @@ export async function stubTrending(page: Page): Promise<void> {
     (route) => route.fulfill({ json: { stories: [], nextBuildDueAt: null } }),
   );
 }
+
+export const TAGS = [
+  makeTag(7, 'Politics', { icon: 'home' }),
+  makeTag(8, 'Science', { icon: 'science' }),
+];
+export const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
+
+export const SCORED_ARTICLE: Surface = {
+  viewport: DESKTOP,
+  stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+  path: '/?subscription=1',
+};
+export const ORGANISE: Surface = {
+  viewport: DESKTOP,
+  stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+  path: '/settings/organise',
+};

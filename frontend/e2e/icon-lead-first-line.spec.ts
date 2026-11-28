@@ -1,36 +1,41 @@
-import { BrowserContext, expect, Locator, Page, test as base } from '@playwright/test';
-import { makeTag } from '../src/app/reader/testing/tag.factory';
+import { expect, Locator, Page } from '@playwright/test';
 import { aStory } from '../src/testing/entry-testing';
-import { settleAnimations } from './support/animations';
-import { presetLocalStorage } from './support/auth';
 import {
+  DESKTOP,
   expectNear,
   expectOnCapMiddle,
-  expectTheme,
   firstTextRect,
   LeadParts,
   measureFirstLine,
   measureToken,
-  stubAccountTheme,
-  ThemeName,
+  PHONE,
+  settle,
+  Setup,
+  Surface,
+  test,
   TOLERANCE,
 } from './support/first-line';
 import {
   NOTIFICATION,
+  ONE_ENTRY,
   openArticle,
+  ORGANISE,
   POST,
+  SCORED_ARTICLE,
   SCORED_POST,
   stubArticle,
   stubMagazine,
   stubNotifications,
   stubTrending,
+  TAGS,
 } from './support/icon-rows';
 import {
+  MENU_COARSE,
+  MENU_FINE,
   openAccountMenu,
   openRepostMenu,
   openShareMenu,
   openShareSheet,
-  stubMenus,
 } from './support/menu-rows';
 import { entryDetailJson, entryWire } from './support/reader';
 
@@ -39,15 +44,8 @@ import { entryDetailJson, entryWire } from './support/reader';
  * first line, whatever the theme or the text size. Every API read is stubbed, so the spec owns what it
  * measures. A case is real only when its text spans two lines or more.
  */
-const PHONE = { width: 375, height: 812 };
-const DESKTOP = { width: 1280, height: 900 };
 const LINE_TOLERANCE = 1;
 const MIN_LINES = 1.9;
-
-interface Setup {
-  theme: ThemeName;
-  step: 100 | 150;
-}
 
 const LONG_STORY = aStory({
   id: 601,
@@ -66,56 +64,6 @@ const PAYWALLED_BODY = {
   originalHero: null,
   extractedAt: '2026-11-24T10:00:00+00:00',
 };
-
-interface Viewport {
-  width: number;
-  height: number;
-}
-
-/** Where a case opens: its viewport and pointer, its local storage, its API stubs and its path. */
-interface Surface {
-  viewport?: Viewport;
-  touch?: boolean;
-  storage?: Record<string, string>;
-  stub: (page: Page) => Promise<void>;
-  path: string;
-}
-
-/** `openSurface` opens a page on `surface` in `setup`; every context it opened closes after the test. */
-const test = base.extend<{ openSurface: (setup: Setup, surface: Surface) => Promise<Page> }>({
-  openSurface: async ({ browser }, use) => {
-    const contexts: BrowserContext[] = [];
-    await use(async ({ step, theme }, { viewport = PHONE, touch = false, storage, stub, path }) => {
-      const context = await browser.newContext({
-        baseURL: test.info().project.use.baseURL,
-        viewport,
-        hasTouch: touch,
-        isMobile: touch,
-      });
-      contexts.push(context);
-      const page = await context.newPage();
-      await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
-      await presetLocalStorage(page, {
-        'sfr.textSize': String(step),
-        'sfr.layout': 'pane',
-        'sfr.theme': 'light',
-        ...storage,
-      });
-      await stub(page);
-      // After the surface stubs: a later route wins, and they answer /api/me too.
-      await stubAccountTheme(page, theme);
-      await page.goto(path);
-      return page;
-    });
-    await Promise.all(contexts.map((context) => context.close()));
-  },
-});
-
-async function settle(page: Page, theme: ThemeName): Promise<void> {
-  await expectTheme(page, theme);
-  await page.evaluate(() => document.fonts.ready);
-  await settleAnimations(page.locator('body'));
-}
 
 /** The icon, the element whose first line it hangs on, and the whole text block, per surface. */
 interface Case extends Surface {
@@ -233,8 +181,6 @@ for (const setup of SETUPS) {
   });
 }
 
-const TAGS = [makeTag(7, 'Politics', { icon: 'home' }), makeTag(8, 'Science', { icon: 'science' })];
-const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
 const BLUESKY_FEED = {
   social: { network: 'bluesky' as const, kind: 'home' as const, accountId: 1 },
 };
@@ -249,17 +195,6 @@ interface LeadCase extends Surface {
 
 const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
 const BLUESKY_COMMENT = 'app-entry-comments li.comment:nth-child(1) app-social-counts-row';
-
-const SCORED_ARTICLE: Surface = {
-  viewport: DESKTOP,
-  stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
-  path: '/?subscription=1',
-};
-const ORGANISE: Surface = {
-  viewport: DESKTOP,
-  stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
-  path: '/settings/organise',
-};
 
 const PILL_CASES: LeadCase[] = [
   {
@@ -532,9 +467,6 @@ interface MenuCase extends LeadCase {
   /** The text is a single line, so its line stays centred in the row. */
   centred: boolean;
 }
-
-const MENU_FINE: Surface = { viewport: DESKTOP, stub: stubMenus, path: '/?subscription=1' };
-const MENU_COARSE: Surface = { ...MENU_FINE, viewport: PHONE, touch: true };
 
 const accountRow = (select: (menu: Locator) => Locator) => async (page: Page) =>
   select(await openAccountMenu(page));

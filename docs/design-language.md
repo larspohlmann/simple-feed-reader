@@ -191,7 +191,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   resolve `1cap`. A slot projected from outside needs `::ng-deep`.
 
 `e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle, and
-a painted glyph inside its control. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
+a painted glyph inside its control. `e2e/icon-lead-slots.spec.ts` finds every slot by its strut rule and
+pins its cap strut, on a fine and a coarse pointer. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
 its exclusion markers.
 
 Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
