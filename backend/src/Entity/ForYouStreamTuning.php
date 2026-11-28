@@ -9,23 +9,19 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** Whether the For you stream runs and how selective it is, embedded in the settings row. */
 #[ORM\Embeddable]
-final class ForYouStreamTuning
+final readonly class ForYouStreamTuning
 {
-    #[ORM\Column(name: 'for_you_stream_enabled', options: ['default' => true])]
-    private bool $enabled;
-
-    #[ORM\Column(
-        name: 'for_you_stream_precision',
-        length: 10,
-        enumType: ForYouStreamPrecision::class,
-        options: ['default' => 'wide'],
-    )]
-    private ForYouStreamPrecision $precision;
-
-    public function __construct(bool $enabled, ForYouStreamPrecision $precision)
-    {
-        $this->enabled = $enabled;
-        $this->precision = $precision;
+    public function __construct(
+        #[ORM\Column(name: 'for_you_stream_enabled', options: ['default' => true])]
+        private bool $enabled,
+        #[ORM\Column(
+            name: 'for_you_stream_precision',
+            length: 10,
+            enumType: ForYouStreamPrecision::class,
+            options: ['default' => 'wide'],
+        )]
+        private ForYouStreamPrecision $precision,
+    ) {
     }
 
     public static function defaults(): self

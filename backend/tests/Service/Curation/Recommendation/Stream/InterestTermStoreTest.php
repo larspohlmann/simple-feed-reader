@@ -20,6 +20,7 @@ use App\Service\Curation\Recommendation\Stream\Model\ExtractedTermsModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StemmingWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
 
 final class InterestTermStoreTest extends DbTestCase
@@ -180,6 +181,37 @@ final class InterestTermStoreTest extends DbTestCase
         $this->expectException(\InvalidArgumentException::class);
 
         InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar']);
+    }
+
+    /** @param array<mixed> $stored */
+    #[DataProvider('provideMalformedStoredPhrases')]
+    public function testAMalformedStoredPhraseFailsLoudly(array $stored): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        InterestPhrase::fromStoredArray($stored);
+    }
+
+    /** @return iterable<string, array{array<mixed>}> */
+    public static function provideMalformedStoredPhrases(): iterable
+    {
+        yield 'a language that is no string' => [['language' => 7, 'phrase' => 'solar', 'weight' => 0.4]];
+        yield 'a phrase that is no string' => [['language' => 'en', 'phrase' => 12, 'weight' => 0.4]];
+        yield 'a weight that is no number' => [['language' => 'en', 'phrase' => 'solar', 'weight' => 'heavy']];
+    }
+
+    public function testAnIntegerWeightInStorageComesBackAsFloat(): void
+    {
+        $phrase = InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar', 'weight' => 3]);
+
+        self::assertSame(3.0, $phrase->weight);
+    }
+
+    public function testANumericStringWeightInStorageComesBackAsFloat(): void
+    {
+        $phrase = InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar', 'weight' => '0.35']);
+
+        self::assertSame(0.35, $phrase->weight);
     }
 
     private function requireUser(): User

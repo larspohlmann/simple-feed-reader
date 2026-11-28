@@ -68,6 +68,11 @@ final class LlmInterestTermExtractorTest extends DbTestCase
             ))),
         );
         self::assertEqualsWithDelta(0.9, $outcome->requireExtracted()->stems[0]->weight, 1e-9);
+        $phrases = $outcome->requireExtracted()->phrases;
+        self::assertCount(1, $phrases);
+        self::assertSame(FeedLanguage::English, $phrases[0]->language);
+        self::assertSame('solar', $phrases[0]->phrase);
+        self::assertEqualsWithDelta(0.9, $phrases[0]->weight, 1e-9);
         $log = $this->onlyLogRow();
         self::assertSame(CallPhase::InterestTerms, $log->getPhase());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());

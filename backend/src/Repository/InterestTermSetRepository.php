@@ -76,10 +76,6 @@ final class InterestTermSetRepository extends ServiceEntityRepository
      */
     public function findStreamPrecisions(array $userIds): array
     {
-        if ($userIds === []) {
-            return [];
-        }
-
         /** @var list<array{userId: int|string, precision: ForYouStreamPrecision}> $rows */
         $rows = $this->createQueryBuilder('s')
             ->select('IDENTITY(s.user) AS userId', 'settings.forYouStream.precision AS precision')
