@@ -833,6 +833,7 @@ describe('RecommendationSettingsCardComponent', () => {
       fixture.detectChanges();
 
       click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
+      fixture.detectChanges();
       click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
       const [, last] = http.match(STREAM_URL);
       expect(last.request.body).toEqual({ enabled: true, precision: 'narrow' });
