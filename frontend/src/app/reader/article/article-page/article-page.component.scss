@@ -8,12 +8,26 @@
   height: 100%;
 }
 
+/* The layer paints the sheet the article sits on, so the width is set here for both. */
+app-article-layer {
+  --article-measure: var(--reading-measure);
+}
+
+app-article-layer[data-reading-width='wide'] {
+  --article-measure: var(--reading-measure-wide);
+  --sheet-measure: calc(
+    var(--reading-measure-wide) - var(--reading-measure) + var(--magazine-measure)
+  );
+}
+
+app-article-layer[data-reading-width='full'] {
+  --article-measure: none;
+  --sheet-measure: 100%;
+}
+
 article {
   position: relative;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned reading measure, not a spacing value. */
-  max-width: 720px;
+  max-width: var(--article-measure);
   margin: 0 auto;
 
   /* The tail is the largest bottom need: the reading focus's (#107), which ReadingScope
@@ -23,8 +37,27 @@ article {
 }
 
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
+  /* The width at which a whole 16:9 frame and its toggle still fit the visible pane. */
+  article {
+    --fit-width: calc(
+      (100cqb - var(--reader-top) - var(--tap-target) - 2 * var(--space-5)) * 16 / 9
+    );
+  }
+
   article:has(.reader-cinema--on) {
     --reader-cinema-tail: calc(100cqb - var(--reader-top));
+  }
+
+  app-article-layer[data-reading-width='full'] article {
+    --reading-media-max: var(--fit-width);
+    --reading-picture-max: var(--reading-picture-measure);
+    --cinema-toggle-display: none;
+  }
+
+  app-article-layer[data-reading-width='full'] .lead-image {
+    width: auto;
+    max-width: 100%;
+    margin-inline: auto;
   }
 }
 

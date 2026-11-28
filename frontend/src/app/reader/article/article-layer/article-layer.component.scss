@@ -43,7 +43,7 @@
 .reader {
   --sheet: var(--surface-2);
 
-  @include list-chrome.sheet-column(var(--sheet));
+  @include list-chrome.sheet-column(var(--sheet), var(--sheet-measure, var(--magazine-measure)));
 
   position: relative;
   min-height: 100%;

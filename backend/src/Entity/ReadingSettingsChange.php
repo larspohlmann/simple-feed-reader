@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\Theme;
 
@@ -18,6 +19,7 @@ final readonly class ReadingSettingsChange
         public ?SidebarStyle $sidebarStyle = null,
         public ?Theme $theme = null,
         public ?Handedness $handedness = null,
+        public ?ReadingWidth $readingWidth = null,
         public ?bool $trendingEnabled = null,
     ) {
     }
@@ -29,6 +31,7 @@ final readonly class ReadingSettingsChange
             && null === $this->sidebarStyle
             && null === $this->theme
             && null === $this->handedness
+            && null === $this->readingWidth
             && null === $this->trendingEnabled;
     }
 }

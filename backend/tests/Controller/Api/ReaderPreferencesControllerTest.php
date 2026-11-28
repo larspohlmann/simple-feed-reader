@@ -19,6 +19,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         'sidebarStyle' => 'airy',
         'theme' => 'graphite',
         'handedness' => 'right',
+        'readingWidth' => 'standard',
         'trendingEnabled' => true,
     ];
 
@@ -65,6 +66,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
             'sidebarStyle' => $preferences['sidebarStyle'],
             'theme' => $preferences['theme'],
             'handedness' => $preferences['handedness'],
+            'readingWidth' => $preferences['readingWidth'],
             'trendingEnabled' => $preferences['trendingEnabled'],
         ];
     }
@@ -85,6 +87,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
                 'sidebarStyle' => 'airy',
                 'theme' => 'graphite',
                 'handedness' => 'right',
+                'readingWidth' => 'standard',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
                 'feedDirectoryScope' => ['countries' => [], 'languages' => []],
@@ -115,6 +118,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         yield 'sidebar style' => ['sidebarStyle', 'boxed'];
         yield 'theme' => ['theme', 'classic'];
         yield 'handedness' => ['handedness', 'left'];
+        yield 'reading width' => ['readingWidth', 'full'];
         yield 'trending' => ['trendingEnabled', false];
     }
 
@@ -183,6 +187,7 @@ final class ReaderPreferencesControllerTest extends ApiTestCase
         yield 'an unknown sidebar style' => ['{"sidebarStyle":"cards"}'];
         yield 'an unknown theme' => ['{"theme":"sepia"}'];
         yield 'an unknown handedness' => ['{"handedness":"both"}'];
+        yield 'an unknown reading width' => ['{"readingWidth":"huge"}'];
     }
 
     #[DataProvider('rejectedReadingSettingBodies')]

@@ -59,6 +59,14 @@
       "right": "Right-handed",
       "left": "Left-handed"
     },
+    "readingWidth": "Article width",
+    "readingWidthHint": "How wide an article runs on a large screen.",
+    "readingWidthSaveFailed": "The article width could not be saved to your account.",
+    "readingWidthOption": {
+      "standard": "Standard",
+      "wide": "Wide",
+      "full": "Full width"
+    },
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",

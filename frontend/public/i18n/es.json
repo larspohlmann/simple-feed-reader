@@ -59,6 +59,14 @@
       "right": "Mano derecha",
       "left": "Mano izquierda"
     },
+    "readingWidth": "Ancho de los artículos",
+    "readingWidthHint": "El ancho de un artículo en una pantalla grande.",
+    "readingWidthSaveFailed": "No se pudo guardar el ancho de los artículos en tu cuenta.",
+    "readingWidthOption": {
+      "standard": "Estándar",
+      "wide": "Ancho",
+      "full": "Ancho completo"
+    },
     "loadingVersion": "Cargando información de la versión",
     "feeds": {
       "title": "Feeds",

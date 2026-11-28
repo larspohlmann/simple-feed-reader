@@ -7,6 +7,7 @@ namespace App\Dto\Me;
 use App\Entity\ReadingSettingsChange;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\Theme;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -19,6 +20,7 @@ final readonly class UpdatePreferencesRequest
         public ?SidebarStyle $sidebarStyle = null,
         public ?Theme $theme = null,
         public ?Handedness $handedness = null,
+        public ?ReadingWidth $readingWidth = null,
         public ?bool $trendingEnabled = null,
     ) {
     }
@@ -37,6 +39,7 @@ final readonly class UpdatePreferencesRequest
             sidebarStyle: $this->sidebarStyle,
             theme: $this->theme,
             handedness: $this->handedness,
+            readingWidth: $this->readingWidth,
             trendingEnabled: $this->trendingEnabled,
         );
     }

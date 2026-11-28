@@ -34,6 +34,7 @@ use App\Enum\FeedLanguage;
 use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -63,6 +64,7 @@ final readonly class FullyPopulatedAccount
         $reading->setSidebarStyle(SidebarStyle::Airy);
         $reading->setTheme(Theme::Classic);
         $reading->setHandedness(Handedness::Left);
+        $reading->setReadingWidth(ReadingWidth::Full);
         $reading->setTrendingEnabled(false);
         $sharing = StoredUserSettings::sharing($this->entityManager, $user);
         $sharing->setEnabled(false);

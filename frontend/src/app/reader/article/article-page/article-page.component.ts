@@ -20,6 +20,7 @@ import { ListActionDirective } from '../../../shared/list-action/list-action.dir
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
+import { ReadingWidthService } from '../../../core/preferences/reading-width.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ArticleContentComponent } from '../article-content/article-content.component';
@@ -79,6 +80,7 @@ export class ArticlePageComponent {
   protected readonly source = inject(ARTICLE_PAGE_SOURCE);
   protected readonly scope = inject(ReadingScope);
   protected readonly sharing = inject(ShareAvailability);
+  protected readonly readingWidth = inject(ReadingWidthService).width;
   protected readonly shareUrl = computed(() =>
     this.sharing.available() ? this.source.url() : null,
   );

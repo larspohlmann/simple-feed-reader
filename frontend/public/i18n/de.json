@@ -59,6 +59,14 @@
       "right": "Rechtshändig",
       "left": "Linkshändig"
     },
+    "readingWidth": "Artikelbreite",
+    "readingWidthHint": "Wie breit ein Artikel auf einem großen Bildschirm läuft.",
+    "readingWidthSaveFailed": "Die Artikelbreite konnte nicht in deinem Konto gespeichert werden.",
+    "readingWidthOption": {
+      "standard": "Standard",
+      "wide": "Breit",
+      "full": "Volle Breite"
+    },
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",

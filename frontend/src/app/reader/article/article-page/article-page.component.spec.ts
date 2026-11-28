@@ -11,6 +11,7 @@ import {
 } from '../../../../testing/social-accounts-testing';
 import { StubArticlePageSource } from '../../../../testing/article-page-source-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { ReadingWidthService } from '../../../core/preferences/reading-width.service';
 import { SharingService } from '../../../core/preferences/sharing.service';
 import { ArticlePageSlotDirective } from './article-page-slot.directive';
 import { ArticlePageComponent } from './article-page.component';
@@ -81,6 +82,18 @@ describe('ArticlePageComponent', () => {
   }
 
   const rerender = (): void => fixture.detectChanges();
+
+  it('sets the article and its sheet to the standard width, then to the one the reader picks', () => {
+    const element = mount();
+    const layer = element.querySelector<HTMLElement>('app-article-layer')!;
+
+    expect(layer.dataset['readingWidth']).toBe('standard');
+
+    TestBed.inject(ReadingWidthService).set('full');
+    rerender();
+
+    expect(layer.dataset['readingWidth']).toBe('full');
+  });
 
   it('offers no sharing at all while sharing is switched off', () => {
     TestBed.inject(SharingService).setEnabled(false);

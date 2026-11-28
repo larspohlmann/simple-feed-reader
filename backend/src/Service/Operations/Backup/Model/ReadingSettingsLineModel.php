@@ -7,6 +7,7 @@ namespace App\Service\Operations\Backup\Model;
 use App\Entity\ReadingSettings;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\Theme;
 use App\Service\Operations\Backup\Support\LineField;
@@ -20,6 +21,7 @@ final readonly class ReadingSettingsLineModel
         public SidebarStyle $sidebarStyle,
         public Theme $theme,
         public Handedness $handedness,
+        public ReadingWidth $readingWidth,
         public bool $trendingEnabled,
     ) {
     }
@@ -44,6 +46,9 @@ final readonly class ReadingSettingsLineModel
             handedness: Handedness::tryFrom(
                 LineFieldWithDefault::string($line, 'handedness', Handedness::Right->value),
             ) ?? Handedness::Right,
+            readingWidth: ReadingWidth::tryFrom(
+                LineFieldWithDefault::string($line, 'readingWidth', ReadingWidth::Standard->value),
+            ) ?? ReadingWidth::Standard,
             trendingEnabled: LineFieldWithDefault::bool($line, 'trendingEnabled', true),
         );
     }
@@ -56,6 +61,7 @@ final readonly class ReadingSettingsLineModel
             sidebarStyle: $settings->getSidebarStyle(),
             theme: $settings->getTheme(),
             handedness: $settings->getHandedness(),
+            readingWidth: $settings->getReadingWidth(),
             trendingEnabled: $settings->isTrendingEnabled(),
         );
     }

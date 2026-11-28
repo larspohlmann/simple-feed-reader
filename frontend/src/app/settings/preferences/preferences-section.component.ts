@@ -3,6 +3,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LANGS } from '../../core/i18n/language';
 import { HANDEDNESS } from '../../core/preferences/handedness';
 import { HandednessService } from '../../core/preferences/handedness.service';
+import { READING_WIDTHS } from '../../core/preferences/reading-width';
+import { ReadingWidthService } from '../../core/preferences/reading-width.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { MAGAZINE_STYLES } from '../../core/preferences/magazine-style';
 import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
@@ -46,9 +48,11 @@ export class PreferencesSectionComponent {
   readonly readingFocus = inject(ReadingFocusService);
   readonly listAutoplay = inject(ListAutoplayService);
   readonly handedness = inject(HandednessService);
+  readonly readingWidth = inject(ReadingWidthService);
   readonly languages = LANGS;
   readonly magazineStyles = MAGAZINE_STYLES;
   readonly sidebarStyles = SIDEBAR_STYLES;
   readonly themeNames = THEMES;
   readonly handednessOptions = HANDEDNESS;
+  readonly readingWidthOptions = READING_WIDTHS;
 }
