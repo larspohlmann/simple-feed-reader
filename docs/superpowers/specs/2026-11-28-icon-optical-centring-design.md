@@ -64,3 +64,10 @@ guard keeps the table complete as glyphs are added.
 The script's file location and language, its page and pixel-scan mechanics,
 the render size, and how the scan module is shared between the Node script and
 Jest.
+
+## Amended during build
+
+- The table file is `icon-ink-shifts.ts`.
+- The shift is applied with the CSS `translate` property, so `transform` animations keep it.
+- Names come from the font's own ligatures (`glyph-names.txt`), because `index.d.ts` omits aliases such as `expand_more`.
+- `icons:measure` and `icons:glyph-names` are separate commands; only the second needs Python.
