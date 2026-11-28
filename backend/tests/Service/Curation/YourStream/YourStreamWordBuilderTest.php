@@ -104,6 +104,45 @@ final class YourStreamWordBuilderTest extends DbTestCase
         self::assertNotContains('nato', $words);
     }
 
+    public function testASeveralWordSearchAloneAddsNoWord(): void
+    {
+        $this->subscribedFeed('https://en.example.com/feed.xml', FeedLanguage::English);
+
+        self::assertSame([], $this->buildWords([], ['burning man']));
+    }
+
+    public function testASeveralWordSearchKeepsTheWordTheReadersOwnArticleSupports(): void
+    {
+        $feed = $this->subscribedFeed('https://en.example.com/feed.xml', FeedLanguage::English);
+        $favourites = [$this->favourite($feed, 'Burning Man tickets')];
+        $this->entries($feed, 600, 'Man arrested');
+
+        $stems = array_column($this->buildWords($favourites, ['burning man']), 'stem');
+
+        self::assertContains(StemmingWiring::stemmer()->stem('burning', FeedLanguage::English), $stems);
+        self::assertNotContains(StemmingWiring::stemmer()->stem('man', FeedLanguage::English), $stems);
+    }
+
+    public function testASingleWordSearchMakesTheListOnItsOwn(): void
+    {
+        $this->subscribedFeed('https://en.example.com/feed.xml', FeedLanguage::English);
+
+        $stems = array_column($this->buildWords([], ['psilocybin']), 'stem');
+
+        self::assertContains(StemmingWiring::stemmer()->stem('psilocybin', FeedLanguage::English), $stems);
+    }
+
+    public function testReadMoreBoilerplateBecomesNoWord(): void
+    {
+        $feed = $this->subscribedFeed('https://de.example.com/feed.xml', FeedLanguage::German);
+        $favourites = [
+            $this->favourite($feed, 'Bundesliga heute Weiterlesen'),
+            $this->favourite($feed, 'Bundesliga morgen Weiterlesen'),
+        ];
+
+        self::assertSame(['Bundesliga'], array_column($this->buildWords($favourites, []), 'word'));
+    }
+
     public function testAStopWordSearchAddsNoWordInAnyLanguage(): void
     {
         $this->subscribedFeed('https://de.example.com/feed.xml', FeedLanguage::German);

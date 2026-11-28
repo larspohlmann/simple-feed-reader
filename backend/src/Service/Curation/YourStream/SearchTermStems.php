@@ -37,6 +37,11 @@ final readonly class SearchTermStems
         return $shares;
     }
 
+    public function isSingleWord(string $term): bool
+    {
+        return \count($this->equivalents->canonicalizeWords($term)) === 1;
+    }
+
     /**
      * A term is typed in one language but stemmed in all: "der die das" must not become English words.
      *
