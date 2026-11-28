@@ -10,6 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "e2e": "playwright test",
+    "icons:measure": "python3 scripts/icons/list-glyph-names.py && node scripts/icons/measure-ink-shifts.mjs",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\"",
