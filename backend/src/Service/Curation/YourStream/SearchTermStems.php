@@ -6,6 +6,7 @@ namespace App\Service\Curation\YourStream;
 
 use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
+use App\Service\Curation\YourStream\Model\SearchTermModel;
 use App\Service\Foundation\Stemming\StopWordStems;
 use App\Service\Foundation\Stemming\WordEquivalents;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
@@ -21,15 +22,19 @@ final readonly class SearchTermStems
     ) {
     }
 
-    /** @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's */
-    public function collectStems(string $term, ?FeedLanguage $language): array
+    public function buildTerm(string $term): SearchTermModel
     {
         $words = $this->equivalents->canonicalizeWords($term);
-        if ($this->isOnlyStopWordsOfOneLanguage($words)) {
-            return [];
-        }
+        $isSingleWord = \count($words) === 1;
+
+        return new SearchTermModel($term, $this->isOnlyStopWordsOfOneLanguage($words) ? [] : $words, $isSingleWord);
+    }
+
+    /** @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's */
+    public function collectStems(SearchTermModel $term, ?FeedLanguage $language): array
+    {
         $shares = [];
-        foreach ($words as [$word, $bare]) {
+        foreach ($term->words as [$word, $bare]) {
             foreach ($this->equivalents->stemWordAndParts($word, $bare, $language) as $position => $stem) {
                 if ($this->isStorable($stem, $language)) {
                     $share = $position === 0 ? 1.0 : self::PART_WEIGHT_SHARE;
@@ -39,11 +44,6 @@ final readonly class SearchTermStems
         }
 
         return $shares;
-    }
-
-    public function isSingleWord(string $term): bool
-    {
-        return \count($this->equivalents->canonicalizeWords($term)) === 1;
     }
 
     /**

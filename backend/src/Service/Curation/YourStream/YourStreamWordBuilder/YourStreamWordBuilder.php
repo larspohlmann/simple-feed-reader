@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream\YourStreamWordBuilder;
 
-use App\Enum\FeedLanguage;
 use App\Repository\YourStreamSourceRepository;
 use App\Service\Curation\YourStream\Model\InterestInputsModel;
 use App\Service\Curation\YourStream\Pass\InterestTally;
@@ -44,21 +43,13 @@ final readonly class YourStreamWordBuilder implements YourStreamWordBuilderInter
     private function recordSearchTerms(InterestTally $interests, InterestInputsModel $inputs): void
     {
         $languages = [...$this->sources->findFeedLanguages($inputs->userId), null];
-        foreach ($inputs->searchTerms as $term) {
+        foreach ($inputs->searchTerms as $typed) {
+            $term = $this->searchTermStems->buildTerm($typed);
+            $articles = $term->isSingleWord ? YourStreamWordSelection::SEARCH_ARTICLES : 1;
             foreach ($languages as $language) {
-                $this->recordSearchTerm($interests, $term, $language);
+                $stemShares = $this->searchTermStems->collectStems($term, $language);
+                $interests->recordSearch($language, $stemShares, $typed, $articles);
             }
         }
-    }
-
-    private function recordSearchTerm(InterestTally $interests, string $term, ?FeedLanguage $language): void
-    {
-        $stemShares = $this->searchTermStems->collectStems($term, $language);
-        if ($this->searchTermStems->isSingleWord($term)) {
-            $interests->recordSearchTerm($language, $stemShares, $term);
-
-            return;
-        }
-        $interests->recordSearchPhrase($language, $stemShares, $term);
     }
 }

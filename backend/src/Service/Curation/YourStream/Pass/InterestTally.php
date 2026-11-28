@@ -8,7 +8,6 @@ use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\Model\EntryStemsModel;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
-use App\Service\Curation\YourStream\YourStreamWordSelection;
 
 /** One account's interests, counted by language key and stem; a one-word saved search counts as several articles. */
 final class InterestTally
@@ -43,16 +42,18 @@ final class InterestTally
         }
     }
 
-    /** @param array<array-key, float> $stemShares a one-word search, counted as several articles */
-    public function recordSearchTerm(?FeedLanguage $language, array $stemShares, string $term): void
+    /** @param array<array-key, float> $stemShares */
+    public function recordSearch(?FeedLanguage $language, array $stemShares, string $term, int $articles): void
     {
-        $this->recordSearch($language, $stemShares, $term, YourStreamWordSelection::SEARCH_ARTICLES);
-    }
-
-    /** @param array<array-key, float> $stemShares a search of several words, each counted as one article */
-    public function recordSearchPhrase(?FeedLanguage $language, array $stemShares, string $term): void
-    {
-        $this->recordSearch($language, $stemShares, $term, 1);
+        if ($stemShares === []) {
+            return;
+        }
+        $key = StreamStrengthsModel::languageKey($language);
+        $this->articleCounts[$key] = ($this->articleCounts[$key] ?? 0.0) + $articles;
+        foreach ($stemShares as $stem => $share) {
+            $this->recordStem($key, (string) $stem, $articles * $share, $articles);
+            $this->searchTerms[$key][$stem] ??= $term;
+        }
     }
 
     /** @return array<string, array<array-key, true>> */
@@ -111,20 +112,6 @@ final class InterestTally
         }
 
         return $picked;
-    }
-
-    /** @param array<array-key, float> $stemShares */
-    private function recordSearch(?FeedLanguage $language, array $stemShares, string $term, int $articles): void
-    {
-        if ($stemShares === []) {
-            return;
-        }
-        $key = StreamStrengthsModel::languageKey($language);
-        $this->articleCounts[$key] = ($this->articleCounts[$key] ?? 0.0) + $articles;
-        foreach ($stemShares as $stem => $share) {
-            $this->recordStem($key, (string) $stem, $articles * $share, $articles);
-            $this->searchTerms[$key][$stem] ??= $term;
-        }
     }
 
     private function recordStem(string $languageKey, string $stem, float $support, int $articles): void

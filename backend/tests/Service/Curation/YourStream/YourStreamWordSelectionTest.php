@@ -66,10 +66,11 @@ final class YourStreamWordSelectionTest extends TestCase
     {
         $this->articles(FeedLanguage::English, 1, ['chang' => 1.0]);
         $this->articles(FeedLanguage::English, 9, []);
-        $this->interests->recordSearchTerm(
+        $this->interests->recordSearch(
             FeedLanguage::English,
             ['climat' => 1.0, 'chang' => 1.0],
             'climate change',
+            YourStreamWordSelection::SEARCH_ARTICLES,
         );
 
         // chang: p_int = 4.5 / 14 against p_bg = 250.5 / 601.
@@ -81,10 +82,11 @@ final class YourStreamWordSelectionTest extends TestCase
 
     public function testASearchTermAloneFillsAListWithoutInterestArticles(): void
     {
-        $this->interests->recordSearchTerm(
+        $this->interests->recordSearch(
             FeedLanguage::German,
             ['warmepump' => 1.0, 'warm' => 0.5, 'pump' => 0.5],
             'Wärmepumpe',
+            YourStreamWordSelection::SEARCH_ARTICLES,
         );
 
         $words = $this->pickWords(FeedLanguage::German, 600, []);
@@ -97,7 +99,7 @@ final class YourStreamWordSelectionTest extends TestCase
     public function testASearchWithoutStemsInALanguageAddsNoArticlesThere(): void
     {
         $this->articles(FeedLanguage::English, 2, ['solar' => 1.0]);
-        $this->interests->recordSearchTerm(FeedLanguage::English, [], 'the');
+        $this->recordOneWordSearch([], 'the');
 
         // p_int = 2.5 / 3 keeps solar against p_bg = 180.5 / 601; three more articles would make it 2.5 / 6.
         self::assertSame(['solar'], $this->stems($this->pickWords(FeedLanguage::English, 600, ['solar' => 180])));
@@ -106,8 +108,8 @@ final class YourStreamWordSelectionTest extends TestCase
     public function testTheFirstSearchNamesAStemTheyShare(): void
     {
         $this->articles(FeedLanguage::English, 2, ['solar' => 1.0], ['solar' => ['Solar']]);
-        $this->interests->recordSearchTerm(FeedLanguage::English, ['solar' => 1.0], 'solar power');
-        $this->interests->recordSearchTerm(FeedLanguage::English, ['solar' => 1.0], 'solar panels');
+        $this->recordOneWordSearch(['solar' => 1.0], 'solar power');
+        $this->recordOneWordSearch(['solar' => 1.0], 'solar panels');
 
         self::assertSame('solar power', $this->pickWords(FeedLanguage::English, 600, [])[0]->word);
     }
@@ -231,6 +233,17 @@ final class YourStreamWordSelectionTest extends TestCase
         self::assertSame(
             [FeedLanguage::German, FeedLanguage::English, null],
             array_map(static fn (StreamWordModel $word): ?FeedLanguage => $word->language, $words),
+        );
+    }
+
+    /** @param array<string, float> $stemShares */
+    private function recordOneWordSearch(array $stemShares, string $term): void
+    {
+        $this->interests->recordSearch(
+            FeedLanguage::English,
+            $stemShares,
+            $term,
+            YourStreamWordSelection::SEARCH_ARTICLES,
         );
     }
 
