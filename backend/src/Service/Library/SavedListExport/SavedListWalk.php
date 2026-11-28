@@ -36,7 +36,7 @@ final readonly class SavedListWalk
             if ($rows === []) {
                 return;
             }
-            $cursor = $this->buildCursorAfter($rows[array_key_last($rows)]);
+            $cursor = $this->buildCursorAfter($query->ordering()->sort, $rows[array_key_last($rows)]);
             yield $this->mapRows($userId, $rows);
             $this->entityManager->clear();
         } while (\count($rows) >= $query->limit);
@@ -55,9 +55,9 @@ final readonly class SavedListWalk
         return $scope->labelScope === null ? $query : $query->withLabelScope($scope->labelScope);
     }
 
-    private function buildCursorAfter(EntryListRow $row): EntryCursor
+    private function buildCursorAfter(EntryListSort $sort, EntryListRow $row): EntryCursor
     {
-        return new EntryCursor(EntryListSort::PublishedDate->requireInstant($row), $row->entry->requireId());
+        return new EntryCursor($sort->requireInstant($row), $row->entry->requireId());
     }
 
     /**
