@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import type { EntryDto } from '../src/app/reader/models';
 import {
   DESKTOP,
   expectNear,
@@ -10,12 +11,14 @@ import {
   test,
 } from './support/first-line';
 import {
-  ONE_ENTRY,
+  COUNTED_ENTRY,
+  MAGAZINE,
   openArticle,
+  openTagPicker,
   ORGANISE,
   SCORED_ARTICLE,
   stubMagazine,
-  TAGS,
+  stubSuggestedTags,
 } from './support/icon-rows';
 import { MENU_FINE, openAccountMenu } from './support/menu-rows';
 
@@ -29,25 +32,41 @@ interface SlotSurface extends Surface {
   name: string;
   /** Brings the surface's rows on screen. */
   open: (page: Page) => Promise<void>;
+  /** Slots the surface must show, so it cannot quietly lose its rows. */
+  expected: string[];
 }
 
-const MAGAZINE: Surface = {
-  viewport: DESKTOP,
-  stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
-  path: '/?subscription=1',
-};
+const LIKED_AND_UNLIKABLE: EntryDto[] = [
+  COUNTED_ENTRY,
+  { ...COUNTED_ENTRY, id: 2, title: 'Two', social: null, myVote: 0 },
+];
 
 const SURFACES: SlotSurface[] = [
-  { name: 'the article', ...SCORED_ARTICLE, open: openArticle },
+  {
+    name: 'the article',
+    ...SCORED_ARTICLE,
+    open: openArticle,
+    expected: ['.byline > app-avatar', 'app-social-counts-row .count > app-icon'],
+  },
   {
     name: 'the list',
     ...MAGAZINE,
-    open: (page) => expect(page.locator('app-entry-list').getByText('One')).toBeVisible(),
+    stub: (page) => stubMagazine(page, LIKED_AND_UNLIKABLE),
+    open: async (page) => {
+      await expect(page.locator('app-entry-like .likes')).toBeVisible();
+      await expect(page.locator('app-entry-like button')).toBeVisible();
+    },
+    expected: [
+      'app-entry-like button > app-icon',
+      'app-entry-like .likes > app-icon',
+      'app-entry-meta .comments > app-icon',
+    ],
   },
   {
     name: 'organise',
     ...ORGANISE,
     open: (page) => expect(page.getByRole('button', { name: 'New tag' })).toBeVisible(),
+    expected: ['button.sm > app-icon'],
   },
   {
     name: 'the account menu',
@@ -55,14 +74,17 @@ const SURFACES: SlotSurface[] = [
     open: async (page) => {
       await openAccountMenu(page);
     },
+    expected: [],
   },
   {
     name: 'the tag picker',
     ...MAGAZINE,
+    stub: stubSuggestedTags,
     open: async (page) => {
-      await page.getByRole('button', { name: 'Edit feed' }).first().click();
-      await expect(page.locator('app-tag-chips .chip').first()).toBeVisible();
+      await openTagPicker(page);
+      await expect(page.locator('app-tag-picker .suggestions button').first()).toBeVisible();
     },
+    expected: ['.suggestion > app-tag-glyph'],
   },
 ];
 
@@ -80,9 +102,15 @@ for (const surface of SURFACES) {
       await surface.open(page);
       await settle(page, SETUP.theme);
 
-      const slots = await findLeadSlots(page);
+      const slots = await findLeadSlots(page, surface.expected);
 
       expect(slots.length, 'slots found').toBeGreaterThan(0);
+      for (const selector of surface.expected) {
+        expect(
+          slots.some((slot) => slot.expected.includes(selector)),
+          `${selector} reported`,
+        ).toBe(true);
+      }
       for (const slot of slots) {
         if (slot.alone) {
           expect(slot.alignSelf, `${slot.selector} alone`).toBe('center');

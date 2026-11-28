@@ -18,9 +18,11 @@ import {
 import {
   AVATAR,
   COMMENTS,
+  COUNTED_ENTRY,
   NOTIFICATION,
   ONE_ENTRY,
   openArticle,
+  openTagPicker,
   ORGANISE,
   POST,
   SCORED_ARTICLE,
@@ -28,6 +30,8 @@ import {
   stubArticle,
   stubMagazine,
   stubNotifications,
+  stubSuggestedTags,
+  stubTaggedMagazine,
   stubTrending,
   TAGS,
 } from './support/icon-rows';
@@ -39,7 +43,7 @@ import {
   openShareMenu,
   openShareSheet,
 } from './support/menu-rows';
-import { entryDetailJson, entryWire, oneFeedJson, subscriptionsJson } from './support/reader';
+import { entryDetailJson, entryWire } from './support/reader';
 
 /**
  * #2558: an icon in front of text that can wrap hangs its centre on the cap middle of the text's
@@ -198,17 +202,6 @@ interface LeadCase extends Surface {
 const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
 const BLUESKY_COMMENT = 'app-entry-comments li.comment:nth-child(1) app-social-counts-row';
 
-/** The edited feed carries no tags and a newer one carries TAGS, so the picker suggests them. */
-async function stubSuggestedTags(page: Page): Promise<void> {
-  await stubMagazine(page, ONE_ENTRY, { tags: [] });
-  const [edited] = oneFeedJson('Fixture feed').subscriptions;
-  const donor = { ...edited, id: 2, feedId: 2, title: 'Donor feed', tags: TAGS };
-  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
-    route.fulfill({ json: subscriptionsJson([edited, donor]) }),
-  );
-  await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags: TAGS } }));
-}
-
 function suggestedChipCase(name: string, viewport: Surface['viewport'], touch: boolean): LeadCase {
   return {
     name,
@@ -217,7 +210,7 @@ function suggestedChipCase(name: string, viewport: Surface['viewport'], touch: b
     stub: stubSuggestedTags,
     path: '/?subscription=1',
     row: async (page) => {
-      await page.getByRole('button', { name: 'Edit feed' }).first().click();
+      await openTagPicker(page);
       return page.locator('app-tag-picker button.suggestion').first();
     },
     icon: 'app-tag-glyph',
@@ -251,7 +244,7 @@ const PILL_CASES: LeadCase[] = [
   {
     name: 'a header tag chip',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: '/',
     row: async (page) => page.locator('.tagrow .chip:not(.all)').first(),
     icon: 'app-tag-glyph',
@@ -260,10 +253,10 @@ const PILL_CASES: LeadCase[] = [
   {
     name: 'a tag-picker chip',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: '/?subscription=1',
     row: async (page) => {
-      await page.getByRole('button', { name: 'Edit feed' }).first().click();
+      await openTagPicker(page);
       return page.locator('app-tag-chips .chip').first();
     },
     icon: 'app-tag-glyph',
@@ -492,17 +485,6 @@ for (const setup of SETUPS) {
     });
   });
 }
-
-const COUNTED_ENTRY = entryWire({
-  id: 1,
-  title: 'One',
-  source: 'Heise',
-  score: 22,
-  myVote: null,
-  commentCount: 6,
-  likeCount: 4,
-  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
-});
 
 const COUNTED_LIST: Surface = {
   viewport: DESKTOP,
@@ -830,7 +812,7 @@ const HEADER_CASES: HeaderCase[] = [
   {
     name: 'the list-header lead of a tag title',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: `/?tag=${TAGS[0].id}`,
     row: async (page) => page.locator('.list-header h2'),
     icon: 'app-tag-glyph',
@@ -1164,9 +1146,10 @@ for (const setup of SETUPS) {
       const row = byline(page, 1);
       const button = row.locator('app-comment-actions button');
       await expect(button).toBeVisible();
-      const measureOn = async (icon: Locator, firstLine: Locator) =>
-        measureFirstLine({ icon, firstLine });
-      const author = await measureOn(row.locator('app-avatar'), row.locator('.author'));
+      const author = await measureFirstLine({
+        icon: row.locator('app-avatar'),
+        firstLine: row.locator('.author'),
+      });
       expectOnCapMiddle(author, 'avatar');
       const lineBox = await boxOf(row.locator('.author'));
       const buttonBox = await boxOf(button);
@@ -1176,7 +1159,10 @@ for (const setup of SETUPS) {
         'the action button centre against the centre of the line',
       );
       for (const text of ['.handle', '.when']) {
-        const measure = await measureOn(row.locator('app-avatar'), row.locator(text));
+        const measure = await measureFirstLine({
+          icon: row.locator('app-avatar'),
+          firstLine: row.locator(text),
+        });
         expectNear(measure.capMiddle, author.capMiddle, `${text} cap middle against the author's`);
       }
     });

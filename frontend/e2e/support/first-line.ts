@@ -225,8 +225,10 @@ export interface SlotReport {
   capHeight: number;
   display: string;
   alignSelf: string;
-  /** The row centres its items on a named text, so the slot must take the baseline itself; inferred from the row's `align-items`. */
+  /** Inferred: the row's `align-items` is not `baseline`. */
   hasText: boolean;
+  /** The expected selectors this slot matches. */
+  expected: string[];
 }
 
 /** Runs in the page: the slot selector of every `::before { block-size: var(--icon-lead-cap) }` rule, in
@@ -277,7 +279,13 @@ function collectSlotSelectors(): string[] {
 }
 
 /** Runs in the page: each rendered element the selectors pick, once, with its strut and the cap. */
-function readSlots(selectors: string[]): SlotReport[] {
+function readSlots({
+  selectors,
+  expected,
+}: {
+  selectors: string[];
+  expected: string[];
+}): SlotReport[] {
   const measureCap = (slot: Element): number =>
     parseFloat(getComputedStyle(slot.parentElement ?? slot).getPropertyValue('--icon-lead-cap'));
   const reported = new Set<Element>();
@@ -297,13 +305,16 @@ function readSlots(selectors: string[]): SlotReport[] {
         display: style.display,
         alignSelf: style.alignSelf,
         hasText: !!row && getComputedStyle(row).alignItems !== 'baseline',
+        expected: expected.filter((candidate) => slot.matches(candidate)),
       });
     }
   }
   return reports;
 }
 
-/** Every icon-lead slot on the page, found by its strut rule rather than listed. */
-export async function findLeadSlots(page: Page): Promise<SlotReport[]> {
-  return page.evaluate(readSlots, await page.evaluate(collectSlotSelectors));
+/** Every icon-lead slot on the page, found by its strut rule rather than listed; `expected` names the
+ *  selectors each slot is reported as matching. */
+export async function findLeadSlots(page: Page, expected: string[] = []): Promise<SlotReport[]> {
+  const selectors = await page.evaluate(collectSlotSelectors);
+  return page.evaluate(readSlots, { selectors, expected });
 }

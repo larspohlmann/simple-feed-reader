@@ -22,6 +22,7 @@ import {
   oneFeedJson,
   readerFailedJson,
   stubOneFeedReader,
+  subscriptionsJson,
 } from './reader';
 
 /** Rows of text beside icons, every API read stubbed, so a spec or a script owns what it measures. */
@@ -222,6 +223,42 @@ export const SCORED_ARTICLE: Surface = {
 };
 export const ORGANISE: Surface = {
   viewport: DESKTOP,
-  stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+  stub: stubTaggedMagazine,
   path: '/settings/organise',
 };
+
+export async function stubTaggedMagazine(page: Page): Promise<void> {
+  await stubMagazine(page, ONE_ENTRY, { tags: TAGS });
+}
+
+export const MAGAZINE: Surface = {
+  viewport: DESKTOP,
+  stub: stubTaggedMagazine,
+  path: '/?subscription=1',
+};
+
+export const COUNTED_ENTRY = entryWire({
+  id: 1,
+  title: 'One',
+  source: 'Heise',
+  score: 22,
+  myVote: null,
+  commentCount: 6,
+  likeCount: 4,
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+});
+
+/** The edited feed carries no tags and a newer one carries TAGS, so the picker suggests them. */
+export async function stubSuggestedTags(page: Page): Promise<void> {
+  await stubMagazine(page, ONE_ENTRY, { tags: [] });
+  const [edited] = oneFeedJson('Fixture feed').subscriptions;
+  const donor = { ...edited, id: 2, feedId: 2, title: 'Donor feed', tags: TAGS };
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+    route.fulfill({ json: subscriptionsJson([edited, donor]) }),
+  );
+  await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags: TAGS } }));
+}
+
+export async function openTagPicker(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Edit feed' }).first().click();
+}
