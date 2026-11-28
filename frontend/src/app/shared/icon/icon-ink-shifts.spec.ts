@@ -8,10 +8,10 @@ const STALE = 'Run `npm run icons:measure` from frontend/ to remeasure.';
 
 describe('icon ink shifts', () => {
   it('covers exactly the names the source can render', () => {
-    const scanned = scanIconNames(FRONTEND);
-    const measured = Object.keys(ICON_INK_SHIFTS);
-    const missing = scanned.filter((name) => !measured.includes(name));
-    const stale = measured.filter((name) => !scanned.includes(name));
+    const scanned = new Set(scanIconNames(FRONTEND));
+    const measured = new Set(Object.keys(ICON_INK_SHIFTS));
+    const missing = [...scanned].filter((name) => !measured.has(name));
+    const stale = [...measured].filter((name) => !scanned.has(name));
     if (missing.length > 0 || stale.length > 0) {
       throw new Error(`${STALE} Missing: ${missing.join(', ')}. Stale: ${stale.join(', ')}.`);
     }
