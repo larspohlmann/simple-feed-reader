@@ -306,7 +306,7 @@
         "fixedPrompt": "Rolle und Ausgabe-Vertrag, die jeder Lauf sendet. Sie sind fest, damit die Antwort maschinenlesbar bleibt — für eigene Anweisungen ist der Leitprompt oben da.",
         "debug": "Wenn aktiv, behält jeder Lauf sein vollständiges Anfrage- und Antwortprotokoll. Das Protokoll erscheint unten im Bereich „Debug-Protokoll“, sobald ein Lauf Einträge erzeugt hat. Der Debug-Modus ändert nicht, was die Empfehlungsliste zeigt — dafür ist „Anzeigen, warum Artikel gewählt wurden“ zuständig.",
         "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf.",
-        "forYouStream": "Die KI macht aus deinem Profil gewichtete Begriffe für jede Sprache. Überschrift und Text jedes neuen Eintrags werden damit abgeglichen, und Begriffe, die in deinen Feeds selten vorkommen, zählen mehr. Eine Änderung wirkt sich nur auf Einträge aus, die danach eintreffen."
+        "forYouStream": "Die KI liest dein Profil und wählt Wörter und kurze Wendungen, die deine Interessen beschreiben (unten aufgelistet). Jeder neue Eintrag wird in Überschrift und Text darauf geprüft, und kommen genug davon vor, landet er in deinem Stream. Wörter, die in deinen Feeds selten sind, zählen mehr als häufige. Die Genauigkeit legt fest, wie genau der Treffer sein muss: eng lässt nur starke Treffer durch, weit lässt mehr durch. Änderungen wirken sich nur auf neue Einträge aus."
       },
       "guide": {
         "title": "Schritt-für-Schritt-Einrichtung",
@@ -358,7 +358,9 @@
             "widest": "Am weitesten"
           },
           "phrases": "Von der KI gewählte Begriffe",
-          "phrasesEmpty": "Noch keine Begriffsliste. Sie erscheint nach der nächsten Profilaktualisierung."
+          "phrasesEmpty": "Noch keine Wortliste. Sie erscheint wenige Minuten nach der Aktualisierung deines Profils.",
+          "phrasesMore": "Mehr",
+          "phrasesLess": "Weniger"
         },
         "showScoreAndReasons": "Bewertung und Begründung anzeigen",
         "showScoreAndReasonsDesc": "Fügt jeder Empfehlung ihre Bewertung und, wo das Modell eine schreibt, ihre Begründung hinzu.",

@@ -7,7 +7,8 @@
 .stream-phrases {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  align-items: flex-start;
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
@@ -28,16 +29,51 @@
   font-size: var(--fs-sm);
 }
 
+.stream-phrase-clip {
+  --phrase-lines: 5;
+
+  align-self: stretch;
+  line-height: var(--lh-normal);
+  overflow: hidden;
+  max-block-size: calc(var(--phrase-lines) * 1lh);
+  position: relative;
+
+  &.expanded {
+    max-block-size: none;
+  }
+}
+
+.stream-phrase-limit {
+  position: absolute;
+  inline-size: 0;
+  block-size: calc(var(--phrase-lines) * 1lh);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stream-phrases-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .stream-language {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
 .stream-phrase-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+  gap: 0 var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;

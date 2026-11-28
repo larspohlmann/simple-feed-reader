@@ -1,7 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  NgZone,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatOneDecimal } from '../../reader/format';
+import { observeResize } from '../../shared/observe-resize';
 import { InfoTipComponent } from '../../shared/info-tip/info-tip.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
@@ -34,10 +46,32 @@ export class ForYouStreamGroupComponent {
 
   readonly stream = input.required<ForYouStreamState>();
 
+  private readonly zone = inject(NgZone);
+
+  private readonly phraseBody = viewChild<ElementRef<HTMLElement>>('phraseBody');
+  private readonly phraseLimit = viewChild<ElementRef<HTMLElement>>('phraseLimit');
+  readonly phrasesOverflow = signal(false);
+  readonly phrasesExpanded = signal(false);
+
   readonly precisionSteps = FOR_YOU_STREAM_PRECISIONS.length;
   readonly precisionIndex = computed(() =>
     FOR_YOU_STREAM_PRECISIONS.indexOf(this.stream().precision),
   );
+
+  constructor() {
+    effect((onCleanup) => {
+      const body = this.phraseBody()?.nativeElement;
+      const limit = this.phraseLimit()?.nativeElement;
+      if (!body || !limit) return;
+      const measure = (): void => this.phrasesOverflow.set(body.offsetHeight > limit.offsetHeight);
+      measure();
+      onCleanup(observeResize(this.zone, [body], measure));
+    });
+  }
+
+  togglePhrases(): void {
+    this.phrasesExpanded.update((expanded) => !expanded);
+  }
 
   onEnabled(enabled: boolean): void {
     this.svc.saveForYouStream({ enabled, precision: this.stream().precision });

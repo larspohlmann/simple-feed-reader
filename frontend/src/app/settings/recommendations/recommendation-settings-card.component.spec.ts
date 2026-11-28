@@ -890,6 +890,88 @@ describe('RecommendationSettingsCardComponent', () => {
       ]);
     });
 
+    describe('the collapsible word list', () => {
+      const GERMAN = {
+        language: 'de',
+        phrases: [{ phrase: 'Kernkraft', weight: 0.85 }],
+      };
+      const LINE_PX = 20;
+      let heights: { body: number };
+
+      beforeEach(() => {
+        heights = { body: LINE_PX * 9 };
+        jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+          this: HTMLElement,
+        ) {
+          if (this.classList.contains('stream-phrase-body')) return heights.body;
+          return this.classList.contains('stream-phrase-limit') ? LINE_PX * 5 : 0;
+        });
+      });
+
+      afterEach(() => jest.restoreAllMocks());
+
+      const mountList = (): Fixture => {
+        const fixture = mount(streamState({ phrases: [GERMAN] }));
+        fixture.detectChanges();
+        return fixture;
+      };
+      const toggle = (fixture: Fixture): HTMLButtonElement | null =>
+        queryIn(
+          fixture,
+          '[data-testid="for-you-stream-phrases-toggle"]',
+        ) as HTMLButtonElement | null;
+      const clip = (fixture: Fixture): HTMLElement =>
+        queryIn(fixture, '[data-testid="for-you-stream-phrases-clip"]') as HTMLElement;
+
+      it('starts collapsed with a More button when the list is longer than five lines', () => {
+        const fixture = mountList();
+
+        expect(toggle(fixture)!.textContent!.trim()).toBe('More');
+        expect(toggle(fixture)!.getAttribute('aria-expanded')).toBe('false');
+        expect(toggle(fixture)!.getAttribute('aria-controls')).toBe(clip(fixture).id);
+        expect(clip(fixture).classList).not.toContain('expanded');
+      });
+
+      it('expands and collapses on the button', () => {
+        const fixture = mountList();
+
+        toggle(fixture)!.click();
+        fixture.detectChanges();
+        expect(clip(fixture).classList).toContain('expanded');
+        expect(toggle(fixture)!.textContent!.trim()).toBe('Less');
+        expect(toggle(fixture)!.getAttribute('aria-expanded')).toBe('true');
+
+        toggle(fixture)!.click();
+        fixture.detectChanges();
+        expect(clip(fixture).classList).not.toContain('expanded');
+        expect(toggle(fixture)!.textContent!.trim()).toBe('More');
+      });
+
+      it('shows no button for a list of exactly five lines', () => {
+        heights.body = LINE_PX * 5;
+
+        expect(toggle(mountList())).toBeNull();
+      });
+
+      it('shows no button for a short list', () => {
+        heights.body = LINE_PX * 2;
+
+        expect(toggle(mountList())).toBeNull();
+      });
+    });
+
+    it('draws the precision stepper with minus and plus icons', () => {
+      const fixture = mount(streamState());
+
+      const icons = (selector: string): string | undefined =>
+        queryIn(
+          fixture,
+          `[data-testid="for-you-stream-precision"] ${selector}`,
+        )?.textContent?.trim();
+      expect(icons('button.narrower')).toContain('remove');
+      expect(icons('button.wider')).toContain('add');
+    });
+
     it('shows the empty state without phrases', () => {
       const fixture = mount(streamState({ phrases: [] }));
 
