@@ -12,7 +12,6 @@ use App\Enum\AiRunKind;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Curation\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Curation\Recommendation\Llm\Run\RecommendationConsolidationResolver;
@@ -40,9 +39,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('consolidation-resolver@example.test');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->fixtures->seedReadyAiSettings($this->user);
     }
 

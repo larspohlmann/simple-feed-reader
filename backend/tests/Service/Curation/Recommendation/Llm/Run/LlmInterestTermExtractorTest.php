@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Llm\Run\LlmInterestTermExtractor;
@@ -34,9 +33,7 @@ final class LlmInterestTermExtractorTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('interest-terms@example.test');
         $this->connection = $fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->run = new InterestTermRun(

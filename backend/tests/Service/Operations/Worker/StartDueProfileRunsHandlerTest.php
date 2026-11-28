@@ -9,7 +9,6 @@ use App\Entity\ProfileSettingsValues;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Service\Operations\Worker\Handler\StartDueProfileRunsHandler;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
@@ -23,10 +22,8 @@ final class StartDueProfileRunsHandlerTest extends DbTestCase
 
     public function testAFiringStartsTheDueAccountsRunWithoutAdvancingIt(): void
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $owner = $this->user('start-due-profile-runs@example.test');
-        (new RecommendationRunFixtures($this->entityManager, $cipher))->seedReadyAiSettingsFor($owner, 'qwen3-14b');
+        RecommendationRunFixtures::fromContainer(self::getContainer())->seedReadyAiSettingsFor($owner, 'qwen3-14b');
         /** @var RecommendationSettingsWriter $writer */
         $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
         $writer->saveProfileSettings($owner, new ProfileSettingsValues(12, null, 40, 80));

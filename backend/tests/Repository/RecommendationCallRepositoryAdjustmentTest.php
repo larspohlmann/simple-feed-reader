@@ -17,7 +17,6 @@ use App\Repository\CallingRun;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -44,9 +43,7 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $this->logs = $logs;
         $this->calls = new RecommendationCallRepository($this->entityManager->getConnection());
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testTheMarkLandsOnTheRejectedCallAndNeverOnANewerTimeout(): void

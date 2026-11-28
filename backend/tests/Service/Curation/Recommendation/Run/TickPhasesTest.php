@@ -7,7 +7,6 @@ namespace App\Tests\Service\Curation\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
@@ -40,9 +39,7 @@ final class TickPhasesTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('tick-phases@example.test');
         $this->fixtures->seedReadyAiSettings($this->owner);
         $this->clock = new MockClock('2026-08-08 10:05:00');

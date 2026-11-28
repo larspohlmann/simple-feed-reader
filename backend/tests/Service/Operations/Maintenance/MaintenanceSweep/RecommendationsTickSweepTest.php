@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Maintenance\MaintenanceSweep;
 
 use App\Entity\ProfileSettingsValues;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\ForYouSweep;
 use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
@@ -21,9 +20,7 @@ final class RecommendationsTickSweepTest extends DbTestCase
     public function testAdvancesTheRunsOnceEvenAfterTheDeadline(): void
     {
         $owner = $this->user('tick-sweep-recommendations@example.test');
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        new RecommendationRunFixtures($this->entityManager, $cipher)->seedReadyAiSettings($owner);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->seedReadyAiSettings($owner);
         $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $writer->saveProfileSettings($owner, new ProfileSettingsValues(6, null, 40, 80));

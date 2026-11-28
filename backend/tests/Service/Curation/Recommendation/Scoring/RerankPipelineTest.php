@@ -10,7 +10,6 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Repository\ForYouFeedQuery;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Feed\ForYouFeed;
 use App\Service\Curation\Recommendation\Scoring\Factory\RerankQueryFactory;
 use App\Tests\DbTestCase;
@@ -35,9 +34,7 @@ final class RerankPipelineTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('rerank-pipeline@example.test');
         $this->fixtures->seedReadyRerankSettings($this->owner);
     }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Recommendation\Run;
 
 use App\Entity\User;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\TickLockTtl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -22,9 +21,7 @@ final class TickLockTtlTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('tick-lock-ttl@example.test');
     }
 

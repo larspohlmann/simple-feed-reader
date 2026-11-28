@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Recommendation\Llm;
 
 use App\Entity\User;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Llm\LlmRecommendationEngine;
 use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 use App\Tests\DbTestCase;
@@ -27,9 +26,7 @@ final class LlmRecommendationEngineTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('llm-engine@example.test');
         $this->fixtures->seedReadyAiSettings($this->owner);
     }

@@ -17,7 +17,6 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\RequestAdjustment;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
 use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
@@ -50,9 +49,7 @@ final class ProfileRunTickTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('profile-run-tick@example.test');
         $this->connection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
     }

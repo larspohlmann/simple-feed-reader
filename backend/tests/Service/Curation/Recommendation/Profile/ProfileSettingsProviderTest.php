@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Profile;
 
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\ProfileSettingsProvider;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -16,9 +15,7 @@ final class ProfileSettingsProviderTest extends DbTestCase
 
     public function testTheSectionShowsTheStoredProfileAndTheDebugSwitch(): void
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $owner = $this->user('profile-settings-provider@example.test');
         $fixtures->debugEnabledSettings($owner);
         $fixtures->storeProfile($owner, 'Likes maps.');

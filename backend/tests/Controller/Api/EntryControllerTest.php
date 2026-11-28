@@ -27,7 +27,6 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\LemmyPostCopies;
 use App\Tests\Support\LemmyPostEntries;
@@ -101,22 +100,12 @@ final class EntryControllerTest extends ApiTestCase
 
     private function seedDebugEnabledSettings(User $user): void
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-
-        (new RecommendationRunFixtures($entityManager, $cipher))->debugEnabledSettings($user);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->debugEnabledSettings($user);
     }
 
     private function seedShowScoreAndReasonsSettings(User $user): void
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-
-        (new RecommendationRunFixtures($entityManager, $cipher))->showScoreAndReasonsEnabledSettings($user);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->showScoreAndReasonsEnabledSettings($user);
     }
 
     private function seedSavedSearchMembership(User $user, string $term, Entry $entry): SavedSearch

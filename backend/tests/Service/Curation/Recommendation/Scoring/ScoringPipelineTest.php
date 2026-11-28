@@ -10,7 +10,6 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\ForYouFeedQuery;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Feed\ForYouFeed;
 use App\Service\Curation\Recommendation\Profile\ProfileConnections;
 use App\Service\Curation\Recommendation\Run\SnapshotPhase;
@@ -39,9 +38,7 @@ final class ScoringPipelineTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('jev-pipeline@example.test');
         $this->fixtures->seedReadyScoringSettings($this->owner);
     }

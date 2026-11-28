@@ -10,7 +10,6 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\DueProfileRunFinder;
 use App\Service\Curation\Recommendation\Profile\ProfileRunAdvancer;
 use App\Service\Curation\Recommendation\Profile\ProfileRunStarter;
@@ -33,9 +32,7 @@ final class ProfileRunSweepTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testStartDueRunsOpensAScheduledRunPerDueAccount(): void

@@ -9,7 +9,6 @@ use App\Entity\RecommendationRun;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Curation\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
@@ -43,9 +42,7 @@ final class WorkerRunSweepTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testSweepWithNoActiveRunsReturnsZeroAndStillReportsLiveness(): void

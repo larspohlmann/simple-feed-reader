@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Curation\Recommendation\Run\Factory;
 
 use App\Enum\RecommendationEngineKind;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\AiNotConfiguredException;
 use App\Service\Curation\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Curation\Recommendation\Run\Model\TickDriver;
@@ -24,9 +23,7 @@ final class TickContextFactoryTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     /** Worker, not the advancer's Poll default: the driver must come from the caller. */

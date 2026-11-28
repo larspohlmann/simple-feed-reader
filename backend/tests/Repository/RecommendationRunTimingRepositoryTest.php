@@ -11,7 +11,6 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -38,9 +37,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $timings = self::getContainer()->get(RecommendationRunTimingRepository::class);
         $this->timings = $timings;
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testReturnsEachPhaseWallSpanWithBatchCount(): void

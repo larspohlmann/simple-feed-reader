@@ -12,7 +12,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
@@ -41,9 +40,7 @@ final class RecommendationItemRepositoryTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testDeleteForUserRemovesOnlyThatUsersItemsAndLeavesTheRunRow(): void

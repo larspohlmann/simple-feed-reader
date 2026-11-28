@@ -10,7 +10,6 @@ use App\Entity\StorySettings;
 use App\Entity\TrendingStory;
 use App\Entity\User;
 use App\Enum\TrendingWindow;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Ai\Exception\RetryableProviderException;
 use App\Service\Curation\StoryAi\StoryAiSweep;
@@ -43,9 +42,7 @@ final class StoryTitleTaskTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock(self::NOW, 'UTC');
         self::getContainer()->set(NaiveUtcClock::class, new NaiveUtcClock($this->clock));
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->runFixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->runFixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->reader = (new TrendingFixtures($this->entityManager))->reader('story-title-task@example.test');
         $this->reader->setLastLoginAt(new \DateTimeImmutable('2031-05-13 12:00:00'));
         $this->reader->setLocale('de');

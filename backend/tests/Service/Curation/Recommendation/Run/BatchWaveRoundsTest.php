@@ -7,7 +7,6 @@ namespace App\Tests\Service\Curation\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Enum\CallVerdict;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Ai\Model\RateLimitedResultModel;
@@ -37,9 +36,7 @@ final class BatchWaveRoundsTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $owner = $this->user('batch-wave-rounds@example.test');
         $fixtures->seedReadyAiSettings($owner);
         $this->run = $fixtures->createRun($owner);

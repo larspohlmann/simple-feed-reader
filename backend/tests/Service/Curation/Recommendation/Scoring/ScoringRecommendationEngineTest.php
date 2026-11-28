@@ -51,9 +51,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('jev-engine@example.test');
         $this->fixtures->seedReadyScoringSettings($this->owner);
     }

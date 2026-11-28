@@ -17,7 +17,6 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Feed\ForYouFeed;
 use App\Service\Curation\Recommendation\Feed\RecommendationFeedPager;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
@@ -35,9 +34,7 @@ final class ForYouFeedTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
 
         $this->user = new User('for-you-responder@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($this->user);

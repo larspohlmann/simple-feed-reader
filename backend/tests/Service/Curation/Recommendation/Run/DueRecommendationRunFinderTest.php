@@ -12,7 +12,6 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\DueRecommendationRunFinder;
 use App\Service\Curation\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
@@ -30,9 +29,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     private function setCadence(User $user, int $hours): void

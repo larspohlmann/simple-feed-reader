@@ -8,7 +8,6 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\StoryAiRun;
 use App\Entity\User;
 use App\Enum\StoryAiTask;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
 use App\Service\Curation\StoryAi\Pass\StoryAiPass;
 use App\Service\Curation\StoryAi\StoryAiRuns;
@@ -26,12 +25,10 @@ final class StoryAiRunsTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->owner = $this->user('story-ai-runs@example.test');
         $this->pass = new StoryAiPass(
             $this->owner,
-            (new RecommendationRunFixtures($this->entityManager, $cipher))
+            RecommendationRunFixtures::fromContainer(self::getContainer())
                 ->seedReadyAiSettingsFor($this->owner, 'qwen3-14b'),
             StoryAiTask::Title,
             new \DateTimeImmutable('2031-05-14 10:00:00'),

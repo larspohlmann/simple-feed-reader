@@ -10,7 +10,6 @@ use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\Model\RunProfileState;
 use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
 use App\Tests\DbTestCase;
@@ -29,9 +28,7 @@ final class ProvisionedProfileForRunTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('profile-for-run@example.test');
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
     }

@@ -13,7 +13,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Exception\ValidationException;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Identity\Account\AccountDeleter;
 use App\Service\Identity\Account\Exception\LastAdminException;
 use App\Service\Social\Social\Model\PrivateFeedModel;
@@ -37,10 +36,7 @@ final class AccountDeleterTest extends DbTestCase
         parent::setUp();
 
         $this->deleter = self::getContainer()->get(AccountDeleter::class);
-        $this->fixtures = new RecommendationRunFixtures(
-            $this->entityManager,
-            self::getContainer()->get(ApiKeyCipher::class),
-        );
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->userFactory = new UserFactory(
             $this->entityManager,
             self::getContainer()->get('security.user_password_hasher'),

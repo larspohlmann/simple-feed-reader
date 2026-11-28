@@ -6,17 +6,13 @@ namespace App\Tests\Support;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 
 /** An account with a stored profile and a connection that can read it, as the interest-term refresh tests need. */
 trait SeedsProfiledAccounts
 {
     private function fixtures(): RecommendationRunFixtures
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-
-        return new RecommendationRunFixtures($this->entityManager, $cipher);
+        return RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     private function profileGeneratedAt(): \DateTimeImmutable

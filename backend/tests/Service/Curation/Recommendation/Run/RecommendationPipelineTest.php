@@ -14,7 +14,6 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
 use App\Service\Curation\Recommendation\Profile\ProfileRunFailure;
 use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
@@ -44,9 +43,7 @@ final class RecommendationPipelineTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('pipeline@example.test');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     /** A two-batch plan: one call per batch, then one consolidation call, on the profile the run froze. */

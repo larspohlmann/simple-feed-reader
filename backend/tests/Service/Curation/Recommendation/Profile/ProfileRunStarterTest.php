@@ -10,7 +10,6 @@ use App\Entity\User;
 use App\Enum\AiRunKind;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\Exception\ProfileConnectionMissingException;
 use App\Service\Curation\Recommendation\Profile\ProfileRunStarter;
 use App\Service\Curation\Recommendation\Run\Support\RunLogRetention;
@@ -33,9 +32,7 @@ final class ProfileRunStarterTest extends DbTestCase
         /** @var CacheItemPoolInterface $rateLimiterCache */
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         $rateLimiterCache->clear();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('profile-run-starter@example.test');
     }
 

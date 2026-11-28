@@ -252,11 +252,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         [$headers, $user] = $this->bearerAndUser('recsettings-jev@example.test');
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        (new RecommendationRunFixtures($entityManager, $cipher))->seedReadyScoringSettings($user);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->seedReadyScoringSettings($user);
 
         $client->request('GET', self::URI, server: $headers);
 
