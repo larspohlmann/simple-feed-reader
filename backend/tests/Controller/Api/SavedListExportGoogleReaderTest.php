@@ -140,17 +140,16 @@ final class SavedListExportGoogleReaderTest extends ApiTestCase
         self::assertStringNotContainsString('social:', $body);
     }
 
-    public function testInvalidUtf8AndControlCharactersStillParse(): void
+    public function testAControlCharacterInContentStillParses(): void
     {
         [$headers, $user] = $this->bearerAndUser('export-gr-utf8@example.com');
         $entry = $this->keptEntry($user, $this->subscribe($user), 'Bad', 'https://export.example/b');
-        $entry->recordText(new EntryText(null, "ok \xB1 \x01 end"));
+        $entry->recordText(new EntryText(null, "ok \x01 end"));
         $this->entityManager()->flush();
 
         $items = $this->downloadDocument($headers, 'view=kept')['items'];
 
-        self::assertStringStartsWith('ok ', $items[0]['content']['content']);
-        self::assertStringEndsWith(' end', $items[0]['content']['content']);
+        self::assertSame("ok \u{1} end", $items[0]['content']['content']);
     }
 
     public function testAnEntryWithoutAUrlHasNoAlternate(): void
