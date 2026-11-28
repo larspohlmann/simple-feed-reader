@@ -75,6 +75,10 @@
   @include icon-lead.lead-space(0);
   @include icon-lead.first-line('> app-avatar', '> .author');
 
+  > app-comment-actions {
+    block-size: 1lh;
+  }
+
   > app-avatar {
     @include icon-lead.self-sized(var(--icon-md));
 

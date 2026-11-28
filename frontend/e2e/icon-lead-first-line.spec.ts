@@ -1,5 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
-import { aStory, anEntryComment } from '../src/testing/entry-testing';
+import { aCommentPost, aStory, anEntryComment } from '../src/testing/entry-testing';
 import {
   DESKTOP,
   expectNear,
@@ -1151,6 +1151,34 @@ for (const setup of SETUPS) {
       });
       expect(measure.lines, 'the byline wraps').toBeGreaterThanOrEqual(MIN_LINES);
       expectOnCapMiddle(measure, 'wrapped avatar');
+    });
+
+    test('an action button leaves the byline one text line tall and centred on it', async ({
+      openSurface,
+    }) => {
+      const own = { ...BYLINED_SHORT, post: aCommentPost({ isOwn: true }) };
+      const page = await openSurface(setup, bylinedArticle(DESKTOP, own));
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      const row = byline(page, 1);
+      const button = row.locator('app-comment-actions button');
+      await expect(button).toBeVisible();
+      const measureOn = async (icon: Locator, firstLine: Locator) =>
+        measureFirstLine({ icon, firstLine });
+      const author = await measureOn(row.locator('app-avatar'), row.locator('.author'));
+      expectOnCapMiddle(author, 'avatar');
+      const lineBox = await boxOf(row.locator('.author'));
+      const buttonBox = await boxOf(button);
+      expectNear(
+        buttonBox.y + buttonBox.height / 2,
+        lineBox.y + lineBox.height / 2,
+        'the action button centre against the centre of the line',
+      );
+      for (const text of ['.handle', '.when']) {
+        const measure = await measureOn(row.locator('app-avatar'), row.locator(text));
+        expectNear(measure.capMiddle, author.capMiddle, `${text} cap middle against the author's`);
+      }
     });
   });
 }
