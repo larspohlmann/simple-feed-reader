@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NamesLabels;
 use App\Tests\Support\StateMarks;
+use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,9 +39,9 @@ final class SavedListExportBookmarksTest extends ApiTestCase
         $body = $this->download($headers, 'view=kept');
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        self::assertStringStartsWith('text/html', (string) $this->client->getResponse()->headers->get('Content-Type'));
+        self::assertSame('text/html; charset=UTF-8', $this->client->getResponse()->headers->get('Content-Type'));
         self::assertSame(
-            sprintf('attachment; filename="simplefeedreader-kept-%s.html"', gmdate('Ymd')),
+            sprintf('attachment; filename="simplefeedreader-kept-%s.html"', $this->today()),
             $this->client->getResponse()->headers->get('Content-Disposition'),
         );
         self::assertStringStartsWith('<!DOCTYPE NETSCAPE-Bookmark-file-1>', $body);
@@ -162,6 +163,14 @@ final class SavedListExportBookmarksTest extends ApiTestCase
         $this->client->request('GET', '/api/exports/bookmarks?view=kept');
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    private function today(): string
+    {
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        return $clock->now()->format('Ymd');
     }
 
     /** @param array<string, string> $headers */

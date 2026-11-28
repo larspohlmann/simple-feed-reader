@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\Factory\BookmarkFileResponseFactory;
+use App\Http\Factory\GoogleReaderStarredResponseFactory;
 use App\Service\Library\SavedListExport\SavedListScopeResolver;
 use App\Service\Library\SavedListExport\SavedListWalk;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -20,6 +21,7 @@ final readonly class SavedListExportController
         private SavedListScopeResolver $scopeResolver,
         private SavedListWalk $walk,
         private BookmarkFileResponseFactory $bookmarkFileResponseFactory,
+        private GoogleReaderStarredResponseFactory $googleReaderStarredResponseFactory,
     ) {
     }
 
@@ -34,5 +36,18 @@ final readonly class SavedListExportController
         $scope = $this->scopeResolver->requireScope($userId, $view, $label, $order);
 
         return $this->bookmarkFileResponseFactory->stream($scope, $this->walk->batches($userId, $scope));
+    }
+
+    #[Route('/google-reader', name: 'api_exports_google_reader', methods: ['GET'])]
+    public function googleReader(
+        #[CurrentUser] User $user,
+        #[MapQueryParameter] ?string $view = null,
+        #[MapQueryParameter] ?string $label = null,
+        #[MapQueryParameter] ?string $order = null,
+    ): StreamedResponse {
+        $userId = $user->requireId();
+        $scope = $this->scopeResolver->requireScope($userId, $view, $label, $order);
+
+        return $this->googleReaderStarredResponseFactory->stream($scope, $this->walk->batches($userId, $scope));
     }
 }
