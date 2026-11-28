@@ -23,7 +23,7 @@ final class RefreshYourStreamWordsHandlerTest extends DbTestCase
         self::assertCount(1, $logger->records);
         self::assertSame('Worker your-stream words refresh finished.', $logger->records[0]['message']);
         self::assertSame(
-            ['raritiesRefreshed' => 0],
+            ['due' => 0, 'checked' => 0, 'built' => 0, 'failed' => 0],
             $logger->records[0]['context']['report'],
         );
     }

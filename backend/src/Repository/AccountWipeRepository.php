@@ -29,6 +29,8 @@ use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamWord;
 use App\Enum\RunLogOwner;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -59,6 +61,8 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(InterestTerm::class, $user);
         $this->deleteByUser(InterestTermSet::class, $user);
         $this->deleteByUser(YourStreamEntry::class, $user);
+        $this->deleteByUser(YourStreamWord::class, $user);
+        $this->deleteByUser(YourStreamState::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
         $this->deleteByUser(StorySettings::class, $user);
     }

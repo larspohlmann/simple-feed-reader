@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream\Pass;
 
-use App\Entity\InterestTerm;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\Model\EntryStemsModel;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
@@ -34,7 +34,7 @@ final class InterestTally
         $key = StreamStrengthsModel::languageKey($stems->language);
         $this->articleCounts[$key] = ($this->articleCounts[$key] ?? 0.0) + 1;
         foreach ($stems->positionWeights as $stem => $weight) {
-            if (mb_strlen((string) $stem) > InterestTerm::STEM_MAX_LENGTH) {
+            if (mb_strlen((string) $stem) > YourStreamWord::STEM_MAX_LENGTH) {
                 continue;
             }
             $this->recordStem($key, (string) $stem, $weight, 1);

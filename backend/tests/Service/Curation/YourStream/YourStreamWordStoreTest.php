@@ -6,213 +6,170 @@ namespace App\Tests\Service\Curation\YourStream;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\InterestPhrase;
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermSet;
 use App\Entity\User;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Repository\EntryMembershipSweepRepository;
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\YourStream\Model\ExtractedTermsModel;
-use App\Service\Curation\YourStream\Model\WordStemModel;
-use App\Service\Curation\YourStream\SearchTermStems;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
+use App\Service\Curation\YourStream\Model\StreamWordModel;
 use App\Service\Curation\YourStream\YourStreamWordStore;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StemmingWiring;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
 
 final class YourStreamWordStoreTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
+    private MockClock $clock;
     private YourStreamWordStore $store;
-    private InterestTermSetRepository $termSets;
-    private InterestTermRepository $storedTerms;
+    private YourStreamStateRepository $states;
+    private YourStreamWordRepository $words;
+    private int $nextEntry = 0;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = new User('terms@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->user = new User('words@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($this->user);
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->entityManager->persist($this->feed);
         $this->entityManager->flush();
 
-        $clock = new MockClock('2026-11-27T10:00:00');
-        $this->termSets = self::getContainer()->get(InterestTermSetRepository::class);
-        $this->storedTerms = self::getContainer()->get(InterestTermRepository::class);
+        $this->clock = new MockClock('2026-11-28 10:00:00');
+        $states = self::getContainer()->get(YourStreamStateRepository::class);
+        $words = self::getContainer()->get(YourStreamWordRepository::class);
         $entries = self::getContainer()->get(EntryMembershipSweepRepository::class);
+        self::assertInstanceOf(YourStreamStateRepository::class, $states);
+        self::assertInstanceOf(YourStreamWordRepository::class, $words);
+        self::assertInstanceOf(EntryMembershipSweepRepository::class, $entries);
+        $this->states = $states;
+        $this->words = $words;
         $this->store = new YourStreamWordStore(
             $this->entityManager,
-            $this->termSets,
-            $this->storedTerms,
-            new SettledCeiling($entries, $clock),
-            $clock,
+            $states,
+            $words,
+            new SettledCeiling($entries, $this->clock),
+            new NaiveUtcClock($this->clock),
         );
     }
 
-    public function testTheFirstTermSetStartsTheMarkAtTheSettledCeiling(): void
+    public function testTheFirstStateStartsTheMarkAtTheSettledCeiling(): void
     {
-        $old = $this->entry('old', '2026-11-27T09:00:00');
-        $this->entry('young', '2026-11-27T09:59:30');
+        $settled = $this->entry('2026-11-28 09:00:00');
+        $this->entry('2026-11-28 09:59:30');
 
-        $set = $this->store->replaceTerms(
-            $this->user,
-            new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->buildExtractedTerms('solar'),
-        );
-
-        self::assertSame($old->requireId(), $set->matchedUpToEntryId());
-        self::assertSame('2026-11-27T10:00:00', $set->getStoredAt()->format('Y-m-d\TH:i:s'));
-        self::assertNull($set->getRaritiesRefreshedAt());
-    }
-
-    public function testReplacingTheTermsKeepsTheMarkAndClearsTheRarities(): void
-    {
-        $this->entry('old', '2026-11-27T09:00:00');
-        $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $set = $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTerms('solar'));
-        $advancedMark = $set->matchedUpToEntryId() + 42;
-        $this->termSets->advanceMarks([$this->user->requireId()], $advancedMark);
-        $set->recordRaritiesRefreshed(new \DateTimeImmutable('2026-11-27T09:30:00'));
-        $this->entityManager->flush();
+        $state = $this->store->ensureState($this->user);
         $this->entityManager->clear();
 
-        $user = $this->entityManager->find(User::class, $this->user->requireId());
-        self::assertNotNull($user);
-        $second = $this->store->replaceTerms($user, $generatedAt, $this->buildExtractedTerms('wind'));
-
-        self::assertSame($advancedMark, $second->matchedUpToEntryId());
-        self::assertNull($second->getRaritiesRefreshedAt());
-        self::assertEqualsCanonicalizing(
-            [StemmingWiring::stemmer()->stem('wind', FeedLanguage::English), 'wind'],
-            array_map(
-                static fn (InterestTerm $term): string => $term->getStem(),
-                $this->storedTerms->findForUser($user->requireId()),
-            ),
-        );
+        self::assertSame($settled->requireId(), $state->matchedUpToEntryId());
+        $stored = $this->states->findForUser($this->requireUser());
+        self::assertSame($settled->requireId(), $stored?->matchedUpToEntryId());
     }
 
-    public function testAnOlderSweepCannotMoveTheMarkBackwards(): void
+    public function testEnsuringAnExistingStateKeepsItsMark(): void
     {
-        $this->store->replaceTerms(
-            $this->user,
-            new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->buildExtractedTerms('solar'),
-        );
-        $this->termSets->advanceMarks([$this->user->requireId()], 500);
-
-        $this->termSets->advanceMarks([$this->user->requireId()], 120);
+        $this->entry('2026-11-28 09:00:00');
+        $this->store->ensureState($this->user);
+        $this->states->advanceMarks([$this->user->requireId()], 500);
         $this->entityManager->clear();
 
-        $set = $this->termSets->findForUser($this->requireUser());
-        self::assertSame(500, $set?->matchedUpToEntryId());
+        self::assertSame(500, $this->store->ensureState($this->requireUser())->matchedUpToEntryId());
     }
 
-    public function testAnotherUsersTermsAreUntouched(): void
+    public function testReplacingWordsSwapsThemWholesaleAndRecordsTheBuild(): void
     {
-        $other = new User('other-terms@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $state = $this->store->ensureState($this->user);
+
+        $this->store->replaceWords($state, 'x', [$this->word('alpha'), $this->word('beta')]);
+        $this->store->replaceWords($state, 'y', [$this->word('gamma')]);
+        $this->entityManager->clear();
+
+        self::assertSame(['gamma'], $this->readStems($this->user));
+        $stored = $this->states->findForUser($this->requireUser());
+        self::assertNotNull($stored);
+        $minuteAgo = new \DateTimeImmutable('2026-11-28 09:59:00');
+        self::assertTrue($stored->isBuiltFrom('y', $minuteAgo));
+        self::assertFalse($stored->isBuiltFrom('x', $minuteAgo));
+        self::assertFalse($stored->isBuiltFrom('y', new \DateTimeImmutable('2026-11-28 10:00:00')));
+    }
+
+    public function testAStateNeverBuiltIsBuiltFromNothing(): void
+    {
+        $state = $this->store->ensureState($this->user);
+
+        self::assertFalse($state->isBuiltFrom('', new \DateTimeImmutable('2000-01-01 00:00:00')));
+    }
+
+    public function testARebuildLeavesTheMarkWhereItIs(): void
+    {
+        $state = $this->store->ensureState($this->user);
+        $this->states->advanceMarks([$this->user->requireId()], 25);
+
+        $this->store->replaceWords($state, 'x', [$this->word('alpha')]);
+        $this->entityManager->clear();
+
+        self::assertSame(25, $this->states->findForUser($this->requireUser())?->matchedUpToEntryId());
+    }
+
+    public function testRecordingACheckLeavesTheBuildAndTheWords(): void
+    {
+        $state = $this->store->ensureState($this->user);
+        $this->store->replaceWords($state, 'x', [$this->word('alpha')]);
+        $this->clock->modify('+2 hours');
+
+        $this->store->recordChecked($state);
+        $this->entityManager->clear();
+
+        self::assertSame(['alpha'], $this->readStems($this->user));
+        self::assertTrue($this->states->findForUser($this->requireUser())?->isBuiltFrom(
+            'x',
+            new \DateTimeImmutable('2026-11-28 09:59:00'),
+        ));
+    }
+
+    public function testASurfaceLongerThanAWordColumnIsCut(): void
+    {
+        $state = $this->store->ensureState($this->user);
+
+        $this->store->replaceWords($state, 'x', [
+            new StreamWordModel(FeedLanguage::German, 'lang', str_repeat('ä', 120), 1.0, 2.0),
+        ]);
+        $this->entityManager->clear();
+
+        [$word] = $this->words->findForUser($this->user->requireId());
+        self::assertSame(YourStreamWord::WORD_MAX_LENGTH, mb_strlen($word->getWord()));
+        self::assertSame(FeedLanguage::German, $word->getLanguage());
+        self::assertSame(1.0, $word->getWeight());
+        self::assertSame(2.0, $word->getRarity());
+    }
+
+    public function testAnotherUsersWordsAreUntouched(): void
+    {
+        $other = new User('other-words@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($other);
         $this->entityManager->flush();
-        $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $this->store->replaceTerms($other, $generatedAt, $this->buildExtractedTerms('solar'));
+        $this->store->replaceWords($this->store->ensureState($other), 'x', [$this->word('solar')]);
 
-        $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTerms('wind'));
+        $this->store->replaceWords($this->store->ensureState($this->user), 'y', [$this->word('wind')]);
 
-        self::assertCount(2, $this->storedTerms->findForUser($other->requireId()));
+        self::assertSame(['solar'], $this->readStems($other));
     }
 
-    public function testReplacingTermsStoresThePhrasesWithTheStems(): void
+    private function word(string $stem): StreamWordModel
     {
-        $phrases = [
-            new InterestPhrase(FeedLanguage::English, 'renewable energy', 0.9),
-            new InterestPhrase(FeedLanguage::German, 'Wärmepumpe', 0.6),
-        ];
+        return new StreamWordModel(FeedLanguage::English, $stem, $stem, 0.5, 1.0);
+    }
 
-        $this->store->replaceTerms(
-            $this->user,
-            new \DateTimeImmutable('2026-11-27T08:00:00'),
-            $this->buildExtractedTermsFrom($phrases),
+    /** @return list<string> */
+    private function readStems(User $user): array
+    {
+        return array_map(
+            static fn (YourStreamWord $word): string => $word->getStem(),
+            $this->words->findForUser($user->requireId()),
         );
-        $this->entityManager->clear();
-
-        $stored = $this->termSets->findForUser($this->requireUser());
-        self::assertEquals($phrases, $stored?->getPhrases());
-        self::assertNotEmpty($this->storedTerms->findForUser($this->user->requireId()));
-    }
-
-    public function testASecondReplaceSwapsThePhrasesWholesale(): void
-    {
-        $generatedAt = new \DateTimeImmutable('2026-11-27T08:00:00');
-        $this->store->replaceTerms($this->user, $generatedAt, $this->buildExtractedTermsFrom([
-            new InterestPhrase(FeedLanguage::English, 'alpha', 1.0),
-            new InterestPhrase(FeedLanguage::English, 'beta', 0.5),
-        ]));
-        $this->entityManager->clear();
-
-        $this->store->replaceTerms($this->requireUser(), $generatedAt, $this->buildExtractedTermsFrom([
-            new InterestPhrase(FeedLanguage::French, 'vélo', 0.7),
-        ]));
-        $this->entityManager->clear();
-
-        $stored = $this->termSets->findForUser($this->requireUser());
-        self::assertEquals([new InterestPhrase(FeedLanguage::French, 'vélo', 0.7)], $stored?->getPhrases());
-    }
-
-    public function testATermSetWithoutStoredPhrasesReadsAsEmpty(): void
-    {
-        $this->entityManager->persist(new InterestTermSet(
-            $this->user,
-            new \DateTimeImmutable('2026-11-27T08:00:00'),
-            new \DateTimeImmutable('2026-11-27T10:00:00'),
-            0,
-        ));
-        $this->entityManager->flush();
-        $this->entityManager->clear();
-
-        $stored = $this->termSets->findForUser($this->requireUser());
-        self::assertSame([], $stored?->getPhrases());
-    }
-
-    public function testAStoredPhraseMissingAKeyFailsLoudly(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-
-        InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar']);
-    }
-
-    /** @param array<mixed> $stored */
-    #[DataProvider('provideMalformedStoredPhrases')]
-    public function testAMalformedStoredPhraseFailsLoudly(array $stored): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-
-        InterestPhrase::fromStoredArray($stored);
-    }
-
-    /** @return iterable<string, array{array<mixed>}> */
-    public static function provideMalformedStoredPhrases(): iterable
-    {
-        yield 'a language that is no string' => [['language' => 7, 'phrase' => 'solar', 'weight' => 0.4]];
-        yield 'a phrase that is no string' => [['language' => 'en', 'phrase' => 12, 'weight' => 0.4]];
-        yield 'a weight that is no number' => [['language' => 'en', 'phrase' => 'solar', 'weight' => 'heavy']];
-    }
-
-    public function testAnIntegerWeightInStorageComesBackAsFloat(): void
-    {
-        $phrase = InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar', 'weight' => 3]);
-
-        self::assertSame(3.0, $phrase->weight);
-    }
-
-    public function testANumericStringWeightInStorageComesBackAsFloat(): void
-    {
-        $phrase = InterestPhrase::fromStoredArray(['language' => 'en', 'phrase' => 'solar', 'weight' => '0.35']);
-
-        self::assertSame(0.35, $phrase->weight);
     }
 
     private function requireUser(): User
@@ -223,29 +180,9 @@ final class YourStreamWordStoreTest extends DbTestCase
         return $user;
     }
 
-    private function buildExtractedTerms(string $phrase): ExtractedTermsModel
+    private function entry(string $createdAt): Entry
     {
-        return $this->buildExtractedTermsFrom([new InterestPhrase(FeedLanguage::English, $phrase, 0.8)]);
-    }
-
-    /** @param list<InterestPhrase> $phrases */
-    private function buildExtractedTermsFrom(array $phrases): ExtractedTermsModel
-    {
-        $searchTermStems = new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems());
-        $stems = [];
-        foreach ($phrases as $phrase) {
-            foreach ([$phrase->language, null] as $language) {
-                foreach ($searchTermStems->collectStems($phrase->phrase, $language) as $stem => $share) {
-                    $stems[] = new WordStemModel($language, (string) $stem, $phrase->weight * $share);
-                }
-            }
-        }
-
-        return new ExtractedTermsModel($phrases, $stems);
-    }
-
-    private function entry(string $guid, string $createdAt): Entry
-    {
+        $guid = 'store-' . $this->nextEntry++;
         $entry = new Entry(
             $this->feed,
             $guid,

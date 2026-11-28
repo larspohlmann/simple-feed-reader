@@ -7,15 +7,15 @@ namespace App\Tests\Support;
 use App\Entity\Entry;
 use App\Entity\EntryText;
 use App\Entity\Feed;
-use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\YourStreamState;
 use App\Enum\FeedLanguage;
 use App\Repository\EntryMembershipSweepRepository;
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
 use App\Repository\YourStreamMembershipRepository;
 use App\Repository\YourStreamSourceRepository;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
 use App\Service\Curation\YourStream\YourStreamChunkMatcher;
 use App\Service\Curation\YourStream\YourStreamScorer;
@@ -36,8 +36,7 @@ trait SeedsYourStreamBacklog
         $this->entityManager->persist($user);
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01')));
-        $at = new \DateTimeImmutable('2026-11-01 00:00:00');
-        $this->entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $this->entityManager->persist(new YourStreamState($user, 0));
         $entry = new Entry(
             $feed,
             'backlog-' . md5($email),
@@ -55,18 +54,18 @@ trait SeedsYourStreamBacklog
     {
         $container = self::getContainer();
         $entries = $container->get(EntryMembershipSweepRepository::class);
-        $sets = $container->get(InterestTermSetRepository::class);
-        $terms = $container->get(InterestTermRepository::class);
+        $states = $container->get(YourStreamStateRepository::class);
+        $words = $container->get(YourStreamWordRepository::class);
         $memberships = $container->get(YourStreamMembershipRepository::class);
         self::assertInstanceOf(EntryMembershipSweepRepository::class, $entries);
-        self::assertInstanceOf(InterestTermSetRepository::class, $sets);
-        self::assertInstanceOf(InterestTermRepository::class, $terms);
+        self::assertInstanceOf(YourStreamStateRepository::class, $states);
+        self::assertInstanceOf(YourStreamWordRepository::class, $words);
         self::assertInstanceOf(YourStreamMembershipRepository::class, $memberships);
 
         return new YourStreamSweep(
-            $sets,
+            $states,
             new YourStreamSourceRepository($this->entityManager),
-            $terms,
+            $words,
             new SettledCeiling($entries, $clock),
             new MarkGroupWalker($entries, $this->entityManager, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),

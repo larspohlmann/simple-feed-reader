@@ -73,7 +73,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         0,
                     ),
                 ]),
-                'yourStreamWords' => new YourStreamWordSweepReportModel(3),
+                'yourStreamWords' => new YourStreamWordSweepReportModel(4, 2, 1, 1),
             ]),
             new LokiSpoolReportModel(14, 15),
         );
@@ -127,7 +127,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
                 'notificationPoll' => ['accountsChecked' => 40, 'failed' => 41, 'newRows' => 42, 'pruned' => 43],
                 'trending' => ['windowsRebuilt' => 2, 'storiesBuilt' => 57],
-                'yourStreamWords' => ['raritiesRefreshed' => 3],
+                'yourStreamWords' => ['due' => 4, 'checked' => 2, 'built' => 1, 'failed' => 1],
                 'logShipping' => ['shipped' => 14, 'failed' => 15],
             ],
             $this->json()->report($report),

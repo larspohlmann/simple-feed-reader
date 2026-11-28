@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream;
 
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
 use App\Repository\YourStreamSourceRepository;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
 use App\Service\Curation\YourStream\Model\YourStreamSweepReportModel;
 use App\Service\Curation\YourStream\Pass\StreamSweepPass;
@@ -19,15 +19,15 @@ use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Psr\Log\LoggerInterface;
 
-/** Fills for_you_stream_entry incrementally: each account's term set carries a mark the shared walk advances. */
+/** Fills your_stream_entry incrementally: each account's state row carries a mark the shared walk advances. */
 final readonly class YourStreamSweep
 {
     public const int PUBLISHED_WINDOW_HOURS = 48;
 
     public function __construct(
-        private InterestTermSetRepository $sets,
+        private YourStreamStateRepository $states,
         private YourStreamSourceRepository $sources,
-        private InterestTermRepository $storedTerms,
+        private YourStreamWordRepository $words,
         private SettledCeiling $ceiling,
         private MarkGroupWalker $walker,
         private EntryStemmingFactory $stemmingFactory,
@@ -43,7 +43,7 @@ final readonly class YourStreamSweep
         $ceiling = $this->ceiling->readSettledCeiling();
         $now = $this->clock->now();
         $publishedSince = $now->modify(\sprintf('-%d hours', self::PUBLISHED_WINDOW_HOURS));
-        $marksByUserId = $this->raiseLaggards($this->sets->findBelowMark($ceiling, $now), $ceiling, $publishedSince);
+        $marksByUserId = $this->raiseLaggards($this->states->findBelowMark($ceiling, $now), $ceiling, $publishedSince);
         $groups = MarkGroupsModel::fromMembers(
             $ceiling,
             array_keys($marksByUserId),
@@ -51,8 +51,8 @@ final readonly class YourStreamSweep
         );
         $walk = new YourStreamMarkGroupWalk(
             new StreamSweepPass($this->stemmingFactory->create(), $publishedSince),
-            $this->storedTerms,
-            $this->sets,
+            $this->words,
+            $this->states,
             $this->matcher,
             $this->memberships,
             $this->clock,
@@ -77,7 +77,7 @@ final readonly class YourStreamSweep
         }
         $floor = min($ceiling, ($this->sources->findFirstEntryIdSince($publishedSince) ?? $ceiling + 1) - 1);
         $laggards = array_filter($marksByUserId, static fn (int $mark): bool => $mark < $floor);
-        $this->sets->advanceMarks(array_keys($laggards), $floor);
+        $this->states->advanceMarks(array_keys($laggards), $floor);
         $raised = array_map(static fn (int $mark): int => max($mark, $floor), $marksByUserId);
 
         return array_filter($raised, static fn (int $mark): bool => $mark < $ceiling);

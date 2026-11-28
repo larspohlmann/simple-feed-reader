@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream;
 
-use App\Entity\InterestTerm;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Foundation\Stemming\StopWordStems;
 use App\Service\Foundation\Stemming\WordEquivalents;
@@ -55,7 +55,7 @@ final readonly class SearchTermStems
 
     private function isStorable(string $stem, ?FeedLanguage $language): bool
     {
-        return mb_strlen($stem) <= InterestTerm::STEM_MAX_LENGTH
+        return mb_strlen($stem) <= YourStreamWord::STEM_MAX_LENGTH
             && !$this->stopWordStems->isStopWordStem($stem, $language);
     }
 }

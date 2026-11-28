@@ -8,11 +8,11 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
-use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamState;
 use App\Entity\YourStreamTuning;
 use App\Enum\YourStreamPrecision;
 use App\Service\Library\Subscription\SubscriptionService;
@@ -186,7 +186,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $feed = new Feed('https://example.com/stream-counts.xml');
         $entityManager->persist($feed);
         $entityManager->persist(new Subscription($user, $feed, $at));
-        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entityManager->persist(new YourStreamState($user, 0));
         $entries = [];
         foreach (['one', 'two', 'three'] as $guid) {
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);
@@ -217,7 +217,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $feed = new Feed('https://example.com/stream-off-counts.xml');
         $entityManager->persist($feed);
         $entityManager->persist(new Subscription($user, $feed, $at));
-        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entityManager->persist(new YourStreamState($user, 0));
         $entries = [];
         foreach (['alpha', 'beta', 'gamma'] as $guid) {
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);

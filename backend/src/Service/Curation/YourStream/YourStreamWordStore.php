@@ -4,57 +4,65 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream;
 
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermSet;
 use App\Entity\User;
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\YourStream\Model\ExtractedTermsModel;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamWord;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
+use App\Service\Curation\YourStream\Model\StreamWordModel;
+use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 
 final readonly class YourStreamWordStore
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private InterestTermSetRepository $termSets,
-        private InterestTermRepository $storedTerms,
+        private YourStreamStateRepository $states,
+        private YourStreamWordRepository $words,
         private SettledCeiling $ceiling,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
-    public function replaceTerms(
-        User $user,
-        \DateTimeImmutable $profileGeneratedAt,
-        ExtractedTermsModel $extracted,
-    ): InterestTermSet {
-        return $this->entityManager->wrapInTransaction(function () use (
-            $user,
-            $profileGeneratedAt,
-            $extracted,
-        ): InterestTermSet {
-            $this->storedTerms->deleteForUser($user->requireId());
-            foreach ($extracted->stems as $stem) {
-                $this->entityManager->persist(new InterestTerm($user, $stem->stem, $stem->language, $stem->weight));
-            }
-            $set = $this->termSets->findForUser($user);
-            if ($set === null) {
-                $set = new InterestTermSet(
-                    $user,
-                    $profileGeneratedAt,
-                    $this->clock->now(),
-                    $this->ceiling->readSettledCeiling(),
-                );
-                $this->entityManager->persist($set);
-            } else {
-                $set->replaceTerms($profileGeneratedAt, $this->clock->now());
-            }
-            $set->recordPhrases($extracted->phrases);
-            $this->entityManager->flush();
+    /** A new state starts its mark at the settled ceiling, so the stream never backfills. */
+    public function ensureState(User $user): YourStreamState
+    {
+        $state = $this->states->findForUser($user);
+        if (null !== $state) {
+            return $state;
+        }
+        $state = new YourStreamState($user, $this->ceiling->readSettledCeiling());
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
-            return $set;
+        return $state;
+    }
+
+    /** @param list<StreamWordModel> $words */
+    public function replaceWords(YourStreamState $state, string $fingerprint, array $words): void
+    {
+        $this->entityManager->wrapInTransaction(function () use ($state, $fingerprint, $words): void {
+            $user = $state->getUser();
+            $this->words->deleteForUser($user->requireId());
+            foreach ($words as $word) {
+                $this->entityManager->persist(new YourStreamWord(
+                    $user,
+                    $word->language,
+                    $word->stem,
+                    mb_substr($word->word, 0, YourStreamWord::WORD_MAX_LENGTH),
+                    $word->weight,
+                    $word->rarity,
+                ));
+            }
+            $state->recordBuilt($fingerprint, $this->clock->now());
+            $this->entityManager->flush();
         });
+    }
+
+    public function recordChecked(YourStreamState $state): void
+    {
+        $state->recordChecked($this->clock->now());
+        $this->entityManager->flush();
     }
 }

@@ -8,13 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
-use App\Entity\InterestTermSet;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamState;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
@@ -136,7 +136,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertFalse($stream->available);
         self::assertSame(0, $stream->unreadCount);
         self::assertSame(0, $stream->entryCount);
-        self::assertSame([], $this->recordedQueriesMatching('/for_you_stream_entry/'));
+        self::assertSame([], $this->recordedQueriesMatching('/your_stream_entry/'));
     }
 
     public function testTheStreamCountsItsUnreadAndAllMatches(): void
@@ -147,7 +147,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $feed = new Feed('https://example.com/stream-tally.xml');
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($user, $feed, $when));
-        $this->entityManager->persist(new InterestTermSet($user, $when, $when, 0));
+        $this->entityManager->persist(new YourStreamState($user, 0));
         $read = $this->entry($feed, 'read-member');
         $this->streamMember($user, $read);
         $this->streamMember($user, $this->entry($feed, 'unread-member'));
@@ -174,7 +174,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $subscription = new Subscription($user, $feed, $when);
         $subscription->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->persist($subscription);
-        $this->entityManager->persist(new InterestTermSet($user, $when, $when, 0));
+        $this->entityManager->persist(new YourStreamState($user, 0));
         $this->streamMember($user, $this->entry($feed, 'hidden-member'));
         $this->entityManager->flush();
 

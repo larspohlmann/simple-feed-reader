@@ -8,21 +8,21 @@ use App\Entity\Entry;
 use App\Entity\EntryText;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermSet;
 use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\YourStreamState;
 use App\Entity\YourStreamTuning;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Enum\YourStreamPrecision;
 use App\Repository\EntryMembershipSweepRepository;
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
 use App\Repository\YourStreamMembershipRepository;
 use App\Repository\YourStreamSourceRepository;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
 use App\Service\Curation\YourStream\YourStreamChunkMatcher;
 use App\Service\Curation\YourStream\YourStreamMembershipWriter\YourStreamMembershipWriterInterface;
@@ -205,7 +205,7 @@ final class YourStreamSweepTest extends DbTestCase
     public function testAnEntryWithoutALanguageMatchesThroughTheCutForm(): void
     {
         $user = $this->subscriber('cut@example.com');
-        $this->entityManager->persist(new InterestTerm($user, WordStems::cut('solar'), null, 2.0));
+        $this->entityManager->persist(new YourStreamWord($user, null, WordStems::cut('solar'), 'solar', 2.0, 1.0));
         $this->entityManager->flush();
         $this->entry('Solar panels', language: null);
 
@@ -377,6 +377,18 @@ final class YourStreamSweepTest extends DbTestCase
         );
     }
 
+    public function testAnAccountWithAStateRowButNoWordsMovesItsMarkWithoutMatching(): void
+    {
+        $user = $this->subscriber('no-words@example.com');
+        $entries = $this->entries(3);
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(0, $report->matchesInserted);
+        self::assertSame([], $this->readRows($user));
+        self::assertSame($entries[2]->requireId(), $this->readMark($user));
+    }
+
     public function testEachAccountMatchesAtItsOwnPrecision(): void
     {
         $balanced = $this->subscriber('balanced@example.com');
@@ -427,7 +439,7 @@ final class YourStreamSweepTest extends DbTestCase
 
         self::assertSame(2, $report->usersSwept);
         self::assertSame([$kept->requireId()], $this->readEntryIds($disabled));
-        self::assertSame(1, $this->countTerms($disabled));
+        self::assertSame(1, $this->countWords($disabled));
         self::assertSame($fresh->requireId(), $this->readMark($disabled));
         self::assertSame([$kept->requireId(), $fresh->requireId()], $this->readEntryIds($enabled));
         self::assertSame($fresh->requireId(), $this->readMark($enabled));
@@ -462,18 +474,18 @@ final class YourStreamSweepTest extends DbTestCase
         $container = self::getContainer();
         $clock ??= new MockClock(self::NOW);
         $entries = $container->get(EntryMembershipSweepRepository::class);
-        $sets = $container->get(InterestTermSetRepository::class);
-        $terms = $container->get(InterestTermRepository::class);
+        $states = $container->get(YourStreamStateRepository::class);
+        $words = $container->get(YourStreamWordRepository::class);
         $memberships = $writer ?? $container->get(YourStreamMembershipRepository::class);
         self::assertInstanceOf(EntryMembershipSweepRepository::class, $entries);
-        self::assertInstanceOf(InterestTermSetRepository::class, $sets);
-        self::assertInstanceOf(InterestTermRepository::class, $terms);
+        self::assertInstanceOf(YourStreamStateRepository::class, $states);
+        self::assertInstanceOf(YourStreamWordRepository::class, $words);
         self::assertInstanceOf(YourStreamMembershipWriterInterface::class, $memberships);
 
         return new YourStreamSweep(
-            $sets,
+            $states,
             new YourStreamSourceRepository($this->entityManager),
-            $terms,
+            $words,
             new SettledCeiling($entries, $clock),
             new MarkGroupWalker($entries, $this->entityManager, $clock),
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
@@ -501,8 +513,7 @@ final class YourStreamSweepTest extends DbTestCase
     {
         $user = $this->account($email);
         $this->entityManager->persist(new Subscription($user, $this->feed, new \DateTimeImmutable('2026-07-01')));
-        $at = new \DateTimeImmutable('2026-11-01 00:00:00');
-        $this->entityManager->persist(new InterestTermSet($user, $at, $at, $mark ?? 0));
+        $this->entityManager->persist(new YourStreamState($user, $mark ?? 0));
         $this->entityManager->flush();
 
         return $user;
@@ -519,7 +530,7 @@ final class YourStreamSweepTest extends DbTestCase
     private function term(User $user, string $word, float $weight): void
     {
         $this->entityManager->persist(
-            new InterestTerm($user, $this->stem($word), FeedLanguage::English, $weight),
+            new YourStreamWord($user, FeedLanguage::English, $this->stem($word), $word, $weight, 1.0),
         );
         $this->entityManager->flush();
     }
@@ -580,10 +591,10 @@ final class YourStreamSweepTest extends DbTestCase
         RecommendationRunFixtures::fromContainer(self::getContainer())->storeYourStreamTuning($user, $tuning);
     }
 
-    private function countTerms(User $user): int
+    private function countWords(User $user): int
     {
         $count = $this->entityManager->getConnection()->fetchOne(
-            'SELECT COUNT(*) FROM interest_term WHERE user_id = ?',
+            'SELECT COUNT(*) FROM your_stream_word WHERE user_id = ?',
             [$user->requireId()],
         );
         self::assertIsNumeric($count);
@@ -594,7 +605,7 @@ final class YourStreamSweepTest extends DbTestCase
     private function setMark(User $user, int $mark): void
     {
         $this->entityManager->getConnection()->executeStatement(
-            'UPDATE interest_term_set SET matched_up_to_entry_id = ? WHERE user_id = ?',
+            'UPDATE your_stream_state SET matched_up_to_entry_id = ? WHERE user_id = ?',
             [$mark, $user->requireId()],
         );
         $this->entityManager->clear();
@@ -603,7 +614,7 @@ final class YourStreamSweepTest extends DbTestCase
     private function readMark(User $user): int
     {
         $mark = $this->entityManager->getConnection()->fetchOne(
-            'SELECT matched_up_to_entry_id FROM interest_term_set WHERE user_id = ?',
+            'SELECT matched_up_to_entry_id FROM your_stream_state WHERE user_id = ?',
             [$user->requireId()],
         );
         self::assertIsNumeric($mark);
@@ -616,7 +627,7 @@ final class YourStreamSweepTest extends DbTestCase
     {
         /** @var list<array{entry_id: int|string, score: float|string, matched_stems: string, matched_at: string}> $rows */
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT entry_id, score, matched_stems, matched_at FROM for_you_stream_entry'
+            'SELECT entry_id, score, matched_stems, matched_at FROM your_stream_entry'
             . ' WHERE user_id = ? ORDER BY entry_id',
             [$user->requireId()],
         );

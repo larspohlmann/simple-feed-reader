@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Curation\YourStream\Pass;
 
 use App\Entity\YourStreamTuning;
-use App\Repository\InterestTermRepository;
-use App\Repository\InterestTermSetRepository;
+use App\Repository\YourStreamStateRepository;
+use App\Repository\YourStreamWordRepository;
 use App\Service\Curation\YourStream\Model\YourStreamMatchModel;
 use App\Service\Curation\YourStream\YourStreamChunkMatcher;
 use App\Service\Curation\YourStream\YourStreamMembershipWriter\YourStreamMembershipWriterInterface;
@@ -15,7 +15,7 @@ use App\Service\Library\Search\Membership\Pass\MarkGroupWalk\MarkGroupWalkInterf
 use Psr\Log\LoggerInterface;
 
 /**
- * One Your stream walk over the accounts' term sets, the members being user ids.
+ * One Your stream walk over the accounts' state rows, the members being user ids.
  *
  * @implements MarkGroupWalkInterface<int, list<YourStreamMatchModel>>
  */
@@ -23,8 +23,8 @@ final readonly class YourStreamMarkGroupWalk implements MarkGroupWalkInterface
 {
     public function __construct(
         private StreamSweepPass $pass,
-        private InterestTermRepository $storedTerms,
-        private InterestTermSetRepository $sets,
+        private YourStreamWordRepository $words,
+        private YourStreamStateRepository $states,
         private YourStreamChunkMatcher $matcher,
         private YourStreamMembershipWriterInterface $memberships,
         private NaiveUtcClock $clock,
@@ -34,11 +34,11 @@ final readonly class YourStreamMarkGroupWalk implements MarkGroupWalkInterface
 
     public function joinGroup(array $group): void
     {
-        $tunings = $this->sets->findStreamTunings($group);
+        $tunings = $this->states->findStreamTunings($group);
         $streaming = array_keys(
             array_filter($tunings, static fn (YourStreamTuning $tuning): bool => $tuning->isEnabled()),
         );
-        $this->pass->join($group, $this->storedTerms->findTermsForUsers($streaming), $tunings);
+        $this->pass->join($group, $this->words->findStrengthsForUsers($streaming), $tunings);
     }
 
     public function matchChunk(array $chunk): array
@@ -53,7 +53,7 @@ final readonly class YourStreamMarkGroupWalk implements MarkGroupWalkInterface
 
     public function advanceMarks(int $entryId): void
     {
-        $this->sets->advanceMarks($this->pass->collectUserIds(), $entryId);
+        $this->states->advanceMarks($this->pass->collectUserIds(), $entryId);
     }
 
     public function logChunkFailure(\Throwable $exception): void

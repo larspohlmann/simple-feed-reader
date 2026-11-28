@@ -32,6 +32,8 @@ use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
 use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamWord;
 use App\Enum\CallPhase;
 use App\Enum\FeedLanguage;
 use App\Enum\PrivateFeedSyncReason;
@@ -293,6 +295,30 @@ final class AccountResetTest extends DbTestCase
         $bystanderTerms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $bystanderId]);
         self::assertCount(1, $bystanderTerms);
         self::assertNotNull($this->entityManager->find(InterestTermSet::class, $bystanderId));
+    }
+
+    public function testAResetForgetsTheStreamWordsAndState(): void
+    {
+        $user = $this->user('reset-words@example.com');
+        $bystander = $this->user('reset-words-bystander@example.com');
+        foreach ([$user, $bystander] as $account) {
+            $this->entityManager->persist(
+                new YourStreamWord($account, FeedLanguage::English, 'solar', 'solar', 1.0, 1.0),
+            );
+            $this->entityManager->persist(new YourStreamState($account, 0));
+        }
+        $this->entityManager->flush();
+        $userId = $user->requireId();
+        $bystanderId = $bystander->requireId();
+
+        $this->reset()->reset($user);
+
+        $this->entityManager->clear();
+        $words = $this->entityManager->getRepository(YourStreamWord::class);
+        self::assertSame([], $words->findBy(['user' => $userId]));
+        self::assertNull($this->entityManager->find(YourStreamState::class, $userId));
+        self::assertCount(1, $words->findBy(['user' => $bystanderId]));
+        self::assertNotNull($this->entityManager->find(YourStreamState::class, $bystanderId));
     }
 
     private function seedInterestTerms(User $user): void

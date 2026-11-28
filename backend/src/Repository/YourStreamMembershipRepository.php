@@ -12,7 +12,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The one writer of for_you_stream_entry.
+ * The one writer of your_stream_entry.
  *
  * @extends ServiceEntityRepository<YourStreamEntry>
  */
@@ -32,7 +32,7 @@ final class YourStreamMembershipRepository extends ServiceEntityRepository imple
         $connection = $this->getEntityManager()->getConnection();
         $insert = BulkInsert::into(
             \sprintf(
-                'INSERT %s INTO for_you_stream_entry (user_id, entry_id, matched_at, score, matched_stems)',
+                'INSERT %s INTO your_stream_entry (user_id, entry_id, matched_at, score, matched_stems)',
                 DatabasePlatform::insertIgnoreClause($connection),
             ),
             self::INSERT_ROWS,
