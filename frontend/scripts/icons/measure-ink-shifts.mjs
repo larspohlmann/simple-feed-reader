@@ -48,16 +48,6 @@ function buildFills(variations) {
   ];
 }
 
-function requireMatchingGlyphNames(iconNames) {
-  const listed = iconNames.glyphNamesFontVersion(FRONTEND);
-  const installed = iconNames.installedFontVersion(FRONTEND);
-  if (listed !== installed) {
-    throw new Error(
-      `glyph-names.txt lists material-symbols ${listed || 'unknown'}, but ${installed} is installed. Run \`npm run icons:glyph-names\` first.`,
-    );
-  }
-}
-
 async function serveAssets(page) {
   await page.route(`${ORIGIN}/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -200,7 +190,7 @@ function reportLargest(names, fills, shiftsByFill) {
 
 async function main() {
   const iconNames = await loadIconNames();
-  requireMatchingGlyphNames(iconNames);
+  iconNames.requireMatchingGlyphNames(FRONTEND);
   const fills = buildFills(iconNames.ICON_VARIATIONS);
   const names = iconNames.scanIconNames(FRONTEND);
   const browser = await chromium.launch();

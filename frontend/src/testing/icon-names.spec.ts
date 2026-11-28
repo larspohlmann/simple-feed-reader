@@ -1,10 +1,9 @@
 import { join } from 'node:path';
 import { TAG_ICONS } from '../app/shared/icon-choices';
 import {
-  fontGlyphNames,
-  glyphNamesFontVersion,
   iconSourceFiles,
-  installedFontVersion,
+  readGlyphNames,
+  requireMatchingGlyphNames,
   scanIconNames,
 } from './icon-names';
 
@@ -23,7 +22,7 @@ describe('scanIconNames', () => {
   });
 
   it('keeps only names the font has', () => {
-    const font = fontGlyphNames(FRONTEND);
+    const font = readGlyphNames(FRONTEND).names;
     expect(names.filter((name) => !font.has(name))).toEqual([]);
   });
 
@@ -51,19 +50,6 @@ describe('scanIconNames', () => {
 
 describe('glyph-names.txt', () => {
   it('the glyph name list was extracted from the installed font', () => {
-    const listed = glyphNamesFontVersion(FRONTEND);
-    const installed = installedFontVersion(FRONTEND);
-    if (listed !== installed) {
-      throw new Error(
-        `glyph-names.txt lists material-symbols ${listed || 'unknown'}, but ${installed} is installed. ` +
-          'Run `npm run icons:glyph-names` from frontend/, then `npm run icons:measure`.',
-      );
-    }
-  });
-});
-
-describe('installedFontVersion', () => {
-  it('reads the material-symbols package version', () => {
-    expect(installedFontVersion(FRONTEND)).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(() => requireMatchingGlyphNames(FRONTEND)).not.toThrow();
   });
 });

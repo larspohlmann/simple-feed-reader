@@ -5,23 +5,48 @@ import { listFiles } from './list-files';
 const GENERATED_TABLE = 'app/shared/icon/icon-ink-shifts.ts';
 const QUOTED_NAME = /['"`]([a-z0-9_]+)['"`]/g;
 const GLYPH_NAMES_PATH = ['scripts', 'icons', 'glyph-names.txt'];
+const HEADER = /^# material-symbols (\S+)$/;
+
 export const ICON_VARIATIONS = {
   outlined: "'opsz' 20",
   filled: "'opsz' 20, 'FILL' 1",
 } as const;
 
-const HEADER = /^# material-symbols (\S+)$/;
-
-function readGlyphNameLines(frontendRoot: string): string[] {
-  return readFileSync(join(frontendRoot, ...GLYPH_NAMES_PATH), 'utf8').split('\n');
+export interface GlyphNames {
+  version: string;
+  names: ReadonlySet<string>;
 }
 
-export function glyphNamesFontVersion(frontendRoot: string): string {
-  return HEADER.exec(readGlyphNameLines(frontendRoot)[0])?.[1] ?? '';
+export function readGlyphNames(frontendRoot: string): GlyphNames {
+  const [header, ...lines] = readFileSync(join(frontendRoot, ...GLYPH_NAMES_PATH), 'utf8').split(
+    '\n',
+  );
+  const version = HEADER.exec(header)?.[1];
+  if (version === undefined) {
+    throw new Error(
+      `glyph-names.txt does not start with "# material-symbols <version>". ` +
+        'Run `npm run icons:glyph-names` from frontend/.',
+    );
+  }
+  return { version, names: new Set(lines.filter((line) => line && !line.startsWith('#'))) };
 }
 
-export function fontGlyphNames(frontendRoot: string): ReadonlySet<string> {
-  return new Set(readGlyphNameLines(frontendRoot).filter((line) => line && !line.startsWith('#')));
+export function installedFontVersion(frontendRoot: string): string {
+  const manifest = JSON.parse(
+    readFileSync(join(frontendRoot, 'node_modules', 'material-symbols', 'package.json'), 'utf8'),
+  ) as { version: string };
+  return manifest.version;
+}
+
+export function requireMatchingGlyphNames(frontendRoot: string): void {
+  const listed = readGlyphNames(frontendRoot).version;
+  const installed = installedFontVersion(frontendRoot);
+  if (listed !== installed) {
+    throw new Error(
+      `glyph-names.txt lists material-symbols ${listed}, but ${installed} is installed. ` +
+        'Run `npm run icons:glyph-names` from frontend/, then `npm run icons:measure`.',
+    );
+  }
 }
 
 export function iconSourceFiles(frontendRoot: string): string[] {
@@ -34,7 +59,7 @@ export function iconSourceFiles(frontendRoot: string): string[] {
 }
 
 export function scanIconNames(frontendRoot: string): string[] {
-  const font = fontGlyphNames(frontendRoot);
+  const font = readGlyphNames(frontendRoot).names;
   const names = new Set<string>();
   for (const path of iconSourceFiles(frontendRoot)) {
     const text = readFileSync(join(frontendRoot, 'src', path), 'utf8');
@@ -45,11 +70,4 @@ export function scanIconNames(frontendRoot: string): string[] {
     }
   }
   return [...names].sort();
-}
-
-export function installedFontVersion(frontendRoot: string): string {
-  const manifest = JSON.parse(
-    readFileSync(join(frontendRoot, 'node_modules', 'material-symbols', 'package.json'), 'utf8'),
-  ) as { version: string };
-  return manifest.version;
 }
