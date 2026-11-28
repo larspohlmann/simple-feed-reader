@@ -187,6 +187,7 @@ final class MeControllerTest extends ApiTestCase
                 'sidebarStyle' => 'airy',
                 'theme' => 'graphite',
                 'handedness' => 'right',
+                'readingWidth' => 'standard',
                 'passkeyOfferAnswered' => false,
                 'trendingEnabled' => true,
                 'feedDirectoryScope' => ['countries' => [], 'languages' => []],
@@ -217,6 +218,7 @@ final class MeControllerTest extends ApiTestCase
             'sidebarStyle' => 'boxed',
             'theme' => 'classic',
             'handedness' => 'left',
+            'readingWidth' => 'wide',
             'trendingEnabled' => false,
         ]);
         $this->patch($client, '/api/me/feed-directory-scope', ['countries' => ['DE'], 'languages' => ['de']]);
@@ -231,7 +233,7 @@ final class MeControllerTest extends ApiTestCase
             ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'text'],
         );
         $expected = '{"scrapeFallbackEnabled":true,"magazineStyle":"airy","sidebarStyle":"boxed","theme":"classic",'
-            . '"handedness":"left",'
+            . '"handedness":"left","readingWidth":"wide",'
             . '"passkeyOfferAnswered":true,"trendingEnabled":false,'
             . '"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'
             . '"sharing":{"enabled":false,"hiddenTargets":["x","email"],"rememberShares":false},'

@@ -9,6 +9,7 @@ use App\Entity\ReadingSettingsChange;
 use App\Entity\User;
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\Theme;
 use App\Tests\Support\UnsavedUserSettings;
@@ -89,6 +90,20 @@ final class ReadingSettingsTest extends TestCase
         self::assertSame(Handedness::Left, $settings->getHandedness());
     }
 
+    public function testTheReadingWidthDefaultsToStandard(): void
+    {
+        self::assertSame(ReadingWidth::Standard, UnsavedUserSettings::reading()->getReadingWidth());
+    }
+
+    public function testTheReadingWidthKeepsWhatItIsGiven(): void
+    {
+        $settings = UnsavedUserSettings::reading();
+
+        $settings->setReadingWidth(ReadingWidth::Full);
+
+        self::assertSame(ReadingWidth::Full, $settings->getReadingWidth());
+    }
+
     public function testTrendingKeepsWhatItIsGiven(): void
     {
         $settings = UnsavedUserSettings::reading();
@@ -102,10 +117,15 @@ final class ReadingSettingsTest extends TestCase
     {
         $settings = UnsavedUserSettings::reading();
 
-        $settings->apply(new ReadingSettingsChange(magazineStyle: MagazineStyle::Airy, handedness: Handedness::Left));
+        $settings->apply(new ReadingSettingsChange(
+            magazineStyle: MagazineStyle::Airy,
+            handedness: Handedness::Left,
+            readingWidth: ReadingWidth::Wide,
+        ));
 
         self::assertSame(MagazineStyle::Airy, $settings->getMagazineStyle());
         self::assertSame(Handedness::Left, $settings->getHandedness());
+        self::assertSame(ReadingWidth::Wide, $settings->getReadingWidth());
         self::assertFalse($settings->isScrapeFallbackEnabled());
         self::assertTrue($settings->isTrendingEnabled());
     }
@@ -137,5 +157,10 @@ final class ReadingSettingsTest extends TestCase
     public function testAChangeNamingASettingIsNotEmpty(): void
     {
         self::assertFalse((new ReadingSettingsChange(handedness: Handedness::Left))->isEmpty());
+    }
+
+    public function testAChangeNamingOnlyTheReadingWidthIsNotEmpty(): void
+    {
+        self::assertFalse((new ReadingSettingsChange(readingWidth: ReadingWidth::Wide))->isEmpty());
     }
 }

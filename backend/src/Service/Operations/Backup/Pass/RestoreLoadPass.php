@@ -100,6 +100,7 @@ final class RestoreLoadPass
         $this->accountSettings->reading->setSidebarStyle($line->reading->sidebarStyle);
         $this->accountSettings->reading->setTheme($line->reading->theme);
         $this->accountSettings->reading->setHandedness($line->reading->handedness);
+        $this->accountSettings->reading->setReadingWidth($line->reading->readingWidth);
         $this->accountSettings->sharing->setEnabled($line->sharingEnabled);
         $this->accountSettings->sharing->setHiddenTargets($line->hiddenShareTargets);
         $this->accountSettings->sharing->setRememberingShares($line->rememberShares);
