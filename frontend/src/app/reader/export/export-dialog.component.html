@@ -1,0 +1,34 @@
+<form (ngSubmit)="submit()" cdkTrapFocus>
+  <app-overlay-panel [heading]="'reader.export.title' | transloco: { name: target.title }">
+    <fieldset class="formats">
+      <legend>{{ 'reader.export.format' | transloco }}</legend>
+      @for (format of formats; track format.id) {
+        <label class="format">
+          <input
+            type="radio"
+            name="format"
+            [value]="format.id"
+            [checked]="chosen() === format"
+            [disabled]="downloading()"
+            (change)="choose(format)"
+          />
+          <span class="text">
+            <span class="name">{{ format.nameKey | transloco }}</span>
+            <span class="description">{{ format.descriptionKey | transloco }}</span>
+          </span>
+        </label>
+      }
+    </fieldset>
+
+    @if (problemMessage(); as message) {
+      <app-error-banner [message]="message" />
+    }
+
+    <app-button footer (click)="ref.close()">
+      {{ 'common.cancel' | transloco }}
+    </app-button>
+    <app-button footer type="submit" variant="primary" [disabled]="downloading()">
+      {{ 'reader.export.submit' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+</form>

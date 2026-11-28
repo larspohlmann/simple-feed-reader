@@ -1,0 +1,41 @@
+:host {
+  display: contents;
+
+  --panel-w: 440px;
+}
+
+form {
+  display: contents;
+}
+
+.formats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-block-end: var(--space-2);
+  padding: 0;
+  color: var(--text-muted);
+}
+
+.format {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+}
+
+.description {
+  color: var(--text-muted);
+}
