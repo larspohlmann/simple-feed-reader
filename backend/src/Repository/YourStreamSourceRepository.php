@@ -43,7 +43,7 @@ final readonly class YourStreamSourceRepository
         ));
     }
 
-    public function findFirstEntryIdSince(\DateTimeImmutable $since): ?int
+    public function findIdBeforeFirstEntrySince(\DateTimeImmutable $since): ?int
     {
         $lowest = $this->entityManager->createQueryBuilder()
             ->select('MIN(entry.id)')
@@ -53,7 +53,7 @@ final readonly class YourStreamSourceRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        return null === $lowest ? null : (int) $lowest;
+        return null === $lowest ? null : (int) $lowest - 1;
     }
 
     /**

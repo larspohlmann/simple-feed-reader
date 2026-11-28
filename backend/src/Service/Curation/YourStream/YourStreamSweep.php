@@ -75,7 +75,7 @@ final readonly class YourStreamSweep
         if ([] === $marksByUserId) {
             return [];
         }
-        $floor = min($ceiling, ($this->sources->findFirstEntryIdSince($publishedSince) ?? $ceiling + 1) - 1);
+        $floor = min($ceiling, $this->sources->findIdBeforeFirstEntrySince($publishedSince) ?? $ceiling);
         $laggards = array_filter($marksByUserId, static fn (int $mark): bool => $mark < $floor);
         $this->states->advanceMarks(array_keys($laggards), $floor);
         $raised = array_map(static fn (int $mark): int => max($mark, $floor), $marksByUserId);

@@ -7,7 +7,6 @@ namespace App\Service\Curation\YourStream;
 use App\Enum\YourStreamPrecision;
 use App\Repository\YourStreamSourceRepository;
 use App\Service\Curation\YourStream\Model\EntryStemsModel;
-use App\Service\Curation\YourStream\Model\RarityWindowModel;
 use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
 use App\Service\Curation\YourStream\Model\YourStreamExplanationModel;
@@ -45,7 +44,7 @@ final readonly class YourStreamExplainer
     private function findReplayedEntries(int $userId, int $days): array
     {
         $since = $this->clock->now()->modify(\sprintf('-%d days', $days));
-        $window = new RarityWindowModel($since, ($this->sources->findFirstEntryIdSince($since) ?? 1) - 1);
+        $window = $this->background->readWindowSince($since);
 
         return $this->sources->findNewestEntries($userId, $window, PHP_INT_MAX, YourStreamBackground::SAMPLE_ENTRIES);
     }

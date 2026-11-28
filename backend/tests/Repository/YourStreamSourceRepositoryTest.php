@@ -27,7 +27,7 @@ final class YourStreamSourceRepositoryTest extends DbTestCase
         $this->sources = $sources;
     }
 
-    public function testTheFirstEntryIdSinceIsTheLowestIdAtOrAfterTheInstant(): void
+    public function testTheIdBeforeTheFirstEntrySinceIsJustBelowTheLowestIdAtOrAfterTheInstant(): void
     {
         $this->entry('old', '2026-10-01 00:00:00');
         $boundary = $this->entry('boundary', '2026-10-28 00:00:00');
@@ -35,10 +35,10 @@ final class YourStreamSourceRepositoryTest extends DbTestCase
         $lateOldDate = $this->entry('older-id-later', '2026-10-15 00:00:00');
         $this->entityManager->flush();
 
-        $first = $this->sources->findFirstEntryIdSince(new \DateTimeImmutable('2026-10-28 00:00:00'));
+        $before = $this->sources->findIdBeforeFirstEntrySince(new \DateTimeImmutable('2026-10-28 00:00:00'));
 
-        self::assertSame($boundary->requireId(), $first);
-        self::assertLessThan($lateOldDate->requireId(), $first);
+        self::assertSame($boundary->requireId() - 1, $before);
+        self::assertLessThan($lateOldDate->requireId(), $before);
     }
 
     public function testNoEntryAtOrAfterTheInstantIsNull(): void
@@ -46,7 +46,7 @@ final class YourStreamSourceRepositoryTest extends DbTestCase
         $this->entry('old', '2026-10-01 00:00:00');
         $this->entityManager->flush();
 
-        self::assertNull($this->sources->findFirstEntryIdSince(new \DateTimeImmutable('2026-11-01 00:00:00')));
+        self::assertNull($this->sources->findIdBeforeFirstEntrySince(new \DateTimeImmutable('2026-11-01 00:00:00')));
     }
 
     public function testEntriesComeInTheAskedOrderAndSkipMissingIds(): void

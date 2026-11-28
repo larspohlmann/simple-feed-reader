@@ -28,9 +28,13 @@ final readonly class YourStreamBackground
     public function buildSweepPass(): RaritySweepPass
     {
         $since = $this->clock->now()->modify(\sprintf('-%d days', self::WINDOW_DAYS));
-        $afterId = ($this->sources->findFirstEntryIdSince($since) ?? 1) - 1;
 
-        return new RaritySweepPass($this->stemmingFactory->create(), new RarityWindowModel($since, $afterId));
+        return new RaritySweepPass($this->stemmingFactory->create(), $this->readWindowSince($since));
+    }
+
+    public function readWindowSince(\DateTimeImmutable $since): RarityWindowModel
+    {
+        return new RarityWindowModel($since, $this->sources->findIdBeforeFirstEntrySince($since) ?? 0);
     }
 
     /** @param array<string, array<array-key, true>> $wantedStemsByLanguageKey */
