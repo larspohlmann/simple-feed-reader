@@ -283,7 +283,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
 
         $client->request('GET', self::URI);
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testSavingFullSettingsEchoesTheNewStateAndPersists(): void
@@ -360,7 +360,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testAnOutOfRangeCapIsUnprocessable(): void
@@ -379,7 +379,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -419,7 +419,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -665,7 +665,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -740,7 +740,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $errors = $this->payload($client)['errors'];
         self::assertIsArray($errors);
         self::assertArrayHasKey('autoGenerateIntervalHours', $errors);
