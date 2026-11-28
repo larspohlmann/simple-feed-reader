@@ -694,6 +694,36 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertTrue($body['subscription']['includeInAllItems']);
     }
 
+    public function testPatchingIncludeInYourStreamLeavesTheOtherSwitches(): void
+    {
+        $client = self::createClient();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        $user = $this->factory()->create('your-stream-flag@example.com');
+        $feed = new Feed('https://your-stream-flag.example.com/rss');
+        $entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $entityManager->persist($subscription);
+        $entityManager->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $subscription->getId(),
+            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['customTitle' => null, 'tagIds' => [], 'includeInYourStream' => false],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertFalse($body['subscription']['includeInYourStream']);
+        self::assertTrue($body['subscription']['includeInForYou']);
+    }
+
     public function testOmittingAFlagLeavesItUnchanged(): void
     {
         $client = self::createClient();

@@ -93,14 +93,14 @@ final class YourStreamBackgroundTest extends DbTestCase
         self::assertEqualsWithDelta(log(502 / 2), $this->termRarity('solar', null), 1e-9);
     }
 
-    public function testEntriesOutsideTheWindowOrOutsideForYouDoNotCount(): void
+    public function testEntriesOutsideTheWindowOrOutsideYourStreamDoNotCount(): void
     {
         $this->term('solar', FeedLanguage::English);
         $this->entries(1, FeedLanguage::English, [1 => 'solar'], '2026-10-01 00:00:00');
         $excluded = $this->subscribedFeed('https://example.com/excluded.xml');
         $this->entries(1, FeedLanguage::English, [1 => 'solar'], null, $excluded);
         $this->entries(1, FeedLanguage::English, [1 => 'solar']);
-        $this->excludeFromForYou($excluded);
+        $this->excludeFromYourStream($excluded);
 
         $this->refreshRarities();
 
@@ -151,12 +151,12 @@ final class YourStreamBackgroundTest extends DbTestCase
         return $feed;
     }
 
-    private function excludeFromForYou(Feed $feed): void
+    private function excludeFromYourStream(Feed $feed): void
     {
         $subscription = $this->entityManager->getRepository(Subscription::class)
             ->findOneBy(['user' => $this->user, 'feed' => $feed]);
         self::assertInstanceOf(Subscription::class, $subscription);
-        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $subscription->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->flush();
     }
 

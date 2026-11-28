@@ -25,6 +25,7 @@ final readonly class AccountLine
         'forYouExcludedNetworks' => InclusionSurface::ForYou,
         'allItemsExcludedNetworks' => InclusionSurface::AllItems,
         'trendingExcludedNetworks' => InclusionSurface::Trending,
+        'yourStreamExcludedNetworks' => InclusionSurface::YourStream,
     ];
 
     /**
@@ -123,6 +124,9 @@ final readonly class AccountLine
         $excluded = [];
         foreach (self::EXCLUDED_NETWORKS_KEYS as $key => $surface) {
             $excluded[$surface->value] = self::networks($line, $key);
+        }
+        if (!\array_key_exists('yourStreamExcludedNetworks', $line)) {
+            $excluded[InclusionSurface::YourStream->value] = $excluded[InclusionSurface::ForYou->value];
         }
 
         return $excluded;

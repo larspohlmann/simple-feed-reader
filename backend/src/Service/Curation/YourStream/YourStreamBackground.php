@@ -17,7 +17,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Weighs each term by how rare its stem is among the account's newest For you entries of the last thirty days. The
+ * Weighs each term by how rare its stem is among the account's newest Your stream entries of the last thirty days. The
  * sample cap bounds one account's walk, so a refresh always finishes.
  */
 final readonly class YourStreamBackground

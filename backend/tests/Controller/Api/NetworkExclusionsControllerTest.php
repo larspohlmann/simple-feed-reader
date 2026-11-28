@@ -29,6 +29,7 @@ final class NetworkExclusionsControllerTest extends ApiTestCase
         yield 'All items' => ['all-items'];
         yield 'For you' => ['for-you'];
         yield 'Trending' => ['trending'];
+        yield 'Your stream' => ['your-stream'];
     }
 
     #[DataProvider('surfaces')]
@@ -55,6 +56,15 @@ final class NetworkExclusionsControllerTest extends ApiTestCase
         self::assertSame(['mastodon'], $this->excludedNetworks('all-items'));
         self::assertSame(['bluesky'], $this->excludedNetworks('for-you'));
         self::assertSame(['bluesky', 'mastodon'], $this->excludedNetworks('trending'));
+    }
+
+    public function testYourStreamKeepsItsOwnExcludedNetworks(): void
+    {
+        $this->client->request('PUT', '/api/your-stream/excluded-networks/bluesky', server: $this->headers);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        self::assertSame(['bluesky'], $this->excludedNetworks('your-stream'));
+        self::assertSame([], $this->excludedNetworks('for-you'));
     }
 
     #[DataProvider('surfaces')]

@@ -91,13 +91,11 @@ final class YourStreamSweepTest extends DbTestCase
         self::assertSame([], $this->readRows($user));
     }
 
-    public function testAnEntryInAFeedOutsideForYouIsNotACandidate(): void
+    public function testAnEntryInAFeedOutOfYourStreamButInForYouIsNotACandidate(): void
     {
         $user = $this->subscriber('outside@example.com');
         $this->term($user, 'solar', 2.0);
-        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $user]);
-        self::assertInstanceOf(Subscription::class, $subscription);
-        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $this->subscriptionOf($user)->changeInclusions(new InclusionChange(yourStream: false));
         $entry = $this->entry('Solar panels');
         $this->entityManager->flush();
 
@@ -105,6 +103,19 @@ final class YourStreamSweepTest extends DbTestCase
 
         self::assertSame([], $this->readRows($user));
         self::assertSame($entry->requireId(), $this->readMark($user));
+    }
+
+    public function testAnEntryInAFeedOutOfForYouButInYourStreamIsMatched(): void
+    {
+        $user = $this->subscriber('for-you-only-out@example.com');
+        $this->term($user, 'solar', 2.0);
+        $this->subscriptionOf($user)->changeInclusions(new InclusionChange(forYou: false));
+        $this->entry('Solar panels');
+        $this->entityManager->flush();
+
+        $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertCount(1, $this->readRows($user));
     }
 
     public function testAnEntryInAnUnsubscribedFeedIsNotACandidate(): void
@@ -137,19 +148,22 @@ final class YourStreamSweepTest extends DbTestCase
         self::assertSame(0, $this->readMark($user));
     }
 
-    public function testAUserWhoExcludedTheFeedsNetworkGetsNoRowWhileTheOtherAtTheSameMarkDoes(): void
+    public function testANetworkExcludedFromYourStreamGetsNoRow(): void
     {
         $excluding = $this->subscriber('excluding@example.com');
-        $keeping = $this->subscriber('keeping@example.com');
+        $forYouOnly = $this->subscriber('for-you-only@example.com');
         $this->term($excluding, 'solar', 2.0);
-        $this->term($keeping, 'solar', 2.0);
+        $this->term($forYouOnly, 'solar', 2.0);
         $bluesky = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
         $this->entityManager->persist($bluesky);
-        foreach ([$excluding, $keeping] as $user) {
+        foreach ([$excluding, $forYouOnly] as $user) {
             $this->entityManager->persist(new Subscription($user, $bluesky, new \DateTimeImmutable('2026-07-01')));
         }
         $this->entityManager->persist(
-            new NetworkExclusion($excluding, SocialNetwork::Bluesky, InclusionSurface::ForYou),
+            new NetworkExclusion($excluding, SocialNetwork::Bluesky, InclusionSurface::YourStream),
+        );
+        $this->entityManager->persist(
+            new NetworkExclusion($forYouOnly, SocialNetwork::Bluesky, InclusionSurface::ForYou),
         );
         $this->entry('Solar panels', feed: $bluesky);
 
@@ -157,7 +171,7 @@ final class YourStreamSweepTest extends DbTestCase
 
         self::assertSame(1, $report->matchesInserted);
         self::assertSame([], $this->readRows($excluding));
-        self::assertCount(1, $this->readRows($keeping));
+        self::assertCount(1, $this->readRows($forYouOnly));
     }
 
     public function testAnEntryPublishedMoreThan48HoursBeforeTheSweepIsSkippedAndPassed(): void
@@ -492,6 +506,14 @@ final class YourStreamSweepTest extends DbTestCase
         $this->entityManager->flush();
 
         return $user;
+    }
+
+    private function subscriptionOf(User $user): Subscription
+    {
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $user]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription;
     }
 
     private function term(User $user, string $word, float $weight): void

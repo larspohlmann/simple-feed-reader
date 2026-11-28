@@ -32,6 +32,7 @@ final readonly class BulkUpdateSubscriptionsRequest
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
         public ?bool $includeInTrending = null,
+        public ?bool $includeInYourStream = null,
     ) {
     }
 
@@ -46,6 +47,7 @@ final readonly class BulkUpdateSubscriptionsRequest
                 forYou: $this->includeInForYou,
                 savedSearches: $this->includeInSavedSearches,
                 trending: $this->includeInTrending,
+                yourStream: $this->includeInYourStream,
             ),
         );
     }

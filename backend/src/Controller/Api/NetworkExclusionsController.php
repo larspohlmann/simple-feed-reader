@@ -21,6 +21,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
         InclusionSurface::AllItems,
         InclusionSurface::ForYou,
         InclusionSurface::Trending,
+        InclusionSurface::YourStream,
     ]),
 ])]
 final readonly class NetworkExclusionsController

@@ -78,10 +78,10 @@ final class YourStreamEntriesControllerTest extends ApiTestCase
         self::assertSame([$oldest->requireId()], $this->ids());
     }
 
-    public function testAFeedSwitchedOutOfForYouHidesItsMatches(): void
+    public function testAFeedSwitchedOutOfYourStreamHidesItsMatches(): void
     {
         $this->member('2026-11-27T08:00:00');
-        $this->subscription->changeInclusions(new InclusionChange(forYou: false));
+        $this->subscription->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager()->flush();
 
         $this->get('/api/entries/your-stream');

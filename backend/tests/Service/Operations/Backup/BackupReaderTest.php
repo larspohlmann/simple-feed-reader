@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Operations\Backup;
 
+use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
 use App\Service\Operations\Backup\BackupReader;
 use App\Service\Operations\Backup\Dto\AccountLine;
@@ -160,11 +161,10 @@ final class BackupReaderTest extends TestCase
         // +02:00 wall clock normalised to naive-UTC storage time.
         self::assertSame('2026-07-01 00:00:00', $subscription->createdAt->format('Y-m-d H:i:s'));
         self::assertSame('Tech', $subscription->tags[0]->name);
-        // The fixture line above carries no includeInAllItems/includeInForYou key,
-        // so both must default to true, as in a backup older than those fields.
-        self::assertTrue($subscription->includeInAllItems);
-        self::assertTrue($subscription->includeInForYou);
-        self::assertTrue($subscription->includeInSavedSearches);
+        // The fixture line above carries no switch, so each must default to true, as in a backup older than them.
+        foreach (InclusionSurface::cases() as $surface) {
+            self::assertTrue($subscription->inclusions->isIncludedIn($surface), $surface->name);
+        }
     }
 
     public function testReadsAnEntryPartInOrder(): void

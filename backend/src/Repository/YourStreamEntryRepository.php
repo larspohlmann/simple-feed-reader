@@ -16,7 +16,7 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * Your stream's list and mark-read reads: the entries the sweep matched for the caller, while the
- * subscription, its network and its tags are switched in for For you.
+ * subscription, its network and its tags are switched in for Your stream.
  *
  * @extends ServiceEntityRepository<Entry>
  */
@@ -100,6 +100,6 @@ final class YourStreamEntryRepository extends ServiceEntityRepository
             $aliases->entry,
             $member,
         ));
-        InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::ForYou);
+        InclusionScopeDql::restrict($qb, $aliases->subscription, InclusionSurface::YourStream);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Operations\Backup\Dto;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
 use App\Entity\Tag;
+use App\Enum\InclusionSurface;
 use App\Enum\SourceFormat;
 use App\Service\Operations\Backup\Dto\SubscriptionLine;
 use App\Service\Social\Social\Model\ExportedSubscriptionModel;
@@ -33,8 +34,34 @@ final class SubscriptionLineTest extends TestCase
             . '"markedReadUntil":"2026-08-01T00:00:00+00:00","createdAt":"2026-07-01T00:00:00+00:00",'
             . '"tags":[{"name":"Science","position":0},{"name":"Reading","position":1}],'
             . '"includeInAllItems":true,"includeInForYou":false,"includeInSavedSearches":true,'
-            . '"includeInTrending":false}',
+            . '"includeInTrending":false,"includeInYourStream":true}',
             SubscriptionLine::fromSubscription($exported)->toBackupLine(),
         );
+    }
+
+    public function testAnOlderLineTakesYourStreamFromForYou(): void
+    {
+        $line = SubscriptionLine::fromLine([
+            'kind' => 'subscription', 'feedUrl' => 'https://one.example/rss', 'customTitle' => null, 'position' => 0,
+            'markedReadUntil' => null, 'createdAt' => '2026-07-01T00:00:00+00:00', 'tags' => [],
+            'includeInForYou' => false,
+        ]);
+
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::YourStream));
+    }
+
+    public function testALineRoundTripsYourStreamApartFromForYou(): void
+    {
+        $subscription = BackupLineRecords::subscription(new Feed('https://one.example/feed.xml'));
+        $subscription->changeInclusions(new InclusionChange(forYou: true, yourStream: false));
+        $exported = new ExportedSubscriptionModel($subscription, 'https://one.example/rss', SourceFormat::XML);
+
+        $encoded = SubscriptionLine::fromSubscription($exported)->toBackupLine();
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($encoded, true, flags: \JSON_THROW_ON_ERROR);
+        $line = SubscriptionLine::fromLine($decoded);
+
+        self::assertTrue($line->inclusions->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::YourStream));
     }
 }

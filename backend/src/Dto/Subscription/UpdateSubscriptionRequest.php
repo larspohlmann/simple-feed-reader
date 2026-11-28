@@ -24,6 +24,7 @@ final readonly class UpdateSubscriptionRequest
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
         public ?bool $includeInTrending = null,
+        public ?bool $includeInYourStream = null,
         #[Assert\Choice(callback: 'languageChoices')]
         public ?string $language = null,
     ) {
@@ -45,6 +46,7 @@ final readonly class UpdateSubscriptionRequest
                 forYou: $this->includeInForYou,
                 savedSearches: $this->includeInSavedSearches,
                 trending: $this->includeInTrending,
+                yourStream: $this->includeInYourStream,
             ),
             language: $this->languageChange(),
         );

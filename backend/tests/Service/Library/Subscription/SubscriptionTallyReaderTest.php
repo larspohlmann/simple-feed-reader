@@ -164,7 +164,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertSame(2, $stream->entryCount);
     }
 
-    public function testAFeedSwitchedOutOfForYouLeavesTheCounts(): void
+    public function testAFeedSwitchedOutOfYourStreamLeavesTheCounts(): void
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('tallies-stream-out@example.com', $when);
@@ -172,7 +172,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $feed = new Feed('https://example.com/stream-out.xml');
         $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, $when);
-        $subscription->changeInclusions(new InclusionChange(forYou: false));
+        $subscription->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->persist($subscription);
         $this->entityManager->persist(new InterestTermSet($user, $when, $when, 0));
         $this->streamMember($user, $this->entry($feed, 'hidden-member'));

@@ -14,7 +14,7 @@ use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
-/** What Your stream reads about the feeds an account has switched into For you. */
+/** What Your stream reads about the feeds an account has switched into Your stream. */
 final readonly class YourStreamSourceRepository
 {
     public function __construct(private EntityManagerInterface $entityManager)
@@ -31,7 +31,7 @@ final readonly class YourStreamSourceRepository
             ->where('IDENTITY(subscription.user) = :user')
             ->andWhere('feed.traits.language IS NOT NULL')
             ->setParameter('user', $userId);
-        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
+        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::YourStream);
 
         /** @var list<array{language: FeedLanguage}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
@@ -56,7 +56,7 @@ final readonly class YourStreamSourceRepository
         return null === $lowest ? null : (int) $lowest;
     }
 
-    /** @return list<StreamEntryModel> descending by id below $beforeId, from the account's For you feeds */
+    /** @return list<StreamEntryModel> descending by id below $beforeId, from the account's Your stream feeds */
     public function findNewestEntries(int $userId, RarityWindowModel $window, int $beforeId, int $limit): array
     {
         $qb = $this->selectEntries()
@@ -71,7 +71,7 @@ final readonly class YourStreamSourceRepository
             ->setParameter('since', $window->since)
             ->setParameter('afterId', $window->afterId)
             ->setParameter('beforeId', $beforeId);
-        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
+        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::YourStream);
 
         /** @var list<array{id: int, entryLanguage: ?FeedLanguage, feedLanguage: ?FeedLanguage, title: string, summary: ?string}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
@@ -84,7 +84,7 @@ final readonly class YourStreamSourceRepository
      * @param non-empty-list<int> $entryIds
      *
      * @return list<StreamCandidateModel> each entry once, ascending by id, with the accounts of $userIds whose
-     *                                    For you subscriptions carry its feed
+     *                                    Your stream subscriptions carry its feed
      */
     public function findCandidates(array $userIds, array $entryIds, \DateTimeImmutable $publishedSince): array
     {
@@ -118,7 +118,7 @@ final readonly class YourStreamSourceRepository
     /**
      * @param list<int> $userIds
      *
-     * @return array<int, non-empty-list<int>> feed id => the accounts whose For you subscriptions carry it
+     * @return array<int, non-empty-list<int>> feed id => the accounts whose Your stream subscriptions carry it
      */
     private function findUserIdsByFeed(array $userIds): array
     {
@@ -128,7 +128,7 @@ final readonly class YourStreamSourceRepository
             ->where('IDENTITY(subscription.user) IN (:users)')
             ->orderBy('subscription.id', 'ASC')
             ->setParameter('users', $userIds);
-        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::ForYou);
+        InclusionScopeDql::restrict($qb, 'subscription', InclusionSurface::YourStream);
 
         /** @var list<array{userId: int|string, feedId: int|string}> $rows */
         $rows = $qb->getQuery()->getArrayResult();

@@ -27,6 +27,7 @@ final readonly class UpdateTagRequest
         public ?bool $includeInForYou = null,
         public ?bool $includeInSavedSearches = null,
         public ?bool $includeInTrending = null,
+        public ?bool $includeInYourStream = null,
     ) {
     }
 
@@ -47,6 +48,7 @@ final readonly class UpdateTagRequest
             forYou: $this->includeInForYou,
             savedSearches: $this->includeInSavedSearches,
             trending: $this->includeInTrending,
+            yourStream: $this->includeInYourStream,
         );
     }
 }
