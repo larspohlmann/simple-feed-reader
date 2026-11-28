@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Settings\Pass;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ForYouStreamTuning;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
@@ -50,6 +51,11 @@ final readonly class AccountRecommendationSettings
             autoGenerateIntervalHours: $values?->autoGenerateIntervalHours,
             showScoreAndReasons: $values->showScoreAndReasons ?? false,
         );
+    }
+
+    public function forYouStreamTuning(): ForYouStreamTuning
+    {
+        return $this->row?->getForYouStreamTuning() ?? ForYouStreamTuning::defaults();
     }
 
     /** The favorites cap is the recommendation form's; kept and viewed are the profile section's. */

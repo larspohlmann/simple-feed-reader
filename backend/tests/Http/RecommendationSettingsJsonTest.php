@@ -15,6 +15,7 @@ use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabil
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
 use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamStateModel;
 use PHPUnit\Framework\TestCase;
 
@@ -48,12 +49,12 @@ final class RecommendationSettingsJsonTest extends TestCase
     /** Only the LLM's own prompt pieces depend on the prompt capability. */
     public function testAnEngineWithoutAPromptShowsNoPromptPieces(): void
     {
-        $state = RecommendationSettingsJson::state(
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(),
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
             workerAlive: true,
             forYouStream: self::forYouStream(),
-        );
+        ));
 
         self::assertArrayHasKey('defaultGuidancePrompt', $state);
         self::assertArrayHasKey('fixedPrompt', $state);
@@ -63,12 +64,12 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateEmitsShowScoreAndReasons(): void
     {
-        $state = RecommendationSettingsJson::state(
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(showScoreAndReasons: true),
             self::llm(),
             workerAlive: true,
             forYouStream: self::forYouStream(),
-        );
+        ));
 
         self::assertTrue($state['showScoreAndReasons']);
     }
@@ -128,12 +129,12 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateCarriesTheForYouStreamSettings(): void
     {
-        $state = RecommendationSettingsJson::state(
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(),
             self::llm(),
             workerAlive: true,
             forYouStream: new ForYouStreamStateModel(new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow), []),
-        );
+        ));
 
         self::assertSame(
             ['enabled' => false, 'precision' => 'narrow', 'defaultPrecision' => 'wide', 'phrases' => []],
@@ -144,12 +145,12 @@ final class RecommendationSettingsJsonTest extends TestCase
     /** @return array<string, mixed> */
     private function defaultState(): array
     {
-        return RecommendationSettingsJson::state(
+        return RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(),
             self::llm(),
             workerAlive: true,
             forYouStream: self::forYouStream(),
-        );
+        ));
     }
 
     private static function forYouStream(): ForYouStreamStateModel
