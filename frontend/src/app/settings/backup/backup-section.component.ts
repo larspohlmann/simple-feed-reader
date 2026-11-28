@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { Problem, REQUEST_TOO_LARGE, parseProblemAsync } from '../../core/problem';
-import { filenameFromContentDisposition, saveAs } from './save-as';
+import { filenameFromContentDisposition, saveAs } from '../../core/download/save-as';
 import { downloadOpmlExport } from '../import/opml-export';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDate } from '../../reader/format';
