@@ -9,6 +9,7 @@ import { DigestConfig } from '../preferences/digest-writer';
 import { FeedDirectoryScope } from '../preferences/feed-directory-scope';
 import { LanguageService } from '../i18n/language.service';
 import { HandednessService } from '../preferences/handedness.service';
+import { ReadingWidthService } from '../preferences/reading-width.service';
 import { MagazineStyleService } from '../preferences/magazine-style.service';
 import { SidebarStyleService } from '../preferences/sidebar-style.service';
 import { ThemeNameService } from '../preferences/theme-name.service';
@@ -34,6 +35,7 @@ export interface UserPreferences {
   sidebarStyle: string;
   theme: string;
   handedness: string;
+  readingWidth: string;
   sharing: SharingSettings;
   trendingEnabled: boolean;
   feedDirectoryScope?: FeedDirectoryScope;
@@ -66,6 +68,7 @@ export class AuthService {
   private readonly sidebarStyle = inject(SidebarStyleService);
   private readonly themeName = inject(ThemeNameService);
   private readonly handedness = inject(HandednessService);
+  private readonly readingWidth = inject(ReadingWidthService);
   private readonly sharing = inject(SharingService);
   private readonly digest = inject(DigestService);
   private readonly ai = inject(AiAvailabilityService);
@@ -104,6 +107,7 @@ export class AuthService {
     this.sidebarStyle.adopt(user);
     this.themeName.adopt(user);
     this.handedness.adopt(user);
+    this.readingWidth.adopt(user);
     this.sharing.adopt(user);
     this.digest.adopt(user);
     this.ai.adopt(user);

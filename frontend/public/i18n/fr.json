@@ -59,6 +59,14 @@
       "right": "Droitier",
       "left": "Gaucher"
     },
+    "readingWidth": "Largeur des articles",
+    "readingWidthHint": "La largeur d'un article sur un grand écran.",
+    "readingWidthSaveFailed": "La largeur des articles n'a pas pu être enregistrée dans votre compte.",
+    "readingWidthOption": {
+      "standard": "Standard",
+      "wide": "Large",
+      "full": "Pleine largeur"
+    },
     "loadingVersion": "Chargement des informations de version",
     "feeds": {
       "title": "Flux",

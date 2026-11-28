@@ -1,6 +1,7 @@
 import { InjectionToken, WritableSignal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
+import { ReadingWidth } from './reading-width';
 import { MagazineStyle } from './magazine-style';
 import { SidebarStyle } from './sidebar-style';
 import { ThemeName } from '../../theme/themes/registry';
@@ -11,6 +12,7 @@ export interface ReadingPreferences {
   sidebarStyle: SidebarStyle;
   theme: ThemeName;
   handedness: Handedness;
+  readingWidth: ReadingWidth;
   trendingEnabled: boolean;
 }
 

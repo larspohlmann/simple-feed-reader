@@ -10,16 +10,21 @@
 
 article {
   position: relative;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned reading measure, not a spacing value. */
-  max-width: 720px;
+  max-width: var(--reading-measure);
   margin: 0 auto;
 
   /* The tail is the largest bottom need: the reading focus's (#107), which ReadingScope
      grants only when the article overflows, and a widened video's (#1479). */
   padding: var(--space-5) var(--space-4)
     max(var(--space-5), var(--reader-focus-tail, 0%), var(--reader-cinema-tail, 0%));
+}
+
+article[data-reading-width='wide'] {
+  max-width: var(--reading-measure-wide);
+}
+
+article[data-reading-width='full'] {
+  max-width: none;
 }
 
 @container reader-pane (width > #{bp.$container-reader-cinema}) {

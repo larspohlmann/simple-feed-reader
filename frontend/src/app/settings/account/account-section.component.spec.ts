@@ -33,6 +33,7 @@ const user: CurrentUser = {
     sidebarStyle: 'boxed',
     theme: 'graphite',
     handedness: 'right',
+    readingWidth: 'standard',
     sharing: SHARING_EVERYTHING,
     trendingEnabled: true,
   },

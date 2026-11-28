@@ -45,6 +45,7 @@ function account(preferences: Partial<UserPreferences> = {}): CurrentUser {
       sidebarStyle: 'boxed',
       theme: 'graphite',
       handedness: 'right',
+      readingWidth: 'standard',
       sharing: SHARING_EVERYTHING,
       trendingEnabled: true,
       ...preferences,

@@ -2259,6 +2259,8 @@ the list's sidebar, the article's back).
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
+- **Article width** (Settings → Preferences, per account): standard caps the article at
+  720px, wide at 960px, full lets it fill the reader pane and keeps its side padding.
 - Every disc is the same grey (`--text-muted`) at 35% over a frost, so the rows show
   through; only an active toggle (favourite or save when on) takes the accent.
 - On touch the list drops the column below `18rem` of list height
