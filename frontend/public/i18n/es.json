@@ -342,8 +342,8 @@
         "forYouStream": {
           "title": "Flujo Para ti",
           "caption": "Entradas de tus feeds que encajan con tus intereses, nada más llegar.",
-          "enabled": "Mostrar el flujo Para ti",
-          "enabledDesc": "Desactiva el flujo para ocultarlo de la barra lateral; no se borra nada.",
+          "enabled": "Flujo Para ti",
+          "enabledDesc": "Si lo desactivas, no se asocian entradas nuevas y el flujo desaparece de la barra lateral. Las entradas que ya contiene se conservan.",
           "precision": "Precisión",
           "precisionDesc": "Cuánto debe encajar una entrada con tus intereses para aparecer.",
           "narrower": "Más estrecha",

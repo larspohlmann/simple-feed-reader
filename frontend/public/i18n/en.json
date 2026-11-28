@@ -342,8 +342,8 @@
         "forYouStream": {
           "title": "For you stream",
           "caption": "Entries from your feeds that match your interests, as they arrive.",
-          "enabled": "Show the For you stream",
-          "enabledDesc": "Turn the stream off to hide it from the sidebar; nothing is deleted.",
+          "enabled": "For you stream",
+          "enabledDesc": "When off, no new entries are matched and the stream leaves the sidebar. Entries already in it are kept.",
           "precision": "Precision",
           "precisionDesc": "How closely an entry must match your interests to appear.",
           "narrower": "Narrower",

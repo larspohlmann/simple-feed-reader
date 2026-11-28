@@ -35,7 +35,7 @@ export class ForYouStreamGroupComponent {
   readonly precisionSteps = FOR_YOU_STREAM_PRECISIONS.length;
   readonly enabled = computed(() => this.svc.forYouStream()?.enabled ?? false);
   readonly precision = computed<ForYouStreamPrecision>(
-    () => this.svc.forYouStream()?.precision ?? 'balanced',
+    () => this.svc.forYouStream()?.precision ?? 'wide',
   );
   /** One-based position on the stepper bar, narrowest first. */
   readonly precisionStep = computed(() => FOR_YOU_STREAM_PRECISIONS.indexOf(this.precision()) + 1);

@@ -161,6 +161,20 @@ describe('RecommendationSettingsService', () => {
     expect(service.state()?.forYouStream.precision).toBe('widest');
   });
 
+  it('carries a stream choice still in flight in a concurrent instant save', () => {
+    loadState();
+
+    service.saveForYouStream({ enabled: false, precision: 'narrow' });
+    service.saveInstant({ showScoreAndReasons: true });
+    const [stream, instant] = http.match(ENDPOINT);
+
+    expect(stream.request.body.forYouStream).toEqual({ enabled: false, precision: 'narrow' });
+    expect(instant.request.body.showScoreAndReasons).toBe(true);
+    expect(instant.request.body.forYouStream).toEqual({ enabled: false, precision: 'narrow' });
+    stream.flush(state());
+    instant.flush(state());
+  });
+
   it('typed path: a cap edit sets dirty and issues no PUT until save()', () => {
     loadState();
 

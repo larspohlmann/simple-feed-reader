@@ -856,6 +856,7 @@ These deliberately stay out and own their markup and styles:
 - the entry row's read toggle
 - the view-controls segmented control
 - the sidebar's brightness stepper (`<app-brightness-control>`)
+- `<app-stepper-bar>`, the dial the brightness control and the For you precision share
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -2091,9 +2092,9 @@ avatars scale by the step, pictures and chrome stay, and nothing is cut at 150 %
 
 ### Brightness control
 
-`<app-brightness-control>` (local to the sidebar, #832) is a moon
-(`dark_mode`), a solid progress bar and a sun (`light_mode`) in the
-segmented frame it shares with the view-controls groups
+`<app-brightness-control>` (local to the sidebar, #832) renders
+`<app-stepper-bar>` with a moon (`dark_mode`), a solid progress bar and a sun
+(`light_mode`) in the segmented frame it shares with the view-controls groups
 (`theme/_segmented.scss`). The bar is one full-height fill over a track the
 same surface as the glyph buttons; the soft accent tint is the indicator. It
 fills with brightness — empty at the darkest step, full at the brightest — so

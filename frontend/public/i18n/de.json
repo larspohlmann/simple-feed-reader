@@ -342,8 +342,8 @@
         "forYouStream": {
           "title": "Für-dich-Stream",
           "caption": "Einträge aus deinen Feeds, die zu deinen Interessen passen, sobald sie ankommen.",
-          "enabled": "Für-dich-Stream anzeigen",
-          "enabledDesc": "Schalte den Stream aus, um ihn aus der Seitenleiste auszublenden; es wird nichts gelöscht.",
+          "enabled": "Für-dich-Stream",
+          "enabledDesc": "Wenn aus, werden keine neuen Einträge zugeordnet und der Stream verschwindet aus der Seitenleiste. Einträge, die schon darin sind, bleiben erhalten.",
           "precision": "Genauigkeit",
           "precisionDesc": "Wie genau ein Eintrag zu deinen Interessen passen muss, um zu erscheinen.",
           "narrower": "Enger",

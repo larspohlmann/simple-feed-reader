@@ -342,8 +342,8 @@
         "forYouStream": {
           "title": "Flux Pour vous",
           "caption": "Les articles de vos flux qui correspondent à vos centres d'intérêt, dès leur arrivée.",
-          "enabled": "Afficher le flux Pour vous",
-          "enabledDesc": "Désactivez le flux pour le masquer de la barre latérale ; rien n'est supprimé.",
+          "enabled": "Flux Pour vous",
+          "enabledDesc": "Désactivé, aucun nouvel article n'est associé et le flux quitte la barre latérale. Les articles déjà présents sont conservés.",
           "precision": "Précision",
           "precisionDesc": "À quel point un article doit correspondre à vos centres d'intérêt pour apparaître.",
           "narrower": "Plus étroit",

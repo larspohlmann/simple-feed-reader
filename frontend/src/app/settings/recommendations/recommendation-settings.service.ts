@@ -170,7 +170,7 @@ export class RecommendationSettingsService extends DraftSettingsService<
       debugEnabled: state.debugEnabled,
       autoGenerateIntervalHours: state.autoGenerateIntervalHours,
       showScoreAndReasons: state.showScoreAndReasons,
-      forYouStream: {
+      forYouStream: this.pendingForYouStream() ?? {
         enabled: state.forYouStream.enabled,
         precision: state.forYouStream.precision,
       },

@@ -65,7 +65,7 @@
             {{ 'reader.feedLanguage.' + group.language | transloco }}
           </h4>
           <ul class="stream-phrase-list">
-            @for (entry of group.phrases; track entry.phrase) {
+            @for (entry of group.phrases; track $index) {
               <li class="stream-phrase">
                 <span class="stream-phrase-text">{{ entry.phrase }}</span>
                 <span class="stream-phrase-weight">{{ formatWeight(entry.weight) }}</span>
