@@ -18,6 +18,7 @@ use App\Service\Library\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NamesLabels;
 use App\Tests\Support\StateMarks;
+use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -57,9 +58,9 @@ final class SavedListExportGoogleReaderTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
         self::assertSame('application/json', $this->client->getResponse()->headers->get('Content-Type'));
-        self::assertMatchesRegularExpression(
-            '/^attachment; filename="simplefeedreader-kept-\d{8}-starred\.json"$/',
-            (string) $this->client->getResponse()->headers->get('Content-Disposition'),
+        self::assertSame(
+            sprintf('attachment; filename="simplefeedreader-kept-%s-starred.json"', $this->today()),
+            $this->client->getResponse()->headers->get('Content-Disposition'),
         );
         self::assertSame(self::STARRED, $document['id']);
         self::assertSame('Kept', $document['title']);
@@ -181,6 +182,17 @@ final class SavedListExportGoogleReaderTest extends ApiTestCase
         self::assertContains('user/-/label/A, "B" & <C>', $document['items'][0]['categories']);
     }
 
+    public function testALabelExportIsTitledWithTheExportName(): void
+    {
+        [$headers, $user] = $this->bearerAndUser('export-gr-title@example.com');
+        $entry = $this->keptEntry($user, $this->subscribe($user), 'Titled', 'https://export.example/t');
+        $label = $this->label($user, $entry, 'Reading list');
+
+        $document = $this->downloadDocument($headers, 'view=kept&label=' . $label->requireId());
+
+        self::assertSame('Kept – Reading list', $document['title']);
+    }
+
     public function testMoreThanOneBatchIsOneValidDocument(): void
     {
         [$headers, $user] = $this->bearerAndUser('export-gr-batches@example.com');
@@ -223,6 +235,14 @@ final class SavedListExportGoogleReaderTest extends ApiTestCase
         $this->client->request('GET', '/api/exports/google-reader?' . $queryString, server: $headers);
 
         return (string) $this->client->getInternalResponse()->getContent();
+    }
+
+    private function today(): string
+    {
+        $clock = self::getContainer()->get(ClockInterface::class);
+        self::assertInstanceOf(ClockInterface::class, $clock);
+
+        return $clock->now()->format('Ymd');
     }
 
     private function subscribe(User $user): Feed

@@ -29,7 +29,7 @@ final readonly class GoogleReaderStarredResponseFactory
         $header = sprintf(
             '{"id":%s,"title":%s,"updated":%d,"items":[',
             self::encoded(self::STARRED),
-            self::encoded($scope->listName()),
+            self::encoded($scope->exportName()),
             $now->getTimestamp(),
         );
 
