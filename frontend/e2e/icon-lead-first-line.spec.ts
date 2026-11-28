@@ -1130,7 +1130,11 @@ for (const setup of SETUPS) {
       const boxes = await Promise.all(items.map((item) => boxOf(row.locator(item))));
       boxes.slice(1).forEach((box, index) => {
         const before = boxes[index];
-        expectNear(box.x - (before.x + before.width), gap, `${items[index + 1]} after its neighbour`);
+        expectNear(
+          box.x - (before.x + before.width),
+          gap,
+          `${items[index + 1]} after its neighbour`,
+        );
       });
     });
 

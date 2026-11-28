@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../post-body';
+@use '../../../theme/icon-lead';
 @use '../../../theme/type';
 
 :host {
@@ -70,6 +71,15 @@
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
+
+  @include icon-lead.lead-space(0);
+  @include icon-lead.first-line('> app-avatar', '> .author');
+
+  > app-avatar {
+    @include icon-lead.self-sized(var(--icon-md));
+
+    margin-inline-end: icon-lead.lead-gap(var(--space-1));
+  }
 }
 
 .handle {
