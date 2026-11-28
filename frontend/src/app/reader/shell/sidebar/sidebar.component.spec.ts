@@ -87,6 +87,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     sidebarStyle: 'boxed',
     theme: 'graphite',
     handedness: 'right',
+    readingWidth: 'standard',
     sharing: SHARING_EVERYTHING,
     trendingEnabled: true,
   },
@@ -2351,6 +2352,12 @@ describe('SidebarComponent', () => {
       expect(element.querySelector('.tags .taghead')).not.toBeNull();
     });
 
+    it('leads the Tags head with the tag icon in the favicon slot, so its label aligns', () => {
+      const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      const leadIcon = element.querySelector('.tags-head .section-link > .favicon-slot');
+      expect(leadIcon?.textContent?.trim()).toBe('sell');
+    });
+
     it('collapses the list and points the chevron right when the chevron is clicked', () => {
       const fixture = mount({ tagTree: [tagNode] });
       const element = fixture.nativeElement as HTMLElement;
@@ -2707,6 +2714,16 @@ describe('organise mode', () => {
     expect(element.querySelector('.tagfeeds')).not.toBeNull();
     expect(element.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
+  });
+
+  it('draws Favorites and Kept in their own card before Tags while organising (#2585)', () => {
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree });
+    const element = fixture.nativeElement as HTMLElement;
+    const card = element.querySelector('app-sidebar-collection')!.closest('.card')!;
+
+    expect(card.querySelectorAll('app-sidebar-collection')).toHaveLength(2);
+    expect(card.querySelectorAll('.collection-head .dots')).toHaveLength(2);
+    expect(card.nextElementSibling?.querySelector('.tags-head')).not.toBeNull();
   });
 
   it('organise tag rows carry a handle, an inert body, ⋯ and a chevron that expands', () => {

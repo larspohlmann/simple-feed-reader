@@ -17,10 +17,12 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { parseProblem } from '../../../core/problem';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { folderToggle } from '../../../core/preferences/folder-toggle';
+import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ToastService } from '../../../shared/toast/toast.service';
+import { ExportDialogService } from '../../export/export-dialog.service';
 import { LayoutService } from '../../layout.service';
 import {
   COLLECTIONS,
@@ -59,12 +61,14 @@ const isCollectionSelection = (selection: Selection): selection is CollectionSel
 export class SidebarCollectionComponent {
   readonly collection = input.required<LabelCollection>();
   readonly selection = input.required<Selection>();
+  readonly organising = input(false);
 
   private readonly labels = inject(LabelsStore);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly sheet = inject(ActionSheet);
+  private readonly exportDialog = inject(ExportDialogService);
   private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -129,8 +133,25 @@ export class SidebarCollectionComponent {
     field?.select();
   });
 
-  protected menuKey(label: LabelTally): string {
-    return `label-${this.collection()}-${label.id}`;
+  protected listName(): string {
+    return this.transloco.translate(`reader.${this.collection()}`);
+  }
+
+  protected menuKey(folder: CollectionFolder): string {
+    return `label-${this.collection()}-${folder.filter}`;
+  }
+
+  protected folderName(folder: CollectionFolder): string {
+    return folder.label?.name ?? this.transloco.translate('reader.labels.unlabeled');
+  }
+
+  protected exportTitle(folder: CollectionFolder | null): string {
+    return folder === null ? this.listName() : `${this.listName()} – ${this.folderName(folder)}`;
+  }
+
+  protected openExportDialog(label: LabelFilter | null, title: string): void {
+    this.rows.closeMenu();
+    this.exportDialog.open({ collection: this.collection(), label, title });
   }
 
   protected startRename(label: LabelTally): void {
@@ -171,25 +192,41 @@ export class SidebarCollectionComponent {
       });
   }
 
-  protected openLabelSheet(label: LabelTally): void {
+  protected openSheet(folder: CollectionFolder | null): void {
+    const label = folder?.label ?? null;
+    const actions =
+      label === null ? [this.exportAction()] : [...this.labelActions(), this.exportAction()];
+    const title = folder === null ? this.listName() : this.folderName(folder);
     this.sheet
-      .open({
-        title: label.name,
-        actions: [
-          { id: 'rename', label: this.transloco.translate('reader.labels.rename'), symbol: 'edit' },
-          {
-            id: 'delete',
-            label: this.transloco.translate('reader.labels.delete'),
-            symbol: 'delete',
-            danger: true,
-          },
-        ],
-      })
+      .open({ title, actions })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
+        if (choice === 'export')
+          this.openExportDialog(folder?.filter ?? null, this.exportTitle(folder));
+        if (label === null) return;
         if (choice === 'rename') this.startRename(label);
         if (choice === 'delete') this.confirmDelete(label);
       });
+  }
+
+  private exportAction(): ActionSheetAction {
+    return {
+      id: 'export',
+      label: this.transloco.translate('reader.export.action'),
+      symbol: 'download',
+    };
+  }
+
+  private labelActions(): ActionSheetAction[] {
+    return [
+      { id: 'rename', label: this.transloco.translate('reader.labels.rename'), symbol: 'edit' },
+      {
+        id: 'delete',
+        label: this.transloco.translate('reader.labels.delete'),
+        symbol: 'delete',
+        danger: true,
+      },
+    ];
   }
 
   private delete(label: LabelTally): void {

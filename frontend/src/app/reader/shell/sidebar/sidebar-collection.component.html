@@ -1,20 +1,48 @@
 @let hasFolders = folders().length > 0;
-@let shown = hasFolders && folder.expanded();
-<div class="folder-head collection-head" [class.current]="headCurrent()">
-  <a
-    class="section-link"
-    [routerLink]="['/']"
-    [queryParams]="selectionQueryParams({ view: collection() })"
-    queryParamsHandling="merge"
-  >
-    <app-icon [name]="icon()" size="md" />
-    <span class="label">{{ 'reader.' + collection() | transloco }}</span>
-    @if (total() > 0) {
-      <span class="section-count">{{ total() }}</span>
-    }
-  </a>
-  <span class="slot" aria-hidden="true"></span>
-  @if (hasFolders) {
+@let shown = hasFolders && (organising() || folder.expanded());
+<div class="folder-head collection-head" [class.current]="!organising() && headCurrent()">
+  @if (organising()) {
+    <span class="section-link">
+      <app-icon [name]="icon()" size="md" />
+      <span class="label">{{ 'reader.' + collection() | transloco }}</span>
+    </span>
+  } @else {
+    <a
+      class="section-link"
+      [routerLink]="['/']"
+      [queryParams]="selectionQueryParams({ view: collection() })"
+      queryParamsHandling="merge"
+    >
+      <app-icon [name]="icon()" size="md" />
+      <span class="label">{{ 'reader.' + collection() | transloco }}</span>
+      @if (total() > 0) {
+        <span class="section-count">{{ total() }}</span>
+      }
+    </a>
+  }
+  @if (organising()) {
+    <button
+      class="dots"
+      type="button"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'reader.manage' | transloco: { name: listName() }"
+      (click)="openSheet(null)"
+    >
+      <app-icon name="more_horiz" size="md" />
+    </button>
+  } @else if (!screen.isCoarse()) {
+    <app-sidebar-row-menu
+      [menuKey]="'collection-' + collection()"
+      [label]="'reader.manage' | transloco: { name: listName() }"
+    >
+      <ng-template>
+        <button role="menuitem" (click)="openExportDialog(null, listName())">
+          {{ 'reader.export.action' | transloco }}
+        </button>
+      </ng-template>
+    </app-sidebar-row-menu>
+  }
+  @if (!organising() && hasFolders) {
     <button
       class="chevzone"
       type="button"
@@ -32,7 +60,7 @@
   <div class="sublist">
     @for (folder of folders(); track folder.filter) {
       @let label = folder.label;
-      <div class="label-row" [class.active]="folder.filter === activeFilter()">
+      <div class="label-row" [class.active]="!organising() && folder.filter === activeFilter()">
         @if (label !== null && renamingId() === label.id) {
           <app-icon name="label" size="md" />
           <input
@@ -46,6 +74,11 @@
             (keydown.escape)="cancelRename()"
             (blur)="cancelRename()"
           />
+        } @else if (organising()) {
+          <span class="nav">
+            <app-icon name="label" size="md" />
+            <span class="name">{{ label?.name ?? ('reader.labels.unlabeled' | transloco) }}</span>
+          </span>
         } @else {
           <a
             class="nav"
@@ -60,29 +93,35 @@
             }
           </a>
         }
-        @if (label === null) {
-          <span class="slot" aria-hidden="true"></span>
-        } @else if (screen.isCoarse()) {
+        @if (organising()) {
           <button
             class="dots"
             type="button"
             aria-haspopup="dialog"
-            [attr.aria-label]="'reader.manage' | transloco: { name: label.name }"
-            (click)="openLabelSheet(label)"
+            [attr.aria-label]="'reader.manage' | transloco: { name: folderName(folder) }"
+            (click)="openSheet(folder)"
           >
             <app-icon name="more_horiz" size="md" />
           </button>
-        } @else {
+        } @else if (!screen.isCoarse()) {
           <app-sidebar-row-menu
-            [menuKey]="menuKey(label)"
-            [label]="'reader.manage' | transloco: { name: label.name }"
+            [menuKey]="menuKey(folder)"
+            [label]="'reader.manage' | transloco: { name: folderName(folder) }"
           >
             <ng-template>
-              <button role="menuitem" (click)="startRename(label)">
-                {{ 'reader.labels.rename' | transloco }}
-              </button>
-              <button role="menuitem" class="danger" (click)="confirmDelete(label)">
-                {{ 'reader.labels.delete' | transloco }}
+              @if (label !== null) {
+                <button role="menuitem" (click)="startRename(label)">
+                  {{ 'reader.labels.rename' | transloco }}
+                </button>
+                <button role="menuitem" class="danger" (click)="confirmDelete(label)">
+                  {{ 'reader.labels.delete' | transloco }}
+                </button>
+              }
+              <button
+                role="menuitem"
+                (click)="openExportDialog(folder.filter, exportTitle(folder))"
+              >
+                {{ 'reader.export.action' | transloco }}
               </button>
             </ng-template>
           </app-sidebar-row-menu>

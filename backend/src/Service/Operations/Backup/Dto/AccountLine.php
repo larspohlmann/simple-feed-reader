@@ -90,6 +90,7 @@ final readonly class AccountLine
             'sidebarStyle' => $this->reading->sidebarStyle->value,
             'theme' => $this->reading->theme->value,
             'handedness' => $this->reading->handedness->value,
+            'readingWidth' => $this->reading->readingWidth->value,
             'sharingEnabled' => $this->sharingEnabled,
             'hiddenShareTargets' => $this->hiddenShareTargets,
             'rememberShares' => $this->rememberShares,

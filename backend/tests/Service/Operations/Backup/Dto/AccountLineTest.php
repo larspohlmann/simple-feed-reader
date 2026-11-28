@@ -7,6 +7,7 @@ namespace App\Tests\Service\Operations\Backup\Dto;
 use App\Enum\Handedness;
 use App\Enum\InclusionSurface;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\SocialNetwork;
 use App\Enum\Theme;
@@ -235,6 +236,35 @@ final class AccountLineTest extends TestCase
         self::assertSame(Handedness::Right, $line->reading->handedness);
     }
 
+    public function testItReadsTheReadingWidth(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'readingWidth' => 'wide',
+        ]);
+
+        self::assertSame(ReadingWidth::Wide, $line->reading->readingWidth);
+    }
+
+    public function testAMissingReadingWidthFallsBackToStandard(): void
+    {
+        $line = AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true]);
+
+        self::assertSame(ReadingWidth::Standard, $line->reading->readingWidth);
+    }
+
+    public function testAnUnknownReadingWidthFallsBackToStandard(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'readingWidth' => 'huge',
+        ]);
+
+        self::assertSame(ReadingWidth::Standard, $line->reading->readingWidth);
+    }
+
     /** An older backup's `recommendationSettings` object is ignored, not rejected: the format does not carry it. */
     public function testALegacyRecommendationSettingsBlockIsIgnored(): void
     {
@@ -376,6 +406,7 @@ final class AccountLineTest extends TestCase
         $settings->reading->setSidebarStyle(SidebarStyle::Airy);
         $settings->reading->setTheme(Theme::Classic);
         $settings->reading->setHandedness(Handedness::Left);
+        $settings->reading->setReadingWidth(ReadingWidth::Wide);
         $settings->reading->setTrendingEnabled(false);
         $settings->sharing->setHiddenTargets(['mastodon', 'email']);
         $settings->sharing->setRememberingShares(false);
@@ -388,7 +419,7 @@ final class AccountLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"airy",'
-            . '"sidebarStyle":"airy","theme":"classic","handedness":"left","sharingEnabled":true,'
+            . '"sidebarStyle":"airy","theme":"classic","handedness":"left","readingWidth":"wide","sharingEnabled":true,'
             . '"hiddenShareTargets":["mastodon","email"],'
             . '"rememberShares":false,'
             . '"trendingEnabled":false,"feedDirectoryScope":{"countries":["DE"],"languages":["de"]},'

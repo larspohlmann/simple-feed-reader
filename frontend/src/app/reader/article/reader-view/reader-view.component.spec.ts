@@ -316,6 +316,8 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('reading focus setting', () => {
+    beforeEach(() => localStorage.setItem('sfr.readingFocus', 'true'));
+
     it('clears dimming from the open article when disabled', async () => {
       const fixture = mount(entryWithBody('<p>First</p><p>Second</p>'));
       await Promise.resolve();
@@ -2145,6 +2147,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('falls under the reading focus with the article body (#1150)', async () => {
+      localStorage.setItem('sfr.readingFocus', 'true');
       commentsState.set(loadedComments);
       const fixture = mount(entry({ comments: 'manual' }));
       await Promise.resolve();
@@ -2156,6 +2159,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('re-seats the reading focus when the comments arrive late (#1150)', async () => {
+      localStorage.setItem('sfr.readingFocus', 'true');
       commentsState.set({ status: 'loading' });
       const fixture = mount(entry({ comments: 'manual' }));
       await Promise.resolve();

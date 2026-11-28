@@ -246,6 +246,7 @@ export class SidebarComponent {
   protected readonly tagsHead: SectionHeadView = {
     group: 'tags',
     section: this.tagsSection,
+    icon: 'sell',
     label: 'reader.tags',
     toggleLabel: 'reader.toggleTags',
   };
@@ -277,6 +278,7 @@ export class SidebarComponent {
   protected readonly feedsHead: SectionHeadView = {
     group: 'feeds',
     section: this.feedsSection,
+    icon: 'rss_feed',
     label: 'reader.feeds',
     toggleLabel: 'reader.toggleFeeds',
   };

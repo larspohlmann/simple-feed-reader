@@ -109,6 +109,7 @@ export const ACCOUNT_PREFERENCES = {
   magazineStyle: 'boxed',
   sidebarStyle: 'boxed',
   handedness: 'right',
+  readingWidth: 'standard',
   trendingEnabled: true,
 };
 

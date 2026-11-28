@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
 import { HandednessService } from '../../core/preferences/handedness.service';
 import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
+import { ReadingWidthService } from '../../core/preferences/reading-width.service';
 import { SidebarStyleService } from '../../core/preferences/sidebar-style.service';
 import { ThemeNameService } from '../../core/preferences/theme-name.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
@@ -46,13 +47,20 @@ describe('PreferencesSectionComponent', () => {
     );
   });
 
-  it('offers a segmented choice for the language, the magazine style, the sidebar style, the theme and the handedness', () => {
+  it('offers a segmented choice for the language, the magazine style, the sidebar style, the theme, the handedness and the article width', () => {
     const element = mount().nativeElement as HTMLElement;
     const labels = Array.from(element.querySelectorAll('app-segmented-choice [role="group"]')).map(
       (group) => group.getAttribute('aria-label'),
     );
 
-    expect(labels).toEqual(['Language', 'Magazine style', 'Sidebar style', 'Theme', 'Handedness']);
+    expect(labels).toEqual([
+      'Language',
+      'Magazine style',
+      'Sidebar style',
+      'Theme',
+      'Handedness',
+      'Article width',
+    ]);
   });
 
   it('writes the sidebar style picked in its segmented choice', () => {
@@ -119,6 +127,27 @@ describe('PreferencesSectionComponent', () => {
     expect(write).toHaveBeenCalledWith({ handedness: 'left' });
   });
 
+  it('writes the article width picked in its segmented choice', () => {
+    const fixture = mount();
+    const write = jest.spyOn(TestBed.inject(PREFERENCES_WRITER), 'write');
+    const options = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '[role="group"][aria-label="Article width"] button',
+      ),
+    );
+
+    expect(options).toHaveLength(3);
+    const wide = options.find(
+      (button) => button.textContent?.trim() === en.settings.readingWidthOption.wide,
+    )!;
+
+    wide.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(ReadingWidthService).width()).toBe('wide');
+    expect(write).toHaveBeenCalledWith({ readingWidth: 'wide' });
+  });
+
   it('surfaces a banner when the handedness write failed', () => {
     const fixture = mount();
     TestBed.inject(HandednessService).saveFailed.set(true);
@@ -150,12 +179,12 @@ describe('PreferencesSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('app-toggle')).not.toBeNull();
   });
 
-  it('offers reading focus enabled by default', () => {
+  it('offers reading focus disabled by default (#2602)', () => {
     const fixture = mount();
     const toggle = fixture.nativeElement.querySelector('#reading-focus-toggle') as HTMLInputElement;
 
     expect(fixture.nativeElement.textContent).toContain('Reading focus');
-    expect(toggle.checked).toBe(true);
+    expect(toggle.checked).toBe(false);
   });
 
   it('stores the reading focus setting when toggled', () => {
@@ -165,8 +194,8 @@ describe('PreferencesSectionComponent', () => {
     toggle.click();
     fixture.detectChanges();
 
-    expect(toggle.checked).toBe(false);
-    expect(localStorage.getItem('sfr.readingFocus')).toBe('false');
+    expect(toggle.checked).toBe(true);
+    expect(localStorage.getItem('sfr.readingFocus')).toBe('true');
   });
 
   it('writes the preference when toggled', () => {

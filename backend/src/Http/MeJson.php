@@ -46,6 +46,7 @@ final class MeJson
             'sidebarStyle' => $settings->reading->getSidebarStyle()->value,
             'theme' => $settings->reading->getTheme()->value,
             'handedness' => $settings->reading->getHandedness()->value,
+            'readingWidth' => $settings->reading->getReadingWidth()->value,
             'passkeyOfferAnswered' => $passkeyOfferAnswered,
             'trendingEnabled' => $settings->reading->isTrendingEnabled(),
             'feedDirectoryScope' => [

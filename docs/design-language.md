@@ -61,9 +61,21 @@ discover panel and the auth card each arrived at 12px independently.
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
+| `--reading-measure` | `720px` | the article column at the standard Article width |
+| `--reading-measure-wide` | `960px` | the article column at wide, selected by `app-article-layer[data-reading-width]` |
+| `--reading-picture-measure` | `1024px` | the widest a stretched body picture (`img.reader-fill`) grows at full; centred |
 | `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
 | `--mini-card-thumb-w` | `104px` | the picture width of a "more sources" mini card, at a 104 / 68 aspect ratio (#2055) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
+
+**Article width** (Settings → Preferences, per account) has three steps, set on
+`<app-article-layer data-reading-width>` so the sheet behind the article follows the
+column: standard caps the column at `--reading-measure` (720px), wide at
+`--reading-measure-wide` (960px), and full fills the reader pane and keeps its side
+padding. At full, 16:9 media (embeds and the prose video) stop growing
+where the whole frame fits the visible pane height and are centred, the lead image
+never upscales past its own width, body pictures stop at 1024px, centred, and the cinema toggle is hidden, as every video is
+already at cinema size.
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
 real app bar at runtime and writes it to `--app-bar-h`. Every consumer must read
@@ -1217,6 +1229,10 @@ dialog's tabs).
 click on the label's text presses the first button of the group. Name the group
 with `ariaLabelKey` and put a hint in a paragraph under it.
 
+### Export option cards (#2585)
+
+The export dialog offers its formats as one card each: a hairline border, `--radius`, `--space-3` padding, an icon, the name and a description. The selected card takes an accent border, an inset 1px accent shadow and an `--accent-soft` fill, with the icon and name in accent. A visually hidden native radio keeps keyboard and semantics; the focus ring sits on the card.
+
 ### `<app-stepper-bar>`
 
 A stepped dial: two glyph buttons either side of a full-height accent bar that
@@ -1996,15 +2012,15 @@ locally: key on `pointer: coarse` (capability), never on viewport width
 
 ### Sidebar cards (#1749)
 
-The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then the two view groups, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
+The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then the two view groups, in organise mode a Favorites and Kept card, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
 
 **A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset, <its lead space>)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
-**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Three ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, a label row's in Favorites and Kept, the only phone entry to rename and delete, and organise mode's, whose rows all carry one.
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one. The Favorites and Kept heads and their label rows (#2585) carry a ⋯ only there: organise mode draws them in their normal-mode geometry, so nothing moves when it toggles, as plain text with no count, labels always shown, and the ⋯ in the chevron column.
 
 **The view groups** (#2593). Two `.card.views-group` cards in `sidebar.component.html`: All items (a folder over Recently read, Liked and Shared), Favorites, Kept; then Saved searches, Followed stories, For you, For you stream, Trending. A group with no view showing is `display: none`. Under the airy style each group is a section with the faint rule above it, except the first, which sits under the search band. A view head (`row.folder-head`: `.folder-head` with a `.section-link`, a bare `size="md"` icon, `.label`, `.section-count`, `.slot`, then `.chevzone` or `.trail`) is a view row in everything: height, inset, type size, weight 400 (600 when current, like an active row), muted lead, the same states, and its count in the plain rows' column. It draws no band when open.
 
-**Collection blocks** (#2581). Favorites and Kept (`app-sidebar-collection`) are view heads with the star or bookmark lead, the collection's total, and a chevron only while a label subfolder shows (open state in `localStorage`, collapsed by default). A subfolder is a sub-row with the `label` glyph and its count in that collection, alphabetical, "Unlabeled" last; each label row's ⋯ offers Rename (in place) and Delete, as a sheet on a coarse pointer.
+**Collection blocks** (#2581, #2585). Favorites and Kept (`app-sidebar-collection`) are view heads with the star or bookmark lead, the collection's total, and a chevron only while a label subfolder shows (open state in `localStorage`, collapsed by default). A subfolder is a sub-row with the `label` glyph and its count in that collection, alphabetical, "Unlabeled" last. Each label row and the Unlabeled row carry a ⋯, and so does each head: heads offer Export; labels Rename (in place), Delete and Export; Unlabeled Export. On a fine pointer they are row menus. On a coarse pointer the ⋯ exist only in organise mode, where Favorites and Kept get their own card (after the hint, before Tags) in their normal-mode geometry, the ⋯ in the chevron column, and open sheets on every pointer.
 
 **Sublists** (#2581, #2593). A head's rows are one `.sublist`: sub-row height, `--fs-dense`, `--space-0` apart. A view head's (All items, Favorites, Kept, Saved searches, Followed stories) is `row.sublist`: it hangs `--space-5` in on the `rail` hairline under the head's lead in both styles. The rail reads `--rail-color`: `--border` boxed, `--airy-rule` where the airy sidebar sets it. A network's is `row.sublist($boxed: flush)`: flush in the boxed card, hung on the rail only under the airy style.
 

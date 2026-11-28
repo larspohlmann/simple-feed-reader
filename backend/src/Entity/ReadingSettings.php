@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\Handedness;
 use App\Enum\MagazineStyle;
+use App\Enum\ReadingWidth;
 use App\Enum\SidebarStyle;
 use App\Enum\Theme;
 use App\Repository\ReadingSettingsRepository;
@@ -34,6 +35,9 @@ final class ReadingSettings
     #[ORM\Column(length: 5, enumType: Handedness::class, options: ['default' => 'right'])]
     private Handedness $handedness = Handedness::Right;
 
+    #[ORM\Column(name: 'reading_width', length: 8, enumType: ReadingWidth::class, options: ['default' => 'standard'])]
+    private ReadingWidth $readingWidth = ReadingWidth::Standard;
+
     #[ORM\Column(options: ['default' => true])]
     private bool $trendingEnabled = true;
 
@@ -44,6 +48,7 @@ final class ReadingSettings
         $this->sidebarStyle = $change->sidebarStyle ?? $this->sidebarStyle;
         $this->theme = $change->theme ?? $this->theme;
         $this->handedness = $change->handedness ?? $this->handedness;
+        $this->readingWidth = $change->readingWidth ?? $this->readingWidth;
         $this->trendingEnabled = $change->trendingEnabled ?? $this->trendingEnabled;
     }
 
@@ -95,6 +100,16 @@ final class ReadingSettings
     public function setHandedness(Handedness $handedness): void
     {
         $this->handedness = $handedness;
+    }
+
+    public function getReadingWidth(): ReadingWidth
+    {
+        return $this->readingWidth;
+    }
+
+    public function setReadingWidth(ReadingWidth $readingWidth): void
+    {
+        $this->readingWidth = $readingWidth;
     }
 
     public function isTrendingEnabled(): bool

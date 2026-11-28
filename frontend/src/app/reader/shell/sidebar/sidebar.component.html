@@ -38,6 +38,14 @@
   <div class="sidebar-body" [appScrollOutsideZone]="onScroll">
     @if (organising()) {
       <p class="organise-hint">{{ 'reader.organiseHint' | transloco }}</p>
+      <div class="card collections-card">
+        <app-sidebar-collection
+          collection="favorites"
+          [selection]="selection()"
+          [organising]="true"
+        />
+        <app-sidebar-collection collection="kept" [selection]="selection()" [organising]="true" />
+      </div>
     } @else {
       @if (screen.isNarrow()) {
         <div class="drawer-head">
@@ -319,6 +327,7 @@
 
   <ng-template #sectionHead appSectionHead let-head let-actions="actions">
     @if (organising()) {
+      <span class="favicon-slot"><app-icon [name]="head.icon" size="md" /></span>
       <span class="label">{{ head.label | transloco }}</span>
       <ng-container *ngTemplateOutlet="actions" />
     } @else {
@@ -328,6 +337,7 @@
         [queryParams]="selectionQueryParams({ group: head.group })"
         queryParamsHandling="merge"
       >
+        <span class="favicon-slot"><app-icon [name]="head.icon" size="md" /></span>
         <span class="label">{{ head.label | transloco }}</span>
         @if (groupUnread()[head.group] > 0) {
           <span class="section-count">{{ groupUnread()[head.group] }}</span>

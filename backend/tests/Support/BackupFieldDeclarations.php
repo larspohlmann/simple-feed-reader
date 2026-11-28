@@ -49,6 +49,7 @@ final class BackupFieldDeclarations
             'sidebarStyle' => 'sidebarStyle',
             'theme' => 'theme',
             'handedness' => 'handedness',
+            'readingWidth' => 'readingWidth',
             'trendingEnabled' => 'trendingEnabled',
         ],
         FeedDirectoryScope::class => [

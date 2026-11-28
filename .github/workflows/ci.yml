@@ -347,6 +347,11 @@ jobs:
       - name: ShellCheck
         run: shellcheck scripts/*.sh scripts/test/*.sh docker/php/entrypoint-prod.sh docker/web/10-select-mode.sh docker/updater/*.sh .claude/hooks/*.sh
 
+      # The PHPMD count-dodge gate (#2025) is a safety hook; it judges each commit in the checkout
+      # it runs in (#2604), and a command it cannot follow is judged against every checkout it reaches.
+      - name: phpmd-gate hook
+        run: scripts/test/phpmd-gate.test.sh
+
       - uses: actions/setup-node@v5
         with:
           node-version: '22'

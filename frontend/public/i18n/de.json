@@ -59,6 +59,14 @@
       "right": "Rechtshändig",
       "left": "Linkshändig"
     },
+    "readingWidth": "Artikelbreite",
+    "readingWidthHint": "Wie breit ein Artikel auf einem großen Bildschirm läuft.",
+    "readingWidthSaveFailed": "Die Artikelbreite konnte nicht in deinem Konto gespeichert werden.",
+    "readingWidthOption": {
+      "standard": "Standard",
+      "wide": "Breit",
+      "full": "Volle Breite"
+    },
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",
@@ -1956,6 +1964,16 @@
       "filter": "Labels filtern",
       "filterBy": "Nach Label „{{name}}“ filtern",
       "more": "+{{count}} weitere Labels"
+    },
+    "export": {
+      "action": "Exportieren",
+      "title": "{{name}} exportieren",
+      "format": "Format",
+      "bookmarksName": "Lesezeichen (HTML)",
+      "bookmarksDescription": "Für Browser und Lesezeichen-Tools wie Raindrop, Linkding, Wallabag oder Pinboard.",
+      "googleReaderName": "Google-Reader-JSON",
+      "googleReaderDescription": "Für Feedreader wie FreshRSS. Behält den Artikeltext und deine Labels. FreshRSS abonniert beim Import den Feed jedes Artikels.",
+      "submit": "Exportieren"
     }
   },
   "social": {

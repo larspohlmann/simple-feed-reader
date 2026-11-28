@@ -52,6 +52,6 @@
 
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
   .reader-cinema__toggle {
-    display: inline-flex;
+    display: var(--cinema-toggle-display, inline-flex);
   }
 }

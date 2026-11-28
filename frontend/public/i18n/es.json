@@ -59,6 +59,14 @@
       "right": "Mano derecha",
       "left": "Mano izquierda"
     },
+    "readingWidth": "Ancho de los artículos",
+    "readingWidthHint": "El ancho de un artículo en una pantalla grande.",
+    "readingWidthSaveFailed": "No se pudo guardar el ancho de los artículos en tu cuenta.",
+    "readingWidthOption": {
+      "standard": "Estándar",
+      "wide": "Ancho",
+      "full": "Ancho completo"
+    },
     "loadingVersion": "Cargando información de la versión",
     "feeds": {
       "title": "Feeds",
@@ -1956,6 +1964,16 @@
       "filter": "Filtrar rótulos",
       "filterBy": "Filtrar por el rótulo “{{name}}”",
       "more": "+{{count}} rótulos más"
+    },
+    "export": {
+      "action": "Exportar",
+      "title": "Exportar {{name}}",
+      "format": "Formato",
+      "bookmarksName": "Marcadores (HTML)",
+      "bookmarksDescription": "Para navegadores y herramientas de marcadores como Raindrop, Linkding, Wallabag o Pinboard.",
+      "googleReaderName": "JSON de Google Reader",
+      "googleReaderDescription": "Para lectores de feeds como FreshRSS. Conserva el texto de los artículos y tus rótulos. FreshRSS se suscribe al feed de cada artículo al importar.",
+      "submit": "Exportar"
     }
   },
   "social": {

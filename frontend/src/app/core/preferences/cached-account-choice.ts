@@ -4,7 +4,7 @@ import { onIdentityChange } from '../auth/session-identity';
 import { TokenStore } from '../auth/token.store';
 import { PREFERENCES_WRITER, ReadingPreferences, writeTracked } from './preferences-writer';
 
-type ChoiceField = 'magazineStyle' | 'handedness' | 'sidebarStyle' | 'theme';
+type ChoiceField = 'magazineStyle' | 'handedness' | 'readingWidth' | 'sidebarStyle' | 'theme';
 
 interface CachedAccountChoiceOptions<Field extends ChoiceField> {
   key: string;
