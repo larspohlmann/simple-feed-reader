@@ -13,7 +13,7 @@ final class CallPhaseTest extends TestCase
     public function testTheStoredValuesAreTheOldConstants(): void
     {
         self::assertSame(
-            ['distill', 'batch', 'consolidate', 'story_title', 'interest_terms'],
+            ['distill', 'batch', 'consolidate', 'story_title'],
             array_map(static fn (CallPhase $phase): string => $phase->value, CallPhase::cases()),
         );
     }

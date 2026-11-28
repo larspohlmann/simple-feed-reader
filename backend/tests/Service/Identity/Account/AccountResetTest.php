@@ -9,7 +9,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouStreamEntry;
 use App\Entity\InterestTerm;
-use App\Entity\InterestTermRun;
 use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
@@ -274,40 +273,31 @@ final class AccountResetTest extends DbTestCase
         );
     }
 
-    public function testAResetForgetsTheInterestTermsTheirRunsTheirCallsAndTheStreamMatches(): void
+    public function testAResetForgetsTheInterestTermsAndTheStreamMatches(): void
     {
         $user = $this->user('reset-terms@example.com');
         $bystander = $this->user('reset-terms-bystander@example.com');
-        [$userRun, $bystanderRun] = [$this->seedInterestTerms($user), $this->seedInterestTerms($bystander)];
+        $this->seedInterestTerms($user);
+        $this->seedInterestTerms($bystander);
         $userId = $user->requireId();
         $bystanderId = $bystander->requireId();
-        $userRunId = $userRun->requireId();
-        $bystanderRunId = $bystanderRun->requireId();
 
         $this->reset()->reset($user);
 
         $this->entityManager->clear();
-        $logs = $this->entityManager->getRepository(RecommendationRunLog::class);
-        self::assertSame([], $logs->findBy(['interestTermRun' => $userRunId]));
-        self::assertNull($this->entityManager->find(InterestTermRun::class, $userRunId));
         self::assertSame([], $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $userId]));
         self::assertNull($this->entityManager->find(InterestTermSet::class, $userId));
         $streamEntries = $this->entityManager->getRepository(ForYouStreamEntry::class);
         self::assertSame([], $streamEntries->findBy(['user' => $userId]));
         self::assertCount(1, $streamEntries->findBy(['user' => $bystanderId]));
-        self::assertCount(1, $logs->findBy(['interestTermRun' => $bystanderRunId]));
-        self::assertNotNull($this->entityManager->find(InterestTermRun::class, $bystanderRunId));
         $bystanderTerms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $bystanderId]);
         self::assertCount(1, $bystanderTerms);
         self::assertNotNull($this->entityManager->find(InterestTermSet::class, $bystanderId));
     }
 
-    private function seedInterestTerms(User $user): InterestTermRun
+    private function seedInterestTerms(User $user): void
     {
         $profileAt = new \DateTimeImmutable('2026-08-05T00:00:00Z');
-        $run = new InterestTermRun($user, $profileAt, $profileAt, 'api.example.test', 'm');
-        $this->entityManager->persist($run);
-        $this->entityManager->persist(RecommendationRunLog::forInterestTermRun($run, 1, '{}', $profileAt));
         $this->entityManager->persist(new InterestTerm($user, 'solar', FeedLanguage::English, 0.8));
         $this->entityManager->persist(new InterestTermSet($user, $profileAt, $profileAt, 0));
         $feed = new Feed('https://example.com/stream-' . $user->getEmail() . '.xml');
@@ -316,8 +306,6 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->persist($entry);
         $this->entityManager->persist(new ForYouStreamEntry($user, $entry, $profileAt, 2.0, 'solar'));
         $this->entityManager->flush();
-
-        return $run;
     }
 
     public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void

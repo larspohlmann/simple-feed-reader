@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Llm\Run;
 
-use App\Entity\InterestTermRun;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\StoryAiRun;
@@ -28,11 +27,6 @@ final readonly class CompletionCallRecorder
     public function beginForProfileRun(ProfileRun $profileRun, CompletionRequestModel $request): RecordedCall
     {
         return $this->callRecorder->beginForProfileRun($profileRun, RenderedCompletionRequest::fromRequest($request));
-    }
-
-    public function beginForInterestTermRun(InterestTermRun $run, CompletionRequestModel $request): RecordedCall
-    {
-        return $this->callRecorder->beginForInterestTermRun($run, RenderedCompletionRequest::fromRequest($request));
     }
 
     public function beginForStoryAiRun(StoryAiRun $storyAiRun, CompletionRequestModel $request): RecordedCall

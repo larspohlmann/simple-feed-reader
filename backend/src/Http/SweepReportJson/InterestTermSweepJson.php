@@ -8,7 +8,7 @@ use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportMode
 
 final readonly class InterestTermSweepJson implements SweepReportJsonInterface
 {
-    /** @return array{due: int, stored: int, failed: int, raritiesRefreshed: int}|null */
+    /** @return array{raritiesRefreshed: int}|null */
     public function figures(object $report): ?array
     {
         if (!$report instanceof InterestTermSweepReportModel) {

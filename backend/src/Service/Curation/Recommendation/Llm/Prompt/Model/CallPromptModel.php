@@ -21,12 +21,6 @@ final readonly class CallPromptModel
     }
 
     /** @param list<array{role: string, content: string}> $messages */
-    public static function interestTerms(array $messages): self
-    {
-        return new self($messages, 1, RecommendationResponseSchema::InterestTerms);
-    }
-
-    /** @param list<array{role: string, content: string}> $messages */
     public static function storyTitle(array $messages): self
     {
         return new self($messages, 1, RecommendationResponseSchema::StoryTitle);

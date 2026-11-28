@@ -23,7 +23,6 @@ use App\Entity\ForYouStreamEntry;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\InterestTerm;
-use App\Entity\InterestTermRun;
 use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
 use App\Entity\Label;
@@ -229,8 +228,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'backfilled.',
         ForYouStreamEntry::class => 'A derived For you stream match (#2582); a restore replaces the entries it '
             . 'points at, and the stream refills only from articles arriving after new terms exist.',
-        InterestTermRun::class => 'The history of the term extraction calls (#2582); meaningless without its '
-            . 'provider calls.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',
         RecommendationItem::class => 'Per-run picks, tied to a run that is not restored.',
         UserPasskey::class => 'Passkeys are bound to a device and to a relying-party id, so a '

@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Stream;
 
-use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
 use App\Repository\ForYouStreamSourceRepository;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
-use App\Service\Curation\Recommendation\Stream\DueInterestTermFinder;
 use App\Service\Curation\Recommendation\Stream\Factory\EntryStemmingFactory;
 use App\Service\Curation\Recommendation\Stream\InterestTermRarity;
-use App\Service\Curation\Recommendation\Stream\InterestTermRefresh;
 use App\Service\Curation\Recommendation\Stream\InterestTermSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
@@ -37,60 +34,15 @@ final class InterestTermSweepTest extends DbTestCase
 
     private const string EDGE_NOW = '2026-11-27 10:00:00';
 
-    private const string USABLE_REPLY = '{"terms":[{"language":"en","term":"solar","weight":8}]}';
-
-    public function testOneFailingUserDoesNotStopTheOthers(): void
+    public function testASweepMakesNoProviderCall(): void
     {
-        $this->profiledAccount('terms-sweep-a@example.test');
-        $this->profiledAccount('terms-sweep-b@example.test');
-        $this->chat()->queueFailure(new \RuntimeException('boom'));
-        $this->chat()->queueContent(self::USABLE_REPLY);
+        $this->profiledAccount('terms-sweep-quiet@example.test');
+        $this->staleSet('terms-sweep-quiet-stale@example.test', '2026-11-26 07:00:00');
 
-        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
+        $report = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(60));
 
-        self::assertSame(
-            ['due' => 2, 'stored' => 1, 'failed' => 0, 'raritiesRefreshed' => 1],
-            $report->toLogContext(),
-        );
-        self::assertCount(1, $this->entityManager->getRepository(InterestTermSet::class)->findAll());
-    }
-
-    public function testNoUserStartsAfterTheDeadline(): void
-    {
-        $this->profiledAccount('terms-sweep-late@example.test');
-
-        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(0));
-
-        self::assertSame(
-            ['due' => 1, 'stored' => 0, 'failed' => 0, 'raritiesRefreshed' => 0],
-            $report->toLogContext(),
-        );
         self::assertSame([], $this->chat()->calls());
-    }
-
-    public function testEveryDueUserStartsBeforeTheDeadline(): void
-    {
-        $this->profiledAccount('terms-sweep-early@example.test');
-        $this->chat()->queueContent(self::USABLE_REPLY);
-
-        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(3600));
-
-        self::assertSame(1, $report->stored);
-        $sets = self::getContainer()->get(InterestTermSetRepository::class);
-        self::assertInstanceOf(InterestTermSetRepository::class, $sets);
-        self::assertCount(1, $sets->findAll());
-    }
-
-    public function testAnAccountDueExactlyAtTheDeadlineIsNotStarted(): void
-    {
-        $this->profiledAccount('terms-sweep-edge@example.test');
-        $this->chat()->queueContent(self::USABLE_REPLY);
-
-        $atDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(0));
-        $beforeDeadline = $this->sweepAt(self::EDGE_NOW)->sweep(SweepBudgetModel::seconds(1));
-
-        self::assertSame(0, $atDeadline->stored);
-        self::assertSame(1, $beforeDeadline->stored);
+        self::assertSame(['raritiesRefreshed' => 1], $report->toLogContext());
     }
 
     public function testNoStaleSetStartsAtTheDeadline(): void
@@ -176,53 +128,6 @@ final class InterestTermSweepTest extends DbTestCase
         self::assertGreaterThan(new \DateTimeImmutable('-1 minute'), $set->getRaritiesRefreshedAt());
     }
 
-    public function testStoringTermsComputesTheirRaritiesAtOnce(): void
-    {
-        $user = $this->profiledAccount('terms-sweep-fresh@example.test');
-        $this->chat()->queueContent(self::USABLE_REPLY);
-
-        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
-
-        self::assertSame(1, $report->stored);
-        self::assertSame(1, $report->raritiesRefreshed);
-        $set = $this->entityManager->getRepository(InterestTermSet::class)->find($user);
-        self::assertInstanceOf(InterestTermSet::class, $set);
-        self::assertNotNull($set->getRaritiesRefreshedAt());
-        $terms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $user]);
-        self::assertNotSame([], $terms);
-        foreach ($terms as $term) {
-            self::assertEqualsWithDelta(log(502 / 1), $term->getRarity(), 1e-9);
-        }
-    }
-
-    public function testReplacingStoredTermsLeavesOnlyTheNewOnesWithTheirRarities(): void
-    {
-        $user = $this->profiledAccount('terms-sweep-replaced@example.test');
-        $this->chat()->queueContent(self::USABLE_REPLY);
-        $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
-        $terms = $this->entityManager->getRepository(InterestTerm::class);
-        $oldTerms = $terms->findBy(['user' => $user]);
-        self::assertNotSame([], $oldTerms);
-
-        $this->fixtures()->storeProfileGeneratedAt($user, 'Likes wind power.', '2026-10-04 06:00:00');
-        $this->chat()->queueContent('{"terms":[{"language":"en","term":"wind","weight":8}]}');
-        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(InterestTermSweep::UNHURRIED_BUDGET_SECONDS));
-
-        self::assertSame(1, $report->stored);
-        foreach ($oldTerms as $oldTerm) {
-            self::assertFalse($this->entityManager->contains($oldTerm));
-        }
-        $stems = [];
-        foreach ($terms->findBy(['user' => $user]) as $term) {
-            $stems[] = $term->getStem();
-            self::assertEqualsWithDelta(log(502 / 1), $term->getRarity(), 1e-9);
-        }
-        self::assertEqualsCanonicalizing(['wind', 'wind'], array_map(
-            static fn (string $stem): string => substr($stem, 0, 4),
-            $stems,
-        ));
-    }
-
     private function staleSet(string $email, ?string $refreshedAt): InterestTermSet
     {
         $set = new InterestTermSet(
@@ -261,8 +166,6 @@ final class InterestTermSweepTest extends DbTestCase
         $clock = new NaiveUtcClock($wallClock);
 
         return new InterestTermSweep(
-            $this->requireFromContainer(DueInterestTermFinder::class),
-            $this->requireFromContainer(InterestTermRefresh::class),
             $this->requireFromContainer(InterestTermSetRepository::class),
             new InterestTermRarity(
                 new ForYouStreamSourceRepository($this->entityManager),
@@ -273,7 +176,6 @@ final class InterestTermSweepTest extends DbTestCase
             ),
             $clock,
             $logger ?? new NullLogger(),
-            $this->entityManager,
         );
     }
 

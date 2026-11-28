@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Run\Factory;
 
-use App\Entity\InterestTermRun;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -49,16 +48,6 @@ final readonly class RecommendationRunLogFactory
     public function createForStoryAiRun(StoryAiRun $storyAiRun, string $renderedRequest): RecommendationRunLog
     {
         return RecommendationRunLog::forStoryAiRun($storyAiRun, $renderedRequest, $this->clock->now());
-    }
-
-    public function createForInterestTermRun(InterestTermRun $run, string $renderedRequest): RecommendationRunLog
-    {
-        return RecommendationRunLog::forInterestTermRun(
-            $run,
-            $run->getAttempts() + $run->getTransportFailures() + 1,
-            $renderedRequest,
-            $this->clock->now(),
-        );
     }
 
     /** Derived from the rows already recorded, so the recorder cannot disagree with its own rows. */

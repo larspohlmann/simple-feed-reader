@@ -23,7 +23,7 @@ final class RefreshDueInterestTermsHandlerTest extends DbTestCase
         self::assertCount(1, $logger->records);
         self::assertSame('Worker interest-term refresh finished.', $logger->records[0]['message']);
         self::assertSame(
-            ['due' => 0, 'stored' => 0, 'failed' => 0, 'raritiesRefreshed' => 0],
+            ['raritiesRefreshed' => 0],
             $logger->records[0]['context']['report'],
         );
     }

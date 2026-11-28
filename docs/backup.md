@@ -249,7 +249,6 @@ These rows belong to your account. A backup drops each of them completely.
 | `InterestTerm` | The weighted terms the "For you" stream matches articles on. They are derived from your interest profile, which the file leaves out, and the term refresh extracts them again once a profile exists. |
 | `InterestTermSet` | When your terms were last extracted, and how far the stream has matched them against articles. It is derived, and a restore leaves it out: the term refresh stores a new one once a profile exists, and its mark starts at the newest article then, so restored articles are not matched back. |
 | `ForYouStreamEntry` | The articles the "For you" stream matched for you. It is derived, and it points at articles the restore replaces. The stream starts empty and fills with articles that arrive after new terms are extracted. |
-| `InterestTermRun` | The history of your term extractions. It has no meaning without the provider calls it records, and the file leaves those out. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
