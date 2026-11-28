@@ -48,8 +48,9 @@ article {
     --reader-cinema-tail: calc(100cqb - var(--reader-top));
   }
 
-  app-article-layer[data-reading-width='full'] {
+  app-article-layer[data-reading-width='full'] article {
     --reading-media-max: var(--fit-width);
+    --reading-picture-max: var(--reading-picture-measure);
     --cinema-toggle-display: none;
   }
 
