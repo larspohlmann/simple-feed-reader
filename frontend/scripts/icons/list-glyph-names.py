@@ -3,9 +3,14 @@
 
 import json
 import re
+import sys
 from pathlib import Path
 
-from fontTools.ttLib import TTFont
+try:
+    import brotli  # noqa: F401
+    from fontTools.ttLib import TTFont
+except ImportError as error:
+    sys.exit(f'{error}. Install the extractor requirements: pip install fonttools brotli')
 
 FRONTEND = Path(__file__).resolve().parents[2]
 PACKAGE = FRONTEND / 'node_modules' / 'material-symbols'

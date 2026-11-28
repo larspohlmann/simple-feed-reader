@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Measures where each Material Symbol's ink sits in its em box and writes the vertical shifts.
-// Usage: npm run icons:measure (lists the font's glyph names first)
+// Usage: npm run icons:measure (run npm run icons:glyph-names first after a font update)
 import { chromium } from '@playwright/test';
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
@@ -16,10 +16,6 @@ const SIZE = 200;
 const COLUMNS = 16;
 const PRECISION = 1000;
 const REPORTED_LARGEST = 5;
-const FILLS = [
-  { name: 'outlined', variation: "'opsz' 20" },
-  { name: 'filled', variation: "'opsz' 20, 'FILL' 1" },
-];
 const ASSETS = {
   '/outlined.css': { file: 'outlined.css', contentType: 'text/css' },
   '/material-symbols-outlined.woff2': {
@@ -49,6 +45,23 @@ async function loadIconNames() {
     logLevel: 'warning',
   });
   return import(pathToFileURL(outfile).href);
+}
+
+function buildFills(variations) {
+  return [
+    { name: 'outlined', variation: variations.outlined },
+    { name: 'filled', variation: variations.filled },
+  ];
+}
+
+function requireMatchingGlyphNames(iconNames) {
+  const listed = iconNames.glyphNamesFontVersion(FRONTEND);
+  const installed = iconNames.installedFontVersion(FRONTEND);
+  if (listed !== installed) {
+    throw new Error(
+      `glyph-names.txt lists material-symbols ${listed || 'unknown'}, but ${installed} is installed. Run \`npm run icons:glyph-names\` first.`,
+    );
+  }
 }
 
 async function serveAssets(page) {
@@ -102,12 +115,12 @@ async function readInkCentroids(page, names) {
   const grid = buildGridSize(names);
   const screenshot = await page.screenshot({ clip: { x: 0, y: 0, ...grid } });
   return page.evaluate(
-    async ({ png, count, size, columns }) => {
+    async ({ png, count, size, columns, width, height }) => {
       const image = new Image();
       image.src = `data:image/png;base64,${png}`;
       await image.decode();
-      if (image.height < Math.ceil(count / columns) * size) {
-        throw new Error(`The screenshot is ${image.height}px tall, short of the grid`);
+      if (image.width !== width || image.height !== height) {
+        throw new Error(`The screenshot is ${image.width}x${image.height}, not ${width}x${height}`);
       }
       const canvas = document.createElement('canvas');
       canvas.width = image.width;
@@ -132,7 +145,13 @@ async function readInkCentroids(page, names) {
       }
       return centroids;
     },
-    { png: screenshot.toString('base64'), count: names.length, size: SIZE, columns: COLUMNS },
+    {
+      png: screenshot.toString('base64'),
+      count: names.length,
+      size: SIZE,
+      columns: COLUMNS,
+      ...grid,
+    },
   );
 }
 
@@ -170,16 +189,16 @@ function formatTable(version, names, shiftsByFill) {
   ].join('\n');
 }
 
-function reportLargest(names, shiftsByFill) {
+function reportLargest(names, fills, shiftsByFill) {
   const measured = names.flatMap((name, index) =>
-    FILLS.map((fill, fillIndex) => ({
+    fills.map((fill, fillIndex) => ({
       name,
       fill: fill.name,
       shift: shiftsByFill[fillIndex][index],
     })),
   );
   measured.sort((left, right) => Math.abs(right.shift) - Math.abs(left.shift));
-  console.log(`Measured ${names.length} glyphs, ${FILLS.map((fill) => fill.name).join(' and ')}.`);
+  console.log(`Measured ${names.length} glyphs, ${fills.map((fill) => fill.name).join(' and ')}.`);
   for (const { name, fill, shift } of measured.slice(0, REPORTED_LARGEST)) {
     console.log(`  ${name} (${fill}): ${shift}em`);
   }
@@ -187,6 +206,8 @@ function reportLargest(names, shiftsByFill) {
 
 async function main() {
   const iconNames = await loadIconNames();
+  requireMatchingGlyphNames(iconNames);
+  const fills = buildFills(iconNames.ICON_VARIATIONS);
   const names = iconNames.scanIconNames(FRONTEND);
   const browser = await chromium.launch();
   try {
@@ -194,7 +215,7 @@ async function main() {
     await serveAssets(page);
     await page.goto(`${ORIGIN}/`);
     const shiftsByFill = [];
-    for (const fill of FILLS) {
+    for (const fill of fills) {
       shiftsByFill.push(await measureShifts(page, names, fill.variation));
     }
     writeFileSync(
@@ -202,7 +223,7 @@ async function main() {
       formatTable(iconNames.installedFontVersion(FRONTEND), names, shiftsByFill),
     );
     execFileSync(join(FRONTEND, 'node_modules', '.bin', 'prettier'), ['--write', OUTPUT]);
-    reportLargest(names, shiftsByFill);
+    reportLargest(names, fills, shiftsByFill);
   } finally {
     await browser.close();
   }

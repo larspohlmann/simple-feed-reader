@@ -51,13 +51,14 @@ describe('scanIconNames', () => {
 
 describe('glyph-names.txt', () => {
   it('the glyph name list was extracted from the installed font', () => {
-    expect({
-      listVersion: glyphNamesFontVersion(FRONTEND),
-      hint: 'rerun: python3 scripts/icons/list-glyph-names.py',
-    }).toEqual({
-      listVersion: installedFontVersion(FRONTEND),
-      hint: 'rerun: python3 scripts/icons/list-glyph-names.py',
-    });
+    const listed = glyphNamesFontVersion(FRONTEND);
+    const installed = installedFontVersion(FRONTEND);
+    if (listed !== installed) {
+      throw new Error(
+        `glyph-names.txt lists material-symbols ${listed || 'unknown'}, but ${installed} is installed. ` +
+          'Run `npm run icons:glyph-names` from frontend/, then `npm run icons:measure`.',
+      );
+    }
   });
 });
 

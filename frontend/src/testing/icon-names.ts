@@ -5,6 +5,11 @@ import { listFiles } from './list-files';
 const GENERATED_TABLE = 'app/shared/icon/icon-ink-shifts.ts';
 const QUOTED_NAME = /['"`]([a-z0-9_]+)['"`]/g;
 const GLYPH_NAMES_PATH = ['scripts', 'icons', 'glyph-names.txt'];
+export const ICON_VARIATIONS = {
+  outlined: "'opsz' 20",
+  filled: "'opsz' 20, 'FILL' 1",
+} as const;
+
 const HEADER = /^# material-symbols (\S+)$/;
 
 function readGlyphNameLines(frontendRoot: string): string[] {

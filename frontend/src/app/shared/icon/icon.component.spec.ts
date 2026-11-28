@@ -42,7 +42,7 @@ class ZeroShiftHost {
   name = '';
 }
 
-function spanOf<T>(
+function renderIconSpan<T>(
   host: new () => T,
   configure?: (instance: T) => void,
 ): { fixture: ComponentFixture<T>; span: HTMLElement } {
@@ -104,38 +104,42 @@ describe('IconComponent', () => {
 
   describe('ink centring', () => {
     it('lifts the glyph by its measured outlined shift', () => {
-      expect(spanOf(HomeHost).span.style.translate).toBe(`0 ${ICON_INK_SHIFTS['home'][0]}em`);
+      expect(renderIconSpan(HomeHost).span.style.translate).toBe(
+        `0 ${ICON_INK_SHIFTS['home'][0]}em`,
+      );
     });
 
     it('uses the filled shift when filled', () => {
-      expect(spanOf(FilledHomeHost).span.style.translate).toBe(`0 ${ICON_INK_SHIFTS['home'][1]}em`);
+      expect(renderIconSpan(FilledHomeHost).span.style.translate).toBe(
+        `0 ${ICON_INK_SHIFTS['home'][1]}em`,
+      );
     });
 
     it('follows the fill input when it toggles', () => {
-      const { fixture, span } = spanOf(FilledHomeHost);
+      const { fixture, span } = renderIconSpan(FilledHomeHost);
       fixture.componentInstance.filled = false;
       fixture.detectChanges();
       expect(span.style.translate).toBe(`0 ${ICON_INK_SHIFTS['home'][0]}em`);
     });
 
     it('leaves an unmeasured glyph untransformed', () => {
-      expect(spanOf(UnknownHost).span.style.translate).toBe('');
+      expect(renderIconSpan(UnknownHost).span.style.translate).toBe('');
     });
 
     it('leaves a zero-shift glyph untranslated', () => {
       const [name] = Object.entries(ICON_INK_SHIFTS).find(([, shifts]) => shifts[0] === 0) ?? [];
       expect(name).toBeDefined();
-      expect(spanOf(ZeroShiftHost, (host) => (host.name = name ?? '')).span.style.translate).toBe(
-        '',
-      );
+      expect(
+        renderIconSpan(ZeroShiftHost, (host) => (host.name = name ?? '')).span.style.translate,
+      ).toBe('');
     });
 
     it('leaves transform free for animations to own', () => {
-      expect(spanOf(HomeHost).span.style.transform).toBe('');
+      expect(renderIconSpan(HomeHost).span.style.transform).toBe('');
     });
 
-    it('keeps the inline font-size beside the transform', () => {
-      const { span } = spanOf(HomeHost);
+    it('keeps the inline font-size beside the translate', () => {
+      const { span } = renderIconSpan(HomeHost);
       expect(span.style.translate).not.toBe('');
       expect(span.style.fontSize).toBe('inherit');
     });
