@@ -132,16 +132,16 @@ export class SidebarCollectionComponent {
     field?.select();
   });
 
-  protected readonly listName = computed(() =>
-    this.transloco.translate(`reader.${this.collection()}`),
-  );
+  protected listName(): string {
+    return this.transloco.translate(`reader.${this.collection()}`);
+  }
 
   protected menuKey(folder: CollectionFolder): string {
     return `label-${this.collection()}-${folder.filter}`;
   }
 
   protected folderName(folder: CollectionFolder): string {
-    return folder.label?.name ?? this.transloco.translate('reader.labels.unlabeled');
+    return folder.label?.name ?? this.transloco.translate('reader.export.unlabeled');
   }
 
   protected exportCollection(): void {

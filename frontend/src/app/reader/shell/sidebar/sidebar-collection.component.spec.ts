@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -352,6 +353,31 @@ describe('SidebarCollectionComponent (#2581)', () => {
         title: 'Kept – Home',
       });
       expect(menuFor()).toBeNull();
+    });
+
+    it('follows the active language in the head label and the export titles', () => {
+      const fixture = mount('favorites');
+      const transloco = TestBed.inject(TranslocoService);
+      transloco.setActiveLang('de');
+      fixture.detectChanges();
+      const list = transloco.translate('reader.favorites');
+      const unlabeled = transloco.translate('reader.export.unlabeled');
+
+      expect(list).not.toBe('Favorites');
+      expect(
+        root(fixture).querySelector('.collection-head .dots')?.getAttribute('aria-label'),
+      ).toBe(transloco.translate('reader.manage', { name: list }));
+      openMenuKey(fixture, 'collection-favorites');
+      menuItem(fixture, transloco.translate('reader.export.action')).click();
+      expect(openExport).toHaveBeenLastCalledWith(expect.objectContaining({ title: list }));
+      labels.set([tally(4, 'Home')]);
+      fixture.detectChanges();
+      toggle(fixture);
+      openMenuKey(fixture, 'label-favorites-unlabeled');
+      menuItem(fixture, transloco.translate('reader.export.action')).click();
+      expect(openExport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ title: `${list} – ${unlabeled}` }),
+      );
     });
 
     it('offers only Export on Unlabeled', () => {
