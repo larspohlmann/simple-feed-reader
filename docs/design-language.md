@@ -183,7 +183,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
   The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
 - A slot's host spaces its own children with margins, not `gap`: the cap strut is a flex item too.
-- An item that would make the row taller than its first line (an action cluster) holds `block-size: 1lh`, as the comment byline's actions do, so the baseline group and the centred items stay on one line.
+- An item that would make the row taller than its first line (an action cluster) holds `block-size: 1lh`,
+  as the comment byline's actions do, so the baseline group and the centred items stay on one line.
 - A menu's own items (a title, a note, a quote hint, a rule) start on the rows' icon edge: the menu declares
   `--icon-lead-space` where the row font applies (`menu-items.menu-lead-space`) and they read it.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
@@ -197,8 +198,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 
 `e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle, and
 a painted glyph inside its control. `e2e/icon-lead-slots.spec.ts` finds every slot by its strut rule and
-pins its cap strut, on a fine and a coarse pointer. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
-its exclusion markers.
+pins its cap strut, on a fine and a coarse pointer, and each surface names the slots it must show.
+`e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and its exclusion markers.
 
 Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
 error banner and the article byline favicon.
