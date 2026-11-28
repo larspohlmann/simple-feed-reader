@@ -42,6 +42,24 @@ final class EntryStemming
         return new EntryStemsModel($entry->language, $weights);
     }
 
+    /** @return array<string, list<string>> each stem with the words, as the entry spells them, it came from */
+    public function collectStemWords(StreamEntryModel $entry): array
+    {
+        $stemWords = [];
+        foreach ([$entry->title, EntryPlainText::cut($entry->summary, self::BODY_CHARACTERS)] as $text) {
+            foreach ($this->equivalents->canonicalizeWordsWithSurfaces($text) as [$word, $bare, $surface]) {
+                if ($surface === null) {
+                    continue;
+                }
+                foreach ($this->findWordStems($word, $bare, $entry->language) as $stem) {
+                    $stemWords[$stem][] = $surface;
+                }
+            }
+        }
+
+        return $stemWords;
+    }
+
     /** @return list<string> */
     private function readStems(string $text, ?FeedLanguage $language): array
     {

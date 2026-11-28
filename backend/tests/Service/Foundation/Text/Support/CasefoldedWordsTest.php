@@ -37,4 +37,14 @@ final class CasefoldedWordsTest extends TestCase
     {
         self::assertSame([], CasefoldedWords::splitWords(' — !! '));
     }
+
+    public function testSurfacesLineUpWithTheFoldedWords(): void
+    {
+        $text = 'Straße DIE Bundesliga ﬁnale İzmir';
+
+        $words = CasefoldedWords::collectWordsWithSurfaces($text);
+
+        self::assertSame(CasefoldedWords::splitWords($text), array_column($words, 0));
+        self::assertSame(['Straße', 'DIE', 'Bundesliga', 'finale', 'İzmir'], array_column($words, 1));
+    }
 }

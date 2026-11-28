@@ -10,6 +10,7 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -19,11 +20,20 @@ use Doctrine\ORM\QueryBuilder;
  * liked, kept, viewed). Liked and viewed take one line per post, from its lowest-id followed copy, and leave the
  * post out when any followed copy ranks in a higher section. Favorites and kept order by effectiveDate, since
  * EntryState has no favorited-at; shared orders by sharedAt, liked by likedAt or votedAt, and viewed by viewedAt.
+ * With a surface, only entries of subscriptions that count in it are read; which section is highest stays blind to it.
  */
 final readonly class ReadingHistoryRepository
 {
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private ?InclusionSurface $surface = null,
+    ) {
+    }
+
+    #[\NoDiscard]
+    public function withSurface(InclusionSurface $surface): self
     {
+        return clone($this, ['surface' => $surface]);
     }
 
     /** @return list<TitledEntry> */
@@ -125,7 +135,7 @@ final readonly class ReadingHistoryRepository
     /** @param class-string $rootClass */
     private function subscribedEntriesQueryBuilder(int $userId, string $rootClass, string $rootAlias): QueryBuilder
     {
-        return $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select($rootAlias, 'e', 'f')
             ->addSelect('s.customTitle AS customTitle')
             ->from($rootClass, $rootAlias)
@@ -134,12 +144,14 @@ final readonly class ReadingHistoryRepository
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere(sprintf('IDENTITY(%s.user) = :user', $rootAlias))
             ->setParameter('user', $userId);
+
+        return $this->restrictToSurface($qb);
     }
 
     /** @param class-string<SocialLike|DiscussionVote> $rootClass */
     private function likedEntriesQueryBuilder(int $userId, string $rootClass, string $instantField): QueryBuilder
     {
-        return $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('e', 'f')
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect(sprintf('liking.%s AS likedAt', $instantField))
@@ -163,6 +175,17 @@ final readonly class ReadingHistoryRepository
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('user', $userId)
             ->setParameter('true', true, Types::BOOLEAN);
+
+        return $this->restrictToSurface($qb);
+    }
+
+    private function restrictToSurface(QueryBuilder $qb): QueryBuilder
+    {
+        if ($this->surface !== null) {
+            InclusionScopeDql::restrict($qb, 's', $this->surface);
+        }
+
+        return $qb;
     }
 
     private function locallyLikedEntriesQueryBuilder(int $userId): QueryBuilder

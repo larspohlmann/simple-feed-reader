@@ -104,21 +104,4 @@ final class InterestTermSetRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
-
-    /** @return list<InterestTermSet> of active accounts, whose rarities were never computed or are older than the cutoff */
-    public function findWithStaleRarities(\DateTimeImmutable $refreshedBefore, \DateTimeImmutable $now): array
-    {
-        $qb = $this->createQueryBuilder('s')
-            ->join('s.user', 'owner')
-            ->andWhere('s.raritiesRefreshedAt IS NULL OR s.raritiesRefreshedAt < :refreshedBefore')
-            ->setParameter('refreshedBefore', $refreshedBefore)
-            ->addOrderBy('s.raritiesRefreshedAt', 'ASC')
-            ->addOrderBy('owner.id', 'ASC');
-        ActiveAccountDql::restrict($qb, 'owner', $now);
-
-        /** @var list<InterestTermSet> $sets */
-        $sets = $qb->getQuery()->getResult();
-
-        return $sets;
-    }
 }

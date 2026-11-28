@@ -63,8 +63,20 @@ final readonly class WordEquivalents
     /** @return list<array{string, string}> each kept word or phrase canonical, with its bare form */
     public function canonicalizeWords(string $text): array
     {
+        return array_map(
+            static fn (array $word): array => [$word[0], $word[1]],
+            $this->canonicalizeWordsWithSurfaces($text),
+        );
+    }
+
+    /**
+     * @return list<array{string, string, ?string}> each kept word or phrase canonical, its bare form, and the word as
+     *                                              the text spells it; null when the text spelled a canonical
+     */
+    public function canonicalizeWordsWithSurfaces(string $text): array
+    {
         return array_values(array_filter(
-            $this->collapsePhrases(CasefoldedWords::splitWords($this->replaceExactWords($text))),
+            $this->collapsePhrases(CasefoldedWords::collectWordsWithSurfaces($this->replaceExactWords($text))),
             static fn (array $word): bool => WordStems::isKept($word[1]),
         ));
     }
@@ -133,22 +145,34 @@ final readonly class WordEquivalents
     }
 
     /**
-     * @param list<string> $words
+     * @param list<array{string, string}> $words each casefolded, with its surface
      *
-     * @return list<array{string, string}> each word or phrase canonical, with its bare form
+     * @return list<array{string, string, ?string}> each word or phrase canonical, with its bare form and surface
      */
     private function collapsePhrases(array $words): array
     {
-        $bareWords = array_map(WordStems::bare(...), $words);
+        $bareWords = array_map(static fn (array $word): string => WordStems::bare($word[0]), $words);
         $collapsed = [];
         $index = 0;
         while ($index < \count($words)) {
             [$length, $canonical] = $this->matchPhrase($bareWords, $index);
-            $collapsed[] = $canonical === null ? [$words[$index], $bareWords[$index]] : [$canonical, $canonical];
+            $collapsed[] = $canonical === null
+                ? $this->keepWord($words[$index], $bareWords[$index])
+                : [$canonical, $canonical, null];
             $index += $length;
         }
 
         return $collapsed;
+    }
+
+    /**
+     * @param array{string, string} $word
+     *
+     * @return array{string, string, ?string}
+     */
+    private function keepWord(array $word, string $bare): array
+    {
+        return [$word[0], $bare, isset($this->canonicals[$bare]) ? null : $word[1]];
     }
 
     /**

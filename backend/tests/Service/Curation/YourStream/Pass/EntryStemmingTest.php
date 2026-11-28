@@ -99,6 +99,27 @@ final class EntryStemmingTest extends TestCase
         self::assertArrayNotHasKey('p', $stems->positionWeights);
     }
 
+    public function testStemWordsCarryTheSurfaceWordsTheirStemCameFrom(): void
+    {
+        $words = $this->stemming->collectStemWords(
+            new StreamEntryModel(1, FeedLanguage::German, 'Bundesliga-Spieltag', 'Die Bundesliga ruht'),
+        );
+
+        self::assertSame(
+            ['Bundesliga', 'Bundesliga'],
+            $words[$this->stemmer->stem('bundesliga', FeedLanguage::German)],
+        );
+        self::assertArrayNotHasKey('die', $words);
+    }
+
+    public function testACollapsedPhraseLeavesItsStemWithoutASurface(): void
+    {
+        $entry = new StreamEntryModel(1, FeedLanguage::English, 'European Union summit', null);
+
+        self::assertArrayNotHasKey('eunion', $this->stemming->collectStemWords($entry));
+        self::assertArrayHasKey('eunion', $this->stemming->collectStems($entry)->positionWeights);
+    }
+
     private function stem(string $word): string
     {
         return $this->stemmer->stem($word, FeedLanguage::English);

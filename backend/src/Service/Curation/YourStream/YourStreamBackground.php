@@ -4,35 +4,23 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream;
 
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermSet;
-use App\Repository\InterestTermRepository;
 use App\Repository\YourStreamSourceRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
 use App\Service\Curation\YourStream\Model\RarityWindowModel;
-use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
 use App\Service\Curation\YourStream\Pass\RaritySweepPass;
 use App\Service\Curation\YourStream\Pass\RarityTally;
 use App\Service\Foundation\Clock\NaiveUtcClock;
-use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * Weighs each term by how rare its stem is among the account's newest Your stream entries of the last thirty days. The
- * sample cap bounds one account's walk, so a refresh always finishes.
- */
+/** Counts the wanted stems among an account's newest Your stream entries of the last thirty days; the sample cap bounds the walk. */
 final readonly class YourStreamBackground
 {
     public const int WINDOW_DAYS = 30;
     public const int SAMPLE_ENTRIES = 5000;
-    public const int COUNTED_ENTRIES_FLOOR = 500;
     public const int CHUNK = 1000;
-    public const int REFRESH_HOURS = 24;
 
     public function __construct(
         private YourStreamSourceRepository $sources,
-        private InterestTermRepository $storedTerms,
         private EntryStemmingFactory $stemmingFactory,
-        private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -45,35 +33,10 @@ final readonly class YourStreamBackground
         return new RaritySweepPass($this->stemmingFactory->create(), new RarityWindowModel($since, $afterId));
     }
 
-    public function refreshRarities(InterestTermSet $set, RaritySweepPass $pass): void
+    /** @param array<string, array<array-key, true>> $wantedStemsByLanguageKey */
+    public function collectBackground(int $userId, RaritySweepPass $pass, array $wantedStemsByLanguageKey): RarityTally
     {
-        $userId = $set->getUser()->requireId();
-        $terms = $this->storedTerms->findForUser($userId);
-        if ($terms !== []) {
-            $this->weighTerms($terms, $this->tally($userId, $terms, $pass));
-        }
-        $set->recordRaritiesRefreshed($this->clock->now());
-        $this->entityManager->flush();
-    }
-
-    /** @param list<InterestTerm> $terms */
-    private function weighTerms(array $terms, RarityTally $tally): void
-    {
-        foreach ($terms as $term) {
-            $key = StreamStrengthsModel::languageKey($term->getLanguage());
-            $counted = max($tally->countEntries($key), self::COUNTED_ENTRIES_FLOOR);
-            $term->recordRarity(log(($counted + 2) / ($tally->countDocuments($key, $term->getStem()) + 1)));
-        }
-    }
-
-    /** @param list<InterestTerm> $terms */
-    private function tally(int $userId, array $terms, RaritySweepPass $pass): RarityTally
-    {
-        $wanted = [];
-        foreach ($terms as $term) {
-            $wanted[StreamStrengthsModel::languageKey($term->getLanguage())][$term->getStem()] = true;
-        }
-        $tally = new RarityTally($wanted);
+        $tally = new RarityTally($wantedStemsByLanguageKey);
         $beforeId = PHP_INT_MAX;
         $remaining = self::SAMPLE_ENTRIES;
         do {

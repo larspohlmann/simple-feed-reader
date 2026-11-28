@@ -8,14 +8,12 @@ use App\Entity\Entry;
 use App\Entity\EntryText;
 use App\Entity\Feed;
 use App\Entity\InclusionChange;
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedLanguage;
-use App\Repository\InterestTermRepository;
 use App\Repository\YourStreamSourceRepository;
 use App\Service\Curation\YourStream\Factory\EntryStemmingFactory;
+use App\Service\Curation\YourStream\Pass\RarityTally;
 use App\Service\Curation\YourStream\YourStreamBackground;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Foundation\Stemming\Support\WordStems;
@@ -30,8 +28,7 @@ final class YourStreamBackgroundTest extends DbTestCase
 
     private User $user;
     private Feed $feed;
-    private InterestTermSet $set;
-    private YourStreamBackground $rarity;
+    private YourStreamBackground $background;
     private int $nextEntry = 0;
 
     protected function setUp(): void
@@ -40,105 +37,79 @@ final class YourStreamBackgroundTest extends DbTestCase
         $this->user = new User('rarity@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager->persist($this->user);
         $this->feed = $this->subscribedFeed('https://example.com/rarity.xml');
-        $this->set = new InterestTermSet(
-            $this->user,
-            new \DateTimeImmutable('2026-11-01 00:00:00'),
-            new \DateTimeImmutable('2026-11-01 00:00:00'),
-            0,
-        );
-        $this->entityManager->persist($this->set);
         $this->entityManager->flush();
-
-        $storedTerms = self::getContainer()->get(InterestTermRepository::class);
-        self::assertInstanceOf(InterestTermRepository::class, $storedTerms);
-        $this->rarity = new YourStreamBackground(
+        $this->background = new YourStreamBackground(
             new YourStreamSourceRepository($this->entityManager),
-            $storedTerms,
             new EntryStemmingFactory(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
-            $this->entityManager,
             new NaiveUtcClock(new MockClock(self::NOW)),
         );
     }
 
-    public function testARareTermWeighsMoreThanACommonOne(): void
+    public function testTheBackgroundCountsEntriesAndTheWantedStemsPerLanguage(): void
     {
-        $this->term('solar', FeedLanguage::English);
-        $this->term('energy', FeedLanguage::English);
         $this->entries(600, FeedLanguage::English, [3 => 'solar', 300 => 'energy']);
 
-        $this->refreshRarities();
+        $tally = $this->collectBackground(['solar', 'energy'], FeedLanguage::English);
 
-        self::assertEqualsWithDelta(log(602 / 4), $this->termRarity('solar', FeedLanguage::English), 1e-9);
-        self::assertEqualsWithDelta(log(602 / 301), $this->termRarity('energy', FeedLanguage::English), 1e-9);
+        self::assertSame(600, $tally->countEntries('en'));
+        self::assertSame(3, $tally->countDocuments('en', $this->stem('solar', FeedLanguage::English)));
+        self::assertSame(300, $tally->countDocuments('en', $this->stem('energy', FeedLanguage::English)));
+        self::assertSame(0, $tally->countDocuments('en', $this->stem('filler', FeedLanguage::English)));
     }
 
-    public function testASmallWindowCountsAtTheFloor(): void
+    public function testCutFormStemsCountOnlyEntriesWithoutALanguage(): void
     {
-        $this->term('solar', FeedLanguage::English);
-        $this->entries(10, FeedLanguage::English, [2 => 'solar']);
-
-        $this->refreshRarities();
-
-        self::assertEqualsWithDelta(log(502 / 3), $this->termRarity('solar', FeedLanguage::English), 1e-9);
-    }
-
-    public function testCutFormTermsCountOnlyEntriesWithoutALanguage(): void
-    {
-        $this->term('solar', null);
         $this->entries(2, FeedLanguage::English, [2 => 'solar']);
         $this->entries(3, null, [1 => 'solar']);
 
-        $this->refreshRarities();
+        $tally = $this->collectBackground(['solar'], null);
 
-        self::assertEqualsWithDelta(log(502 / 2), $this->termRarity('solar', null), 1e-9);
+        self::assertSame(3, $tally->countEntries(''));
+        self::assertSame(1, $tally->countDocuments('', WordStems::cut('solar')));
     }
 
     public function testEntriesOutsideTheWindowOrOutsideYourStreamDoNotCount(): void
     {
-        $this->term('solar', FeedLanguage::English);
         $this->entries(1, FeedLanguage::English, [1 => 'solar'], '2026-10-01 00:00:00');
         $excluded = $this->subscribedFeed('https://example.com/excluded.xml');
         $this->entries(1, FeedLanguage::English, [1 => 'solar'], null, $excluded);
         $this->entries(1, FeedLanguage::English, [1 => 'solar']);
         $this->excludeFromYourStream($excluded);
 
-        $this->refreshRarities();
+        $tally = $this->collectBackground(['solar'], FeedLanguage::English);
 
-        self::assertEqualsWithDelta(log(502 / 2), $this->termRarity('solar', FeedLanguage::English), 1e-9);
-    }
-
-    public function testTheRefreshIsStampedOnTheSet(): void
-    {
-        $this->term('solar', FeedLanguage::English);
-
-        $this->refreshRarities();
-
-        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
+        self::assertSame(1, $tally->countEntries('en'));
+        self::assertSame(1, $tally->countDocuments('en', $this->stem('solar', FeedLanguage::English)));
     }
 
     public function testAWindowLargerThanTheSampleCountsOnlyItsNewestEntries(): void
     {
-        $this->term('solar', FeedLanguage::English);
         $this->entriesInBatches(YourStreamBackground::SAMPLE_ENTRIES + 1, [1 => 'solar']);
 
-        $this->refreshRarities();
+        $tally = $this->collectBackground(['solar'], FeedLanguage::English);
 
-        $sampled = YourStreamBackground::SAMPLE_ENTRIES;
-        self::assertEqualsWithDelta(log(($sampled + 2) / 1), $this->termRarity('solar', FeedLanguage::English), 1e-9);
+        self::assertSame(YourStreamBackground::SAMPLE_ENTRIES, $tally->countEntries('en'));
+        self::assertSame(0, $tally->countDocuments('en', $this->stem('solar', FeedLanguage::English)));
     }
 
-    public function testASetWithoutTermsIsStampedAndWeighsNothing(): void
+    /** @param list<string> $words */
+    private function collectBackground(array $words, ?FeedLanguage $language): RarityTally
     {
-        $this->entries(3, FeedLanguage::English, [1 => 'solar']);
+        $wanted = [];
+        foreach ($words as $word) {
+            $wanted[$language->value ?? ''][$this->stem($word, $language)] = true;
+        }
 
-        $this->refreshRarities();
-
-        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->set->getRaritiesRefreshedAt());
+        return $this->background->collectBackground(
+            $this->user->requireId(),
+            $this->background->buildSweepPass(),
+            $wanted,
+        );
     }
 
-    private function refreshRarities(): void
+    private function stem(string $word, ?FeedLanguage $language): string
     {
-        $this->rarity->refreshRarities($this->set, $this->rarity->buildSweepPass());
+        return $language === null ? WordStems::cut($word) : StemmingWiring::stemmer()->stem($word, $language);
     }
 
     private function subscribedFeed(string $url): Feed
@@ -157,15 +128,6 @@ final class YourStreamBackgroundTest extends DbTestCase
             ->findOneBy(['user' => $this->user, 'feed' => $feed]);
         self::assertInstanceOf(Subscription::class, $subscription);
         $subscription->changeInclusions(new InclusionChange(yourStream: false));
-        $this->entityManager->flush();
-    }
-
-    private function term(string $word, ?FeedLanguage $language): void
-    {
-        $stem = $language === null
-            ? WordStems::cut($word)
-            : StemmingWiring::stemmer()->stem($word, $language);
-        $this->entityManager->persist(new InterestTerm($this->user, $stem, $language, 1.0));
         $this->entityManager->flush();
     }
 
@@ -215,7 +177,6 @@ final class YourStreamBackgroundTest extends DbTestCase
         }
         $this->user = $this->requireFound(User::class, $this->user->requireId());
         $this->feed = $this->requireFound(Feed::class, $feedId);
-        $this->set = $this->requireFound(InterestTermSet::class, $this->user->requireId());
     }
 
     /**
@@ -231,18 +192,5 @@ final class YourStreamBackgroundTest extends DbTestCase
         self::assertInstanceOf($class, $found);
 
         return $found;
-    }
-
-    private function termRarity(string $word, ?FeedLanguage $language): float
-    {
-        $stem = $language === null
-            ? WordStems::cut($word)
-            : StemmingWiring::stemmer()->stem($word, $language);
-        foreach ($this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $this->user]) as $term) {
-            if ($term->getStem() === $stem && $term->getLanguage() === $language) {
-                return $term->getRarity();
-            }
-        }
-        self::fail('No such term: ' . $word);
     }
 }

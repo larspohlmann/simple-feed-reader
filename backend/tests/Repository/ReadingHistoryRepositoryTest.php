@@ -9,9 +9,12 @@ use App\Entity\DiscussionVote;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\InclusionChange;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CanonicalItemKind;
+use App\Enum\InclusionSurface;
 use App\Enum\VoteScore;
 use App\Repository\ReadingHistoryRepository;
 use App\Repository\TitledEntry;
@@ -53,6 +56,71 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
         $shared = $this->history()->shared($this->user->requireId(), 10);
 
         self::assertSame([$newer->requireId(), $older->requireId()], $this->entryIds($shared));
+    }
+
+    public function testWithASurfaceTheHistoryKeepsOnlyThatSurfacesFeeds(): void
+    {
+        $switchedOff = $this->persistSubscribedFeed($this->user, 'https://switched-off.example.com/feed.xml');
+        $tagged = $this->persistSubscribedFeed($this->user, 'https://tagged.example.com/feed.xml');
+        $inStream = $this->persistDatedEntry($this->feed, 'in-stream', '2026-10-01 10:00:00');
+        $outOfStream = $this->persistDatedEntry($switchedOff, 'out-of-stream', '2026-10-02 10:00:00');
+        $sharedUnderTag = $this->persistDatedEntry($tagged, 'shared-under-tag', '2026-10-03 10:00:00');
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $inStream));
+        StateMarks::markFavorite(SavedPostFixtures::state($this->entityManager, $this->user, $outOfStream));
+        EntryShareFixtures::share(
+            $this->entityManager,
+            $this->user,
+            $sharedUnderTag,
+            new \DateTimeImmutable('2026-10-03 11:00:00'),
+        );
+        $this->subscriptionTo($switchedOff)->changeInclusions(new InclusionChange(yourStream: false));
+        $tag = new Tag($this->user, 'Muted');
+        $this->entityManager->persist($tag);
+        $this->subscriptionTo($tagged)->addTag($tag);
+        $tag->changeInclusions(new InclusionChange(yourStream: false));
+        $this->entityManager->flush();
+        $userId = $this->user->requireId();
+        $scoped = $this->history()->withSurface(InclusionSurface::YourStream);
+
+        self::assertSame([$inStream->requireId()], $this->entryIds($scoped->favorites($userId, 10)));
+        self::assertSame([], $scoped->shared($userId, 10));
+        self::assertSame(
+            [$outOfStream->requireId(), $inStream->requireId()],
+            $this->entryIds($this->history()->favorites($userId, 10)),
+        );
+        self::assertSame([$sharedUnderTag->requireId()], $this->entryIds($this->history()->shared($userId, 10)));
+    }
+
+    public function testWithASurfaceLikesKeepOnlyThatSurfacesFeeds(): void
+    {
+        $switchedOff = $this->persistSubscribedFeed($this->user, 'https://switched-off.example.com/feed.xml');
+        $inStream = $this->persistEntry('liked-in-stream');
+        $outOfStream = SavedPostFixtures::entry(
+            $this->entityManager,
+            $switchedOff,
+            'liked-out',
+            'https://switched-off.example.com/liked-out',
+        );
+        $this->likeEntry($inStream, '2026-10-02 10:00:00');
+        $this->likeEntry($outOfStream, '2026-10-02 11:00:00');
+        $this->likeLocally($this->persistEntry('local-in-stream'), '2026-10-02 12:00:00');
+        $locallyOut = SavedPostFixtures::entry(
+            $this->entityManager,
+            $switchedOff,
+            'local-out',
+            'https://switched-off.example.com/local-out',
+        );
+        $this->likeLocally($locallyOut, '2026-10-02 13:00:00');
+        $this->subscriptionTo($switchedOff)->changeInclusions(new InclusionChange(yourStream: false));
+        $this->entityManager->flush();
+        $userId = $this->user->requireId();
+
+        $liked = $this->history()->withSurface(InclusionSurface::YourStream)->liked($userId, 10);
+
+        self::assertCount(2, $liked);
+        self::assertNotContains($outOfStream->requireId(), $this->entryIds($liked));
+        self::assertNotContains($locallyOut->requireId(), $this->entryIds($liked));
+        self::assertCount(4, $this->history()->liked($userId, 10));
     }
 
     public function testTwoViewsFromTheSameInstantComeBackHighestIdFirst(): void
@@ -598,6 +666,25 @@ final class ReadingHistoryRepositoryTest extends DbTestCase
     private function history(): ReadingHistoryRepository
     {
         return new ReadingHistoryRepository($this->entityManager);
+    }
+
+    private function persistDatedEntry(Feed $feed, string $guid, string $effectiveAt): Entry
+    {
+        $at = new \DateTimeImmutable($effectiveAt);
+        $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $at, $at);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function subscriptionTo(Feed $feed): Subscription
+    {
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['user' => $this->user, 'feed' => $feed]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription;
     }
 
     private function persistEntry(string $guid): Entry

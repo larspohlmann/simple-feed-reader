@@ -15,7 +15,8 @@ use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\YourStream\Model\ExtractedTermsModel;
-use App\Service\Curation\YourStream\PhraseStems;
+use App\Service\Curation\YourStream\Model\WordStemModel;
+use App\Service\Curation\YourStream\SearchTermStems;
 use App\Service\Curation\YourStream\YourStreamWordStore;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
@@ -230,8 +231,15 @@ final class YourStreamWordStoreTest extends DbTestCase
     /** @param list<InterestPhrase> $phrases */
     private function buildExtractedTermsFrom(array $phrases): ExtractedTermsModel
     {
-        $stems = (new PhraseStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()))
-            ->buildTermStems($phrases);
+        $searchTermStems = new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems());
+        $stems = [];
+        foreach ($phrases as $phrase) {
+            foreach ([$phrase->language, null] as $language) {
+                foreach ($searchTermStems->collectStems($phrase->phrase, $language) as $stem => $share) {
+                    $stems[] = new WordStemModel($language, (string) $stem, $phrase->weight * $share);
+                }
+            }
+        }
 
         return new ExtractedTermsModel($phrases, $stems);
     }

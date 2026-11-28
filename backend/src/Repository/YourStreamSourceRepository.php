@@ -150,7 +150,7 @@ final readonly class YourStreamSourceRepository
                 'entry.text.language AS entryLanguage',
                 'feed.traits.language AS feedLanguage',
                 'entry.headline.title AS title',
-                'SUBSTRING(entry.text.summary, 1, 2000) AS summary',
+                \sprintf('SUBSTRING(entry.text.summary, 1, %d) AS summary', StreamEntryModel::SUMMARY_CHARACTERS),
             )
             ->from(Entry::class, 'entry')
             ->join('entry.feed', 'feed');
