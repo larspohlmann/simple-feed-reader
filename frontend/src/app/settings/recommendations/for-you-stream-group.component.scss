@@ -33,6 +33,7 @@
   --phrase-lines: 5;
 
   align-self: stretch;
+  font-size: var(--fs-sm);
   line-height: var(--lh-normal);
   overflow: hidden;
   max-block-size: calc(var(--phrase-lines) * 1lh);
@@ -65,6 +66,13 @@
   }
 }
 
+.stream-phrase-body * {
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .stream-language {
   display: flex;
   flex-direction: column;
@@ -82,7 +90,7 @@
 .stream-phrase {
   display: inline-flex;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
+  align-items: baseline;
 }
 
 .stream-phrase-weight {
