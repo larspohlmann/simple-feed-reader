@@ -17,6 +17,7 @@ beforeEach(() => followedStories.load.mockClear());
 describe.each<{ store: NetworkExcludingSurface; surface: NetworkExclusionSurface }>([
   { store: 'allItems', surface: 'all-items' },
   { store: 'forYou', surface: 'for-you' },
+  { store: 'yourStream', surface: 'your-stream' },
   { store: 'trending', surface: 'trending' },
 ])('the $surface network switches', ({ store: storeSurface, surface }) => {
   const reloadCountsQuietly = jest.fn();

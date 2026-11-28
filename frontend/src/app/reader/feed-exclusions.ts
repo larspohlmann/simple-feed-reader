@@ -4,7 +4,7 @@ import type { ActionSheetCheck } from '../shared/action-sheet/action-sheet.compo
 import { EntryView, SubscriptionDto, TagInclusion } from './models';
 import type { ManageActions } from './feeds/manage/manage-actions.service';
 
-export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches' | 'trending';
+export type ExclusionSurface = 'allItems' | 'forYou' | 'yourStream' | 'savedSearches' | 'trending';
 
 /** One surface a feed, a tag or a network can be switched out of. */
 export interface SurfaceDescriptor {
@@ -38,6 +38,15 @@ export const SURFACE_DESCRIPTORS: readonly SurfaceDescriptor[] = [
     labelKey: 'reader.forYou',
     dataTest: 'toggle-for-you',
     listView: null,
+    privateFeedsIncluded: false,
+  },
+  {
+    surface: 'yourStream',
+    flag: 'includeInYourStream',
+    includeKey: 'reader.includeInYourStream',
+    labelKey: 'reader.yourStream',
+    dataTest: 'toggle-your-stream',
+    listView: 'your-stream',
     privateFeedsIncluded: false,
   },
   {

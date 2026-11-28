@@ -72,6 +72,7 @@ const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): Sub
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInYourStream: true,
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,

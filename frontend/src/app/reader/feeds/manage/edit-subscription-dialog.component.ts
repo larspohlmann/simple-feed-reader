@@ -67,6 +67,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly checked = signal<ReadonlySet<number>>(new Set(this.data.tags.map((tag) => tag.id)));
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
+  readonly includeInYourStream = signal<boolean>(this.data.includeInYourStream);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
   readonly includeInTrending = signal<boolean>(this.data.includeInTrending);
   readonly languageEditable = this.data.languageEditable;
@@ -126,6 +127,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
       tagIds: [...this.checked()],
       includeInAllItems: this.includeInAllItems(),
       includeInForYou: this.includeInForYou(),
+      includeInYourStream: this.includeInYourStream(),
       includeInSavedSearches: this.includeInSavedSearches(),
       includeInTrending: this.includeInTrending(),
       ...this.languageChange(),

@@ -20,11 +20,18 @@ describe('ownExcludedSurfaces', () => {
     const feed = makeSubscription({
       includeInAllItems: false,
       includeInForYou: false,
+      includeInYourStream: false,
       includeInSavedSearches: false,
       includeInTrending: false,
     });
 
-    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
+    expect(ownExcludedSurfaces(feed)).toEqual([
+      'allItems',
+      'forYou',
+      'yourStream',
+      'savedSearches',
+      'trending',
+    ]);
   });
 
   it('ignores the network a social feed belongs to', () => {
@@ -49,10 +56,11 @@ describe('exclusionTitle', () => {
 });
 
 describe('SURFACE_DESCRIPTORS', () => {
-  it('lists All items, For you, saved searches and Trending, in menu order', () => {
+  it('lists All items, For you, Your stream, saved searches and Trending, in menu order', () => {
     expect(SURFACE_DESCRIPTORS.map((descriptor) => descriptor.surface)).toEqual([
       'allItems',
       'forYou',
+      'yourStream',
       'savedSearches',
       'trending',
     ]);

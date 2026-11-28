@@ -123,6 +123,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInYourStream: true,
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,

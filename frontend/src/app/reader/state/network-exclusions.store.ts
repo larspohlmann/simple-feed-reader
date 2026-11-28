@@ -23,6 +23,7 @@ export type NetworkExcludingSurface = Exclude<ExclusionSurface, 'savedSearches'>
 const ENDPOINT_SURFACE: Readonly<Record<NetworkExcludingSurface, NetworkExclusionSurface>> = {
   allItems: 'all-items',
   forYou: 'for-you',
+  yourStream: 'your-stream',
   trending: 'trending',
 };
 
@@ -81,6 +82,7 @@ export const NETWORK_EXCLUSION_STORES = new InjectionToken<
   factory: () => ({
     allItems: new NetworkExclusionsStore('allItems'),
     forYou: new NetworkExclusionsStore('forYou'),
+    yourStream: new NetworkExclusionsStore('yourStream'),
     trending: new NetworkExclusionsStore('trending'),
   }),
 });

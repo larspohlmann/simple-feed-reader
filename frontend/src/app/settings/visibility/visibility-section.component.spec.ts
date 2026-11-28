@@ -176,7 +176,7 @@ describe('VisibilitySectionComponent', () => {
     const heads = [...element.querySelectorAll('.head-surface')].map((head) =>
       head.textContent!.trim(),
     );
-    expect(heads).toEqual(['All items', 'For you', 'Saved searches', 'Trending']);
+    expect(heads).toEqual(['All items', 'For you', 'Your stream', 'Saved searches', 'Trending']);
     expect(heads).toHaveLength(SURFACE_DESCRIPTORS.length);
     expect(row('tag:3/feed:11').querySelectorAll('input')).toHaveLength(SURFACE_DESCRIPTORS.length);
   });

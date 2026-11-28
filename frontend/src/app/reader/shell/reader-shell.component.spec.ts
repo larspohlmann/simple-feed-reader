@@ -151,6 +151,7 @@ describe('ReaderShellComponent', () => {
         entryCount: 9,
         includeInAllItems: true,
         includeInForYou: true,
+        includeInYourStream: true,
         includeInSavedSearches: true,
         includeInTrending: true,
         language: null,

@@ -89,6 +89,7 @@ describe('StatisticsSectionComponent', () => {
       excludedNetworks: {
         allItems: new Set(),
         forYou: new Set(),
+        yourStream: new Set(),
         savedSearches: new Set(),
         trending: new Set(),
       },

@@ -86,6 +86,17 @@
         />
       </div>
       <div class="switch-row">
+        <label class="switch-label" for="edit-feed-your-stream">
+          {{ 'dialog.editFeed.showInYourStream' | transloco }}
+        </label>
+        <app-toggle
+          inputId="edit-feed-your-stream"
+          [checked]="includeInYourStream()"
+          [label]="'dialog.editFeed.showInYourStream' | transloco"
+          (toggled)="includeInYourStream.set($event)"
+        />
+      </div>
+      <div class="switch-row">
         <label class="switch-label" for="edit-feed-saved-searches">
           {{ 'dialog.editFeed.showInSavedSearches' | transloco }}
         </label>

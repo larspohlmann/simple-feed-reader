@@ -48,6 +48,7 @@ const sub: SubscriptionDto = {
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInYourStream: true,
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,
@@ -202,6 +203,7 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [2],
       includeInAllItems: true,
       includeInForYou: true,
+      includeInYourStream: true,
       includeInSavedSearches: true,
       includeInTrending: true,
     });
@@ -219,6 +221,7 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [1],
       includeInAllItems: true,
       includeInForYou: true,
+      includeInYourStream: true,
       includeInSavedSearches: true,
       includeInTrending: true,
     });
@@ -251,16 +254,19 @@ describe('EditSubscriptionDialogComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const allItemsSwitch = element.querySelector<HTMLInputElement>('#edit-feed-all-items');
     const forYouSwitch = element.querySelector<HTMLInputElement>('#edit-feed-for-you');
+    const yourStreamSwitch = element.querySelector<HTMLInputElement>('#edit-feed-your-stream');
     const savedSearchesSwitch = element.querySelector<HTMLInputElement>(
       '#edit-feed-saved-searches',
     );
     expect(allItemsSwitch!.checked).toBe(false);
     expect(forYouSwitch!.checked).toBe(true);
+    expect(yourStreamSwitch!.checked).toBe(true);
     const trendingSwitch = element.querySelector<HTMLInputElement>('#edit-feed-trending');
     expect(savedSearchesSwitch!.checked).toBe(false);
     expect(trendingSwitch!.checked).toBe(false);
 
     forYouSwitch!.click();
+    yourStreamSwitch!.click();
     savedSearchesSwitch!.click();
     trendingSwitch!.click();
     fixture.detectChanges();
@@ -272,10 +278,26 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [1],
       includeInAllItems: false,
       includeInForYou: false,
+      includeInYourStream: false,
       includeInSavedSearches: true,
       includeInTrending: true,
     });
     testRequest.flush({ subscription: excludedFromAllItems });
+  });
+
+  it('saves the Your stream switch apart from For you', () => {
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLInputElement>('#edit-feed-your-stream')!.click();
+    fixture.detectChanges();
+    fixture.componentInstance.submit();
+
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body).toEqual(
+      expect.objectContaining({ includeInYourStream: false, includeInForYou: true }),
+    );
+    testRequest.flush({ subscription: sub });
   });
 
   it('prefills an unrenamed Home with its label and sends no custom title when left as is', () => {
