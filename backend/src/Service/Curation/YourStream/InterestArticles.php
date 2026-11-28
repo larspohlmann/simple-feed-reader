@@ -21,15 +21,11 @@ final readonly class InterestArticles
 
     public function collectInputs(int $userId): InterestInputsModel
     {
-        $surface = InclusionSurface::YourStream;
-        $articleIds = array_unique([
-            ...$this->history->findFavoriteIds($userId, self::SECTION_CAP, $surface),
-            ...$this->history->findKeptIds($userId, self::SECTION_CAP, $surface),
-            ...$this->history->findLikedIds($userId, self::SECTION_CAP, $surface),
-            ...$this->history->findSharedIds($userId, self::SECTION_CAP, $surface),
-        ]);
-
-        return new InterestInputsModel($userId, array_values($articleIds), $this->collectSearchTerms($userId));
+        return new InterestInputsModel(
+            $userId,
+            $this->history->findInterestEntryIds($userId, self::SECTION_CAP, InclusionSurface::YourStream),
+            $this->collectSearchTerms($userId),
+        );
     }
 
     /** @return list<string> in position order */

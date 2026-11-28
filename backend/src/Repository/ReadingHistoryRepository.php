@@ -82,35 +82,25 @@ final readonly class ReadingHistoryRepository
         return $this->titledEntries($qb);
     }
 
-    /** @return list<int> the favorites' entry ids, only of subscriptions that count in $surface */
-    public function findFavoriteIds(int $userId, int $cap, InclusionSurface $surface): array
+    /**
+     * @return list<int> the entry ids of every section but viewed, each section's newest $cap, favorites, kept, liked
+     *                   then shared, only of subscriptions that count in $surface
+     */
+    public function findInterestEntryIds(int $userId, int $cap, InclusionSurface $surface): array
     {
-        return $this->readEntryIds($this->favoritesQueryBuilder($userId, $cap), $surface);
-    }
-
-    /** @return list<int> the shared entries' ids, only of subscriptions that count in $surface */
-    public function findSharedIds(int $userId, int $cap, InclusionSurface $surface): array
-    {
-        return $this->readEntryIds($this->sharedQueryBuilder($userId, $cap), $surface);
-    }
-
-    /** @return list<int> the liked entries' ids, only of subscriptions that count in $surface */
-    public function findLikedIds(int $userId, int $cap, InclusionSurface $surface): array
-    {
-        $rows = [];
+        $likedRows = [];
         foreach ($this->likedQueries($userId, $cap) as [$qb, $likedAt]) {
             InclusionScopeDql::restrict($qb, 's', $surface);
             $qb->select('e.id AS entryId', 'IDENTITY(e.canonicalItem) AS canonicalItemId', $likedAt . ' AS likedAt');
-            $rows = [...$rows, ...self::readLikedIdRows($qb)];
+            $likedRows = [...$likedRows, ...self::readLikedIdRows($qb)];
         }
 
-        return self::pickNewestLikes($rows, $cap);
-    }
-
-    /** @return list<int> the kept entries' ids, only of subscriptions that count in $surface */
-    public function findKeptIds(int $userId, int $cap, InclusionSurface $surface): array
-    {
-        return $this->readEntryIds($this->keptQueryBuilder($userId, $cap), $surface);
+        return array_values(array_unique([
+            ...$this->readEntryIds($this->favoritesQueryBuilder($userId, $cap), $surface),
+            ...$this->readEntryIds($this->keptQueryBuilder($userId, $cap), $surface),
+            ...self::pickNewestLikes($likedRows, $cap),
+            ...$this->readEntryIds($this->sharedQueryBuilder($userId, $cap), $surface),
+        ]));
     }
 
     private function favoritesQueryBuilder(int $userId, int $cap): QueryBuilder
