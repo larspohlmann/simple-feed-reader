@@ -154,7 +154,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 
 - `first-line($slot, $text)` on the row: the slot and the named text share a baseline, and the slot's
   baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on the cap
-  middle whatever the engine rounds. The row's other items centre on it; one that should not (a column that
+  middle whatever the engine rounds. The strut's `content` and `block-size` are `!important`, so a
+  consumer's own `::before` or `block-size` rule cannot drop it. The row's other items centre on it; one that should not (a column that
   stays at the top) says `align-self: start`. The slot gives up its own end margin. The slot must share a
   flex line with its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected
   text) has no selector: `$text: null` lines the whole row up on the baseline instead.
@@ -171,7 +172,9 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   derives where a row's label starts from the same `space()`.
 - `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
 - `alone($slot)`: a glyph with no text beside it (an icon-only button) takes its own box back, centred,
-  with no lead space after it. In an `<app-button>` it carries `class="alone"`.
+  with no lead space after it. In an `<app-button>` it carries `class="alone"`. Its `content: none` is
+  `!important` too and wins on order: include `alone` after the row's mixin, with a selector at least as
+  specific.
 - A slot has no height in the line. One that paints a box of its own (a logo, a chip, a wrapper holding a
   glyph and its badge) publishes that box's height as `--icon-lead-self` on itself (`self-sized($size)` for a
   host sized by it, `padded-slot($size, $padding)` for a chip round a glyph): the slot keeps the box
