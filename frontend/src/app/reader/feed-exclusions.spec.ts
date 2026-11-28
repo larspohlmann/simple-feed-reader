@@ -67,13 +67,14 @@ describe('SURFACE_DESCRIPTORS', () => {
   });
 
   it('labels the Trending switch', () => {
-    expect(SURFACE_DESCRIPTORS[3].includeKey).toBe('reader.includeInTrending');
+    expect(SURFACE_DESCRIPTORS[4].includeKey).toBe('reader.includeInTrending');
   });
 
   it('flips each flag through ManageActions.setInclusion', () => {
     const feed = makeSubscription({
       includeInAllItems: true,
       includeInForYou: false,
+      includeInYourStream: true,
       includeInSavedSearches: true,
       includeInTrending: false,
     });
@@ -86,6 +87,7 @@ describe('SURFACE_DESCRIPTORS', () => {
     expect(actions.setInclusion.mock.calls).toEqual([
       [feed, 'allItems', false],
       [feed, 'forYou', true],
+      [feed, 'yourStream', false],
       [feed, 'savedSearches', false],
       [feed, 'trending', true],
     ]);

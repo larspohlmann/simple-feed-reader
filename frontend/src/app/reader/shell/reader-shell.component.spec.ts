@@ -279,6 +279,9 @@ describe('ReaderShellComponent', () => {
       .expectOne('https://api.test/api/all-items/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
+      .expectOne('https://api.test/api/your-stream/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
       .expectOne('https://api.test/api/trending/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl

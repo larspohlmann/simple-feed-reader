@@ -67,7 +67,7 @@ describe('SidebarTagRowMenuComponent', () => {
     expect(itemTexts(openMenuFor(tagOf(3, 2)))).not.toContain('Create tag here');
   });
 
-  it('lists the four switches as checkboxes between the actions and Delete', () => {
+  it('lists the five switches as checkboxes between the actions and Delete', () => {
     const pop = openMenuFor(tagOf(1, null)).querySelector('.pop')!;
     const items = [...pop.children].map((item) =>
       item.tagName === 'HR' ? '<hr>' : item.textContent?.trim(),
@@ -79,6 +79,7 @@ describe('SidebarTagRowMenuComponent', () => {
       '<hr>',
       'Show in All items',
       'Show in For You',
+      'Show in Your stream',
       'Show in saved searches',
       'Show in Trending',
       '<hr>',
@@ -88,7 +89,7 @@ describe('SidebarTagRowMenuComponent', () => {
       [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
         (box) => box.checked,
       ),
-    ).toEqual([true, true, true, true]);
+    ).toEqual([true, true, true, true, true]);
   });
 
   it('switches the tag from a checkbox and keeps the menu open', () => {

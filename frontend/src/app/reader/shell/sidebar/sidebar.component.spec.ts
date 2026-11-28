@@ -1178,7 +1178,7 @@ describe('SidebarComponent', () => {
   const popoverItems = (pop: Element) =>
     [...pop.children].map((item) => (item.tagName === 'HR' ? '<hr>' : item.textContent?.trim()));
 
-  it('lists the four switches as checkboxes in the untagged feed row menu', () => {
+  it('lists the five switches as checkboxes in the untagged feed row menu', () => {
     const fixture = mount({ untagged: [{ ...sub(1, 0), includeInForYou: false }] });
     const element = fixture.nativeElement as HTMLElement;
 
@@ -1191,6 +1191,7 @@ describe('SidebarComponent', () => {
       '<hr>',
       'Show in All items',
       'Show in For You',
+      'Show in Your stream',
       'Show in saved searches',
       'Show in Trending',
       '<hr>',
@@ -1200,7 +1201,7 @@ describe('SidebarComponent', () => {
       [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
         (box) => box.checked,
       ),
-    ).toEqual([true, false, true, true]);
+    ).toEqual([true, false, true, true, true]);
   });
 
   it('keeps the feed row menu open once a tick has patched and re-rendered the row', () => {
@@ -1228,12 +1229,12 @@ describe('SidebarComponent', () => {
     const boxes = element.querySelectorAll<HTMLInputElement>(
       '.feedrow .pop [role="menuitemcheckbox"]',
     );
-    expect(boxes).toHaveLength(4);
+    expect(boxes).toHaveLength(5);
     expect(boxes[1].checked).toBe(false);
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).not.toBeNull();
   });
 
-  it('lists the four switches in the tagged feed row menu and switches the feed', () => {
+  it('lists the five switches in the tagged feed row menu and switches the feed', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
       tag: {
@@ -1264,6 +1265,7 @@ describe('SidebarComponent', () => {
       '<hr>',
       'Show in All items',
       'Show in For You',
+      'Show in Your stream',
       'Show in saved searches',
       'Show in Trending',
       '<hr>',
@@ -2848,6 +2850,7 @@ describe('organise mode', () => {
         ACTION_SHEET_DIVIDER,
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
         expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
@@ -2857,7 +2860,7 @@ describe('organise mode', () => {
     expect(deleted).toHaveBeenCalledWith(tag);
   });
 
-  it('the feed dots offer edit, the four switches, and unsubscribe', () => {
+  it('the feed dots offer edit, the five switches, and unsubscribe', () => {
     const fixture = mount({
       coarse: true,
       organising: true,
@@ -2875,6 +2878,7 @@ describe('organise mode', () => {
         ACTION_SHEET_DIVIDER,
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
         expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
@@ -2901,6 +2905,11 @@ describe('organise mode', () => {
     expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
       'forYou',
+      false,
+    );
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      'yourStream',
       false,
     );
     expect(manageActions.setInclusion).toHaveBeenCalledWith(
