@@ -113,9 +113,6 @@
                 <button role="menuitem" (click)="startRename(label)">
                   {{ 'reader.labels.rename' | transloco }}
                 </button>
-                <button role="menuitem" class="danger" (click)="confirmDelete(label)">
-                  {{ 'reader.labels.delete' | transloco }}
-                </button>
               }
               <button
                 role="menuitem"
@@ -123,6 +120,11 @@
               >
                 {{ 'reader.export.action' | transloco }}
               </button>
+              @if (label !== null) {
+                <button role="menuitem" class="danger" (click)="confirmDelete(label)">
+                  {{ 'reader.labels.delete' | transloco }}
+                </button>
+              }
             </ng-template>
           </app-sidebar-row-menu>
         }

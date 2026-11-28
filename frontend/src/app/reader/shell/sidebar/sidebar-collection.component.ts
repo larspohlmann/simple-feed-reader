@@ -195,7 +195,9 @@ export class SidebarCollectionComponent {
   protected openSheet(folder: CollectionFolder | null): void {
     const label = folder?.label ?? null;
     const actions =
-      label === null ? [this.exportAction()] : [...this.labelActions(), this.exportAction()];
+      label === null
+        ? [this.exportAction()]
+        : [this.renameAction(), this.exportAction(), this.deleteAction()];
     const title = folder === null ? this.listName() : this.folderName(folder);
     this.sheet
       .open({ title, actions })
@@ -217,16 +219,21 @@ export class SidebarCollectionComponent {
     };
   }
 
-  private labelActions(): ActionSheetAction[] {
-    return [
-      { id: 'rename', label: this.transloco.translate('reader.labels.rename'), symbol: 'edit' },
-      {
-        id: 'delete',
-        label: this.transloco.translate('reader.labels.delete'),
-        symbol: 'delete',
-        danger: true,
-      },
-    ];
+  private renameAction(): ActionSheetAction {
+    return {
+      id: 'rename',
+      label: this.transloco.translate('reader.labels.rename'),
+      symbol: 'edit',
+    };
+  }
+
+  private deleteAction(): ActionSheetAction {
+    return {
+      id: 'delete',
+      label: this.transloco.translate('reader.labels.delete'),
+      symbol: 'delete',
+      danger: true,
+    };
   }
 
   private delete(label: LabelTally): void {
