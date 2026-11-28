@@ -215,7 +215,7 @@ test.describe('the airy sidebar on a phone', () => {
       Number.parseFloat(getComputedStyle(element).getPropertyValue('--tap-target')),
     );
     const heights = await aside
-      .locator('.section-head')
+      .locator('.section-head, .folder-head')
       .evaluateAll((heads) => heads.map((head) => head.getBoundingClientRect().height));
     expect(heights.length).toBeGreaterThan(0);
     for (const height of heights) expect(height).toBeGreaterThanOrEqual(tapTarget);

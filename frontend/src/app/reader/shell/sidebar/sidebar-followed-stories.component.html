@@ -1,70 +1,65 @@
 @if (stories().length) {
-  <div class="card">
-    <div class="section-head followed-head">
-      <button
-        class="section-link followed-toggle"
-        type="button"
-        [attr.aria-expanded]="expanded()"
-        (click)="toggle()"
-      >
-        <span class="favicon-slot"><app-icon name="notifications_active" size="dense" /></span>
-        <span class="label">{{ 'reader.followedStories' | transloco }}</span>
-        @if (newTotal() > 0) {
-          <span class="section-count">{{ newTotal() }}</span>
-        }
-      </button>
-      <span class="slot" aria-hidden="true"></span>
-      <button
-        class="chevzone"
-        type="button"
-        [attr.aria-expanded]="expanded()"
-        [attr.aria-label]="'reader.toggleFollowedStories' | transloco"
-        (click)="toggle()"
-      >
-        <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
-      </button>
-    </div>
-    @if (expanded()) {
-      <div class="sublist">
-        @for (story of stories(); track story.id) {
-          <div class="followed-row" [class.active]="story.id === activeStoryId()">
-            <a
-              class="nav"
-              [routerLink]="storyListLink(story.id)"
-              [queryParams]="storyListQueryParams"
-              queryParamsHandling="merge"
-              [state]="storyRootState(story.id)"
-            >
-              <app-icon name="notifications_active" size="md" />
-              <span class="name">{{
-                story.headline ?? ('reader.followedStoryFallback' | transloco)
-              }}</span>
-              @if (story.quiet) {
-                <span
-                  class="quiet-badge"
-                  [attr.title]="'reader.followedStoryQuietHint' | transloco"
-                >
-                  {{ 'reader.followedStoryQuiet' | transloco }}
-                </span>
-              }
-              @if (story.newCount > 0) {
-                <span class="count">{{ story.newCount }}</span>
-              }
-            </a>
-            <app-sidebar-row-menu
-              [menuKey]="'followed-story-' + story.id"
-              [label]="'reader.followedStoryMenu' | transloco"
-            >
-              <ng-template>
-                <button role="menuitem" (click)="followed.unfollow(story.id); rows.closeMenu()">
-                  {{ 'reader.unfollowStory' | transloco }}
-                </button>
-              </ng-template>
-            </app-sidebar-row-menu>
-            <span class="trail" aria-hidden="true"></span>
-          </div>
-        }
-      </div>
-    }
+  <div class="folder-head followed-head">
+    <button
+      class="section-link followed-toggle"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      (click)="toggle()"
+    >
+      <app-icon name="notifications_active" size="md" />
+      <span class="label">{{ 'reader.followedStories' | transloco }}</span>
+      @if (newTotal() > 0) {
+        <span class="section-count">{{ newTotal() }}</span>
+      }
+    </button>
+    <span class="slot" aria-hidden="true"></span>
+    <button
+      class="chevzone"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="'reader.toggleFollowedStories' | transloco"
+      (click)="toggle()"
+    >
+      <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+    </button>
   </div>
+  @if (expanded()) {
+    <div class="sublist">
+      @for (story of stories(); track story.id) {
+        <div class="followed-row" [class.active]="story.id === activeStoryId()">
+          <a
+            class="nav"
+            [routerLink]="storyListLink(story.id)"
+            [queryParams]="storyListQueryParams"
+            queryParamsHandling="merge"
+            [state]="storyRootState(story.id)"
+          >
+            <app-icon name="notifications_active" size="md" />
+            <span class="name">{{
+              story.headline ?? ('reader.followedStoryFallback' | transloco)
+            }}</span>
+            @if (story.quiet) {
+              <span class="quiet-badge" [attr.title]="'reader.followedStoryQuietHint' | transloco">
+                {{ 'reader.followedStoryQuiet' | transloco }}
+              </span>
+            }
+            @if (story.newCount > 0) {
+              <span class="count">{{ story.newCount }}</span>
+            }
+          </a>
+          <app-sidebar-row-menu
+            [menuKey]="'followed-story-' + story.id"
+            [label]="'reader.followedStoryMenu' | transloco"
+          >
+            <ng-template>
+              <button role="menuitem" (click)="followed.unfollow(story.id); rows.closeMenu()">
+                {{ 'reader.unfollowStory' | transloco }}
+              </button>
+            </ng-template>
+          </app-sidebar-row-menu>
+          <span class="trail" aria-hidden="true"></span>
+        </div>
+      }
+    </div>
+  }
 }

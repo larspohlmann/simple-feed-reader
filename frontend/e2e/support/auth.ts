@@ -112,11 +112,17 @@ export const ACCOUNT_PREFERENCES = {
   trendingEnabled: true,
 };
 
+/** What a stubbed profile changes beyond its preferences, and the promise its answer waits for. */
+export interface AccountProfileStub {
+  profile?: Record<string, unknown>;
+  release?: Promise<void>;
+}
+
 /** `/api/me` answers a full, active profile whose preferences carry `preferences`, once `release` settles. */
 export async function stubAccountProfile(
   page: Page,
   preferences: Record<string, unknown>,
-  release?: Promise<void>,
+  { profile = {}, release }: AccountProfileStub = {},
 ): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/me',
@@ -135,6 +141,7 @@ export async function stubAccountProfile(
           ai: { ready: false, model: null, capabilities: null },
           mail: { enabled: false },
           emailVerified: true,
+          ...profile,
           preferences: { ...ACCOUNT_PREFERENCES, ...preferences },
         },
       });

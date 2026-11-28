@@ -1,6 +1,8 @@
 @use 'sidebar-row' as row;
-@include row.card;
 @include row.row-parts;
+@include row.folder-head;
+@include row.chevron('.chevzone');
+@include row.sublist;
 
 :host {
   display: contents;
@@ -11,19 +13,6 @@
 }
 
 @include row.row-states('.nav', '.nav.active');
-
-/* The coarse row gap is --space-0 wider than a head's; pull the chevron column back so the counts line up. */
-@media (pointer: coarse) {
-  .nav .trail {
-    margin-left: calc(var(--space-0) * -1);
-  }
-}
-
-/* The airy sheet's first section: no rule under the search band or the drawer's title. */
-:host-context(.sidebar-airy) .card.primary {
-  padding-top: var(--space-1);
-  border-top-color: transparent;
-}
 
 .nav:not(.active) > app-icon {
   color: var(--text-muted);

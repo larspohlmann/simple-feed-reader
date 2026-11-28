@@ -8,7 +8,6 @@ import {
   effect,
   inject,
   input,
-  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -17,7 +16,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { parseProblem } from '../../../core/problem';
 import { pluralKey } from '../../../core/i18n/plural-key';
-import { persistedToggle } from '../../../core/preferences/persisted-toggle';
+import { folderToggle } from '../../../core/preferences/folder-toggle';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -74,10 +73,6 @@ export class SidebarCollectionComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly labelNameMax = LABEL_NAME_MAX;
 
-  protected readonly open = persistedToggle(
-    () => `sfr.sidebar.${this.collection()}.collapsed`,
-    'collapsed',
-  );
   protected readonly icon = computed(() => COLLECTIONS[this.collection()].icon);
   protected readonly toggleLabel = computed(() => COLLECTIONS[this.collection()].toggleKey);
 
@@ -116,15 +111,9 @@ export class SidebarCollectionComponent {
     return selection.label ?? null;
   });
 
-  /** Set by the chevron, cleared by the next subfolder: a block opened only by its active subfolder still closes. */
-  private readonly collapsedHere = linkedSignal({
-    source: this.activeFilter,
-    computation: () => false,
-  });
-
-  /** Following a pill into a subfolder opens its block; the stored collapse stays. */
-  protected readonly expanded = computed(
-    () => !this.collapsedHere() && (this.open.expanded() || this.activeFilter() !== null),
+  protected readonly folder = folderToggle(
+    () => `sfr.sidebar.${this.collection()}.collapsed`,
+    this.activeFilter,
   );
 
   protected readonly headCurrent = computed(
@@ -139,16 +128,6 @@ export class SidebarCollectionComponent {
     field?.focus();
     field?.select();
   });
-
-  protected toggleExpanded(): void {
-    if (this.expanded()) {
-      if (this.open.expanded()) this.open.toggle();
-      this.collapsedHere.set(true);
-      return;
-    }
-    this.collapsedHere.set(false);
-    this.open.open();
-  }
 
   protected menuKey(label: LabelTally): string {
     return `label-${this.collection()}-${label.id}`;

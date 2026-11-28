@@ -83,6 +83,7 @@ app-reader-header.hidden {
 .sidebar.sidebar-airy {
   --airy-sheet: var(--surface-2);
   --airy-rule: var(--border);
+  --rail-color: var(--airy-rule);
   --airy-hrule: color-mix(in srgb, var(--border) 35%, var(--airy-sheet));
   --airy-edge-cast: rgb(0 0 0 / 5%);
 

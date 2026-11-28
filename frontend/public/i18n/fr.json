@@ -1462,6 +1462,7 @@
     "savedSearches": "Recherches enregistrées",
     "savedSearchesEmpty": "Aucune recherche enregistrée pour l'instant. Enregistrez une recherche pour la voir ici.",
     "toggleSavedSearches": "Afficher/masquer les recherches enregistrées",
+    "toggleAllItems": "Afficher/masquer Tout",
     "followedStories": "Sujets suivis",
     "toggleFollowedStories": "Afficher ou masquer les sujets suivis",
     "followedStoryFallback": "Sujet suivi",

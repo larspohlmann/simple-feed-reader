@@ -120,12 +120,12 @@ describe('SidebarCollectionComponent (#2581)', () => {
   it('marks the head current on the whole collection only', () => {
     expect(
       root(mount('favorites', { kind: 'favorites' }))
-        .querySelector('.section-head')
+        .querySelector('.folder-head')
         ?.classList.contains('current'),
     ).toBe(true);
     expect(
       root(mount('favorites', { kind: 'favorites', label: 3 }))
-        .querySelector('.section-head')
+        .querySelector('.folder-head')
         ?.classList.contains('current'),
     ).toBe(false);
   });
@@ -288,38 +288,6 @@ describe('SidebarCollectionComponent (#2581)', () => {
     fixture.detectChanges();
 
     expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
-  });
-
-  it('closes a block its subfolder opened on the chevron, without storing it', () => {
-    labels.set([tally(1, 'Home')]);
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-
-    toggle(fixture);
-
-    expect(root(fixture).querySelector('.label-row')).toBeNull();
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBeNull();
-  });
-
-  it('closes a stored-open block on the chevron while one of its subfolders is listed', () => {
-    labels.set([tally(1, 'Home')]);
-    localStorage.setItem('sfr.sidebar.favorites.collapsed', 'false');
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-
-    toggle(fixture);
-
-    expect(root(fixture).querySelector('.label-row')).toBeNull();
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('true');
-  });
-
-  it('reopens a block closed inside a subfolder on the chevron, storing it open', () => {
-    labels.set([tally(1, 'Home')]);
-    const fixture = mount('favorites', { kind: 'favorites', label: 1 });
-    toggle(fixture);
-
-    toggle(fixture);
-
-    expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
-    expect(localStorage.getItem('sfr.sidebar.favorites.collapsed')).toBe('false');
   });
 
   it('opens a block closed inside one subfolder again on the next', () => {

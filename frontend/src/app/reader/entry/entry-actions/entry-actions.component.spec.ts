@@ -23,7 +23,7 @@ import { LabelMenu } from '../../labels/label-menu.service';
       [entry]="entry"
       [size]="size"
       [audio]="audio"
-      [like]="likeShown"
+      [like]="likePlacement"
       [labelMenu]="labelMenu"
     />
   </article>`,
@@ -33,7 +33,7 @@ class HostComponent implements EntryActionHandler {
   entry: EntryDto = anEntry();
   size: 'sm' | 'md' = 'sm';
   audio = true;
-  likeShown = false;
+  likePlacement: 'first' | 'after-favorite' | 'none' = 'none';
   labelMenu: 'list' | 'article' = 'list';
   likeAnswer = new Subject<void>();
   cardOpened = false;
@@ -110,7 +110,7 @@ function mount(testEntry: EntryDto = anEntry()) {
 function mountLiking(testEntry: EntryDto) {
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.entry = testEntry;
-  fixture.componentInstance.likeShown = true;
+  fixture.componentInstance.likePlacement = 'after-favorite';
   fixture.detectChanges();
   return fixture;
 }
@@ -541,6 +541,23 @@ describe('EntryActionsComponent', () => {
         social: { network: 'bluesky', isLiked, canLike: true, isOwn: false },
       });
 
+    it('leads with the like when like is first', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = blueskyPost();
+      fixture.componentInstance.likePlacement = 'first';
+      fixture.detectChanges();
+      const host = fixture.nativeElement.querySelector('app-entry-actions') as HTMLElement;
+
+      expect(host.firstElementChild?.tagName).toBe('APP-ENTRY-LIKE');
+      expect(host.querySelectorAll('app-entry-like').length).toBe(1);
+    });
+
+    it('renders no like when like is none', () => {
+      const fixture = mount(blueskyPost());
+
+      expect(fixture.nativeElement.querySelector('app-entry-like')).toBeNull();
+    });
+
     it('offers the like right after favorite, named for the network', () => {
       const labels = buttons(mountLiking(blueskyPost())).map((button) =>
         button.getAttribute('aria-label'),
@@ -656,7 +673,7 @@ describe('EntryActionsComponent', () => {
     it('leaves the like to the article view’s counts row when told to (#1615)', () => {
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.entry = blueskyPost();
-      fixture.componentInstance.likeShown = false;
+      fixture.componentInstance.likePlacement = 'none';
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).not.toContain('thumb_up');

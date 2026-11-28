@@ -12,6 +12,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
   padding: var(--space-0);
   border: none;
   border-radius: var(--radius-sm);
@@ -22,13 +23,17 @@ button {
 .likes {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-1);
   color: var(--text-muted);
 }
 
 .count {
-  margin-inline-start: var(--space-1);
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
+}
+
+:host(.count-start) .count {
+  order: -1;
 }
 
 /* Same tap-target math as the action cluster: the hit box reaches --tap-target

@@ -1,8 +1,6 @@
 @use 'sidebar-row' as row;
-@include row.card;
 @include row.row-parts;
-@include row.section-head;
-@include row.section-head-glyph;
+@include row.folder-head;
 @include row.chevron('.chevzone');
 @include row.sublist;
 
@@ -11,6 +9,7 @@
 }
 
 .followed-toggle {
+  padding: 0;
   border: 0;
   background: none;
   font: inherit;
@@ -39,3 +38,5 @@
   color: var(--text-muted);
   font-size: var(--fs-2xs);
 }
+
+@include row.menu-takes-chevron-column('.followed-row app-sidebar-row-menu');

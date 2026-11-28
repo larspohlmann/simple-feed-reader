@@ -1,77 +1,52 @@
-@if (section() === 'primary') {
-  <div class="card primary">
-    <a
-      class="nav all"
-      [class.active]="selection().kind === 'all'"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({})"
-      queryParamsHandling="merge"
-    >
-      <app-icon name="inbox" size="md" />
-      <span class="name">{{ 'reader.allItems' | transloco }}</span>
-      @if (totalUnread() > 0) {
-        <span class="count">{{ totalUnread() }}</span>
-      }
-    </a>
-    @if (sharedCount() > 0) {
+@switch (section()) {
+  @case ('all-items') {
+    <div class="folder-head all-head" [class.current]="selection().kind === 'all'">
       <a
-        class="nav"
-        [class.active]="selection().kind === 'shared'"
+        class="section-link"
         [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ view: 'shared' })"
+        [queryParams]="selectionQueryParams({})"
         queryParamsHandling="merge"
       >
-        <app-icon name="share" size="md" />
-        <span class="name">{{ 'reader.shared' | transloco }}</span>
-        <span class="count">{{ sharedCount() }}</span>
-      </a>
-    }
-    <a
-      class="nav"
-      [class.active]="selection().kind === 'liked'"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ view: 'liked' })"
-      queryParamsHandling="merge"
-    >
-      <app-icon name="thumb_up" size="md" />
-      <span class="name">{{ 'reader.liked' | transloco }}</span>
-      @if (likedCount() > 0) {
-        <span class="count">{{ likedCount() }}</span>
-      }
-    </a>
-    <a
-      class="nav"
-      [class.active]="selection().kind === 'viewed'"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ view: 'viewed' })"
-      queryParamsHandling="merge"
-    >
-      <app-icon name="history" size="md" />
-      <span class="name">{{ 'reader.viewed' | transloco }}</span>
-      @if (viewedCount() > 0) {
-        <span class="count">{{ viewedCount() }}</span>
-      }
-    </a>
-  </div>
-} @else if (showsDiscover()) {
-  <div class="card">
-    @if (preferences.trendingEnabled()) {
-      <a
-        class="nav trending"
-        [class.active]="selection().kind === 'trending'"
-        [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ view: 'trending' })"
-        queryParamsHandling="merge"
-      >
-        <app-icon name="trending_up" size="md" />
-        <span class="name">{{ 'reader.trending' | transloco }}</span>
-        @if (trendingUnopened().unopened > 0) {
-          <span class="count">{{ trendingUnopened().unopened }}</span>
+        <app-icon name="inbox" size="md" />
+        <span class="label">{{ 'reader.allItems' | transloco }}</span>
+        @if (totalUnread() > 0) {
+          <span class="section-count">{{ totalUnread() }}</span>
         }
-        <span class="slot" aria-hidden="true"></span>
-        <span class="trail" aria-hidden="true"></span>
       </a>
+      <span class="slot" aria-hidden="true"></span>
+      <button
+        class="chevzone"
+        type="button"
+        [attr.aria-expanded]="folder.expanded()"
+        [attr.aria-label]="'reader.toggleAllItems' | transloco"
+        (click)="folder.toggle()"
+      >
+        <app-icon [name]="folder.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+      </button>
+    </div>
+    @if (folder.expanded()) {
+      <div class="sublist">
+        @for (child of children(); track child.view) {
+          <a
+            class="nav"
+            [class.active]="selection().kind === child.view"
+            [routerLink]="['/']"
+            [queryParams]="selectionQueryParams({ view: child.view })"
+            queryParamsHandling="merge"
+          >
+            <app-icon [name]="child.icon" size="md" />
+            <span class="name">{{ child.labelKey | transloco }}</span>
+            @if (child.count > 0) {
+              <span class="count">{{ child.count }}</span>
+            }
+            <span class="slot" aria-hidden="true"></span>
+            <span class="trail" aria-hidden="true"></span>
+          </a>
+        }
+      </div>
     }
+  }
+  @case ('for-you') {
     @if (ai.ready()) {
       <a
         class="nav for-you"
@@ -106,5 +81,24 @@
         <span class="trail" aria-hidden="true"></span>
       </a>
     }
-  </div>
+  }
+  @case ('trending') {
+    @if (preferences.trendingEnabled()) {
+      <a
+        class="nav trending"
+        [class.active]="selection().kind === 'trending'"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ view: 'trending' })"
+        queryParamsHandling="merge"
+      >
+        <app-icon name="trending_up" size="md" />
+        <span class="name">{{ 'reader.trending' | transloco }}</span>
+        @if (trendingUnopened().unopened > 0) {
+          <span class="count">{{ trendingUnopened().unopened }}</span>
+        }
+        <span class="slot" aria-hidden="true"></span>
+        <span class="trail" aria-hidden="true"></span>
+      </a>
+    }
+  }
 }
