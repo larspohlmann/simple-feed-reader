@@ -158,7 +158,7 @@ final class YourStreamWordSelectionTest extends TestCase
                     $weights['stem' . $stem] = 1.0;
                 }
             }
-            $this->interests->recordArticle(new EntryStemsModel(FeedLanguage::English, $weights), []);
+            $this->interests->recordArticle(new EntryStemsModel(FeedLanguage::English, $weights));
         }
 
         $words = $this->pickWords(FeedLanguage::English, 0, []);
@@ -241,7 +241,7 @@ final class YourStreamWordSelectionTest extends TestCase
     private function articles(?FeedLanguage $language, int $count, array $weights, array $stemWords = []): void
     {
         for ($index = 0; $index < $count; $index++) {
-            $this->interests->recordArticle(new EntryStemsModel($language, $weights), $stemWords);
+            $this->interests->recordArticle(new EntryStemsModel($language, $weights, $stemWords));
         }
     }
 

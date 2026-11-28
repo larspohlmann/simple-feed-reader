@@ -8,8 +8,14 @@ use App\Enum\FeedLanguage;
 
 final readonly class EntryStemsModel
 {
-    /** @param array<array-key, float> $positionWeights stem => its weight by where it stands in the entry */
-    public function __construct(public ?FeedLanguage $language, public array $positionWeights)
-    {
+    /**
+     * @param array<array-key, float>        $positionWeights stem => its weight by where it stands in the entry
+     * @param array<array-key, list<string>> $stemWords       stem => the words, as the entry spells them, it came from
+     */
+    public function __construct(
+        public ?FeedLanguage $language,
+        public array $positionWeights,
+        public array $stemWords = [],
+    ) {
     }
 }

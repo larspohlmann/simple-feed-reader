@@ -36,10 +36,7 @@ final readonly class YourStreamWordBuilder implements YourStreamWordBuilderInter
     private function recordArticles(InterestTally $interests, InterestInputsModel $inputs, RaritySweepPass $pass): void
     {
         foreach ($this->sources->findEntries($inputs->articleIds) as $article) {
-            $interests->recordArticle(
-                $pass->stemming->collectStems($article),
-                $pass->stemming->collectStemWords($article),
-            );
+            $interests->recordArticle($pass->stemming->collectStemsWithWords($article));
         }
     }
 

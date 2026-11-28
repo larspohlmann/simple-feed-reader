@@ -30,39 +30,58 @@ final class EntryStemming
 
     public function collectStems(StreamEntryModel $entry): EntryStemsModel
     {
-        $bodyText = EntryPlainText::cut($entry->summary, self::BODY_CHARACTERS);
+        [$titleStems, $bodyStems] = $this->readEntryStems($entry);
+
+        return new EntryStemsModel($entry->language, self::buildWeights($titleStems, $bodyStems));
+    }
+
+    public function collectStemsWithWords(StreamEntryModel $entry): EntryStemsModel
+    {
+        [$titleStems, $bodyStems] = $this->readEntryStems($entry);
+        $stemWords = [];
+        foreach ([...$titleStems, ...$bodyStems] as [$stem, $surface]) {
+            $stemWords[$stem][] = $surface;
+        }
+
+        return new EntryStemsModel($entry->language, self::buildWeights($titleStems, $bodyStems), $stemWords);
+    }
+
+    /** @return array{list<array{string, string}>, list<array{string, string}>} the title's and the body's stems */
+    private function readEntryStems(StreamEntryModel $entry): array
+    {
+        return [
+            $this->readStems($entry->title, $entry->language),
+            $this->readStems(EntryPlainText::cut($entry->summary, self::BODY_CHARACTERS), $entry->language),
+        ];
+    }
+
+    /**
+     * @param list<array{string, string}> $titleStems
+     * @param list<array{string, string}> $bodyStems
+     *
+     * @return array<string, float>
+     */
+    private static function buildWeights(array $titleStems, array $bodyStems): array
+    {
         $weights = [];
-        foreach ($this->readStems($bodyText, $entry->language) as $stem) {
+        foreach ($bodyStems as [$stem]) {
             $weights[$stem] = self::BODY_WEIGHT;
         }
-        foreach ($this->readStems($entry->title, $entry->language) as $stem) {
+        foreach ($titleStems as [$stem]) {
             $weights[$stem] = self::HEADLINE_WEIGHT;
         }
 
-        return new EntryStemsModel($entry->language, $weights);
+        return $weights;
     }
 
-    /** @return array<string, list<string>> each stem with the words, as the entry spells them, it came from */
-    public function collectStemWords(StreamEntryModel $entry): array
-    {
-        $stemWords = [];
-        foreach ([$entry->title, EntryPlainText::cut($entry->summary, self::BODY_CHARACTERS)] as $text) {
-            foreach ($this->equivalents->canonicalizeWordsWithSurfaces($text) as [$word, $bare, $surface]) {
-                foreach ($this->findWordStems($word, $bare, $entry->language) as $stem) {
-                    $stemWords[$stem][] = $surface;
-                }
-            }
-        }
-
-        return $stemWords;
-    }
-
-    /** @return list<string> */
+    /** @return list<array{string, string}> each stem with the word, as the text spells it, it came from */
     private function readStems(string $text, ?FeedLanguage $language): array
     {
         $stems = [];
-        foreach ($this->equivalents->canonicalizeWords($text) as [$word, $bare]) {
-            array_push($stems, ...$this->findWordStems($word, $bare, $language));
+        foreach ($this->equivalents->canonicalizeWordsWithSurfaces($text) as [$word, $bare, $surface]) {
+            foreach ($this->findWordStems($word, $bare, $language) as $stem) {
+                $stems[] = [$stem, $surface];
+            }
         }
 
         return $stems;

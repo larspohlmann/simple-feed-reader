@@ -101,9 +101,9 @@ final class EntryStemmingTest extends TestCase
 
     public function testStemWordsCarryTheSurfaceWordsTheirStemCameFrom(): void
     {
-        $words = $this->stemming->collectStemWords(
+        $words = $this->stemming->collectStemsWithWords(
             new StreamEntryModel(1, FeedLanguage::German, 'Bundesliga-Spieltag', 'Die Bundesliga ruht'),
-        );
+        )->stemWords;
 
         self::assertSame(
             ['Bundesliga', 'Bundesliga'],
@@ -114,12 +114,22 @@ final class EntryStemmingTest extends TestCase
 
     public function testACanonicalKeepsTheWordsTheEntrySpelledIt(): void
     {
-        $words = $this->stemming->collectStemWords(
+        $words = $this->stemming->collectStemsWithWords(
             new StreamEntryModel(1, FeedLanguage::English, 'European Union summit', 'EU leaders meet NATO'),
-        );
+        )->stemWords;
 
         self::assertSame(['European Union', 'EU'], $words['eunion']);
         self::assertSame(['NATO'], $words['nato']);
+    }
+
+    public function testTheStemsWithWordsWeighLikeTheStemsAlone(): void
+    {
+        $entry = new StreamEntryModel(1, FeedLanguage::German, 'Bundesliga heute', 'Die Bundesliga ruht heute nicht');
+
+        $withWords = $this->stemming->collectStemsWithWords($entry);
+
+        self::assertSame($this->stemming->collectStems($entry)->positionWeights, $withWords->positionWeights);
+        self::assertSame([], $this->stemming->collectStems($entry)->stemWords);
     }
 
     private function stem(string $word): string

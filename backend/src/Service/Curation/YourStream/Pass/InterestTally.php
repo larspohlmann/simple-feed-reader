@@ -28,8 +28,7 @@ final class InterestTally
     /** @var array<string, array<array-key, string>> */
     private array $searchTerms = [];
 
-    /** @param array<array-key, list<string>> $stemWords */
-    public function recordArticle(EntryStemsModel $stems, array $stemWords): void
+    public function recordArticle(EntryStemsModel $stems): void
     {
         $key = StreamStrengthsModel::languageKey($stems->language);
         $this->articleCounts[$key] = ($this->articleCounts[$key] ?? 0.0) + 1;
@@ -38,7 +37,7 @@ final class InterestTally
                 continue;
             }
             $this->recordStem($key, (string) $stem, $weight, 1);
-            foreach ($stemWords[$stem] ?? [] as $surface) {
+            foreach ($stems->stemWords[$stem] ?? [] as $surface) {
                 $this->surfaceCounts[$key][$stem][$surface] = ($this->surfaceCounts[$key][$stem][$surface] ?? 0) + 1;
             }
         }
