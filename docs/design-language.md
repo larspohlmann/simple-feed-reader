@@ -868,7 +868,7 @@ These deliberately stay out and own their markup and styles:
 - the entry row's read toggle
 - the view-controls segmented control
 - the sidebar's brightness stepper (`<app-brightness-control>`)
-- `<app-stepper-bar>`, the dial the brightness control and the For you precision share
+- `<app-stepper-bar>`, the dial the brightness control and the Your stream precision share
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -1245,7 +1245,7 @@ knows no translation keys, so every text arrives already translated.
 | `step` | `number` (required) | — the current step |
 | `min`, `max` | `number` (required) | — the bar is empty at `min` and full at `max`; the end buttons disable there |
 | `decreaseIcon`, `increaseIcon` | `string` | — icon names; each end needs an icon or a text |
-| `decreaseText`, `increaseText` | `string` | — a word on that end instead of its icon (the For you precision reads "Narrow" / "Wide"); the button sizes to the word with the `--space-3` inline padding |
+| `decreaseText`, `increaseText` | `string` | — a word on that end instead of its icon (the Your stream precision reads "Narrow" / "Wide"); the button sizes to the word with the `--space-3` inline padding |
 | `groupLabel` | `string` (required) | — the group's accessible name |
 | `decreaseLabel`, `increaseLabel`, `resetLabel` | `string` (required) | — title and `aria-label` of the buttons |
 | `readout` | `string` (required) | — the sentence a screen reader hears on change |
