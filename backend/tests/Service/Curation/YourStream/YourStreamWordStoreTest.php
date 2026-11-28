@@ -71,12 +71,12 @@ final class YourStreamWordStoreTest extends DbTestCase
 
     public function testEnsuringAnExistingStateKeepsItsMark(): void
     {
-        $this->entry('2026-11-28 09:00:00');
+        $advancedMark = $this->entry('2026-11-28 09:00:00')->requireId() + 500;
         $this->store->ensureState($this->user);
-        $this->states->advanceMarks([$this->user->requireId()], 500);
+        $this->states->advanceMarks([$this->user->requireId()], $advancedMark);
         $this->entityManager->clear();
 
-        self::assertSame(500, $this->store->ensureState($this->requireUser())->matchedUpToEntryId());
+        self::assertSame($advancedMark, $this->store->ensureState($this->requireUser())->matchedUpToEntryId());
     }
 
     public function testReplacingWordsSwapsThemWholesaleAndRecordsTheBuild(): void

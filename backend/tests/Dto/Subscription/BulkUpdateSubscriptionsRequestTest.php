@@ -11,7 +11,7 @@ final class BulkUpdateSubscriptionsRequestTest extends TestCase
 {
     public function testToChangeCarriesTheSelectionTheTagChangesAndTheFlags(): void
     {
-        $change = (new BulkUpdateSubscriptionsRequest([1, 2], [3], [4], true, false, false, false))->toChange();
+        $change = (new BulkUpdateSubscriptionsRequest([1, 2], [3], [4], true, false, false, false, true))->toChange();
 
         self::assertSame([1, 2], $change->subscriptionIds);
         self::assertSame([3], $change->addTagIds);
@@ -22,6 +22,7 @@ final class BulkUpdateSubscriptionsRequestTest extends TestCase
                 'forYou' => false,
                 'savedSearches' => false,
                 'trending' => false,
+                'yourStream' => true,
             ],
             get_object_vars($change->inclusions),
         );
