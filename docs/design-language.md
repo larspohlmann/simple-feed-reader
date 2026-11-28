@@ -155,10 +155,11 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 - `first-line($slot, $text)` on the row: the slot and the named text share a baseline, and the slot's
   baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on the cap
   middle whatever the engine rounds. The strut's `content` and `block-size` are `!important`, so a
-  consumer's own `::before` or `block-size` rule cannot drop it. The row's other items centre on it; one that should not (a column that
-  stays at the top) says `align-self: start`. The slot gives up its own end margin. The slot must share a
-  flex line with its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected
-  text) has no selector: `$text: null` lines the whole row up on the baseline instead.
+  consumer's own `::before` or `block-size` rule cannot drop it. The row's other items centre on it;
+  one that should not (a column that stays at the top) says `align-self: start`. The slot gives up its
+  own end margin. The slot must share a flex line with its text, in a row direction. Bare text (a
+  chip's label, an `<app-button>`'s projected text) has no selector: `$text: null` lines the whole row
+  up on the baseline instead.
 - `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset` (a bare `0` is
   fine); its side padding and icon gap are one lead space, `lead-space($inset)` = `$inset + (1lh - 1cap) / 2`,
   declared on the row as `--icon-lead-space`. With `$gap:` when items follow the text: only the icon gets
@@ -182,6 +183,7 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
   The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
 - A slot's host spaces its own children with margins, not `gap`: the cap strut is a flex item too.
+- An item that would make the row taller than its first line (an action cluster) holds `block-size: 1lh`, as the comment byline's actions do, so the baseline group and the centred items stay on one line.
 - A menu's own items (a title, a note, a quote hint, a rule) start on the rows' icon edge: the menu declares
   `--icon-lead-space` where the row font applies (`menu-items.menu-lead-space`) and they read it.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an

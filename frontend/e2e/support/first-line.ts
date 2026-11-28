@@ -225,7 +225,7 @@ export interface SlotReport {
   capHeight: number;
   display: string;
   alignSelf: string;
-  /** The row centres its items on a named text, so the slot must take the baseline itself. */
+  /** The row centres its items on a named text, so the slot must take the baseline itself; inferred from the row's `align-items`. */
   hasText: boolean;
 }
 
