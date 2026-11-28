@@ -307,7 +307,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(rowNames(fixture)).toEqual(['Home', 'Work', 'Unlabeled']);
   });
 
-  it('offers Rename, Delete and Export on a label row', () => {
+  it('offers Rename, Export and Delete on a label row, Delete last', () => {
     labels.set([tally(1, 'Home')]);
     const fixture = mount('favorites');
     toggle(fixture);
@@ -317,7 +317,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
     const items = Array.from(root(fixture).querySelectorAll('[role="menuitem"]')).map((item) =>
       item.textContent?.trim(),
     );
-    expect(items).toEqual(['Rename', 'Delete', 'Export']);
+    expect(items).toEqual(['Rename', 'Export', 'Delete']);
   });
 
   describe('export', () => {
@@ -616,8 +616,8 @@ describe('SidebarCollectionComponent (#2581)', () => {
           title: 'Home',
           actions: [
             expect.objectContaining({ id: 'rename', label: 'Rename' }),
-            expect.objectContaining({ id: 'delete', label: 'Delete', danger: true }),
             expect.objectContaining({ id: 'export', label: 'Export' }),
+            expect.objectContaining({ id: 'delete', label: 'Delete', danger: true }),
           ],
         }),
       );
