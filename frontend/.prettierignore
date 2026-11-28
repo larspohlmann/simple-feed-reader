@@ -2,3 +2,4 @@ dist
 coverage
 node_modules
 src/app/reader/media/embed-frame-allowlist.generated.json
+src/app/shared/icon/icon-ink-shifts.json
