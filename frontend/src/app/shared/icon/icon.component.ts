@@ -53,8 +53,7 @@ export class IconComponent {
   }
 
   protected inkShift(): string | null {
-    const shifts = ICON_INK_SHIFTS[this.name()];
-    const shift = shifts?.[this.fill() ? 1 : 0] ?? 0;
-    return shift === 0 ? null : `0 ${shift}em`;
+    const shift = ICON_INK_SHIFTS[this.name()]?.[this.fill() ? 1 : 0];
+    return shift ? `0 ${shift}em` : null;
   }
 }
