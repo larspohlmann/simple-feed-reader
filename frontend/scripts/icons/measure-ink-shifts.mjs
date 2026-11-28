@@ -16,13 +16,10 @@ const SIZE = 200;
 const COLUMNS = 16;
 const PRECISION = 1000;
 const REPORTED_LARGEST = 5;
-const ASSETS = {
-  '/outlined.css': { file: 'outlined.css', contentType: 'text/css' },
-  '/material-symbols-outlined.woff2': {
-    file: 'material-symbols-outlined.woff2',
-    contentType: 'font/woff2',
-  },
-};
+const ASSETS = new Map([
+  ['outlined.css', 'text/css'],
+  ['material-symbols-outlined.woff2', 'font/woff2'],
+]);
 
 const PAGE = `<!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/outlined.css">
@@ -47,14 +44,12 @@ async function serveAssets(page) {
     if (path === '/') {
       return route.fulfill({ contentType: 'text/html', body: PAGE });
     }
-    const asset = ASSETS[path];
-    if (!asset) {
+    const file = path.slice(1);
+    const contentType = ASSETS.get(file);
+    if (!contentType) {
       return route.fulfill({ status: 404, body: '' });
     }
-    return route.fulfill({
-      contentType: asset.contentType,
-      body: readFileSync(join(PACKAGE, asset.file)),
-    });
+    return route.fulfill({ contentType, body: readFileSync(join(PACKAGE, file)) });
   });
 }
 
