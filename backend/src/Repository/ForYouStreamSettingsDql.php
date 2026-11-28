@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\RecommendationSettings;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 
 /** The account's settings row in DQL, for queries on its stream: no row means the stream runs at the defaults. */
@@ -17,7 +18,7 @@ final class ForYouStreamSettingsDql
         $qb->leftJoin(
             RecommendationSettings::class,
             self::ALIAS,
-            'WITH',
+            Join::ON,
             \sprintf('%s.user = %s', self::ALIAS, $userExpression),
         );
     }
