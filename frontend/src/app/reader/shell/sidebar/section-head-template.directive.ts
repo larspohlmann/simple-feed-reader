@@ -5,6 +5,7 @@ import { FeedGroupName } from '../../../core/feed-group';
 export interface SectionHeadView {
   readonly group: FeedGroupName;
   readonly section: PersistedToggle;
+  readonly icon: string;
   readonly label: string;
   readonly toggleLabel: string;
 }

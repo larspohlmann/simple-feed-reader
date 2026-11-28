@@ -319,6 +319,7 @@
 
   <ng-template #sectionHead appSectionHead let-head let-actions="actions">
     @if (organising()) {
+      <span class="favicon-slot"><app-icon [name]="head.icon" size="md" /></span>
       <span class="label">{{ head.label | transloco }}</span>
       <ng-container *ngTemplateOutlet="actions" />
     } @else {
@@ -328,6 +329,7 @@
         [queryParams]="selectionQueryParams({ group: head.group })"
         queryParamsHandling="merge"
       >
+        <span class="favicon-slot"><app-icon [name]="head.icon" size="md" /></span>
         <span class="label">{{ head.label | transloco }}</span>
         @if (groupUnread()[head.group] > 0) {
           <span class="section-count">{{ groupUnread()[head.group] }}</span>
