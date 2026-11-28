@@ -37,14 +37,7 @@ final readonly class YourStreamExplainer
             static fn (StreamEntryModel $entry): EntryStemsModel => $pass->stemming->collectStems($entry),
             $entries,
         );
-        $variants = [
-            YourStreamExplanationModel::WEIGHT_TIMES_RARITY => self::buildStoredStrengths($words),
-            YourStreamExplanationModel::FLAT_RARITY => self::buildFlatStrengths($words),
-        ];
-        $matches = array_map(
-            fn (StreamStrengthsModel $strengths): array => $this->tallyMatches($strengths, $stems),
-            $variants,
-        );
+        $matches = $this->tallyMatches(self::buildStoredStrengths($words), $stems);
 
         return new YourStreamExplanationModel($words, $days, \count($entries), $matches);
     }
@@ -84,26 +77,6 @@ final readonly class YourStreamExplainer
         $strengths = [];
         foreach ($words as $word) {
             $strengths[StreamStrengthsModel::languageKey($word->language)][$word->stem] = $word->weight * $word->rarity;
-        }
-
-        return StreamStrengthsModel::fromStrengths($strengths);
-    }
-
-    /** @param list<StreamWordModel> $words */
-    private static function buildFlatStrengths(array $words): StreamStrengthsModel
-    {
-        $raritiesByLanguageKey = [];
-        foreach ($words as $word) {
-            $raritiesByLanguageKey[StreamStrengthsModel::languageKey($word->language)][] = $word->rarity;
-        }
-        $meanRarities = array_map(
-            static fn (array $rarities): float => array_sum($rarities) / \count($rarities),
-            $raritiesByLanguageKey,
-        );
-        $strengths = [];
-        foreach ($words as $word) {
-            $languageKey = StreamStrengthsModel::languageKey($word->language);
-            $strengths[$languageKey][$word->stem] = $word->weight * $meanRarities[$languageKey];
         }
 
         return StreamStrengthsModel::fromStrengths($strengths);

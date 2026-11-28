@@ -84,12 +84,8 @@ final class YourStreamExplainCommand extends Command
             $explanation->days === 1 ? 'day' : 'days',
             YourStreamBackground::SAMPLE_ENTRIES,
         ));
-        $variantHeaders = array_map(
-            static fn (string $variant): string => $variant . ' (/day)',
-            array_keys($explanation->matchesByVariantAndPrecision),
-        );
         $io->table(
-            ['precision', 'minimum score', ...$variantHeaders],
+            ['precision', 'minimum score', 'matches (/day)'],
             array_map(
                 static fn (YourStreamPrecision $precision): array => self::formatPrecisionRow($explanation, $precision),
                 YourStreamPrecision::cases(),
@@ -97,20 +93,15 @@ final class YourStreamExplainCommand extends Command
         );
     }
 
-    /** @return list<string> the step, its minimum score, then each variant's matches with matches per day */
+    /** @return list<string> the step, its minimum score, then its matches with matches per day */
     private static function formatPrecisionRow(
         YourStreamExplanationModel $explanation,
         YourStreamPrecision $precision,
     ): array {
-        $row = [$precision->value, \sprintf('%.1f', $precision->minimumScore())];
-        foreach ($explanation->matchesByVariantAndPrecision as $variant => $matchesByPrecision) {
-            $row[] = \sprintf(
-                '%d (%.1f)',
-                $matchesByPrecision[$precision->value] ?? 0,
-                $explanation->matchesPerDay($variant, $precision),
-            );
-        }
-
-        return $row;
+        return [
+            $precision->value,
+            \sprintf('%.1f', $precision->minimumScore()),
+            \sprintf('%d (%.1f)', $explanation->countMatches($precision), $explanation->matchesPerDay($precision)),
+        ];
     }
 }

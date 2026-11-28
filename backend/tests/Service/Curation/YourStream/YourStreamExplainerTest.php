@@ -53,30 +53,14 @@ final class YourStreamExplainerTest extends DbTestCase
 
         self::assertSame(
             ['narrowest' => 3, 'narrow' => 3, 'balanced' => 4, 'wide' => 4, 'widest' => 4],
-            $explanation->matchesByVariantAndPrecision[YourStreamExplanationModel::WEIGHT_TIMES_RARITY],
+            $explanation->matchesByPrecision,
         );
-        self::assertSame(
-            4.0,
-            $explanation->matchesPerDay(YourStreamExplanationModel::WEIGHT_TIMES_RARITY, YourStreamPrecision::Wide),
-        );
+        self::assertSame(4, $explanation->countMatches(YourStreamPrecision::Wide));
+        self::assertSame(4.0, $explanation->matchesPerDay(YourStreamPrecision::Wide));
         self::assertSame(['Bundesliga'], array_column($explanation->words, 'word'));
         self::assertSame(6, $explanation->entryCount);
         self::assertSame(0, $this->entityManager->getRepository(YourStreamWord::class)->count([]));
         self::assertSame(0, $this->entityManager->getRepository(YourStreamEntry::class)->count([]));
-    }
-
-    public function testFlatRarityScoresEveryWordAtItsLanguagesMeanRarity(): void
-    {
-        $this->fixtures->favourite($this->user, $this->feed, 'Olympia heute');
-        $this->fixtures->favourite($this->user, $this->feed, 'Olympia morgen');
-        $this->fixtures->entries($this->feed, 1, 'Bundesliga', self::TODAY);
-        $this->fixtures->entries($this->feed, 60, 'Olympia', self::TODAY);
-
-        $matches = $this->explain(1)->matchesByVariantAndPrecision;
-
-        self::assertSame(1, $matches[YourStreamExplanationModel::WEIGHT_TIMES_RARITY]['widest']);
-        self::assertSame(61, $matches[YourStreamExplanationModel::FLAT_RARITY]['wide']);
-        self::assertSame(1, $matches[YourStreamExplanationModel::FLAT_RARITY]['narrowest']);
     }
 
     public function testMatchesPerDaySpreadTheMatchesOverTheDays(): void
@@ -85,10 +69,7 @@ final class YourStreamExplainerTest extends DbTestCase
 
         $explanation = $this->explain(2);
 
-        self::assertSame(
-            1.5,
-            $explanation->matchesPerDay(YourStreamExplanationModel::FLAT_RARITY, YourStreamPrecision::Narrowest),
-        );
+        self::assertSame(1.5, $explanation->matchesPerDay(YourStreamPrecision::Narrowest));
     }
 
     private function explain(int $days): YourStreamExplanationModel

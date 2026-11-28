@@ -8,23 +8,25 @@ use App\Enum\YourStreamPrecision;
 
 final readonly class YourStreamExplanationModel
 {
-    public const string WEIGHT_TIMES_RARITY = 'weightTimesRarity';
-    public const string FLAT_RARITY = 'flatRarity';
-
     /**
-     * @param list<StreamWordModel>             $words
-     * @param array<string, array<string, int>> $matchesByVariantAndPrecision variant => precision value => matches
+     * @param list<StreamWordModel> $words
+     * @param array<string, int>    $matchesByPrecision precision value => matches
      */
     public function __construct(
         public array $words,
         public int $days,
         public int $entryCount,
-        public array $matchesByVariantAndPrecision,
+        public array $matchesByPrecision,
     ) {
     }
 
-    public function matchesPerDay(string $variant, YourStreamPrecision $precision): float
+    public function countMatches(YourStreamPrecision $precision): int
     {
-        return ($this->matchesByVariantAndPrecision[$variant][$precision->value] ?? 0) / $this->days;
+        return $this->matchesByPrecision[$precision->value] ?? 0;
+    }
+
+    public function matchesPerDay(YourStreamPrecision $precision): float
+    {
+        return $this->countMatches($precision) / $this->days;
     }
 }

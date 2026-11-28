@@ -45,6 +45,7 @@ final class YourStreamExplainCommandTest extends DbTestCase
         self::assertStringContainsString('Bundesliga', $display);
         self::assertStringContainsString('widest', $display);
         self::assertStringContainsString('3 entries over 1 day', $display);
+        self::assertMatchesRegularExpression('/widest\s+1\.0\s+3 \(3\.0\)/', $display);
     }
 
     private function command(YourStreamExplainFixtures $fixtures): YourStreamExplainCommand
