@@ -281,7 +281,8 @@ function readSlots(selectors: string[]): SlotReport[] {
   const measureCap = (slot: Element): number => {
     const probe = document.createElement('div');
     probe.style.cssText = 'position: absolute; visibility: hidden; width: var(--icon-lead-cap)';
-    slot.append(probe);
+    // In the row: a slot may be scaled, which would scale the probe with it.
+    (slot.parentElement ?? slot).append(probe);
     const width = probe.getBoundingClientRect().width;
     probe.remove();
     return width;

@@ -1,3 +1,5 @@
+@use '../../../theme/icon-lead';
+
 :host {
   display: inline-flex;
 
@@ -9,10 +11,14 @@
 }
 
 button {
+  @include icon-lead.first-line('> app-icon, > app-pending-dots', '> .count');
+  @include icon-lead.centred-line;
+
   display: inline-flex;
-  align-items: center;
   justify-content: center;
   gap: var(--space-1);
+  font-size: var(--fs-sm);
+  min-block-size: calc(var(--tap-glyph) + 2 * var(--space-0));
   padding: var(--space-0);
   border: none;
   border-radius: var(--radius-sm);
@@ -26,14 +32,17 @@ app-icon {
 }
 
 .likes {
+  @include icon-lead.first-line('> app-icon', '> .count');
+  @include icon-lead.centred-line;
+
   display: inline-flex;
-  align-items: center;
   gap: var(--space-1);
+  min-block-size: var(--tap-glyph);
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .count {
-  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -45,6 +54,7 @@ app-icon {
    without making the row taller. */
 @media (pointer: coarse) {
   button {
+    min-block-size: var(--tap-target);
     padding-block: calc((var(--tap-target) - var(--tap-glyph)) / 2);
     margin-block: calc((var(--tap-target) - var(--tap-glyph)) / -2);
     padding-inline: var(--space-2);

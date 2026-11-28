@@ -1,4 +1,5 @@
 @use '../../../theme/action-button';
+@use '../../../theme/icon-lead';
 
 :host {
   --action-height: calc(var(--space-5) + var(--space-1));
@@ -23,8 +24,9 @@
 }
 
 .count {
+  @include icon-lead.first-line('> app-icon', '> .number');
+
   display: inline-flex;
-  align-items: center;
   gap: var(--space-1);
   color: var(--text-muted);
 }
