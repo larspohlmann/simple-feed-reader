@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\InterestTerm;
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermsModel;
+use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -56,7 +56,7 @@ final class InterestTermRepository extends ServiceEntityRepository
     /**
      * @param list<int> $userIds
      *
-     * @return array<int, InterestTermsModel> every requested id, an empty model for none
+     * @return array<int, StreamStrengthsModel> every requested id, an empty model for none
      */
     public function findTermsForUsers(array $userIds): array
     {
@@ -66,11 +66,11 @@ final class InterestTermRepository extends ServiceEntityRepository
 
         $strengths = array_fill_keys($userIds, []);
         foreach ($this->readStrengthRows($userIds) as $row) {
-            $key = InterestTermsModel::languageKey($row['language']);
+            $key = StreamStrengthsModel::languageKey($row['language']);
             $strengths[(int) $row['userId']][$key][$row['stem']] = (float) $row['weight'] * (float) $row['rarity'];
         }
 
-        return array_map(InterestTermsModel::fromStrengths(...), $strengths);
+        return array_map(StreamStrengthsModel::fromStrengths(...), $strengths);
     }
 
     /**

@@ -11,15 +11,15 @@ use App\Service\Operations\Worker\Message\PollSocialNotifications;
 use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
-use App\Service\Operations\Worker\Message\RefreshDueInterestTerms;
 use App\Service\Operations\Worker\Message\RefreshProfileImages;
+use App\Service\Operations\Worker\Message\RefreshYourStreamWords;
 use App\Service\Operations\Worker\Message\ResolvePendingLinks;
 use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
 use App\Service\Operations\Worker\Message\SendDueDigests;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
-use App\Service\Operations\Worker\Message\SweepForYouStream;
 use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Operations\Worker\Message\SweepYourStream;
 use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
 use App\Service\Operations\Worker\Message\VerifyPendingImages;
@@ -64,8 +64,8 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('1 minute', new ResolvePendingLinks()))
             ->add(RecurringMessage::every('5 minutes', new PollSocialNotifications()))
             ->add(RecurringMessage::every('5 minutes', new RunDueStoryAiTasks()))
-            ->add(RecurringMessage::every('5 minutes', new RefreshDueInterestTerms()))
-            ->add(RecurringMessage::every('1 minute', new SweepForYouStream()))
+            ->add(RecurringMessage::every('5 minutes', new RefreshYourStreamWords()))
+            ->add(RecurringMessage::every('1 minute', new SweepYourStream()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

@@ -19,7 +19,6 @@ use App\Entity\EntryState;
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Entity\FeedDirectoryScope;
-use App\Entity\ForYouStreamEntry;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\InterestTerm;
@@ -69,6 +68,7 @@ use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Entity\UserPasskey;
 use App\Entity\WorkerHeartbeat;
+use App\Entity\YourStreamEntry;
 use App\Service\Operations\Backup\AccountBackupExporter;
 use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Tests\DbTestCase;
@@ -226,7 +226,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         InterestTermSet::class => 'The stream\'s sweep mark and term stamp (#2582); derived, and not restored: a new '
             . 'set is stored once a profile exists, with its mark at the then-current ceiling, so nothing is '
             . 'backfilled.',
-        ForYouStreamEntry::class => 'A derived For you stream match (#2582); a restore replaces the entries it '
+        YourStreamEntry::class => 'A derived For you stream match (#2582); a restore replaces the entries it '
             . 'points at, and the stream refills only from articles arriving after new terms exist.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',
         RecommendationItem::class => 'Per-run picks, tied to a run that is not restored.',

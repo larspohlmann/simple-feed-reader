@@ -17,11 +17,11 @@ services:
     App\Tests\Support\StubChatClient:
         autowire: true
 
-    App\Service\Curation\Recommendation\Stream\ForYouStreamSweep:
+    App\Service\Curation\YourStream\YourStreamSweep:
         autowire: true
         public: true
 
-    App\Service\Curation\Recommendation\Stream\InterestTermSweep:
+    App\Service\Curation\YourStream\YourStreamWordSweep:
         autowire: true
         public: true
 

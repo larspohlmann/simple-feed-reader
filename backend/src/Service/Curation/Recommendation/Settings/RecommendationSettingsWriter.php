@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Settings;
 
-use App\Entity\ForYouStreamTuning;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
+use App\Entity\YourStreamTuning;
 use App\Repository\RecommendationSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -31,9 +31,9 @@ final readonly class RecommendationSettingsWriter
         $this->entityManager->flush();
     }
 
-    public function saveForYouStream(User $user, ForYouStreamTuning $tuning): void
+    public function saveYourStream(User $user, YourStreamTuning $tuning): void
     {
-        $this->loadOrCreate($user)->updateForYouStream($tuning);
+        $this->loadOrCreate($user)->updateYourStream($tuning);
         $this->entityManager->flush();
     }
 

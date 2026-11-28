@@ -68,9 +68,9 @@ final class SubscriptionCountsJson
             'unreadTotals' => UnreadTotalsJson::from($tallies->subscriptions->unreadTotals),
             'notifications' => self::notificationCounts($tallies->subscriptions->notificationsUnseen),
             'forYouStream' => [
-                'available' => $tallies->subscriptions->forYouStream->available,
-                'unreadCount' => $tallies->subscriptions->forYouStream->unreadCount,
-                'entryCount' => $tallies->subscriptions->forYouStream->entryCount,
+                'available' => $tallies->subscriptions->yourStream->available,
+                'unreadCount' => $tallies->subscriptions->yourStream->unreadCount,
+                'entryCount' => $tallies->subscriptions->yourStream->entryCount,
             ],
         ];
     }

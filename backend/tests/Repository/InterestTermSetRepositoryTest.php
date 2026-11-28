@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\ForYouStreamTuning;
 use App\Entity\InterestTermSet;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
-use App\Enum\ForYouStreamPrecision;
+use App\Entity\YourStreamTuning;
+use App\Enum\YourStreamPrecision;
 use App\Repository\InterestTermSetRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -39,11 +39,11 @@ final class InterestTermSetRepositoryTest extends DbTestCase
     public function testFindStreamTuningsHoldsEachAskedOwnerAndTheDefaultsWithoutASettingsRow(): void
     {
         $narrowest = $this->accountAtMark('narrowest@example.com', 0);
-        $this->storeTuning($narrowest, false, ForYouStreamPrecision::Narrowest);
+        $this->storeTuning($narrowest, false, YourStreamPrecision::Narrowest);
         $defaulted = $this->accountAtMark('defaulted@example.com', 0);
         $this->entityManager->persist(new RecommendationSettings($defaulted));
         $unset = $this->accountAtMark('unset@example.com', 0);
-        $this->storeTuning($this->accountAtMark('not-asked@example.com', 0), true, ForYouStreamPrecision::Widest);
+        $this->storeTuning($this->accountAtMark('not-asked@example.com', 0), true, YourStreamPrecision::Widest);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -53,9 +53,9 @@ final class InterestTermSetRepositoryTest extends DbTestCase
         ksort($tunings);
 
         self::assertEquals([
-            $narrowest->requireId() => new ForYouStreamTuning(false, ForYouStreamPrecision::Narrowest),
-            $defaulted->requireId() => ForYouStreamTuning::defaults(),
-            $unset->requireId() => ForYouStreamTuning::defaults(),
+            $narrowest->requireId() => new YourStreamTuning(false, YourStreamPrecision::Narrowest),
+            $defaulted->requireId() => YourStreamTuning::defaults(),
+            $unset->requireId() => YourStreamTuning::defaults(),
         ], $tunings);
     }
 
@@ -104,9 +104,9 @@ final class InterestTermSetRepositoryTest extends DbTestCase
     private function storeTuning(
         User $user,
         bool $enabled,
-        ForYouStreamPrecision $precision = ForYouStreamPrecision::Balanced,
+        YourStreamPrecision $precision = YourStreamPrecision::Balanced,
     ): void {
         RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeForYouStreamTuning($user, new ForYouStreamTuning($enabled, $precision));
+            ->storeYourStreamTuning($user, new YourStreamTuning($enabled, $precision));
     }
 }

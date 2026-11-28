@@ -7,7 +7,6 @@ namespace App\Tests\Service\Identity\Account;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
 use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
@@ -32,6 +31,7 @@ use App\Entity\TrendingStoryEntry;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
+use App\Entity\YourStreamEntry;
 use App\Enum\CallPhase;
 use App\Enum\FeedLanguage;
 use App\Enum\PrivateFeedSyncReason;
@@ -287,7 +287,7 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->clear();
         self::assertSame([], $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $userId]));
         self::assertNull($this->entityManager->find(InterestTermSet::class, $userId));
-        $streamEntries = $this->entityManager->getRepository(ForYouStreamEntry::class);
+        $streamEntries = $this->entityManager->getRepository(YourStreamEntry::class);
         self::assertSame([], $streamEntries->findBy(['user' => $userId]));
         self::assertCount(1, $streamEntries->findBy(['user' => $bystanderId]));
         $bystanderTerms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $bystanderId]);
@@ -304,7 +304,7 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->persist($feed);
         $entry = new Entry($feed, 'stream', null, 'Solar', $profileAt, $profileAt);
         $this->entityManager->persist($entry);
-        $this->entityManager->persist(new ForYouStreamEntry($user, $entry, $profileAt, 2.0, 'solar'));
+        $this->entityManager->persist(new YourStreamEntry($user, $entry, $profileAt, 2.0, 'solar'));
         $this->entityManager->flush();
     }
 

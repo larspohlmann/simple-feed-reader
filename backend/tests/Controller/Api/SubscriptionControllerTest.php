@@ -7,14 +7,14 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
-use App\Entity\ForYouStreamTuning;
 use App\Entity\InclusionChange;
 use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\ForYouStreamPrecision;
+use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamTuning;
+use App\Enum\YourStreamPrecision;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -192,7 +192,7 @@ final class SubscriptionControllerTest extends ApiTestCase
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);
             $entityManager->persist($entry);
             $matchedAt = new \DateTimeImmutable('2026-11-27 12:00:00');
-            $entityManager->persist(new ForYouStreamEntry($user, $entry, $matchedAt, 1.0, 'stem'));
+            $entityManager->persist(new YourStreamEntry($user, $entry, $matchedAt, 1.0, 'stem'));
             $entries[] = $entry;
         }
         $state = new EntryState($user, $entries[0]);
@@ -223,7 +223,7 @@ final class SubscriptionControllerTest extends ApiTestCase
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);
             $entityManager->persist($entry);
             $entityManager->persist(
-                new ForYouStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
+                new YourStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
             );
             $entries[] = $entry;
         }
@@ -232,7 +232,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $entityManager->persist($state);
         $entityManager->flush();
         RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeForYouStreamTuning($user, new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced));
+            ->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
 
         $client->request('GET', '/api/subscriptions/counts', server: $this->bearerFor($user));
 

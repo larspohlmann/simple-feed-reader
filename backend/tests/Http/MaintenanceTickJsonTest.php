@@ -10,11 +10,11 @@ use App\Service\Content\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Content\LinkResolution\Model\LinkResolutionReportModel;
 use App\Service\Content\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Curation\Recommendation\Run\Model\ForYouSweepReportModel;
-use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamSweepReportModel;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermSweepReportModel;
 use App\Service\Curation\Trending\Model\StoryMatchModel;
 use App\Service\Curation\Trending\Model\TrendingBuildReportModel;
 use App\Service\Curation\Trending\Model\TrendingRebuildReportModel;
+use App\Service\Curation\YourStream\Model\YourStreamSweepReportModel;
+use App\Service\Curation\YourStream\Model\YourStreamWordSweepReportModel;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Library\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
@@ -44,7 +44,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'profileImages' => new ProfileImageSweepReportModel(18, 19),
                 'hiddenProfiles' => new HiddenProfileSwitchReportModel(24, 25),
                 'savedSearchMemberships' => new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
-                'forYouStream' => new ForYouStreamSweepReportModel(5, 6, 7, true),
+                'forYouStream' => new YourStreamSweepReportModel(5, 6, 7, true),
                 'privateFeedSync' => new PrivateFeedSyncReportModel(20, 21, 22, 23),
                 'notificationPoll' => new NotificationPollReportModel(40, 41, 42, 43),
                 'trending' => new TrendingRebuildReportModel([
@@ -73,7 +73,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         0,
                     ),
                 ]),
-                'interestTerms' => new InterestTermSweepReportModel(3),
+                'interestTerms' => new YourStreamWordSweepReportModel(3),
             ]),
             new LokiSpoolReportModel(14, 15),
         );

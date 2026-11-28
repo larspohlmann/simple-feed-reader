@@ -1,0 +1,80 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Curation\YourStream;
+
+use App\Entity\InterestPhrase;
+use App\Entity\InterestTerm;
+use App\Enum\FeedLanguage;
+use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
+use App\Service\Curation\YourStream\Model\WordStemModel;
+use App\Service\Foundation\Stemming\StopWordStems;
+use App\Service\Foundation\Stemming\WordEquivalents;
+
+final readonly class PhraseStems
+{
+    public const float PART_WEIGHT_SHARE = 0.5;
+
+    public function __construct(private WordEquivalents $equivalents, private StopWordStems $stopWordStems)
+    {
+    }
+
+    /**
+     * @param list<InterestPhrase> $terms
+     *
+     * @return list<WordStemModel> one per language and stem, at its highest weight
+     */
+    public function buildTermStems(array $terms): array
+    {
+        $stems = [];
+        foreach ($terms as $term) {
+            foreach ([$term->language, null] as $language) {
+                array_push($stems, ...$this->readStems($term, $language));
+            }
+        }
+
+        return self::keepHighestWeights($stems);
+    }
+
+    /**
+     * @param list<WordStemModel> $stems
+     *
+     * @return list<WordStemModel>
+     */
+    private static function keepHighestWeights(array $stems): array
+    {
+        $highest = [];
+        foreach ($stems as $stem) {
+            $key = StreamStrengthsModel::languageKey($stem->language) . ':' . $stem->stem;
+            if (!isset($highest[$key]) || $stem->weight > $highest[$key]->weight) {
+                $highest[$key] = $stem;
+            }
+        }
+
+        return array_values($highest);
+    }
+
+    /** @return list<WordStemModel> */
+    private function readStems(InterestPhrase $term, ?FeedLanguage $language): array
+    {
+        $stems = [];
+        foreach ($this->equivalents->canonicalizeWords($term->phrase) as [$word, $bare]) {
+            foreach ($this->equivalents->stemWordAndParts($word, $bare, $language) as $position => $stem) {
+                if (!$this->isStorable($stem, $language)) {
+                    continue;
+                }
+                $weight = $position === 0 ? $term->weight : $term->weight * self::PART_WEIGHT_SHARE;
+                $stems[] = new WordStemModel($language, $stem, $weight);
+            }
+        }
+
+        return $stems;
+    }
+
+    private function isStorable(string $stem, ?FeedLanguage $language): bool
+    {
+        return mb_strlen($stem) <= InterestTerm::STEM_MAX_LENGTH
+            && !$this->stopWordStems->isStopWordStem($stem, $language);
+    }
+}

@@ -8,15 +8,15 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
-use App\Repository\ForYouStreamEntryRepository;
 use App\Repository\InterestTermSetRepository;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\SocialNotificationRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
-use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
+use App\Repository\YourStreamEntryRepository;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
+use App\Service\Library\Subscription\Model\YourStreamTallyModel;
 
 final readonly class SubscriptionTallyReader
 {
@@ -29,7 +29,7 @@ final readonly class SubscriptionTallyReader
         private EntryListRepository $entryList,
         private SocialNotificationRepository $socialNotifications,
         private InterestTermSetRepository $interestTermSets,
-        private ForYouStreamEntryRepository $streamEntries,
+        private YourStreamEntryRepository $streamEntries,
     ) {
     }
 
@@ -55,10 +55,10 @@ final readonly class SubscriptionTallyReader
         );
     }
 
-    private function countStream(int $userId): ForYouStreamTallyModel
+    private function countStream(int $userId): YourStreamTallyModel
     {
         if (!$this->interestTermSets->hasEnabledStreamForUser($userId)) {
-            return ForYouStreamTallyModel::unavailable();
+            return YourStreamTallyModel::unavailable();
         }
 
         return $this->streamEntries->countMembersAndUnread($userId);

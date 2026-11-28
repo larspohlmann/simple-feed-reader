@@ -51,7 +51,7 @@ final class RecommendationSettingsJson
             'showScoreAndReasons' => $effective->showScoreAndReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
             'workerAlive' => $state->workerAlive,
-            'forYouStream' => ForYouStreamSettingsJson::state($state->forYouStream),
+            'forYouStream' => YourStreamSettingsJson::state($state->yourStream),
         ];
     }
 

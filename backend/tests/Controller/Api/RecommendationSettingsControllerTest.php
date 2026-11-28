@@ -100,7 +100,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         self::assertSame($this->payload($client), $saved);
     }
 
-    public function testTheSettingsPutIgnoresAForYouStreamKey(): void
+    public function testTheSettingsPutIgnoresAYourStreamKey(): void
     {
         $client = static::createClient();
         $headers = $this->bearerFor($this->factory()->create('recsettings-stream-ignored@example.test'));
@@ -181,14 +181,14 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         $client->request('GET', self::URI, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $forYouStream = $this->payload($client)['forYouStream'];
-        self::assertIsArray($forYouStream);
+        $yourStream = $this->payload($client)['forYouStream'];
+        self::assertIsArray($yourStream);
         self::assertEquals(
             [['language' => 'en', 'phrases' => [
                 ['phrase' => 'grid', 'weight' => 1],
                 ['phrase' => 'heat pumps', 'weight' => 0.8],
             ]]],
-            $forYouStream['phrases'],
+            $yourStream['phrases'],
         );
     }
 

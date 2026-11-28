@@ -9,7 +9,7 @@ use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
-use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamStateModel;
+use App\Service\Curation\YourStream\Model\YourStreamSettingsStateModel;
 
 final readonly class RecommendationSettingsStateReader
 {
@@ -29,8 +29,8 @@ final readonly class RecommendationSettingsStateReader
             $account->forConnection($user->getActiveAiProviderSettings()),
             $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
-            new ForYouStreamStateModel(
-                $account->forYouStreamTuning(),
+            new YourStreamSettingsStateModel(
+                $account->yourStreamTuning(),
                 $this->termSets->findForUser($user)?->getPhrases() ?? [],
             ),
         );

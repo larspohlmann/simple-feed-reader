@@ -9,7 +9,6 @@ use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamTuning;
 use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
@@ -20,6 +19,7 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Entity\YourStreamTuning;
 use App\Enum\CallPhase;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\ScoringProtocol;
@@ -203,9 +203,9 @@ final readonly class RecommendationRunFixtures
         $this->entityManager->flush();
     }
 
-    public function storeForYouStreamTuning(User $user, ForYouStreamTuning $tuning): void
+    public function storeYourStreamTuning(User $user, YourStreamTuning $tuning): void
     {
-        $this->settingsRowOf($user)->updateForYouStream($tuning);
+        $this->settingsRowOf($user)->updateYourStream($tuning);
         $this->entityManager->flush();
     }
 

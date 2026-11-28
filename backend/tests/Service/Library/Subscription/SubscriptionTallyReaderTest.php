@@ -7,7 +7,6 @@ namespace App\Tests\Service\Library\Subscription;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
 use App\Entity\InclusionChange;
 use App\Entity\InterestTermSet;
 use App\Entity\RecommendationItem;
@@ -15,6 +14,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Entity\YourStreamEntry;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
@@ -131,7 +131,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $reader = $this->reader();
         $this->startRecordingQueries();
 
-        $stream = $reader->countTallies($user)->forYouStream;
+        $stream = $reader->countTallies($user)->yourStream;
 
         self::assertFalse($stream->available);
         self::assertSame(0, $stream->unreadCount);
@@ -157,7 +157,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $stream = $this->reader()->countTallies($user)->forYouStream;
+        $stream = $this->reader()->countTallies($user)->yourStream;
 
         self::assertTrue($stream->available);
         self::assertSame(1, $stream->unreadCount);
@@ -178,7 +178,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $this->streamMember($user, $this->entry($feed, 'hidden-member'));
         $this->entityManager->flush();
 
-        $stream = $this->reader()->countTallies($user)->forYouStream;
+        $stream = $this->reader()->countTallies($user)->yourStream;
 
         self::assertTrue($stream->available);
         self::assertSame(0, $stream->unreadCount);
@@ -196,7 +196,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
     private function streamMember(User $user, Entry $entry): void
     {
         $this->entityManager->persist(
-            new ForYouStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
+            new YourStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
         );
     }
 

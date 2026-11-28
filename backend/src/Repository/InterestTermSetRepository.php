@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\ForYouStreamTuning;
 use App\Entity\InterestTermSet;
 use App\Entity\User;
-use App\Enum\ForYouStreamPrecision;
+use App\Entity\YourStreamTuning;
+use App\Enum\YourStreamPrecision;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -31,7 +31,7 @@ final class InterestTermSetRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(s.user) = :userId')
             ->setParameter('userId', $userId)
             ->setMaxResults(1);
-        ForYouStreamSettingsDql::restrictToEnabled($qb, 's.user');
+        YourStreamSettingsDql::restrictToEnabled($qb, 's.user');
 
         return $qb->getQuery()->getOneOrNullResult() !== null;
     }
@@ -60,28 +60,28 @@ final class InterestTermSetRepository extends ServiceEntityRepository
     /**
      * @param list<int> $userIds
      *
-     * @return array<int, ForYouStreamTuning> one per asked owner with a term set, the defaults without a settings row
+     * @return array<int, YourStreamTuning> one per asked owner with a term set, the defaults without a settings row
      */
     public function findStreamTunings(array $userIds): array
     {
         $qb = $this->createQueryBuilder('s')
             ->select(
                 'IDENTITY(s.user) AS userId',
-                \sprintf('%s.forYouStream.enabled AS enabled', ForYouStreamSettingsDql::ALIAS),
-                \sprintf('%s.forYouStream.precision AS precision', ForYouStreamSettingsDql::ALIAS),
+                \sprintf('%s.forYouStream.enabled AS enabled', YourStreamSettingsDql::ALIAS),
+                \sprintf('%s.forYouStream.precision AS precision', YourStreamSettingsDql::ALIAS),
             )
             ->andWhere('IDENTITY(s.user) IN (:userIds)')
             ->setParameter('userIds', $userIds);
-        ForYouStreamSettingsDql::joinSettingsRow($qb, 's.user');
+        YourStreamSettingsDql::joinSettingsRow($qb, 's.user');
 
-        /** @var list<array{userId: int|string, enabled: ?bool, precision: ?ForYouStreamPrecision}> $rows */
+        /** @var list<array{userId: int|string, enabled: ?bool, precision: ?YourStreamPrecision}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
 
         $tuningsByUserId = [];
         foreach ($rows as $row) {
             $tuningsByUserId[(int) $row['userId']] = null === $row['enabled'] || null === $row['precision']
-                ? ForYouStreamTuning::defaults()
-                : new ForYouStreamTuning($row['enabled'], $row['precision']);
+                ? YourStreamTuning::defaults()
+                : new YourStreamTuning($row['enabled'], $row['precision']);
         }
 
         return $tuningsByUserId;

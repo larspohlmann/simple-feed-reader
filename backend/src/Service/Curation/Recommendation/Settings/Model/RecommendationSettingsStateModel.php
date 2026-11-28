@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Settings\Model;
 
 use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamStateModel;
+use App\Service\Curation\YourStream\Model\YourStreamSettingsStateModel;
 
 /** Everything the recommendation settings card shows, read from one load of the settings row. */
 final readonly class RecommendationSettingsStateModel
@@ -14,7 +14,7 @@ final readonly class RecommendationSettingsStateModel
         public EffectiveRecommendationSettingsModel $effective,
         public RecommendationEngineCapabilitiesModel $capabilities,
         public bool $workerAlive,
-        public ForYouStreamStateModel $forYouStream,
+        public YourStreamSettingsStateModel $yourStream,
     ) {
     }
 }

@@ -63,8 +63,8 @@ final class RecommendationSettings
     #[ORM\Embedded(class: ProfileTuning::class, columnPrefix: false)]
     private ProfileTuning $profileTuning;
 
-    #[ORM\Embedded(class: ForYouStreamTuning::class, columnPrefix: false)]
-    private ForYouStreamTuning $forYouStream;
+    #[ORM\Embedded(class: YourStreamTuning::class, columnPrefix: false)]
+    private YourStreamTuning $forYouStream;
 
     /** The connection that builds the profile; null means the active one. */
     #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
@@ -81,7 +81,7 @@ final class RecommendationSettings
         $this->storedProfile = StoredProfile::none();
         $this->poolLimits = RecommendationPoolLimits::defaults();
         $this->profileTuning = ProfileTuning::defaults();
-        $this->forYouStream = ForYouStreamTuning::defaults();
+        $this->forYouStream = YourStreamTuning::defaults();
     }
 
     public function getUser(): User
@@ -101,12 +101,12 @@ final class RecommendationSettings
         $this->showScoreAndReasons = $values->showScoreAndReasons;
     }
 
-    public function updateForYouStream(ForYouStreamTuning $tuning): void
+    public function updateYourStream(YourStreamTuning $tuning): void
     {
         $this->forYouStream = $tuning;
     }
 
-    public function getForYouStreamTuning(): ForYouStreamTuning
+    public function getYourStreamTuning(): YourStreamTuning
     {
         return $this->forYouStream;
     }

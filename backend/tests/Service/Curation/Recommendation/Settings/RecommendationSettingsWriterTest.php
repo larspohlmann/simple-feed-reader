@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Settings;
 
-use App\Entity\ForYouStreamTuning;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
-use App\Enum\ForYouStreamPrecision;
+use App\Entity\YourStreamTuning;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\YourStreamPrecision;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
@@ -110,46 +110,46 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(9, $profileSettings->viewedCap);
     }
 
-    public function testSaveForYouStreamCreatesTheRowWithTheTuningAndDefaultSettings(): void
+    public function testSaveYourStreamCreatesTheRowWithTheTuningAndDefaultSettings(): void
     {
-        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow));
+        $this->writer->saveYourStream($this->user, new YourStreamTuning(false, YourStreamPrecision::Narrow));
 
         $reloaded = $this->reloaded();
-        self::assertFalse($reloaded->getForYouStreamTuning()->isEnabled());
-        self::assertSame(ForYouStreamPrecision::Narrow, $reloaded->getForYouStreamTuning()->getPrecision());
+        self::assertFalse($reloaded->getYourStreamTuning()->isEnabled());
+        self::assertSame(YourStreamPrecision::Narrow, $reloaded->getYourStreamTuning()->getPrecision());
         self::assertSame(RecommendationSettings::DEFAULT_FAVORITES_CAP, $reloaded->values()->favoritesCap);
     }
 
-    public function testSaveForYouStreamKeepsTheOtherSettings(): void
+    public function testSaveYourStreamKeepsTheOtherSettings(): void
     {
         $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
 
-        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(true, ForYouStreamPrecision::Narrowest));
+        $this->writer->saveYourStream($this->user, new YourStreamTuning(true, YourStreamPrecision::Narrowest));
 
         $reloaded = $this->reloaded();
         self::assertTrue($reloaded->values()->showScoreAndReasons);
         self::assertSame(10, $reloaded->values()->favoritesCap);
-        self::assertSame(ForYouStreamPrecision::Narrowest, $reloaded->getForYouStreamTuning()->getPrecision());
+        self::assertSame(YourStreamPrecision::Narrowest, $reloaded->getYourStreamTuning()->getPrecision());
     }
 
     public function testSavingTheSettingsKeepsTheStoredStreamTuning(): void
     {
-        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced));
+        $this->writer->saveYourStream($this->user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
 
         $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
 
         $reloaded = $this->reloaded();
         self::assertTrue($reloaded->values()->showScoreAndReasons);
-        self::assertFalse($reloaded->getForYouStreamTuning()->isEnabled());
-        self::assertSame(ForYouStreamPrecision::Balanced, $reloaded->getForYouStreamTuning()->getPrecision());
+        self::assertFalse($reloaded->getYourStreamTuning()->isEnabled());
+        self::assertSame(YourStreamPrecision::Balanced, $reloaded->getYourStreamTuning()->getPrecision());
     }
 
     public function testANewRowStreamsAtTheDefaultPrecision(): void
     {
-        $tuning = (new RecommendationSettings($this->user))->getForYouStreamTuning();
+        $tuning = (new RecommendationSettings($this->user))->getYourStreamTuning();
 
         self::assertTrue($tuning->isEnabled());
-        self::assertSame(ForYouStreamPrecision::Wide, $tuning->getPrecision());
+        self::assertSame(YourStreamPrecision::Wide, $tuning->getPrecision());
     }
 
     private function values(bool $showScoreAndReasons): RecommendationSettingsValues

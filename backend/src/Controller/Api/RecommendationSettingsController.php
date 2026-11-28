@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Dto\Recommendation\SaveForYouStreamRequest;
 use App\Dto\Recommendation\SaveRecommendationSettingsRequest;
+use App\Dto\Recommendation\SaveYourStreamRequest;
 use App\Entity\User;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsStateReader;
@@ -41,11 +41,11 @@ final readonly class RecommendationSettingsController
     }
 
     #[Route('/for-you-stream', name: 'api_me_ai_recommendations_for_you_stream_save', methods: ['PUT'])]
-    public function saveForYouStream(
+    public function saveYourStream(
         #[CurrentUser] User $user,
-        #[MapRequestPayload] SaveForYouStreamRequest $request,
+        #[MapRequestPayload] SaveYourStreamRequest $request,
     ): JsonResponse {
-        $this->writer->saveForYouStream($user, $request->toTuning());
+        $this->writer->saveYourStream($user, $request->toTuning());
 
         return new JsonResponse(RecommendationSettingsJson::state($this->stateReader->readState($user)));
     }

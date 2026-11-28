@@ -18,7 +18,7 @@ final readonly class SubscriptionTalliesModel
         public array $flagCounts,
         public UnreadTotalsModel $unreadTotals,
         public array $notificationsUnseen,
-        public ForYouStreamTallyModel $forYouStream,
+        public YourStreamTallyModel $yourStream,
     ) {
     }
 }
