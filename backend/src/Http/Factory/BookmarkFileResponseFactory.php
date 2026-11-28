@@ -8,6 +8,7 @@ use App\Service\Library\SavedListExport\Model\SavedListEntryModel;
 use App\Service\Library\SavedListExport\Model\SavedListFilenameModel;
 use App\Service\Library\SavedListExport\Model\SavedListScopeModel;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final readonly class BookmarkFileResponseFactory
@@ -33,7 +34,7 @@ final readonly class BookmarkFileResponseFactory
             },
             headers: [
                 'Content-Type' => 'text/html; charset=UTF-8',
-                'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
+                'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $filename),
             ],
         );
     }

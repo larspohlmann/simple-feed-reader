@@ -59,7 +59,7 @@ final class SavedListExportGoogleReaderTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
         self::assertSame('application/json', $this->client->getResponse()->headers->get('Content-Type'));
         self::assertSame(
-            sprintf('attachment; filename="simplefeedreader-kept-%s-starred.json"', $this->today()),
+            sprintf('attachment; filename=simplefeedreader-kept-%s-starred.json', $this->today()),
             $this->client->getResponse()->headers->get('Content-Disposition'),
         );
         self::assertSame(self::STARRED, $document['id']);

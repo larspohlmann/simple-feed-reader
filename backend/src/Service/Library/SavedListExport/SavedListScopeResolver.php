@@ -18,10 +18,6 @@ final readonly class SavedListScopeResolver
     {
     }
 
-    /**
-     * @throws ValidationException when the view, the label or the order is unusable
-     * @throws RecordNotFoundException when the label is unknown or another user's
-     */
     public function requireScope(int $userId, ?string $view, ?string $label, ?string $order): SavedListScopeModel
     {
         $entryView = $this->requireExportableView($view);

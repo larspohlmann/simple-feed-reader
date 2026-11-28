@@ -9,6 +9,7 @@ use App\Service\Library\SavedListExport\Model\SavedListFilenameModel;
 use App\Service\Library\SavedListExport\Model\SavedListOriginModel;
 use App\Service\Library\SavedListExport\Model\SavedListScopeModel;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final readonly class GoogleReaderStarredResponseFactory
@@ -48,7 +49,7 @@ final readonly class GoogleReaderStarredResponseFactory
             },
             headers: [
                 'Content-Type' => 'application/json',
-                'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
+                'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $filename),
             ],
         );
     }

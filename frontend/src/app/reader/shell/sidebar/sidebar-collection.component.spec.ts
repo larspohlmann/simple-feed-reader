@@ -363,7 +363,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
       transloco.setActiveLang('de');
       fixture.detectChanges();
       const list = transloco.translate('reader.favorites');
-      const unlabeled = transloco.translate('reader.export.unlabeled');
+      const unlabeled = transloco.translate('reader.labels.unlabeled');
 
       expect(list).not.toBe('Favorites');
       expect(

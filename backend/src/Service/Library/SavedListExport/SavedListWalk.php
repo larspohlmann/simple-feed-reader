@@ -37,8 +37,9 @@ final readonly class SavedListWalk
                 return;
             }
             $cursor = $this->buildCursorAfter($query->ordering()->sort, $rows[array_key_last($rows)]);
-            yield $this->mapRows($userId, $rows);
+            $models = $this->mapRows($userId, $rows);
             $this->entityManager->clear();
+            yield $models;
         } while (\count($rows) >= $query->limit);
     }
 

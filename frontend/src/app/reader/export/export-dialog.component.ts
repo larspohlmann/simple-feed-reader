@@ -45,10 +45,6 @@ export class ExportDialogComponent {
     return problem === null ? null : problem.detail || problem.title;
   });
 
-  protected choose(format: ExportFormat): void {
-    this.chosen.set(format);
-  }
-
   submit(): void {
     if (this.downloading()) return;
     const format = this.chosen();

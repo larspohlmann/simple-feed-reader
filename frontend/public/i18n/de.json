@@ -1961,8 +1961,7 @@
       "bookmarksDescription": "Für Browser und Lesezeichen-Tools wie Raindrop, Linkding, Wallabag oder Pinboard.",
       "googleReaderName": "Google-Reader-JSON",
       "googleReaderDescription": "Für Feedreader wie FreshRSS. Behält den Artikeltext und deine Labels. FreshRSS abonniert beim Import den Feed jedes Artikels.",
-      "submit": "Exportieren",
-      "unlabeled": "Ohne Label"
+      "submit": "Exportieren"
     }
   },
   "social": {

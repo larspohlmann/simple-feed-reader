@@ -1,24 +1,12 @@
 @let hasFolders = folders().length > 0;
 @let shown = hasFolders && (organising() || folder.expanded());
-@if (organising()) {
-  <div class="folder-head collection-head">
+<div class="folder-head collection-head" [class.current]="!organising() && headCurrent()">
+  @if (organising()) {
     <span class="section-link">
       <app-icon [name]="icon()" size="md" />
       <span class="label">{{ 'reader.' + collection() | transloco }}</span>
     </span>
-    <button
-      class="dots"
-      type="button"
-      aria-haspopup="dialog"
-      [attr.aria-label]="'reader.manage' | transloco: { name: listName() }"
-      (click)="openCollectionSheet()"
-    >
-      <app-icon name="more_horiz" size="md" />
-    </button>
-    <span class="trail" aria-hidden="true"></span>
-  </div>
-} @else {
-  <div class="folder-head collection-head" [class.current]="headCurrent()">
+  } @else {
     <a
       class="section-link"
       [routerLink]="['/']"
@@ -31,33 +19,43 @@
         <span class="section-count">{{ total() }}</span>
       }
     </a>
-    @if (!screen.isCoarse()) {
-      <app-sidebar-row-menu
-        [menuKey]="'collection-' + collection()"
-        [label]="'reader.manage' | transloco: { name: listName() }"
-      >
-        <ng-template>
-          <button role="menuitem" (click)="exportCollection()">
-            {{ 'reader.export.action' | transloco }}
-          </button>
-        </ng-template>
-      </app-sidebar-row-menu>
-    }
-    @if (hasFolders) {
-      <button
-        class="chevzone"
-        type="button"
-        [attr.aria-expanded]="shown"
-        [attr.aria-label]="toggleLabel() | transloco"
-        (click)="folder.toggle()"
-      >
-        <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
-      </button>
-    } @else {
-      <span class="trail" aria-hidden="true"></span>
-    }
-  </div>
-}
+  }
+  @if (organising()) {
+    <button
+      class="dots"
+      type="button"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'reader.manage' | transloco: { name: listName() }"
+      (click)="openSheet(null)"
+    >
+      <app-icon name="more_horiz" size="md" />
+    </button>
+  } @else if (!screen.isCoarse()) {
+    <app-sidebar-row-menu
+      [menuKey]="'collection-' + collection()"
+      [label]="'reader.manage' | transloco: { name: listName() }"
+    >
+      <ng-template>
+        <button role="menuitem" (click)="openExportDialog(null, listName())">
+          {{ 'reader.export.action' | transloco }}
+        </button>
+      </ng-template>
+    </app-sidebar-row-menu>
+  }
+  @if (!organising() && hasFolders) {
+    <button
+      class="chevzone"
+      type="button"
+      [attr.aria-expanded]="shown"
+      [attr.aria-label]="toggleLabel() | transloco"
+      (click)="folder.toggle()"
+    >
+      <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
+    </button>
+  } @else {
+    <span class="trail" aria-hidden="true"></span>
+  }
+</div>
 @if (shown) {
   <div class="sublist">
     @for (folder of folders(); track folder.filter) {
@@ -95,21 +93,20 @@
             }
           </a>
         }
-        @let folderLabel = folderName(folder);
         @if (organising()) {
           <button
             class="dots"
             type="button"
             aria-haspopup="dialog"
-            [attr.aria-label]="'reader.manage' | transloco: { name: folderLabel }"
-            (click)="openFolderSheet(folder)"
+            [attr.aria-label]="'reader.manage' | transloco: { name: folderName(folder) }"
+            (click)="openSheet(folder)"
           >
             <app-icon name="more_horiz" size="md" />
           </button>
         } @else if (!screen.isCoarse()) {
           <app-sidebar-row-menu
             [menuKey]="menuKey(folder)"
-            [label]="'reader.manage' | transloco: { name: folderLabel }"
+            [label]="'reader.manage' | transloco: { name: folderName(folder) }"
           >
             <ng-template>
               @if (label !== null) {
@@ -120,7 +117,10 @@
                   {{ 'reader.labels.delete' | transloco }}
                 </button>
               }
-              <button role="menuitem" (click)="exportFolder(folder)">
+              <button
+                role="menuitem"
+                (click)="openExportDialog(folder.filter, exportTitle(folder))"
+              >
                 {{ 'reader.export.action' | transloco }}
               </button>
             </ng-template>

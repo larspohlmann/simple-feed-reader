@@ -41,7 +41,7 @@ final class SavedListExportBookmarksTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
         self::assertSame('text/html; charset=UTF-8', $this->client->getResponse()->headers->get('Content-Type'));
         self::assertSame(
-            sprintf('attachment; filename="simplefeedreader-kept-%s.html"', $this->today()),
+            sprintf('attachment; filename=simplefeedreader-kept-%s.html', $this->today()),
             $this->client->getResponse()->headers->get('Content-Disposition'),
         );
         self::assertStringStartsWith('<!DOCTYPE NETSCAPE-Bookmark-file-1>', $body);

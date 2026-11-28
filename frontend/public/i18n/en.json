@@ -1961,8 +1961,7 @@
       "bookmarksDescription": "For browsers and bookmark tools such as Raindrop, Linkding, Wallabag or Pinboard.",
       "googleReaderName": "Google Reader JSON",
       "googleReaderDescription": "For feed readers such as FreshRSS. Keeps the article text and your labels. FreshRSS subscribes to each article's feed on import.",
-      "submit": "Export",
-      "unlabeled": "Unlabeled"
+      "submit": "Export"
     }
   },
   "social": {

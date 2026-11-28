@@ -142,25 +142,16 @@ export class SidebarCollectionComponent {
   }
 
   protected folderName(folder: CollectionFolder): string {
-    return folder.label?.name ?? this.transloco.translate('reader.export.unlabeled');
+    return folder.label?.name ?? this.transloco.translate('reader.labels.unlabeled');
   }
 
-  protected exportCollection(): void {
-    this.rows.closeMenu();
-    this.exportDialog.open({
-      collection: this.collection(),
-      label: null,
-      title: this.listName(),
-    });
+  protected exportTitle(folder: CollectionFolder | null): string {
+    return folder === null ? this.listName() : `${this.listName()} – ${this.folderName(folder)}`;
   }
 
-  protected exportFolder(folder: CollectionFolder): void {
+  protected openExportDialog(label: LabelFilter | null, title: string): void {
     this.rows.closeMenu();
-    this.exportDialog.open({
-      collection: this.collection(),
-      label: folder.filter,
-      title: `${this.listName()} – ${this.folderName(folder)}`,
-    });
+    this.exportDialog.open({ collection: this.collection(), label, title });
   }
 
   protected startRename(label: LabelTally): void {
@@ -201,26 +192,17 @@ export class SidebarCollectionComponent {
       });
   }
 
-  protected openCollectionSheet(): void {
+  protected openSheet(folder: CollectionFolder | null): void {
+    const label = folder?.label ?? null;
+    const actions =
+      label === null ? [this.exportAction()] : [...this.labelActions(), this.exportAction()];
+    const title = folder === null ? this.listName() : this.folderName(folder);
     this.sheet
-      .open({ title: this.listName(), actions: [this.exportAction()] })
+      .open({ title, actions })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === 'export') this.exportCollection();
-      });
-  }
-
-  protected openFolderSheet(folder: CollectionFolder): void {
-    const label = folder.label;
-    this.sheet
-      .open({
-        title: this.folderName(folder),
-        actions:
-          label === null ? [this.exportAction()] : [...this.labelActions(), this.exportAction()],
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((choice) => {
-        if (choice === 'export') this.exportFolder(folder);
+        if (choice === 'export')
+          this.openExportDialog(folder?.filter ?? null, this.exportTitle(folder));
         if (label === null) return;
         if (choice === 'rename') this.startRename(label);
         if (choice === 'delete') this.confirmDelete(label);

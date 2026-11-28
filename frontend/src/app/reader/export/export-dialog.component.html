@@ -10,7 +10,7 @@
             name="format"
             [checked]="chosen() === format"
             [disabled]="downloading()"
-            (change)="choose(format)"
+            (change)="chosen.set(format)"
           />
           <app-icon [name]="format.icon" size="sm" />
           <span class="name">{{ format.nameKey | transloco }}</span>

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Library\SavedListExport\Model;
 
+use App\Service\Library\Subscription\Support\SubscribableUrl;
+
 final readonly class SavedListOriginModel
 {
     public function __construct(
@@ -15,8 +17,6 @@ final readonly class SavedListOriginModel
 
     public function isSubscribable(): bool
     {
-        $scheme = parse_url($this->feedUrl, \PHP_URL_SCHEME);
-
-        return \is_string($scheme) && \in_array(strtolower($scheme), ['http', 'https'], true);
+        return SubscribableUrl::isSubscribable($this->feedUrl);
     }
 }
