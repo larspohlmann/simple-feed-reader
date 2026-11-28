@@ -2,12 +2,17 @@
   <button
     type="button"
     [class]="'end ' + decreaseClass()"
+    [class.has-text]="decreaseText()"
     [title]="decreaseLabel()"
     [attr.aria-label]="decreaseLabel()"
     [disabled]="step() === min()"
     (click)="decrease.emit()"
   >
-    <app-icon [name]="decreaseIcon()" size="md" />
+    @if (decreaseText(); as text) {
+      {{ text }}
+    } @else {
+      <app-icon [name]="decreaseIcon()!" size="md" />
+    }
   </button>
   <button
     type="button"
@@ -21,12 +26,17 @@
   <button
     type="button"
     [class]="'end ' + increaseClass()"
+    [class.has-text]="increaseText()"
     [title]="increaseLabel()"
     [attr.aria-label]="increaseLabel()"
     [disabled]="step() === max()"
     (click)="increase.emit()"
   >
-    <app-icon [name]="increaseIcon()" size="md" />
+    @if (increaseText(); as text) {
+      {{ text }}
+    } @else {
+      <app-icon [name]="increaseIcon()!" size="md" />
+    }
   </button>
   <output class="sr-only" aria-live="polite">{{ readout() }}</output>
 </div>

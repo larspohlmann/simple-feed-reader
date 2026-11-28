@@ -32,8 +32,8 @@
         [step]="precisionIndex() + 1"
         [min]="1"
         [max]="precisionSteps"
-        decreaseIcon="remove"
-        increaseIcon="add"
+        [decreaseText]="'settings.ai.recommendations.forYouStream.narrowEnd' | transloco"
+        [increaseText]="'settings.ai.recommendations.forYouStream.wideEnd' | transloco"
         decreaseClass="narrower"
         increaseClass="wider"
         [groupLabel]="'settings.ai.recommendations.forYouStream.precision' | transloco"
@@ -61,7 +61,7 @@
       </h3>
       @if (stream().phrases.length > 0) {
         <div
-          id="for-you-stream-phrase-clip"
+          [id]="phraseClipId"
           class="stream-phrase-clip"
           data-testid="for-you-stream-phrases-clip"
           [class.expanded]="phrasesExpanded()"
@@ -90,16 +90,11 @@
             type="button"
             class="stream-phrases-toggle"
             data-testid="for-you-stream-phrases-toggle"
-            aria-controls="for-you-stream-phrase-clip"
+            [attr.aria-controls]="phraseClipId"
             [attr.aria-expanded]="phrasesExpanded()"
             (click)="togglePhrases()"
           >
-            {{
-              (phrasesExpanded()
-                ? 'settings.ai.recommendations.forYouStream.phrasesLess'
-                : 'settings.ai.recommendations.forYouStream.phrasesMore'
-              ) | transloco
-            }}
+            {{ (phrasesExpanded() ? 'reader.showLess' : 'reader.showMore') | transloco }}
           </button>
         }
       } @else {

@@ -348,6 +348,8 @@
           "precisionDesc": "Wie genau ein Eintrag zu deinen Interessen passen muss, um zu erscheinen.",
           "narrower": "Enger",
           "wider": "Weiter",
+          "narrowEnd": "Eng",
+          "wideEnd": "Weit",
           "resetPrecision": "Genauigkeit zurücksetzen",
           "precisionReadout": "Genauigkeit: {{label}}",
           "precisionLabel": {
@@ -358,9 +360,7 @@
             "widest": "Am weitesten"
           },
           "phrases": "Von der KI gewählte Begriffe",
-          "phrasesEmpty": "Noch keine Wortliste. Sie erscheint wenige Minuten nach der Aktualisierung deines Profils.",
-          "phrasesMore": "Mehr",
-          "phrasesLess": "Weniger"
+          "phrasesEmpty": "Noch keine Wortliste. Sie erscheint wenige Minuten nach der Aktualisierung deines Profils."
         },
         "showScoreAndReasons": "Bewertung und Begründung anzeigen",
         "showScoreAndReasonsDesc": "Fügt jeder Empfehlung ihre Bewertung und, wo das Modell eine schreibt, ihre Begründung hinzu.",

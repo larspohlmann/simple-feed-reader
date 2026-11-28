@@ -348,6 +348,8 @@
           "precisionDesc": "À quel point un article doit correspondre à vos centres d'intérêt pour apparaître.",
           "narrower": "Plus étroit",
           "wider": "Plus large",
+          "narrowEnd": "Étroit",
+          "wideEnd": "Large",
           "resetPrecision": "Réinitialiser la précision",
           "precisionReadout": "Précision : {{label}}",
           "precisionLabel": {
@@ -358,9 +360,7 @@
             "widest": "La plus large"
           },
           "phrases": "Termes choisis par l'IA",
-          "phrasesEmpty": "Pas encore de liste de termes. Elle apparaît quelques minutes après la mise à jour de votre profil.",
-          "phrasesMore": "Plus",
-          "phrasesLess": "Moins"
+          "phrasesEmpty": "Pas encore de liste de termes. Elle apparaît quelques minutes après la mise à jour de votre profil."
         },
         "showScoreAndReasons": "Afficher la note et la justification",
         "showScoreAndReasonsDesc": "Ajoute la note de chaque sélection et, quand le modèle en rédige une, sa justification.",

@@ -348,6 +348,8 @@
           "precisionDesc": "How closely an entry must match your interests to appear.",
           "narrower": "Narrower",
           "wider": "Wider",
+          "narrowEnd": "Narrow",
+          "wideEnd": "Wide",
           "resetPrecision": "Reset precision",
           "precisionReadout": "Precision: {{label}}",
           "precisionLabel": {
@@ -358,9 +360,7 @@
             "widest": "Widest"
           },
           "phrases": "Words the AI picked",
-          "phrasesEmpty": "No word list yet. It appears a few minutes after your profile is updated.",
-          "phrasesMore": "More",
-          "phrasesLess": "Less"
+          "phrasesEmpty": "No word list yet. It appears a few minutes after your profile is updated."
         },
         "showScoreAndReasons": "Show score and reasons",
         "showScoreAndReasonsDesc": "Adds each pick's score and, where the model writes one, its reason.",

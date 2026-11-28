@@ -348,6 +348,8 @@
           "precisionDesc": "Cuánto debe encajar una entrada con tus intereses para aparecer.",
           "narrower": "Más estrecha",
           "wider": "Más amplia",
+          "narrowEnd": "Estrecho",
+          "wideEnd": "Amplio",
           "resetPrecision": "Restablecer la precisión",
           "precisionReadout": "Precisión: {{label}}",
           "precisionLabel": {
@@ -358,9 +360,7 @@
             "widest": "La más amplia"
           },
           "phrases": "Palabras elegidas por la IA",
-          "phrasesEmpty": "Aún no hay lista de palabras. Aparece unos minutos después de actualizar tu perfil.",
-          "phrasesMore": "Más",
-          "phrasesLess": "Menos"
+          "phrasesEmpty": "Aún no hay lista de palabras. Aparece unos minutos después de actualizar tu perfil."
         },
         "showScoreAndReasons": "Mostrar puntuación y motivos",
         "showScoreAndReasonsDesc": "Añade la puntuación de cada selección y, si el modelo lo escribe, su motivo.",

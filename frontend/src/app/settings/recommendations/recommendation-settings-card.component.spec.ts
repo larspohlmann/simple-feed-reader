@@ -926,7 +926,7 @@ describe('RecommendationSettingsCardComponent', () => {
       it('starts collapsed with a More button when the list is longer than five lines', () => {
         const fixture = mountList();
 
-        expect(toggle(fixture)!.textContent!.trim()).toBe('More');
+        expect(toggle(fixture)!.textContent!.trim()).toBe('Show more');
         expect(toggle(fixture)!.getAttribute('aria-expanded')).toBe('false');
         expect(toggle(fixture)!.getAttribute('aria-controls')).toBe(clip(fixture).id);
         expect(clip(fixture).classList).not.toContain('expanded');
@@ -938,13 +938,21 @@ describe('RecommendationSettingsCardComponent', () => {
         toggle(fixture)!.click();
         fixture.detectChanges();
         expect(clip(fixture).classList).toContain('expanded');
-        expect(toggle(fixture)!.textContent!.trim()).toBe('Less');
+        expect(toggle(fixture)!.textContent!.trim()).toBe('Show less');
         expect(toggle(fixture)!.getAttribute('aria-expanded')).toBe('true');
 
         toggle(fixture)!.click();
         fixture.detectChanges();
         expect(clip(fixture).classList).not.toContain('expanded');
-        expect(toggle(fixture)!.textContent!.trim()).toBe('More');
+        expect(toggle(fixture)!.textContent!.trim()).toBe('Show more');
+      });
+
+      it('gives each instance its own clip id', () => {
+        const first = mountList();
+        const second = mountList();
+
+        expect(clip(first).id).not.toBe(clip(second).id);
+        expect(toggle(second)!.getAttribute('aria-controls')).toBe(clip(second).id);
       });
 
       it('shows no button for a list of exactly five lines', () => {
@@ -960,16 +968,15 @@ describe('RecommendationSettingsCardComponent', () => {
       });
     });
 
-    it('draws the precision stepper with minus and plus icons', () => {
+    it('labels the precision stepper ends with words, not icons', () => {
       const fixture = mount(streamState());
 
-      const icons = (selector: string): string | undefined =>
-        queryIn(
-          fixture,
-          `[data-testid="for-you-stream-precision"] ${selector}`,
-        )?.textContent?.trim();
-      expect(icons('button.narrower')).toContain('remove');
-      expect(icons('button.wider')).toContain('add');
+      const end = (selector: string): HTMLElement =>
+        queryIn(fixture, `[data-testid="for-you-stream-precision"] ${selector}`) as HTMLElement;
+      expect(end('button.narrower').textContent?.trim()).toBe('Narrow');
+      expect(end('button.wider').textContent?.trim()).toBe('Wide');
+      expect(end('button.narrower').getAttribute('aria-label')).toBe('Narrower');
+      expect(end('button.wider').getAttribute('aria-label')).toBe('Wider');
     });
 
     it('shows the empty state without phrases', () => {

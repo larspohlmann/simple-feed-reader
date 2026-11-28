@@ -26,6 +26,8 @@ import {
   RecommendationSettingsService,
 } from './recommendation-settings.service';
 
+let nextPhraseClipId = 0;
+
 @Component({
   selector: 'app-for-you-stream-group',
   imports: [
@@ -50,6 +52,7 @@ export class ForYouStreamGroupComponent {
 
   private readonly phraseBody = viewChild<ElementRef<HTMLElement>>('phraseBody');
   private readonly phraseLimit = viewChild<ElementRef<HTMLElement>>('phraseLimit');
+  readonly phraseClipId = `for-you-stream-phrase-clip-${nextPhraseClipId++}`;
   readonly phrasesOverflow = signal(false);
   readonly phrasesExpanded = signal(false);
 
