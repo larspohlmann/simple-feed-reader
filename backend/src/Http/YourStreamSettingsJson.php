@@ -37,37 +37,34 @@ final class YourStreamSettingsJson
      */
     private static function wordsByLanguage(array $words): array
     {
+        $weightsByLanguage = [];
+        foreach ($words as $word) {
+            $language = $word->getLanguage()->value ?? '';
+            $highest = max($weightsByLanguage[$language][$word->getWord()] ?? 0.0, $word->getWeight());
+            $weightsByLanguage[$language][$word->getWord()] = $highest;
+        }
         $groups = [];
         foreach ([...FeedLanguage::cases(), null] as $language) {
-            $inLanguage = self::strongestPerWord(array_filter(
-                $words,
-                static fn (YourStreamWord $word): bool => $word->getLanguage() === $language,
-            ));
-            if ([] === $inLanguage) {
-                continue;
+            $weights = $weightsByLanguage[$language->value ?? ''] ?? [];
+            if ([] !== $weights) {
+                $groups[] = ['language' => $language?->value, 'words' => self::sortStrongestFirst($weights)];
             }
-            $groups[] = ['language' => $language?->value, 'words' => $inLanguage];
         }
 
         return $groups;
     }
 
     /**
-     * @param array<YourStreamWord> $words
+     * @param array<array-key, float> $weights word => its highest weight
      *
-     * @return list<array{word: string, weight: float}> each word once at its highest weight, strongest first
+     * @return list<array{word: string, weight: float}> strongest first, equal weights by word
      */
-    private static function strongestPerWord(array $words): array
+    private static function sortStrongestFirst(array $weights): array
     {
-        $weights = [];
-        foreach ($words as $word) {
-            $weights[$word->getWord()] = max($weights[$word->getWord()] ?? 0.0, $word->getWeight());
+        $entries = [];
+        foreach ($weights as $word => $weight) {
+            $entries[] = ['word' => (string) $word, 'weight' => $weight];
         }
-        $entries = array_map(
-            static fn (string $word, float $weight): array => ['word' => $word, 'weight' => $weight],
-            array_map(strval(...), array_keys($weights)),
-            array_values($weights),
-        );
         usort($entries, static fn (array $left, array $right): int => [$right['weight'], $left['word']]
             <=> [$left['weight'], $right['word']]);
 
