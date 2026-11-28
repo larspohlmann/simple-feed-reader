@@ -75,6 +75,14 @@ export const SETTINGS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'your-stream',
+        title: sectionLabelKey('your-stream'),
+        loadComponent: () =>
+          import('./your-stream/your-stream-section.component').then(
+            (module) => module.YourStreamSectionComponent,
+          ),
+      },
+      {
         path: 'ai',
         title: sectionLabelKey('ai'),
         loadComponent: () =>

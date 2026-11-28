@@ -271,10 +271,6 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
       />
     </app-settings-group>
 
-    @if (svc.forYouStream(); as stream) {
-      <app-for-you-stream-group [stream]="stream" />
-    }
-
     <app-settings-group
       icon="delete_sweep"
       [title]="'settings.ai.recommendations.purge' | transloco"

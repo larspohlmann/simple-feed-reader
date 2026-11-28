@@ -207,6 +207,32 @@
       "testMailRateLimited": "Too many test emails in a short time. Wait a few minutes, then try again.",
       "testMailFailed": "The test email could not be sent. The mail server may be misconfigured or unreachable — check the server log."
     },
+    "yourStream": {
+      "title": "Your stream",
+      "caption": "Entries from your feeds that match what you favourite, keep, like and share, as they arrive.",
+      "enabled": "Your stream",
+      "enabledDesc": "When off, no new entries are matched and the stream leaves the sidebar. Entries already in it are kept.",
+      "precision": "Precision",
+      "precisionDesc": "How closely an entry must match your interests to appear.",
+      "narrower": "Narrower",
+      "wider": "Wider",
+      "narrowEnd": "Narrow",
+      "wideEnd": "Wide",
+      "resetPrecision": "Reset precision",
+      "precisionReadout": "Precision: {{label}}",
+      "precisionLabel": {
+        "narrowest": "Narrowest",
+        "narrow": "Narrow",
+        "balanced": "Balanced",
+        "wide": "Wide",
+        "widest": "Widest"
+      },
+      "words": "Your words",
+      "wordsEmpty": "No word list yet. Favourite, keep, like or share articles to fill your stream.",
+      "noLanguage": "Feeds without a language",
+      "info": "Your stream picks words that stand out in the articles you favourite, keep, like and share, and in your saved searches (listed below). Each new article is checked for them in its headline and text, and if enough of them appear, it lands in your stream. Words that are rare in your feeds count more than common ones. Precision sets how close the match must be: narrow lets in only strong matches, wide lets in more. Changes only affect new articles.",
+      "saved": "Saved."
+    },
     "ai": {
       "title": "AI",
       "lead": "Connect an OpenAI-compatible endpoint. The key is stored encrypted and is never shown again.",
@@ -313,8 +339,7 @@
         "contextWindow": "The token budget one request may use. The line below says where the current value comes from: your override here, the limit your provider reports, or the built-in default. Leave the field empty to use the provider value or the default.",
         "fixedPrompt": "The role and output contract every run sends. They are fixed so the response stays machine-readable — the guidance prompt above is the place for your own instructions.",
         "debug": "When on, every run keeps its full request and response log. The log appears in the “Debug log” panel below once a run has produced entries. Debug mode does not change what the recommendation list shows — that is what “Show why articles were picked” controls.",
-        "purge": "Deletes every recommended article from “For you” for this account. The articles themselves and their read state stay untouched. This cannot be undone — the next run builds a fresh list.",
-        "forYouStream": "The AI reads your profile and picks words and short phrases that describe your interests (listed below). Each new article is checked for them in its headline and text, and if enough of them appear, it lands in your stream. Words that are rare in your feeds count more than common ones. Precision sets how close the match must be: narrow lets in only strong matches, wide lets in more. Changes only affect new articles."
+        "purge": "Deletes every recommended article from “For you” for this account. The articles themselves and their read state stay untouched. This cannot be undone — the next run builds a fresh list."
       },
       "guide": {
         "title": "Step-by-step setup",
@@ -347,29 +372,6 @@
         "title": "Recommendations",
         "forYouTitle": "For You",
         "forYouCaption": "How your personal feed is built.",
-        "forYouStream": {
-          "title": "For you stream",
-          "caption": "Entries from your feeds that match your interests, as they arrive.",
-          "enabled": "For you stream",
-          "enabledDesc": "When off, no new entries are matched and the stream leaves the sidebar. Entries already in it are kept.",
-          "precision": "Precision",
-          "precisionDesc": "How closely an entry must match your interests to appear.",
-          "narrower": "Narrower",
-          "wider": "Wider",
-          "narrowEnd": "Narrow",
-          "wideEnd": "Wide",
-          "resetPrecision": "Reset precision",
-          "precisionReadout": "Precision: {{label}}",
-          "precisionLabel": {
-            "narrowest": "Narrowest",
-            "narrow": "Narrow",
-            "balanced": "Balanced",
-            "wide": "Wide",
-            "widest": "Widest"
-          },
-          "phrases": "Words the AI picked",
-          "phrasesEmpty": "No word list yet. It appears a few minutes after your profile is updated."
-        },
         "showScoreAndReasons": "Show score and reasons",
         "showScoreAndReasonsDesc": "Adds each pick's score and, where the model writes one, its reason.",
         "autoGenerate": "Auto-generate For you",

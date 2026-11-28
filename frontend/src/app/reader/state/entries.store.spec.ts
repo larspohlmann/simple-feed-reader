@@ -296,6 +296,29 @@ describe('EntriesStore', () => {
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
+  it('reloads the Your stream list when Your stream is the list it shows', () => {
+    store.load({ view: 'your-stream' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries/your-stream')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.reloadIfShowing('yourStream');
+
+    ctrl.expectOne((request) => request.url === 'https://api.test/api/entries/your-stream');
+  });
+
+  it('leaves any other list alone when asked to reload Your stream', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.reloadIfShowing('yourStream');
+
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries/your-stream');
+  });
+
   it('keeps the previous entries visible while a reload is on the wire', () => {
     store.load({ view: 'unread' });
     ctrl

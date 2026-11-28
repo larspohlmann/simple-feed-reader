@@ -36,7 +36,6 @@ import {
   RecommendationSettingBounds,
   TypedRecommendationEdits,
 } from './recommendation-settings.service';
-import { ForYouStreamGroupComponent } from './for-you-stream-group.component';
 import { typedSeed } from './recommendation-typed-seed';
 
 /** The "For You" tuning card, rebuilt on the settings primitives (#541). The
@@ -59,7 +58,6 @@ import { typedSeed } from './recommendation-typed-seed';
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
-    ForYouStreamGroupComponent,
     InfoTipComponent,
     SettingsGroupComponent,
     SettingsRowComponent,

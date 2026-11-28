@@ -40,6 +40,12 @@ export const SETTINGS_SECTIONS = [
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'email', icon: 'mail', labelKey: 'settings.email.title', group: 'general' },
   { path: 'account', icon: 'person', labelKey: 'settings.account.title', group: 'general' },
+  {
+    path: 'your-stream',
+    icon: 'stream',
+    labelKey: 'settings.yourStream.title',
+    group: 'general',
+  },
   { path: 'ai', icon: 'smart_toy', labelKey: 'settings.ai.title', group: 'general' },
   { path: 'social', icon: 'forum', labelKey: 'settings.social.title', group: 'general' },
   { path: 'statistics', icon: 'insights', labelKey: 'settings.statistics.title', group: 'general' },

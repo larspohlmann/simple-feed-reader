@@ -32,12 +32,6 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
     autoGenerateIntervalHours: null,
     workerAlive: true,
     showScoreAndReasons: false,
-    forYouStream: {
-      enabled: true,
-      precision: 'balanced',
-      defaultPrecision: 'wide',
-      phrases: [],
-    },
     ...otherOverrides,
     expertDefaults: expertDefaults ?? {
       guidancePrompt: null,
@@ -96,96 +90,6 @@ describe('RecommendationSettingsService', () => {
 
     put.flush(state({ showScoreAndReasons: true }));
     expect(service.state()?.showScoreAndReasons).toBe(true);
-  });
-
-  const STREAM_ENDPOINT = `${ENDPOINT}/for-you-stream`;
-  const served = (enabled: boolean, precision: 'narrow' | 'wide' | 'widest' | 'narrowest') =>
-    state({ forYouStream: { enabled, precision, defaultPrecision: 'wide', phrases: [] } });
-
-  it('sends no stream field in a whole-settings write', () => {
-    loadState();
-
-    service.saveInstant({ debugEnabled: true });
-
-    const put = http.expectOne(ENDPOINT);
-    expect('forYouStream' in put.request.body).toBe(false);
-    put.flush(state());
-  });
-
-  it('puts only enabled and precision to the stream endpoint', () => {
-    loadState();
-
-    service.saveForYouStream({ enabled: false, precision: 'narrowest' });
-
-    const put = http.expectOne(STREAM_ENDPOINT);
-    expect(put.request.method).toBe('PUT');
-    expect(put.request.body).toEqual({ enabled: false, precision: 'narrowest' });
-    put.flush(served(false, 'narrowest'));
-    expect(service.state()?.forYouStream.precision).toBe('narrowest');
-    expect(service.saved()).toBe(true);
-  });
-
-  it('reloads the sidebar counts when the switch changed, not before', () => {
-    const reload = TestBed.inject(SubscriptionsStore).reloadCountsQuietly as jest.Mock;
-    loadState();
-
-    service.saveForYouStream({ enabled: false, precision: 'balanced' });
-
-    const put = http.expectOne(STREAM_ENDPOINT);
-    expect(reload).not.toHaveBeenCalled();
-    put.flush(served(false, 'wide'));
-    expect(reload).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not reload the sidebar counts for a precision step', () => {
-    const reload = TestBed.inject(SubscriptionsStore).reloadCountsQuietly as jest.Mock;
-    loadState();
-
-    service.saveForYouStream({ enabled: true, precision: 'widest' });
-
-    http.expectOne(STREAM_ENDPOINT).flush(served(true, 'widest'));
-    expect(service.state()?.forYouStream.precision).toBe('widest');
-    expect(reload).not.toHaveBeenCalled();
-  });
-
-  it('shows the chosen stream settings at once and snaps back when the save fails', () => {
-    loadState();
-
-    service.saveForYouStream({ enabled: true, precision: 'widest' });
-    expect(service.forYouStream()?.precision).toBe('widest');
-
-    http
-      .expectOne(STREAM_ENDPOINT)
-      .flush({ title: 'boom' }, { status: 500, statusText: 'Server Error' });
-    expect(service.forYouStream()?.precision).toBe('balanced');
-    expect(service.failure()).not.toBeNull();
-  });
-
-  it('keeps the last chosen stream setting when two saves overlap', () => {
-    loadState();
-
-    service.saveForYouStream({ enabled: true, precision: 'wide' });
-    service.saveForYouStream({ enabled: true, precision: 'widest' });
-    const [first, second] = http.match(STREAM_ENDPOINT);
-
-    first.flush(served(true, 'wide'));
-    expect(service.forYouStream()?.precision).toBe('widest');
-    second.flush(served(true, 'widest'));
-    expect(service.forYouStream()?.precision).toBe('widest');
-    expect(service.state()?.forYouStream.precision).toBe('widest');
-  });
-
-  it('keeps the newer choice when an older save fails', () => {
-    loadState();
-
-    service.saveForYouStream({ enabled: true, precision: 'narrow' });
-    service.saveForYouStream({ enabled: true, precision: 'widest' });
-    const [first, second] = http.match(STREAM_ENDPOINT);
-
-    first.flush({ title: 'boom' }, { status: 500, statusText: 'Server Error' });
-    expect(service.forYouStream()?.precision).toBe('widest');
-    second.flush(served(true, 'widest'));
-    expect(service.forYouStream()?.precision).toBe('widest');
   });
 
   it('typed path: a cap edit sets dirty and issues no PUT until save()', () => {

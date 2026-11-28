@@ -32,6 +32,11 @@ describe('SETTINGS_SECTIONS', () => {
     expect(paths[paths.indexOf('organise') + 1]).toBe('visibility');
   });
 
+  it('lists Your stream directly before AI', () => {
+    const paths = SETTINGS_SECTIONS.map((section) => section.path);
+    expect(paths[paths.indexOf('ai') - 1]).toBe('your-stream');
+  });
+
   it('rejects a path no section owns rather than titling a page with nothing', () => {
     // The parameter type keeps a caller from asking in the first place; the
     // cast is how a spec reaches the guard behind it.

@@ -114,7 +114,6 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   autoGenerateIntervalHours: null,
   workerAlive: true,
   showScoreAndReasons: false,
-  forYouStream: { enabled: true, precision: 'balanced', defaultPrecision: 'wide', phrases: [] },
 };
 
 function createStub(): AiSettingsStub {

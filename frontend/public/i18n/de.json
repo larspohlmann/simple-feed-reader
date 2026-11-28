@@ -207,6 +207,32 @@
       "testMailRateLimited": "Zu viele Test-E-Mails in kurzer Zeit. Warte ein paar Minuten und versuche es erneut.",
       "testMailFailed": "Die Test-E-Mail konnte nicht gesendet werden. Der Mailserver ist möglicherweise falsch konfiguriert oder nicht erreichbar – prüfe das Server-Log."
     },
+    "yourStream": {
+      "title": "Dein Stream",
+      "caption": "Einträge aus deinen Feeds, die zu dem passen, was du favorisierst, behältst, mit „Gefällt mir“ markierst und teilst, sobald sie ankommen.",
+      "enabled": "Dein Stream",
+      "enabledDesc": "Wenn aus, werden keine neuen Einträge zugeordnet und der Stream verschwindet aus der Seitenleiste. Einträge, die schon darin sind, bleiben erhalten.",
+      "precision": "Genauigkeit",
+      "precisionDesc": "Wie genau ein Eintrag zu deinen Interessen passen muss, um zu erscheinen.",
+      "narrower": "Enger",
+      "wider": "Weiter",
+      "narrowEnd": "Eng",
+      "wideEnd": "Weit",
+      "resetPrecision": "Genauigkeit zurücksetzen",
+      "precisionReadout": "Genauigkeit: {{label}}",
+      "precisionLabel": {
+        "narrowest": "Am engsten",
+        "narrow": "Eng",
+        "balanced": "Ausgewogen",
+        "wide": "Weit",
+        "widest": "Am weitesten"
+      },
+      "words": "Deine Wörter",
+      "wordsEmpty": "Noch keine Wortliste. Favorisiere, behalte, markiere mit „Gefällt mir“ oder teile Artikel, um deinen Stream zu füllen.",
+      "noLanguage": "Feeds ohne Sprache",
+      "info": "Dein Stream wählt Wörter, die in den Artikeln auffallen, die du favorisierst, behältst, mit „Gefällt mir“ markierst und teilst, sowie in deinen gespeicherten Suchen (unten aufgelistet). Jeder neue Eintrag wird in Überschrift und Text darauf geprüft, und kommen genug davon vor, landet er in deinem Stream. Wörter, die in deinen Feeds selten sind, zählen mehr als häufige. Die Genauigkeit legt fest, wie genau der Treffer sein muss: eng lässt nur starke Treffer durch, weit lässt mehr durch. Änderungen wirken sich nur auf neue Einträge aus.",
+      "saved": "Gespeichert."
+    },
     "ai": {
       "title": "KI",
       "lead": "Verbinde einen OpenAI-kompatiblen Endpunkt. Der Schlüssel wird verschlüsselt gespeichert und nie wieder angezeigt.",
@@ -313,8 +339,7 @@
         "contextWindow": "Das Token-Budget einer einzelnen Anfrage. Die Zeile darunter zeigt, woher der aktuelle Wert stammt: deine Eingabe hier, das vom Anbieter gemeldete Limit oder der eingebaute Standard. Leer lassen, um Anbieterwert oder Standard zu nutzen.",
         "fixedPrompt": "Rolle und Ausgabe-Vertrag, die jeder Lauf sendet. Sie sind fest, damit die Antwort maschinenlesbar bleibt — für eigene Anweisungen ist der Leitprompt oben da.",
         "debug": "Wenn aktiv, behält jeder Lauf sein vollständiges Anfrage- und Antwortprotokoll. Das Protokoll erscheint unten im Bereich „Debug-Protokoll“, sobald ein Lauf Einträge erzeugt hat. Der Debug-Modus ändert nicht, was die Empfehlungsliste zeigt — dafür ist „Anzeigen, warum Artikel gewählt wurden“ zuständig.",
-        "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf.",
-        "forYouStream": "Die KI liest dein Profil und wählt Wörter und kurze Wendungen, die deine Interessen beschreiben (unten aufgelistet). Jeder neue Eintrag wird in Überschrift und Text darauf geprüft, und kommen genug davon vor, landet er in deinem Stream. Wörter, die in deinen Feeds selten sind, zählen mehr als häufige. Die Genauigkeit legt fest, wie genau der Treffer sein muss: eng lässt nur starke Treffer durch, weit lässt mehr durch. Änderungen wirken sich nur auf neue Einträge aus."
+        "purge": "Entfernt alle empfohlenen Beiträge aus „Für dich“ für dieses Konto. Die Beiträge selbst und ihr Lesestatus bleiben unberührt. Das lässt sich nicht rückgängig machen — der nächste Lauf baut eine neue Liste auf."
       },
       "guide": {
         "title": "Schritt-für-Schritt-Einrichtung",
@@ -347,29 +372,6 @@
         "title": "Empfehlungen",
         "forYouTitle": "Für dich",
         "forYouCaption": "Wie dein persönlicher Feed aufgebaut wird.",
-        "forYouStream": {
-          "title": "Für-dich-Stream",
-          "caption": "Einträge aus deinen Feeds, die zu deinen Interessen passen, sobald sie ankommen.",
-          "enabled": "Für-dich-Stream",
-          "enabledDesc": "Wenn aus, werden keine neuen Einträge zugeordnet und der Stream verschwindet aus der Seitenleiste. Einträge, die schon darin sind, bleiben erhalten.",
-          "precision": "Genauigkeit",
-          "precisionDesc": "Wie genau ein Eintrag zu deinen Interessen passen muss, um zu erscheinen.",
-          "narrower": "Enger",
-          "wider": "Weiter",
-          "narrowEnd": "Eng",
-          "wideEnd": "Weit",
-          "resetPrecision": "Genauigkeit zurücksetzen",
-          "precisionReadout": "Genauigkeit: {{label}}",
-          "precisionLabel": {
-            "narrowest": "Am engsten",
-            "narrow": "Eng",
-            "balanced": "Ausgewogen",
-            "wide": "Weit",
-            "widest": "Am weitesten"
-          },
-          "phrases": "Von der KI gewählte Begriffe",
-          "phrasesEmpty": "Noch keine Wortliste. Sie erscheint wenige Minuten nach der Aktualisierung deines Profils."
-        },
         "showScoreAndReasons": "Bewertung und Begründung anzeigen",
         "showScoreAndReasonsDesc": "Fügt jeder Empfehlung ihre Bewertung und, wo das Modell eine schreibt, ihre Begründung hinzu.",
         "autoGenerate": "„Für dich“ automatisch erzeugen",

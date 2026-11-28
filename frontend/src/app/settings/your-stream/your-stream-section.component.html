@@ -1,0 +1,117 @@
+<app-settings-stack>
+  <app-settings-group
+    icon="stream"
+    [title]="'settings.yourStream.title' | transloco"
+    [caption]="'settings.yourStream.caption' | transloco"
+  >
+    @if (service.state(); as stream) {
+      <app-settings-row
+        data-testid="your-stream-enabled"
+        [title]="'settings.yourStream.enabled' | transloco"
+        [description]="'settings.yourStream.enabledDesc' | transloco"
+      >
+        <app-info-tip
+          rowTitleTip
+          [text]="'settings.yourStream.info' | transloco"
+          [label]="'settings.yourStream.enabled' | transloco"
+        />
+        <app-toggle
+          [label]="'settings.yourStream.enabled' | transloco"
+          [checked]="stream.enabled"
+          (toggled)="onEnabled($event)"
+        />
+      </app-settings-row>
+
+      @if (stream.enabled) {
+        <app-settings-row
+          data-testid="your-stream-precision"
+          [stackable]="true"
+          [title]="'settings.yourStream.precision' | transloco"
+          [description]="'settings.yourStream.precisionDesc' | transloco"
+        >
+          <app-stepper-bar
+            class="precision-bar"
+            [step]="precisionIndex() + 1"
+            [min]="1"
+            [max]="precisionSteps"
+            [decreaseText]="'settings.yourStream.narrowEnd' | transloco"
+            [increaseText]="'settings.yourStream.wideEnd' | transloco"
+            decreaseClass="narrower"
+            increaseClass="wider"
+            [groupLabel]="'settings.yourStream.precision' | transloco"
+            [decreaseLabel]="'settings.yourStream.narrower' | transloco"
+            [increaseLabel]="'settings.yourStream.wider' | transloco"
+            [resetLabel]="'settings.yourStream.resetPrecision' | transloco"
+            [readout]="
+              'settings.yourStream.precisionReadout'
+                | transloco
+                  : {
+                      label: 'settings.yourStream.precisionLabel.' + stream.precision | transloco,
+                    }
+            "
+            (decrease)="step(-1)"
+            (increase)="step(1)"
+            (resetStep)="resetPrecision()"
+          />
+        </app-settings-row>
+
+        <section class="stream-words" data-testid="your-stream-words">
+          <h3 class="stream-words-title">
+            {{ 'settings.yourStream.words' | transloco }}
+          </h3>
+          @if (stream.words.length > 0) {
+            <div
+              [id]="wordClipId"
+              class="stream-word-clip"
+              data-testid="your-stream-words-clip"
+              [class.expanded]="wordsExpanded()"
+            >
+              <span #wordLimit class="stream-word-limit" aria-hidden="true"></span>
+              <div #wordBody class="stream-word-body">
+                @for (group of stream.words; track group.language) {
+                  <div class="stream-language">
+                    <h4 class="stream-language-name">
+                      {{ languageName(group.language) | transloco }}
+                    </h4>
+                    <ul class="stream-word-list">
+                      @for (entry of group.words; track $index) {
+                        <li class="stream-word">
+                          <span class="stream-word-text">{{ entry.word }}</span>
+                          <span class="stream-word-weight">{{ formatWeight(entry.weight) }}</span>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            </div>
+            @if (wordsOverflow()) {
+              <button
+                type="button"
+                class="stream-words-toggle"
+                data-testid="your-stream-words-toggle"
+                [attr.aria-controls]="wordClipId"
+                [attr.aria-expanded]="wordsExpanded()"
+                (click)="toggleWords()"
+              >
+                {{ (wordsExpanded() ? 'reader.showLess' : 'reader.showMore') | transloco }}
+              </button>
+            }
+          } @else {
+            <p class="stream-words-empty">
+              {{ 'settings.yourStream.wordsEmpty' | transloco }}
+            </p>
+          }
+        </section>
+      }
+    } @else if (service.failure() === null) {
+      <div class="stream-loading" data-testid="your-stream-loading"><app-spinner /></div>
+    }
+
+    @if (failureMessage(); as message) {
+      <div class="panel-banner">
+        <app-error-banner [message]="message" />
+      </div>
+    }
+  </app-settings-group>
+</app-settings-stack>
