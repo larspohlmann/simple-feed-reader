@@ -4,7 +4,7 @@
     [title]="'settings.yourStream.title' | transloco"
     [caption]="'settings.yourStream.caption' | transloco"
   >
-    @if (service.state(); as stream) {
+    @if (service.shown(); as stream) {
       <app-settings-row
         data-testid="your-stream-enabled"
         [title]="'settings.yourStream.enabled' | transloco"
@@ -18,7 +18,7 @@
         <app-toggle
           [label]="'settings.yourStream.enabled' | transloco"
           [checked]="stream.enabled"
-          (toggled)="onEnabled($event)"
+          (toggled)="change({ enabled: $event })"
         />
       </app-settings-row>
 
@@ -108,7 +108,7 @@
       <div class="stream-loading" data-testid="your-stream-loading"><app-spinner /></div>
     }
 
-    @if (failureMessage(); as message) {
+    @if (service.failureMessage(); as message) {
       <div class="panel-banner">
         <app-error-banner [message]="message" />
       </div>

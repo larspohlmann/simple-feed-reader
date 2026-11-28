@@ -40,9 +40,9 @@ describe('YourStreamSettingsService', () => {
   it('loads from and saves to /api/me/your-stream', () => {
     service.load();
     http.expectOne(URL).flush(aState({ enabled: true, precision: 'wide' }));
-    expect(service.state()?.precision).toBe('wide');
+    expect(service.shown()?.precision).toBe('wide');
 
-    service.save({ enabled: false, precision: 'narrow' });
+    service.saveInstant({ enabled: false, precision: 'narrow' });
     const put = http.expectOne(URL);
 
     expect(put.request.method).toBe('PUT');
@@ -51,19 +51,19 @@ describe('YourStreamSettingsService', () => {
   });
 
   it('has no state before the first answer', () => {
-    expect(service.state()).toBeNull();
+    expect(service.shown()).toBeNull();
   });
 
   it('shows the pending settings until the answer lands, and drops them on failure', () => {
     loaded(aState({ precision: 'wide' }));
 
-    service.save({ enabled: true, precision: 'narrow' });
-    expect(service.state()?.precision).toBe('narrow');
+    service.saveInstant({ enabled: true, precision: 'narrow' });
+    expect(service.shown()?.precision).toBe('narrow');
 
     http
       .expectOne(URL)
       .flush({ type: 'about:blank', title: 'boom' }, { status: 500, statusText: 'Server Error' });
-    expect(service.state()?.precision).toBe('wide');
+    expect(service.shown()?.precision).toBe('wide');
     expect(service.failure()?.title).toBe('boom');
     expect(service.saved()).toBe(false);
   });
@@ -71,7 +71,7 @@ describe('YourStreamSettingsService', () => {
   it('adopts the answer, words included, and flags the save', () => {
     loaded(aState());
 
-    service.save({ enabled: true, precision: 'narrow' });
+    service.saveInstant({ enabled: true, precision: 'narrow' });
     http.expectOne(URL).flush(
       aState({
         precision: 'narrow',
@@ -79,32 +79,32 @@ describe('YourStreamSettingsService', () => {
       }),
     );
 
-    expect(service.state()?.words).toHaveLength(1);
+    expect(service.shown()?.words).toHaveLength(1);
     expect(service.saved()).toBe(true);
   });
 
   it('ignores the answer to a save that a newer one replaced', () => {
     loaded(aState({ precision: 'wide' }));
 
-    service.save({ enabled: true, precision: 'narrow' });
+    service.saveInstant({ enabled: true, precision: 'narrow' });
     const first = http.expectOne(URL);
-    service.save({ enabled: true, precision: 'narrowest' });
+    service.saveInstant({ enabled: true, precision: 'narrowest' });
     const second = http.expectOne(URL);
     first.flush(aState({ precision: 'narrow' }));
 
-    expect(service.state()?.precision).toBe('narrowest');
+    expect(service.shown()?.precision).toBe('narrowest');
     second.flush(aState({ precision: 'narrowest' }));
-    expect(service.state()?.precision).toBe('narrowest');
+    expect(service.shown()?.precision).toBe('narrowest');
   });
 
   it('reloads the sidebar counts when the switch changes, not when only the precision does', () => {
     loaded(aState({ enabled: true }));
 
-    service.save({ enabled: true, precision: 'narrow' });
+    service.saveInstant({ enabled: true, precision: 'narrow' });
     http.expectOne(URL).flush(aState({ enabled: true, precision: 'narrow' }));
     expect(subscriptions.reloadCountsQuietly).toHaveBeenCalledTimes(0);
 
-    service.save({ enabled: false, precision: 'narrow' });
+    service.saveInstant({ enabled: false, precision: 'narrow' });
     http.expectOne(URL).flush(aState({ enabled: false, precision: 'narrow' }));
     expect(subscriptions.reloadCountsQuietly).toHaveBeenCalledTimes(1);
   });
@@ -112,18 +112,18 @@ describe('YourStreamSettingsService', () => {
   it('keeps the newer choice when an older save fails', () => {
     loaded(aState({ precision: 'wide' }));
 
-    service.save({ enabled: true, precision: 'narrow' });
-    service.save({ enabled: true, precision: 'widest' });
+    service.saveInstant({ enabled: true, precision: 'narrow' });
+    service.saveInstant({ enabled: true, precision: 'widest' });
     const [first, second] = http.match(URL);
     first.flush(
       { type: 'about:blank', title: 'boom' },
       { status: 500, statusText: 'Server Error' },
     );
 
-    expect(service.state()?.precision).toBe('widest');
+    expect(service.shown()?.precision).toBe('widest');
     expect(service.failure()).toBeNull();
     second.flush(aState({ precision: 'widest' }));
-    expect(service.state()?.precision).toBe('widest');
+    expect(service.shown()?.precision).toBe('widest');
   });
 
   it('keeps the failure of a load', () => {
@@ -132,7 +132,7 @@ describe('YourStreamSettingsService', () => {
       .expectOne(URL)
       .flush({ type: 'about:blank', title: 'down' }, { status: 503, statusText: 'Unavailable' });
 
-    expect(service.state()).toBeNull();
+    expect(service.shown()).toBeNull();
     expect(service.failure()?.title).toBe('down');
   });
 });

@@ -110,12 +110,14 @@ describe('YourStreamSectionComponent', () => {
 
   it('steps precision wider from wide to widest', () => {
     const fixture = mount(aState({ precision: 'wide' }));
-    const saveSpy = jest.spyOn(TestBed.inject(YourStreamSettingsService), 'save');
+    const saveSpy = jest.spyOn(TestBed.inject(YourStreamSettingsService), 'saveInstant');
 
     click(fixture, '[data-testid="your-stream-precision"] button.wider');
 
-    expect(saveSpy).toHaveBeenCalledWith({ enabled: true, precision: 'widest' });
-    streamPut().flush(aState({ precision: 'widest' }));
+    expect(saveSpy).toHaveBeenCalledWith({ precision: 'widest' });
+    const put = streamPut();
+    expect(put.body).toEqual({ enabled: true, precision: 'widest' });
+    put.flush(aState({ precision: 'widest' }));
   });
 
   it('steps narrower from balanced to narrow', () => {

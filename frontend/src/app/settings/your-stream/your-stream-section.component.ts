@@ -25,7 +25,7 @@ import { toastOnSaved } from '../../shared/toast/saved-toast';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
 import {
   YOUR_STREAM_PRECISIONS,
-  YourStreamPrecision,
+  YourStreamSettings,
   YourStreamSettingsService,
 } from './your-stream-settings.service';
 
@@ -61,12 +61,8 @@ export class YourStreamSectionComponent implements OnInit {
 
   readonly precisionSteps = YOUR_STREAM_PRECISIONS.length;
   readonly precisionIndex = computed(() => {
-    const precision = this.service.state()?.precision;
+    const precision = this.service.shown()?.precision;
     return precision === undefined ? 0 : YOUR_STREAM_PRECISIONS.indexOf(precision);
-  });
-  readonly failureMessage = computed(() => {
-    const failure = this.service.failure();
-    return failure ? (failure.detail ?? failure.title) : null;
   });
 
   constructor() {
@@ -89,18 +85,17 @@ export class YourStreamSectionComponent implements OnInit {
     this.wordsExpanded.update((expanded) => !expanded);
   }
 
-  onEnabled(enabled: boolean): void {
-    const state = this.service.state();
-    if (state) this.service.save({ enabled, precision: state.precision });
+  change(patch: Partial<YourStreamSettings>): void {
+    this.service.saveInstant(patch);
   }
 
   step(offset: -1 | 1): void {
-    this.savePrecision(YOUR_STREAM_PRECISIONS[this.precisionIndex() + offset]);
+    this.change({ precision: YOUR_STREAM_PRECISIONS[this.precisionIndex() + offset] });
   }
 
   resetPrecision(): void {
-    const state = this.service.state();
-    if (state) this.savePrecision(state.defaultPrecision);
+    const shown = this.service.shown();
+    if (shown) this.change({ precision: shown.defaultPrecision });
   }
 
   languageName(language: string | null): string {
@@ -109,10 +104,5 @@ export class YourStreamSectionComponent implements OnInit {
 
   formatWeight(weight: number): string {
     return formatOneDecimal(weight, this.language.lang());
-  }
-
-  private savePrecision(precision: YourStreamPrecision): void {
-    const state = this.service.state();
-    if (state) this.service.save({ enabled: state.enabled, precision });
   }
 }
