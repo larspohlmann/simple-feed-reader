@@ -1,36 +1,49 @@
-import { BrowserContext, expect, Locator, Page, test as base } from '@playwright/test';
-import { makeTag } from '../src/app/reader/testing/tag.factory';
-import { aStory } from '../src/testing/entry-testing';
-import { settleAnimations } from './support/animations';
-import { presetLocalStorage } from './support/auth';
+import { expect, Locator, Page } from '@playwright/test';
+import { aCommentPost, aStory, anEntryComment } from '../src/testing/entry-testing';
+import { boxOf, centreY } from './support/geometry';
 import {
+  DESKTOP,
   expectNear,
   expectOnCapMiddle,
-  expectTheme,
   firstTextRect,
   LeadParts,
   measureFirstLine,
   measureToken,
-  stubAccountTheme,
-  ThemeName,
+  PHONE,
+  settle,
+  Setup,
+  Surface,
+  test,
   TOLERANCE,
 } from './support/first-line';
 import {
+  AVATAR,
+  COMMENTS,
+  COUNTED_ENTRY,
   NOTIFICATION,
+  ONE_ENTRY,
   openArticle,
+  openTagPicker,
+  ORGANISE,
   POST,
+  SCORED_ARTICLE,
   SCORED_POST,
   stubArticle,
   stubMagazine,
   stubNotifications,
+  stubSuggestedTags,
+  stubTaggedMagazine,
   stubTrending,
+  TAGS,
+  UNLIKABLE_ENTRY,
 } from './support/icon-rows';
 import {
+  MENU_COARSE,
+  MENU_FINE,
   openAccountMenu,
   openRepostMenu,
   openShareMenu,
   openShareSheet,
-  stubMenus,
 } from './support/menu-rows';
 import { entryDetailJson, entryWire } from './support/reader';
 
@@ -39,15 +52,8 @@ import { entryDetailJson, entryWire } from './support/reader';
  * first line, whatever the theme or the text size. Every API read is stubbed, so the spec owns what it
  * measures. A case is real only when its text spans two lines or more.
  */
-const PHONE = { width: 375, height: 812 };
-const DESKTOP = { width: 1280, height: 900 };
 const LINE_TOLERANCE = 1;
 const MIN_LINES = 1.9;
-
-interface Setup {
-  theme: ThemeName;
-  step: 100 | 150;
-}
 
 const LONG_STORY = aStory({
   id: 601,
@@ -66,56 +72,6 @@ const PAYWALLED_BODY = {
   originalHero: null,
   extractedAt: '2026-11-24T10:00:00+00:00',
 };
-
-interface Viewport {
-  width: number;
-  height: number;
-}
-
-/** Where a case opens: its viewport and pointer, its local storage, its API stubs and its path. */
-interface Surface {
-  viewport?: Viewport;
-  touch?: boolean;
-  storage?: Record<string, string>;
-  stub: (page: Page) => Promise<void>;
-  path: string;
-}
-
-/** `openSurface` opens a page on `surface` in `setup`; every context it opened closes after the test. */
-const test = base.extend<{ openSurface: (setup: Setup, surface: Surface) => Promise<Page> }>({
-  openSurface: async ({ browser }, use) => {
-    const contexts: BrowserContext[] = [];
-    await use(async ({ step, theme }, { viewport = PHONE, touch = false, storage, stub, path }) => {
-      const context = await browser.newContext({
-        baseURL: test.info().project.use.baseURL,
-        viewport,
-        hasTouch: touch,
-        isMobile: touch,
-      });
-      contexts.push(context);
-      const page = await context.newPage();
-      await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
-      await presetLocalStorage(page, {
-        'sfr.textSize': String(step),
-        'sfr.layout': 'pane',
-        'sfr.theme': 'light',
-        ...storage,
-      });
-      await stub(page);
-      // After the surface stubs: a later route wins, and they answer /api/me too.
-      await stubAccountTheme(page, theme);
-      await page.goto(path);
-      return page;
-    });
-    await Promise.all(contexts.map((context) => context.close()));
-  },
-});
-
-async function settle(page: Page, theme: ThemeName): Promise<void> {
-  await expectTheme(page, theme);
-  await page.evaluate(() => document.fonts.ready);
-  await settleAnimations(page.locator('body'));
-}
 
 /** The icon, the element whose first line it hangs on, and the whole text block, per surface. */
 interface Case extends Surface {
@@ -233,8 +189,6 @@ for (const setup of SETUPS) {
   });
 }
 
-const TAGS = [makeTag(7, 'Politics', { icon: 'home' }), makeTag(8, 'Science', { icon: 'science' })];
-const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
 const BLUESKY_FEED = {
   social: { network: 'bluesky' as const, kind: 'home' as const, accountId: 1 },
 };
@@ -250,16 +204,21 @@ interface LeadCase extends Surface {
 const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
 const BLUESKY_COMMENT = 'app-entry-comments li.comment:nth-child(1) app-social-counts-row';
 
-const SCORED_ARTICLE: Surface = {
-  viewport: DESKTOP,
-  stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
-  path: '/?subscription=1',
-};
-const ORGANISE: Surface = {
-  viewport: DESKTOP,
-  stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
-  path: '/settings/organise',
-};
+function suggestedChipCase(name: string, viewport: Surface['viewport'], touch: boolean): LeadCase {
+  return {
+    name,
+    viewport,
+    touch,
+    stub: stubSuggestedTags,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await openTagPicker(page);
+      return page.locator('app-tag-picker button.suggestion').first();
+    },
+    icon: 'app-tag-glyph',
+    text: '.label',
+  };
+}
 
 const PILL_CASES: LeadCase[] = [
   {
@@ -287,7 +246,7 @@ const PILL_CASES: LeadCase[] = [
   {
     name: 'a header tag chip',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: '/',
     row: async (page) => page.locator('.tagrow .chip:not(.all)').first(),
     icon: 'app-tag-glyph',
@@ -296,15 +255,17 @@ const PILL_CASES: LeadCase[] = [
   {
     name: 'a tag-picker chip',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: '/?subscription=1',
     row: async (page) => {
-      await page.getByRole('button', { name: 'Edit feed' }).first().click();
+      await openTagPicker(page);
       return page.locator('app-tag-chips .chip').first();
     },
     icon: 'app-tag-glyph',
     text: '.label',
   },
+  suggestedChipCase('a SUGGESTED tag chip', DESKTOP, false),
+  suggestedChipCase('a SUGGESTED tag chip on a phone', PHONE, true),
   {
     name: 'Reply',
     ...SCORED_ARTICLE,
@@ -527,14 +488,82 @@ for (const setup of SETUPS) {
   });
 }
 
+const COUNTED_LIST: Surface = {
+  viewport: DESKTOP,
+  stub: (page) => stubMagazine(page, [COUNTED_ENTRY]),
+  path: '/?subscription=1',
+};
+
+interface CountCase extends Surface {
+  name: string;
+  open?: (page: Page) => Promise<void>;
+  row: string;
+  icon: string;
+  text: string;
+}
+
+function countCase(
+  name: string,
+  surface: Surface & { open?: CountCase['open'] },
+  { row, text = '.count' }: { row: string; text?: string },
+): CountCase {
+  return { name, ...surface, row, icon: 'app-icon', text };
+}
+
+const COUNT_CASES: CountCase[] = [
+  countCase('the list comment bubble', COUNTED_LIST, { row: 'app-entry-meta .comments' }),
+  countCase('the list like button count', COUNTED_LIST, { row: 'app-entry-like button' }),
+  countCase(
+    'the list like count without a button',
+    { ...COUNTED_LIST, stub: (page) => stubMagazine(page, [UNLIKABLE_ENTRY]) },
+    { row: 'app-entry-like .likes' },
+  ),
+  countCase(
+    'the article social count',
+    { ...SCORED_ARTICLE, open: openArticle },
+    { row: 'app-social-counts app-social-counts-row .count', text: '.number' },
+  ),
+];
+
+for (const setup of SETUPS) {
+  test.describe(`counts, ${setup.theme} at ${setup.step}%`, () => {
+    for (const count of COUNT_CASES) {
+      test(`${count.name} centres its glyph on the cap middle`, async ({ openSurface }) => {
+        const page = await openSurface(setup, count);
+        await count.open?.(page);
+        const row = page.locator(count.row).first();
+        await expect(row).toBeVisible();
+        await settle(page, setup.theme);
+
+        expectOnCapMiddle(
+          await measureFirstLine({
+            icon: row.locator(count.icon).first(),
+            firstLine: row.locator(count.text).first(),
+          }),
+        );
+      });
+    }
+
+    test('the comment bubble and the vote arrows share a line', async ({ openSurface }) => {
+      const page = await openSurface(setup, COUNTED_LIST);
+      const discussion = page.locator('app-entry-meta .discussion').first();
+      await expect(discussion.locator('.comments')).toBeVisible();
+      await settle(page, setup.theme);
+
+      const [bubble, arrow] = await Promise.all([
+        centreY(discussion.locator('.comments app-icon').first()),
+        centreY(discussion.locator('app-vote-pill .arrow app-icon').first()),
+      ]);
+      expectNear(bubble, arrow, 'the bubble centre against the arrow centre');
+    });
+  });
+}
+
 /** A row of a menu: how to open the menu and find the row, its lead icon and the text it leads. */
 interface MenuCase extends LeadCase {
   /** The text is a single line, so its line stays centred in the row. */
   centred: boolean;
 }
-
-const MENU_FINE: Surface = { viewport: DESKTOP, stub: stubMenus, path: '/?subscription=1' };
-const MENU_COARSE: Surface = { ...MENU_FINE, viewport: PHONE, touch: true };
 
 const accountRow = (select: (menu: Locator) => Locator) => async (page: Page) =>
   select(await openAccountMenu(page));
@@ -771,7 +800,7 @@ const HEADER_CASES: HeaderCase[] = [
   {
     name: 'the list-header lead of a tag title',
     viewport: PHONE,
-    stub: (page) => stubMagazine(page, ONE_ENTRY, { tags: TAGS }),
+    stub: stubTaggedMagazine,
     path: `/?tag=${TAGS[0].id}`,
     row: async (page) => page.locator('.list-header h2'),
     icon: 'app-tag-glyph',
@@ -981,3 +1010,158 @@ test.describe('an icon-only list action', () => {
     expectNear(dot!.y + dot!.height / 2, dots.centre, 'the dots against the middle of their box');
   });
 });
+
+const BYLINED = anEntryComment({
+  author: 'Commenter With Long Name',
+  authorHandle: '@a.very.long.handle.example.social',
+  authorAvatarUrl: AVATAR,
+  byEntryAuthor: true,
+  publishedAt: '2026-11-24T10:00:00+00:00',
+});
+const BYLINED_SHORT = { ...BYLINED, author: 'Ana', authorHandle: '@ana.social' };
+
+function bylinedArticle(viewport: Surface['viewport'], comment = BYLINED): Surface {
+  return {
+    viewport,
+    stub: async (page) => {
+      await stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } });
+      await page.route(
+        (url) => url.pathname === '/api/entries/1/comments',
+        (route) => route.fulfill({ json: { ...COMMENTS, comments: [comment, comment, comment] } }),
+      );
+    },
+    path: '/?subscription=1',
+  };
+}
+
+const byline = (page: Page, comment: number) =>
+  page.locator(`app-entry-comments li.comment:nth-child(${comment}) .byline`);
+
+type OpenSurface = (setup: Setup, surface: Surface) => Promise<Page>;
+
+async function openBylines(
+  openSurface: OpenSurface,
+  setup: Setup,
+  surface: Surface = SCORED_ARTICLE,
+): Promise<Page> {
+  const page = await openSurface(setup, surface);
+  await openArticle(page);
+  await settle(page, setup.theme);
+  return page;
+}
+
+for (const setup of SETUPS) {
+  test.describe(`comment bylines, ${setup.theme} at ${setup.step}%`, () => {
+    test('an avatar hangs on the cap middle of its author', async ({ openSurface }) => {
+      const page = await openBylines(openSurface, setup);
+
+      for (const comment of [1, 2]) {
+        const row = byline(page, comment);
+        expectOnCapMiddle(
+          await measureFirstLine({
+            icon: row.locator('app-avatar'),
+            firstLine: row.locator('.author'),
+          }),
+          `comment ${comment} avatar`,
+        );
+      }
+    });
+
+    test('an avatar stands a lead space from its author', async ({ openSurface }) => {
+      const page = await openBylines(openSurface, setup);
+
+      const row = byline(page, 2);
+      const [avatar, author, leadSpace] = await Promise.all([
+        boxOf(row.locator('app-avatar')),
+        boxOf(row.locator('.author')),
+        measureToken(row, 'var(--icon-lead-space)'),
+      ]);
+      expectNear(
+        author.x - (avatar.x + avatar.width),
+        leadSpace,
+        'the avatar to author distance against the lead space',
+      );
+    });
+
+    test('a byline without an avatar starts on its author', async ({ openSurface }) => {
+      const page = await openBylines(openSurface, setup);
+
+      const row = byline(page, 3);
+      await expect(row.locator('app-avatar')).toHaveCount(0);
+      const [line, author] = await Promise.all([boxOf(row), boxOf(row.locator('.author'))]);
+      expectNear(author.x, line.x, 'the author against the byline start');
+      expectNear(author.y, line.y, 'the author against the byline top');
+      expectNear(author.height, line.height, 'the author against the byline height');
+    });
+
+    test('the other byline items stand a space token apart', async ({ openSurface }) => {
+      const page = await openBylines(openSurface, setup, bylinedArticle(DESKTOP, BYLINED_SHORT));
+
+      const row = byline(page, 1);
+      const items = ['.author', '.handle', '.op', '.separator', '.when'];
+      const [gap, ...boxes] = await Promise.all([
+        measureToken(row, 'var(--space-1)'),
+        ...items.map((item) => boxOf(row.locator(item))),
+      ]);
+      boxes.slice(1).forEach((box, index) => {
+        const before = boxes[index];
+        expectNear(
+          box.x - (before.x + before.width),
+          gap,
+          `${items[index + 1]} after its neighbour`,
+        );
+      });
+    });
+
+    test('a wrapped byline keeps its avatar on the first line', async ({ openSurface }) => {
+      const page = await openBylines(openSurface, setup, bylinedArticle(PHONE));
+
+      const row = byline(page, 1);
+      const measure = await measureFirstLine({
+        icon: row.locator('app-avatar'),
+        firstLine: row.locator('.author'),
+        block: row,
+      });
+      expect(measure.lines, 'the byline wraps').toBeGreaterThanOrEqual(MIN_LINES);
+      expectOnCapMiddle(measure, 'wrapped avatar');
+    });
+
+    test('an action button leaves the byline one text line tall and centred on it', async ({
+      openSurface,
+    }) => {
+      const own = { ...BYLINED_SHORT, post: aCommentPost({ isOwn: true }) };
+      const page = await openBylines(openSurface, setup, bylinedArticle(DESKTOP, own));
+
+      const row = byline(page, 1);
+      const button = row.locator('app-comment-actions button');
+      await expect(button).toBeVisible();
+      const author = await measureFirstLine({
+        icon: row.locator('app-avatar'),
+        firstLine: row.locator('.author'),
+      });
+      expectOnCapMiddle(author, 'avatar');
+      const [lineCentre, buttonCentre] = await Promise.all([
+        centreY(row.locator('.author')),
+        centreY(button),
+      ]);
+      expectNear(
+        buttonCentre,
+        lineCentre,
+        'the action button centre against the centre of the line',
+      );
+      const texts = ['.handle', '.when'];
+      const measures = await Promise.all(
+        texts.map((text) =>
+          measureFirstLine({ icon: row.locator('app-avatar'), firstLine: row.locator(text) }),
+        ),
+      );
+      measures.forEach((measure, index) =>
+        expectNear(
+          measure.capMiddle,
+          author.capMiddle,
+          `${texts[index]} cap middle against the author's`,
+        ),
+      );
+    });
+  });
+}

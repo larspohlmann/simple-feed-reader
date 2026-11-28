@@ -1,5 +1,13 @@
-import { expect, Locator, Page } from '@playwright/test';
-import { stubAccountProfile } from './auth';
+import {
+  BrowserContext,
+  expect,
+  Locator,
+  Page,
+  test as base,
+  type ViewportSize,
+} from '@playwright/test';
+import { settleAnimations } from './animations';
+import { presetLocalStorage, stubAccountProfile } from './auth';
 
 export const TOLERANCE = 0.5;
 
@@ -152,4 +160,160 @@ export async function stubAccountTheme(
   sidebarStyle: 'boxed' | 'airy' = 'boxed',
 ): Promise<void> {
   await stubAccountProfile(page, { theme, sidebarStyle });
+}
+
+export const PHONE = { width: 375, height: 812 };
+export const DESKTOP = { width: 1280, height: 900 };
+
+export interface Setup {
+  theme: ThemeName;
+  step: 100 | 150;
+}
+
+/** Where a case opens: its viewport and pointer, its local storage, its API stubs and its path. */
+export interface Surface {
+  viewport?: ViewportSize;
+  touch?: boolean;
+  storage?: Record<string, string>;
+  stub: (page: Page) => Promise<void>;
+  path: string;
+}
+
+/** `openSurface` opens a page on `surface` in `setup`; every context it opened closes after the test. */
+export const test = base.extend<{ openSurface: (setup: Setup, surface: Surface) => Promise<Page> }>(
+  {
+    openSurface: async ({ browser }, use) => {
+      const contexts: BrowserContext[] = [];
+      await use(
+        async ({ step, theme }, { viewport = PHONE, touch = false, storage, stub, path }) => {
+          const context = await browser.newContext({
+            baseURL: test.info().project.use.baseURL,
+            viewport,
+            hasTouch: touch,
+            isMobile: touch,
+          });
+          contexts.push(context);
+          const page = await context.newPage();
+          await page.clock.setFixedTime(new Date('2026-11-24T12:00:00Z'));
+          await presetLocalStorage(page, {
+            'sfr.textSize': String(step),
+            'sfr.layout': 'pane',
+            'sfr.theme': 'light',
+            ...storage,
+          });
+          await stub(page);
+          // After the surface stubs: a later route wins, and they answer /api/me too.
+          await stubAccountTheme(page, theme);
+          await page.goto(path);
+          return page;
+        },
+      );
+      await Promise.all(contexts.map((context) => context.close()));
+    },
+  },
+);
+
+export async function settle(page: Page, theme: ThemeName): Promise<void> {
+  await expectTheme(page, theme);
+  await page.evaluate(() => document.fonts.ready);
+  await settleAnimations(page.locator('body'));
+}
+
+/** An element an icon-lead strut rule selects, as it renders. `alone`: its strut is dropped. */
+export interface SlotReport {
+  selector: string;
+  alone: boolean;
+  strutBlockSize: number;
+  capHeight: number;
+  display: string;
+  alignSelf: string;
+  /** Inferred: the row's `align-items` is not `baseline`. */
+  hasText: boolean;
+  expected: string[];
+}
+
+/** Runs in the page: the slot selector of every `::before { block-size: var(--icon-lead-cap) }` rule, in
+ *  every sheet and every grouping rule whose media and supports conditions hold. */
+function collectSlotSelectors(): string[] {
+  const STRUT = '::before';
+  const splitSelectorList = (list: string): string[] => {
+    const selectors: string[] = [];
+    let depth = 0;
+    let start = 0;
+    [...list].forEach((character, index) => {
+      if ('(['.includes(character)) depth++;
+      else if (')]'.includes(character)) depth--;
+      else if (character === ',' && depth === 0) {
+        selectors.push(list.slice(start, index).trim());
+        start = index + 1;
+      }
+    });
+    selectors.push(list.slice(start).trim());
+    return selectors;
+  };
+  const holds = (rule: CSSRule): boolean => {
+    if (rule instanceof CSSMediaRule) return matchMedia(rule.media.mediaText).matches;
+    if (rule instanceof CSSSupportsRule) return CSS.supports(rule.conditionText);
+    return true;
+  };
+  const slotSelectors = new Set<string>();
+  const collect = (rules: CSSRuleList): void => {
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule) {
+        if (rule.style.getPropertyValue('block-size').trim() !== 'var(--icon-lead-cap)') continue;
+        splitSelectorList(rule.selectorText)
+          .filter((selector) => selector.endsWith(STRUT))
+          .forEach((selector) => slotSelectors.add(selector.slice(0, -STRUT.length)));
+      } else if (rule instanceof CSSGroupingRule && holds(rule)) {
+        collect(rule.cssRules);
+      }
+    }
+  };
+  for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+    try {
+      collect(sheet.cssRules);
+    } catch {
+      // A cross-origin sheet hides its rules, and no strut lives in one.
+    }
+  }
+  return [...slotSelectors];
+}
+
+/** Runs in the page: each rendered element the selectors pick, once, with its strut and the cap. */
+function readSlots({
+  selectors,
+  expected,
+}: {
+  selectors: string[];
+  expected: string[];
+}): SlotReport[] {
+  const reported = new Set<Element>();
+  const reports: SlotReport[] = [];
+  for (const selector of selectors) {
+    for (const slot of document.querySelectorAll(selector)) {
+      if (reported.has(slot) || slot.getClientRects().length === 0) continue;
+      reported.add(slot);
+      const style = getComputedStyle(slot);
+      const strut = getComputedStyle(slot, '::before');
+      const row = slot.parentElement;
+      reports.push({
+        selector,
+        alone: strut.content === 'none',
+        strutBlockSize: parseFloat(strut.blockSize) || 0,
+        capHeight: parseFloat(getComputedStyle(row ?? slot).getPropertyValue('--icon-lead-cap')),
+        display: style.display,
+        alignSelf: style.alignSelf,
+        hasText: !!row && getComputedStyle(row).alignItems !== 'baseline',
+        expected: expected.filter((candidate) => slot.matches(candidate)),
+      });
+    }
+  }
+  return reports;
+}
+
+/** Every icon-lead slot on the page, found by its strut rule rather than listed; `expected` names the
+ *  selectors each slot is reported as matching. */
+export async function findLeadSlots(page: Page, expected: string[] = []): Promise<SlotReport[]> {
+  const selectors = await page.evaluate(collectSlotSelectors);
+  return page.evaluate(readSlots, { selectors, expected });
 }

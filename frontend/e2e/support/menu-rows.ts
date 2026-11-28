@@ -1,5 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { aSubscription } from '../../src/testing/subscription-testing';
+import { DESKTOP, PHONE, Surface } from './first-line';
 import { openArticle, SCORED_POST, stubArticle } from './icon-rows';
 import { subscriptionsJson } from './reader';
 
@@ -63,3 +64,6 @@ export async function openRepostMenu(page: Page): Promise<Locator> {
   await page.locator('app-reader-view button.repost').first().click();
   return expectPopover(page);
 }
+
+export const MENU_FINE: Surface = { viewport: DESKTOP, stub: stubMenus, path: '/?subscription=1' };
+export const MENU_COARSE: Surface = { ...MENU_FINE, viewport: PHONE, touch: true };

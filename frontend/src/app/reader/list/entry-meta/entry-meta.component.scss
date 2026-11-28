@@ -1,3 +1,5 @@
+@use '../../../theme/icon-lead';
+
 /* The host IS the row. `width: 100%` counters ancestors' `flex-start`;
    `align-items: flex-end` levels actions with a wrapping pill list's last line. */
 :host {
@@ -29,7 +31,7 @@ app-entry-actions {
 
 .discussion {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-4);
   font-size: var(--fs-sm);
   color: var(--text-muted);
@@ -40,8 +42,9 @@ app-vote-pill {
 }
 
 .comments {
+  @include icon-lead.first-line('> app-icon', '> .count');
+
   display: inline-flex;
-  align-items: center;
   gap: var(--space-1);
   font-variant-numeric: tabular-nums;
 }

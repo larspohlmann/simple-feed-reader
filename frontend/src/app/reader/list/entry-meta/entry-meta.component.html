@@ -11,7 +11,8 @@
         role="img"
         [attr.aria-label]="commentBubble.labelKey | transloco: { count: commentBubble.count }"
       >
-        <app-icon name="chat_bubble" size="sm" aria-hidden="true" />{{ commentBubble.text }}
+        <app-icon name="chat_bubble" size="sm" aria-hidden="true" />
+        <span class="count">{{ commentBubble.text }}</span>
       </span>
     }
   </span>

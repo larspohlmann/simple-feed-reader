@@ -13,6 +13,9 @@ import {
   aStory,
   aStoryArticle,
 } from '../../src/testing/entry-testing';
+import { aSubscription } from '../../src/testing/subscription-testing';
+import { makeTag } from '../../src/app/reader/testing/tag.factory';
+import { DESKTOP, Surface } from './first-line';
 import { stubImageHost } from './images';
 import {
   entryDetailJson,
@@ -20,6 +23,7 @@ import {
   oneFeedJson,
   readerFailedJson,
   stubOneFeedReader,
+  subscriptionsJson,
 } from './reader';
 
 /** Rows of text beside icons, every API read stubbed, so a spec or a script owns what it measures. */
@@ -205,4 +209,56 @@ export async function stubTrending(page: Page): Promise<void> {
     (url) => url.pathname === '/api/trending/followed',
     (route) => route.fulfill({ json: { stories: [], nextBuildDueAt: null } }),
   );
+}
+
+export const TAGS = [
+  makeTag(7, 'Politics', { icon: 'home' }),
+  makeTag(8, 'Science', { icon: 'science' }),
+];
+export const ONE_ENTRY = [entryWire({ id: 1, title: 'One', source: 'Heise' })];
+
+export const SCORED_ARTICLE: Surface = {
+  viewport: DESKTOP,
+  stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
+  path: '/?subscription=1',
+};
+
+export async function stubTaggedMagazine(page: Page): Promise<void> {
+  await stubMagazine(page, ONE_ENTRY, { tags: TAGS });
+}
+
+export const MAGAZINE: Surface = {
+  viewport: DESKTOP,
+  stub: stubTaggedMagazine,
+  path: '/?subscription=1',
+};
+export const ORGANISE: Surface = { ...MAGAZINE, path: '/settings/organise' };
+
+export const COUNTED_ENTRY = entryWire({
+  id: 1,
+  title: 'One',
+  source: 'Heise',
+  score: 22,
+  myVote: null,
+  commentCount: 6,
+  likeCount: 4,
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+});
+
+export const UNLIKABLE_ENTRY: EntryDto = { ...COUNTED_ENTRY, social: null, myVote: 0 };
+
+/** The edited feed carries no tags and a newer one carries TAGS, so the picker suggests them. */
+export async function stubSuggestedTags(page: Page): Promise<void> {
+  await stubMagazine(page, ONE_ENTRY, { tags: [] });
+  const counts = { unreadCount: 1, entryCount: 1 };
+  const edited = aSubscription({ title: 'Fixture feed', ...counts });
+  const donor = aSubscription({ id: 2, title: 'Donor feed', tags: TAGS, ...counts });
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+    route.fulfill({ json: subscriptionsJson([edited, donor]) }),
+  );
+  await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags: TAGS } }));
+}
+
+export async function openTagPicker(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Edit feed' }).first().click();
 }

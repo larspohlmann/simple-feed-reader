@@ -95,8 +95,8 @@ describe('icon-lead', () => {
       'margin-inline-end': '0',
     });
     expect(rules['.row > .glyph::before']).toMatchObject({
-      content: '""',
-      'block-size': 'var(--icon-lead-cap)',
+      content: '"" !important',
+      'block-size': 'var(--icon-lead-cap) !important',
     });
   });
 
@@ -141,12 +141,14 @@ describe('icon-lead', () => {
       'margin-block': '0',
       'margin-inline-end': '0',
     });
-    expect(rules['.alone > .glyph.only::before']).toMatchObject({ content: 'none' });
+    expect(rules['.alone > .glyph.only::before']).toMatchObject({ content: 'none !important' });
   });
 
   it('lines a whole row up on the baseline when its text is bare', () => {
     expect(rules['.bare']).toMatchObject({ 'align-items': 'baseline' });
-    expect(rules['.bare > .glyph::before']).toMatchObject({ 'block-size': 'var(--icon-lead-cap)' });
+    expect(rules['.bare > .glyph::before']).toMatchObject({
+      'block-size': 'var(--icon-lead-cap) !important',
+    });
   });
 
   it('keeps a single wrapped line centred in a taller row', () => {

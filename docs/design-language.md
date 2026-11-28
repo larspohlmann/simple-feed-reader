@@ -154,10 +154,12 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
 
 - `first-line($slot, $text)` on the row: the slot and the named text share a baseline, and the slot's
   baseline is the bottom of a zero-width `1cap` strut centred in it, so the glyph centres on the cap
-  middle whatever the engine rounds. The row's other items centre on it; one that should not (a column that
-  stays at the top) says `align-self: start`. The slot gives up its own end margin. The slot must share a
-  flex line with its text, in a row direction. Bare text (a chip's label, an `<app-button>`'s projected
-  text) has no selector: `$text: null` lines the whole row up on the baseline instead.
+  middle whatever the engine rounds. The strut's `content` and `block-size` are `!important`, so a
+  consumer's own `::before` or `block-size` rule cannot drop it. The row's other items centre on it;
+  one that should not (a column that stays at the top) says `align-self: start`. The slot gives up its
+  own end margin. The slot must share a flex line with its text, in a row direction. Bare text (a
+  chip's label, an `<app-button>`'s projected text) has no selector: `$text: null` lines the whole row
+  up on the baseline instead.
 - `box($inset, $slot, $text)`: a boxed note or a pill whose block padding is `$inset` (a bare `0` is
   fine); its side padding and icon gap are one lead space, `lead-space($inset)` = `$inset + (1lh - 1cap) / 2`,
   declared on the row as `--icon-lead-space`. With `$gap:` when items follow the text: only the icon gets
@@ -171,7 +173,9 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   derives where a row's label starts from the same `space()`.
 - `centred-line`: a row with a min-height that wraps keeps its single line centred in it.
 - `alone($slot)`: a glyph with no text beside it (an icon-only button) takes its own box back, centred,
-  with no lead space after it. In an `<app-button>` it carries `class="alone"`.
+  with no lead space after it. In an `<app-button>` it carries `class="alone"`. Its `content: none` is
+  `!important` too and wins on order: include `alone` after the row's mixin, with a selector at least as
+  specific.
 - A slot has no height in the line. One that paints a box of its own (a logo, a chip, a wrapper holding a
   glyph and its badge) publishes that box's height as `--icon-lead-self` on itself (`self-sized($size)` for a
   host sized by it, `padded-slot($size, $padding)` for a chip round a glyph): the slot keeps the box
@@ -179,6 +183,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
   The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
 - A slot's host spaces its own children with margins, not `gap`: the cap strut is a flex item too.
+- Recorded example: the comment byline's actions would make the row taller than its first line, so they
+  hold `block-size: 1lh` and the baseline group and the centred items stay on one line.
 - A menu's own items (a title, a note, a quote hint, a rule) start on the rows' icon edge: the menu declares
   `--icon-lead-space` where the row font applies (`menu-items.menu-lead-space`) and they read it.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an
@@ -191,8 +197,9 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   resolve `1cap`. A slot projected from outside needs `::ng-deep`.
 
 `e2e/icon-lead-first-line.spec.ts` pins it: icon centre within 0.5px of the first line's cap middle, and
-a painted glyph inside its control. `e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and
-its exclusion markers.
+a painted glyph inside its control. `e2e/icon-lead-slots.spec.ts` finds every slot by its strut rule and
+pins its cap strut, on a fine and a coarse pointer, and each surface names the slots it must show.
+`e2e/sidebar-lead-space.spec.ts` pins the sidebar's lead spaces and its exclusion markers.
 
 Not part of it: the feed-intro logo, favicons inside a run of text, the story-sources thumbnail tile, the
 error banner and the article byline favicon.
