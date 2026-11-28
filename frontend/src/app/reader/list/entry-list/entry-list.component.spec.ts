@@ -2557,6 +2557,8 @@ describe('EntryListComponent', () => {
   // #462: rows that appear after mount get the focus pass too, not only a
   // scroll, a resize or the first frame; they must not stay undimmed.
   describe('reading focus', () => {
+    beforeEach(() => localStorage.setItem('sfr.readingFocus', 'true'));
+
     const loaded = [entry(1), entry(2), entry(3)];
 
     it('clears dimming from the open list when disabled', async () => {
@@ -2669,6 +2671,8 @@ describe('EntryListComponent', () => {
   // #501: rendering a whole load-more page in one tick stalls the main thread
   // for hundreds of ms on a long list; iOS keeps scrolling into unpainted rows.
   describe('load-more reveal', () => {
+    beforeEach(() => localStorage.setItem('sfr.readingFocus', 'true'));
+
     const rowCount = (fixture: ComponentFixture<EntryListComponent>): number =>
       (fixture.nativeElement as HTMLElement).querySelectorAll('.rows app-entry-row').length;
     const page = (from: number, count: number): EntryDto[] =>
