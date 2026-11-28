@@ -183,8 +183,8 @@ line's cap middle, one line or five (#2558). `theme/_icon-lead.scss` is the one 
   sets it beside its glyph's; a consumer that resizes such a host sets the property, not `width`/`height`.
   The vote pill's arrows are the exception: a hit area that sizes the pill keeps `block-size: auto`.
 - A slot's host spaces its own children with margins, not `gap`: the cap strut is a flex item too.
-- An item that would make the row taller than its first line (an action cluster) holds `block-size: 1lh`,
-  as the comment byline's actions do, so the baseline group and the centred items stay on one line.
+- Recorded example: the comment byline's actions would make the row taller than its first line, so they
+  hold `block-size: 1lh` and the baseline group and the centred items stay on one line.
 - A menu's own items (a title, a note, a quote hint, a rule) start on the rows' icon edge: the menu declares
   `--icon-lead-space` where the row font applies (`menu-items.menu-lead-space`) and they read it.
 - A trailing icon (a chevron after a label) is not a lead: it keeps the row's gap token. In an

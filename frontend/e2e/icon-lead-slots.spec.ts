@@ -19,6 +19,7 @@ import {
   SCORED_ARTICLE,
   stubMagazine,
   stubSuggestedTags,
+  UNLIKABLE_ENTRY,
 } from './support/icon-rows';
 import { MENU_FINE, openAccountMenu } from './support/menu-rows';
 
@@ -30,7 +31,6 @@ const SETUP: Setup = { theme: 'graphite', step: 100 };
 
 interface SlotSurface extends Surface {
   name: string;
-  /** Brings the surface's rows on screen. */
   open: (page: Page) => Promise<void>;
   /** Slots the surface must show, so it cannot quietly lose its rows. */
   expected: string[];
@@ -38,7 +38,7 @@ interface SlotSurface extends Surface {
 
 const LIKED_AND_UNLIKABLE: EntryDto[] = [
   COUNTED_ENTRY,
-  { ...COUNTED_ENTRY, id: 2, title: 'Two', social: null, myVote: 0 },
+  { ...UNLIKABLE_ENTRY, id: 2, title: 'Two' },
 ];
 
 const SURFACES: SlotSurface[] = [

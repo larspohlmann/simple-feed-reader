@@ -13,6 +13,7 @@ import {
   aStory,
   aStoryArticle,
 } from '../../src/testing/entry-testing';
+import { aSubscription } from '../../src/testing/subscription-testing';
 import { makeTag } from '../../src/app/reader/testing/tag.factory';
 import { DESKTOP, Surface } from './first-line';
 import { stubImageHost } from './images';
@@ -221,11 +222,6 @@ export const SCORED_ARTICLE: Surface = {
   stub: (page) => stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } }),
   path: '/?subscription=1',
 };
-export const ORGANISE: Surface = {
-  viewport: DESKTOP,
-  stub: stubTaggedMagazine,
-  path: '/settings/organise',
-};
 
 export async function stubTaggedMagazine(page: Page): Promise<void> {
   await stubMagazine(page, ONE_ENTRY, { tags: TAGS });
@@ -236,6 +232,7 @@ export const MAGAZINE: Surface = {
   stub: stubTaggedMagazine,
   path: '/?subscription=1',
 };
+export const ORGANISE: Surface = { ...MAGAZINE, path: '/settings/organise' };
 
 export const COUNTED_ENTRY = entryWire({
   id: 1,
@@ -248,11 +245,14 @@ export const COUNTED_ENTRY = entryWire({
   social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
 });
 
+export const UNLIKABLE_ENTRY: EntryDto = { ...COUNTED_ENTRY, social: null, myVote: 0 };
+
 /** The edited feed carries no tags and a newer one carries TAGS, so the picker suggests them. */
 export async function stubSuggestedTags(page: Page): Promise<void> {
   await stubMagazine(page, ONE_ENTRY, { tags: [] });
-  const [edited] = oneFeedJson('Fixture feed').subscriptions;
-  const donor = { ...edited, id: 2, feedId: 2, title: 'Donor feed', tags: TAGS };
+  const counts = { unreadCount: 1, entryCount: 1 };
+  const edited = aSubscription({ title: 'Fixture feed', ...counts });
+  const donor = aSubscription({ id: 2, title: 'Donor feed', tags: TAGS, ...counts });
   await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
     route.fulfill({ json: subscriptionsJson([edited, donor]) }),
   );

@@ -10,16 +10,20 @@
   --tap-glyph: var(--icon-md);
 }
 
-button {
+button,
+.likes {
   @include icon-lead.first-line('> app-icon, > app-pending-dots', '> .count');
   @include icon-lead.centred-line;
 
   display: inline-flex;
-  justify-content: center;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
-  min-block-size: calc(var(--tap-glyph) + 2 * var(--space-0));
   min-inline-size: max-content;
+  font-size: var(--fs-sm);
+}
+
+button {
+  justify-content: center;
+  min-block-size: calc(var(--tap-glyph) + 2 * var(--space-0));
   padding: var(--space-0);
   border: none;
   border-radius: var(--radius-sm);
@@ -33,14 +37,7 @@ app-icon {
 }
 
 .likes {
-  @include icon-lead.first-line('> app-icon', '> .count');
-  @include icon-lead.centred-line;
-
-  display: inline-flex;
-  gap: var(--space-1);
   min-block-size: var(--tap-glyph);
-  min-inline-size: max-content;
-  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 

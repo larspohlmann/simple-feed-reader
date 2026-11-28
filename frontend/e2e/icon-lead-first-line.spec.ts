@@ -1,5 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { aCommentPost, aStory, anEntryComment } from '../src/testing/entry-testing';
+import { boxOf, centreY } from './support/geometry';
 import {
   DESKTOP,
   expectNear,
@@ -34,6 +35,7 @@ import {
   stubTaggedMagazine,
   stubTrending,
   TAGS,
+  UNLIKABLE_ENTRY,
 } from './support/icon-rows';
 import {
   MENU_COARSE,
@@ -492,7 +494,6 @@ const COUNTED_LIST: Surface = {
   path: '/?subscription=1',
 };
 
-/** A count beside a glyph: its row, the glyph and the number. */
 interface CountCase extends Surface {
   name: string;
   open?: (page: Page) => Promise<void>;
@@ -501,38 +502,27 @@ interface CountCase extends Surface {
   text: string;
 }
 
+function countCase(
+  name: string,
+  surface: Surface & { open?: CountCase['open'] },
+  { row, text = '.count' }: { row: string; text?: string },
+): CountCase {
+  return { name, ...surface, row, icon: 'app-icon', text };
+}
+
 const COUNT_CASES: CountCase[] = [
-  {
-    name: 'the list comment bubble',
-    ...COUNTED_LIST,
-    row: 'app-entry-meta .comments',
-    icon: 'app-icon',
-    text: '.count',
-  },
-  {
-    name: 'the list like button count',
-    ...COUNTED_LIST,
-    row: 'app-entry-like button',
-    icon: 'app-icon',
-    text: '.count',
-  },
-  {
-    name: 'the list like count without a button',
-    viewport: DESKTOP,
-    stub: (page) => stubMagazine(page, [{ ...COUNTED_ENTRY, social: null, myVote: 0 }]),
-    path: '/?subscription=1',
-    row: 'app-entry-like .likes',
-    icon: 'app-icon',
-    text: '.count',
-  },
-  {
-    name: 'the article social count',
-    ...SCORED_ARTICLE,
-    open: openArticle,
-    row: 'app-social-counts app-social-counts-row .count',
-    icon: 'app-icon',
-    text: '.number',
-  },
+  countCase('the list comment bubble', COUNTED_LIST, { row: 'app-entry-meta .comments' }),
+  countCase('the list like button count', COUNTED_LIST, { row: 'app-entry-like button' }),
+  countCase(
+    'the list like count without a button',
+    { ...COUNTED_LIST, stub: (page) => stubMagazine(page, [UNLIKABLE_ENTRY]) },
+    { row: 'app-entry-like .likes' },
+  ),
+  countCase(
+    'the article social count',
+    { ...SCORED_ARTICLE, open: openArticle },
+    { row: 'app-social-counts app-social-counts-row .count', text: '.number' },
+  ),
 ];
 
 for (const setup of SETUPS) {
@@ -560,13 +550,11 @@ for (const setup of SETUPS) {
       await expect(discussion.locator('.comments')).toBeVisible();
       await settle(page, setup.theme);
 
-      const centres = await discussion.evaluate((element) =>
-        ['.comments app-icon', 'app-vote-pill .arrow app-icon'].map((selector) => {
-          const box = element.querySelector(selector)!.getBoundingClientRect();
-          return box.top + box.height / 2;
-        }),
-      );
-      expectNear(centres[0], centres[1], 'the bubble centre against the arrow centre');
+      const [bubble, arrow] = await Promise.all([
+        centreY(discussion.locator('.comments app-icon').first()),
+        centreY(discussion.locator('app-vote-pill .arrow app-icon').first()),
+      ]);
+      expectNear(bubble, arrow, 'the bubble centre against the arrow centre');
     });
   });
 }
@@ -1049,16 +1037,23 @@ function bylinedArticle(viewport: Surface['viewport'], comment = BYLINED): Surfa
 const byline = (page: Page, comment: number) =>
   page.locator(`app-entry-comments li.comment:nth-child(${comment}) .byline`);
 
-async function boxOf(locator: Locator) {
-  return (await locator.boundingBox())!;
+type OpenSurface = (setup: Setup, surface: Surface) => Promise<Page>;
+
+async function openBylines(
+  openSurface: OpenSurface,
+  setup: Setup,
+  surface: Surface = SCORED_ARTICLE,
+): Promise<Page> {
+  const page = await openSurface(setup, surface);
+  await openArticle(page);
+  await settle(page, setup.theme);
+  return page;
 }
 
 for (const setup of SETUPS) {
   test.describe(`comment bylines, ${setup.theme} at ${setup.step}%`, () => {
     test('an avatar hangs on the cap middle of its author', async ({ openSurface }) => {
-      const page = await openSurface(setup, SCORED_ARTICLE);
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup);
 
       for (const comment of [1, 2]) {
         const row = byline(page, comment);
@@ -1073,43 +1068,41 @@ for (const setup of SETUPS) {
     });
 
     test('an avatar stands a lead space from its author', async ({ openSurface }) => {
-      const page = await openSurface(setup, SCORED_ARTICLE);
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup);
 
       const row = byline(page, 2);
-      const avatar = await boxOf(row.locator('app-avatar'));
-      const author = await boxOf(row.locator('.author'));
+      const [avatar, author, leadSpace] = await Promise.all([
+        boxOf(row.locator('app-avatar')),
+        boxOf(row.locator('.author')),
+        measureToken(row, 'var(--icon-lead-space)'),
+      ]);
       expectNear(
         author.x - (avatar.x + avatar.width),
-        await measureToken(row, 'var(--icon-lead-space)'),
+        leadSpace,
         'the avatar to author distance against the lead space',
       );
     });
 
     test('a byline without an avatar starts on its author', async ({ openSurface }) => {
-      const page = await openSurface(setup, SCORED_ARTICLE);
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup);
 
       const row = byline(page, 3);
       await expect(row.locator('app-avatar')).toHaveCount(0);
-      const line = await boxOf(row);
-      const author = await boxOf(row.locator('.author'));
+      const [line, author] = await Promise.all([boxOf(row), boxOf(row.locator('.author'))]);
       expectNear(author.x, line.x, 'the author against the byline start');
       expectNear(author.y, line.y, 'the author against the byline top');
       expectNear(author.height, line.height, 'the author against the byline height');
     });
 
     test('the other byline items stand a space token apart', async ({ openSurface }) => {
-      const page = await openSurface(setup, bylinedArticle(DESKTOP, BYLINED_SHORT));
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup, bylinedArticle(DESKTOP, BYLINED_SHORT));
 
       const row = byline(page, 1);
-      const gap = await measureToken(row, 'var(--space-1)');
       const items = ['.author', '.handle', '.op', '.separator', '.when'];
-      const boxes = await Promise.all(items.map((item) => boxOf(row.locator(item))));
+      const [gap, ...boxes] = await Promise.all([
+        measureToken(row, 'var(--space-1)'),
+        ...items.map((item) => boxOf(row.locator(item))),
+      ]);
       boxes.slice(1).forEach((box, index) => {
         const before = boxes[index];
         expectNear(
@@ -1121,9 +1114,7 @@ for (const setup of SETUPS) {
     });
 
     test('a wrapped byline keeps its avatar on the first line', async ({ openSurface }) => {
-      const page = await openSurface(setup, bylinedArticle(PHONE));
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup, bylinedArticle(PHONE));
 
       const row = byline(page, 1);
       const measure = await measureFirstLine({
@@ -1139,9 +1130,7 @@ for (const setup of SETUPS) {
       openSurface,
     }) => {
       const own = { ...BYLINED_SHORT, post: aCommentPost({ isOwn: true }) };
-      const page = await openSurface(setup, bylinedArticle(DESKTOP, own));
-      await openArticle(page);
-      await settle(page, setup.theme);
+      const page = await openBylines(openSurface, setup, bylinedArticle(DESKTOP, own));
 
       const row = byline(page, 1);
       const button = row.locator('app-comment-actions button');
@@ -1151,20 +1140,28 @@ for (const setup of SETUPS) {
         firstLine: row.locator('.author'),
       });
       expectOnCapMiddle(author, 'avatar');
-      const lineBox = await boxOf(row.locator('.author'));
-      const buttonBox = await boxOf(button);
+      const [lineCentre, buttonCentre] = await Promise.all([
+        centreY(row.locator('.author')),
+        centreY(button),
+      ]);
       expectNear(
-        buttonBox.y + buttonBox.height / 2,
-        lineBox.y + lineBox.height / 2,
+        buttonCentre,
+        lineCentre,
         'the action button centre against the centre of the line',
       );
-      for (const text of ['.handle', '.when']) {
-        const measure = await measureFirstLine({
-          icon: row.locator('app-avatar'),
-          firstLine: row.locator(text),
-        });
-        expectNear(measure.capMiddle, author.capMiddle, `${text} cap middle against the author's`);
-      }
+      const texts = ['.handle', '.when'];
+      const measures = await Promise.all(
+        texts.map((text) =>
+          measureFirstLine({ icon: row.locator('app-avatar'), firstLine: row.locator(text) }),
+        ),
+      );
+      measures.forEach((measure, index) =>
+        expectNear(
+          measure.capMiddle,
+          author.capMiddle,
+          `${texts[index]} cap middle against the author's`,
+        ),
+      );
     });
   });
 }

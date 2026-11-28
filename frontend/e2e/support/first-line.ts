@@ -1,4 +1,11 @@
-import { BrowserContext, expect, Locator, Page, test as base } from '@playwright/test';
+import {
+  BrowserContext,
+  expect,
+  Locator,
+  Page,
+  test as base,
+  type ViewportSize,
+} from '@playwright/test';
 import { settleAnimations } from './animations';
 import { presetLocalStorage, stubAccountProfile } from './auth';
 
@@ -163,14 +170,9 @@ export interface Setup {
   step: 100 | 150;
 }
 
-export interface Viewport {
-  width: number;
-  height: number;
-}
-
 /** Where a case opens: its viewport and pointer, its local storage, its API stubs and its path. */
 export interface Surface {
-  viewport?: Viewport;
+  viewport?: ViewportSize;
   touch?: boolean;
   storage?: Record<string, string>;
   stub: (page: Page) => Promise<void>;
@@ -227,7 +229,6 @@ export interface SlotReport {
   alignSelf: string;
   /** Inferred: the row's `align-items` is not `baseline`. */
   hasText: boolean;
-  /** The expected selectors this slot matches. */
   expected: string[];
 }
 
@@ -286,8 +287,6 @@ function readSlots({
   selectors: string[];
   expected: string[];
 }): SlotReport[] {
-  const measureCap = (slot: Element): number =>
-    parseFloat(getComputedStyle(slot.parentElement ?? slot).getPropertyValue('--icon-lead-cap'));
   const reported = new Set<Element>();
   const reports: SlotReport[] = [];
   for (const selector of selectors) {
@@ -301,7 +300,7 @@ function readSlots({
         selector,
         alone: strut.content === 'none',
         strutBlockSize: parseFloat(strut.blockSize) || 0,
-        capHeight: measureCap(slot),
+        capHeight: parseFloat(getComputedStyle(row ?? slot).getPropertyValue('--icon-lead-cap')),
         display: style.display,
         alignSelf: style.alignSelf,
         hasText: !!row && getComputedStyle(row).alignItems !== 'baseline',
