@@ -462,6 +462,105 @@ for (const setup of SETUPS) {
   });
 }
 
+const COUNTED_ENTRY = entryWire({
+  id: 1,
+  title: 'One',
+  source: 'Heise',
+  score: 22,
+  myVote: null,
+  commentCount: 6,
+  likeCount: 4,
+  social: { network: 'bluesky', isLiked: false, canLike: true, isOwn: false },
+});
+
+const COUNTED_LIST: Surface = {
+  viewport: DESKTOP,
+  stub: (page) => stubMagazine(page, [COUNTED_ENTRY]),
+  path: '/?subscription=1',
+};
+
+/** A count beside a glyph: its row, the glyph and the number. */
+interface CountCase extends Surface {
+  name: string;
+  open: (page: Page) => Promise<void>;
+  row: string;
+  icon: string;
+  text: string;
+}
+
+const COUNT_CASES: CountCase[] = [
+  {
+    name: 'the list comment bubble',
+    ...COUNTED_LIST,
+    open: async () => undefined,
+    row: 'app-entry-meta .comments',
+    icon: 'app-icon',
+    text: '.count',
+  },
+  {
+    name: 'the list like button count',
+    ...COUNTED_LIST,
+    open: async () => undefined,
+    row: 'app-entry-like button',
+    icon: 'app-icon',
+    text: '.count',
+  },
+  {
+    name: 'the list like count without a button',
+    viewport: DESKTOP,
+    stub: (page) => stubMagazine(page, [{ ...COUNTED_ENTRY, social: null, myVote: 0 }]),
+    path: '/?subscription=1',
+    open: async () => undefined,
+    row: 'app-entry-like .likes',
+    icon: 'app-icon',
+    text: '.count',
+  },
+  {
+    name: 'the article social count',
+    ...SCORED_ARTICLE,
+    open: openArticle,
+    row: 'app-social-counts app-social-counts-row .count',
+    icon: 'app-icon',
+    text: '.number',
+  },
+];
+
+for (const setup of SETUPS) {
+  test.describe(`counts, ${setup.theme} at ${setup.step}%`, () => {
+    for (const count of COUNT_CASES) {
+      test(`${count.name} centres its glyph on the cap middle`, async ({ openSurface }) => {
+        const page = await openSurface(setup, count);
+        await count.open(page);
+        const row = page.locator(count.row).first();
+        await expect(row).toBeVisible();
+        await settle(page, setup.theme);
+
+        expectOnCapMiddle(
+          await measureFirstLine({
+            icon: row.locator(count.icon).first(),
+            firstLine: row.locator(count.text).first(),
+          }),
+        );
+      });
+    }
+
+    test('the comment bubble and the vote arrows share a line', async ({ openSurface }) => {
+      const page = await openSurface(setup, COUNTED_LIST);
+      const discussion = page.locator('app-entry-meta .discussion').first();
+      await expect(discussion.locator('.comments')).toBeVisible();
+      await settle(page, setup.theme);
+
+      const centres = await discussion.evaluate((element) =>
+        ['.comments app-icon', 'app-vote-pill .arrow app-icon'].map((selector) => {
+          const box = element.querySelector(selector)!.getBoundingClientRect();
+          return box.top + box.height / 2;
+        }),
+      );
+      expectNear(centres[0], centres[1], 'the bubble centre against the arrow centre');
+    });
+  });
+}
+
 /** A row of a menu: how to open the menu and find the row, its lead icon and the text it leads. */
 interface MenuCase extends LeadCase {
   /** The text is a single line, so its line stays centred in the row. */
