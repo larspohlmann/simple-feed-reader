@@ -1,5 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
-import { aStory } from '../src/testing/entry-testing';
+import { aStory, anEntryComment } from '../src/testing/entry-testing';
 import {
   DESKTOP,
   expectNear,
@@ -16,6 +16,8 @@ import {
   TOLERANCE,
 } from './support/first-line';
 import {
+  AVATAR,
+  COMMENTS,
   NOTIFICATION,
   ONE_ENTRY,
   openArticle,
@@ -1038,3 +1040,113 @@ test.describe('an icon-only list action', () => {
     expectNear(dot!.y + dot!.height / 2, dots.centre, 'the dots against the middle of their box');
   });
 });
+
+const BYLINED = anEntryComment({
+  author: 'Commenter With Long Name',
+  authorHandle: '@a.very.long.handle.example.social',
+  authorAvatarUrl: AVATAR,
+  byEntryAuthor: true,
+  publishedAt: '2026-11-24T10:00:00+00:00',
+});
+const BYLINED_SHORT = { ...BYLINED, author: 'Ana', authorHandle: '@ana.social' };
+
+function bylinedArticle(viewport: Surface['viewport'], comment = BYLINED): Surface {
+  return {
+    viewport,
+    stub: async (page) => {
+      await stubArticle(page, { post: SCORED_POST, feed: { tags: TAGS } });
+      await page.route(
+        (url) => url.pathname === '/api/entries/1/comments',
+        (route) => route.fulfill({ json: { ...COMMENTS, comments: [comment, comment, comment] } }),
+      );
+    },
+    path: '/?subscription=1',
+  };
+}
+
+const byline = (page: Page, comment: number) =>
+  page.locator(`app-entry-comments li.comment:nth-child(${comment}) .byline`);
+
+async function boxOf(locator: Locator) {
+  return (await locator.boundingBox())!;
+}
+
+for (const setup of SETUPS) {
+  test.describe(`comment bylines, ${setup.theme} at ${setup.step}%`, () => {
+    test('an avatar hangs on the cap middle of its author', async ({ openSurface }) => {
+      const page = await openSurface(setup, SCORED_ARTICLE);
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      for (const comment of [1, 2]) {
+        const row = byline(page, comment);
+        expectOnCapMiddle(
+          await measureFirstLine({
+            icon: row.locator('app-avatar'),
+            firstLine: row.locator('.author'),
+          }),
+          `comment ${comment} avatar`,
+        );
+      }
+    });
+
+    test('an avatar stands a lead space from its author', async ({ openSurface }) => {
+      const page = await openSurface(setup, SCORED_ARTICLE);
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      const row = byline(page, 2);
+      const avatar = await boxOf(row.locator('app-avatar'));
+      const author = await boxOf(row.locator('.author'));
+      expectNear(
+        author.x - (avatar.x + avatar.width),
+        await measureToken(row, 'var(--icon-lead-space)'),
+        'the avatar to author distance against the lead space',
+      );
+    });
+
+    test('a byline without an avatar starts on its author', async ({ openSurface }) => {
+      const page = await openSurface(setup, SCORED_ARTICLE);
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      const row = byline(page, 3);
+      await expect(row.locator('app-avatar')).toHaveCount(0);
+      const line = await boxOf(row);
+      const author = await boxOf(row.locator('.author'));
+      expectNear(author.x, line.x, 'the author against the byline start');
+      expectNear(author.y, line.y, 'the author against the byline top');
+      expectNear(author.height, line.height, 'the author against the byline height');
+    });
+
+    test('the other byline items stand a space token apart', async ({ openSurface }) => {
+      const page = await openSurface(setup, bylinedArticle(DESKTOP, BYLINED_SHORT));
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      const row = byline(page, 1);
+      const gap = await measureToken(row, 'var(--space-1)');
+      const items = ['.author', '.handle', '.op', '.separator', '.when'];
+      const boxes = await Promise.all(items.map((item) => boxOf(row.locator(item))));
+      boxes.slice(1).forEach((box, index) => {
+        const before = boxes[index];
+        expectNear(box.x - (before.x + before.width), gap, `${items[index + 1]} after its neighbour`);
+      });
+    });
+
+    test('a wrapped byline keeps its avatar on the first line', async ({ openSurface }) => {
+      const page = await openSurface(setup, bylinedArticle(PHONE));
+      await openArticle(page);
+      await settle(page, setup.theme);
+
+      const row = byline(page, 1);
+      const measure = await measureFirstLine({
+        icon: row.locator('app-avatar'),
+        firstLine: row.locator('.author'),
+        block: row,
+      });
+      expect(measure.lines, 'the byline wraps').toBeGreaterThanOrEqual(MIN_LINES);
+      expectOnCapMiddle(measure, 'wrapped avatar');
+    });
+  });
+}
