@@ -19,6 +19,7 @@ button {
   gap: var(--space-1);
   font-size: var(--fs-sm);
   min-block-size: calc(var(--tap-glyph) + 2 * var(--space-0));
+  min-inline-size: max-content;
   padding: var(--space-0);
   border: none;
   border-radius: var(--radius-sm);
@@ -38,6 +39,7 @@ app-icon {
   display: inline-flex;
   gap: var(--space-1);
   min-block-size: var(--tap-glyph);
+  min-inline-size: max-content;
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }

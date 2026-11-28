@@ -482,7 +482,7 @@ const COUNTED_LIST: Surface = {
 /** A count beside a glyph: its row, the glyph and the number. */
 interface CountCase extends Surface {
   name: string;
-  open: (page: Page) => Promise<void>;
+  open?: (page: Page) => Promise<void>;
   row: string;
   icon: string;
   text: string;
@@ -492,7 +492,6 @@ const COUNT_CASES: CountCase[] = [
   {
     name: 'the list comment bubble',
     ...COUNTED_LIST,
-    open: async () => undefined,
     row: 'app-entry-meta .comments',
     icon: 'app-icon',
     text: '.count',
@@ -500,7 +499,6 @@ const COUNT_CASES: CountCase[] = [
   {
     name: 'the list like button count',
     ...COUNTED_LIST,
-    open: async () => undefined,
     row: 'app-entry-like button',
     icon: 'app-icon',
     text: '.count',
@@ -510,7 +508,6 @@ const COUNT_CASES: CountCase[] = [
     viewport: DESKTOP,
     stub: (page) => stubMagazine(page, [{ ...COUNTED_ENTRY, social: null, myVote: 0 }]),
     path: '/?subscription=1',
-    open: async () => undefined,
     row: 'app-entry-like .likes',
     icon: 'app-icon',
     text: '.count',
@@ -530,7 +527,7 @@ for (const setup of SETUPS) {
     for (const count of COUNT_CASES) {
       test(`${count.name} centres its glyph on the cap middle`, async ({ openSurface }) => {
         const page = await openSurface(setup, count);
-        await count.open(page);
+        await count.open?.(page);
         const row = page.locator(count.row).first();
         await expect(row).toBeVisible();
         await settle(page, setup.theme);

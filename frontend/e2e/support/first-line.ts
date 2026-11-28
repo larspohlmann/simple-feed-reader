@@ -278,15 +278,8 @@ function collectSlotSelectors(): string[] {
 
 /** Runs in the page: each rendered element the selectors pick, once, with its strut and the cap. */
 function readSlots(selectors: string[]): SlotReport[] {
-  const measureCap = (slot: Element): number => {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position: absolute; visibility: hidden; width: var(--icon-lead-cap)';
-    // In the row: a slot may be scaled, which would scale the probe with it.
-    (slot.parentElement ?? slot).append(probe);
-    const width = probe.getBoundingClientRect().width;
-    probe.remove();
-    return width;
-  };
+  const measureCap = (slot: Element): number =>
+    parseFloat(getComputedStyle(slot.parentElement ?? slot).getPropertyValue('--icon-lead-cap'));
   const reported = new Set<Element>();
   const reports: SlotReport[] = [];
   for (const selector of selectors) {
