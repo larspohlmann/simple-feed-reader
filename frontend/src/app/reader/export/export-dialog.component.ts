@@ -43,7 +43,7 @@ export class ExportDialogComponent {
     return problem === null ? null : problem.detail || problem.title;
   });
 
-  choose(format: ExportFormat): void {
+  protected choose(format: ExportFormat): void {
     this.chosen.set(format);
   }
 

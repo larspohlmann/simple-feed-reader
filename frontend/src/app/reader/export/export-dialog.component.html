@@ -7,7 +7,6 @@
           <input
             type="radio"
             name="format"
-            [value]="format.id"
             [checked]="chosen() === format"
             [disabled]="downloading()"
             (change)="choose(format)"

@@ -110,7 +110,7 @@ describe('ExportDialogComponent', () => {
     const fixture = mount();
 
     submit(fixture);
-    submit(fixture);
+    fixture.componentInstance.submit();
 
     expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
     expect(download).toHaveBeenCalledTimes(1);
