@@ -13,9 +13,11 @@ class Host {
 
 @Component({
   imports: [TagGlyphComponent],
-  template: `<app-tag-glyph name="public" size="xs" />`,
+  template: `<app-tag-glyph name="public" [size]="size()" />`,
 })
-class SmallHost {}
+class SizedHost {
+  readonly size = signal<'xs' | 'sm' | 'md'>('xs');
+}
 
 describe('TagGlyphComponent', () => {
   const mount = async () => {
@@ -70,25 +72,26 @@ describe('TagGlyphComponent', () => {
       'app-tag-glyph',
     ) as HTMLElement;
 
-    const withoutGlyph = { width: host.style.width, height: host.style.height };
+    const withoutGlyph = host.style.getPropertyValue('--tag-glyph-size');
 
     fixture.componentInstance.name.set('public');
     fixture.detectChanges();
-    const withGlyph = { width: host.style.width, height: host.style.height };
 
-    expect(withoutGlyph).toEqual({ width: 'var(--icon-md)', height: 'var(--icon-md)' });
-    expect(withGlyph).toEqual(withoutGlyph);
+    expect(withoutGlyph).toBe('var(--icon-md)');
+    expect(host.style.getPropertyValue('--tag-glyph-size')).toBe(withoutGlyph);
   });
 
-  it('sizes the square from the named size', async () => {
-    await TestBed.configureTestingModule({ imports: [SmallHost] }).compileComponents();
-    const fixture = TestBed.createComponent(SmallHost);
+  it.each(['xs', 'sm', 'md'] as const)('publishes its %s box without a width', async (size) => {
+    await TestBed.configureTestingModule({ imports: [SizedHost] }).compileComponents();
+    const fixture = TestBed.createComponent(SizedHost);
+    fixture.componentInstance.size.set(size);
     fixture.detectChanges();
     const host = (fixture.nativeElement as HTMLElement).querySelector(
       'app-tag-glyph',
     ) as HTMLElement;
 
-    expect(host.style.width).toBe('var(--icon-xs)');
-    expect(host.style.height).toBe('var(--icon-xs)');
+    expect(host.style.getPropertyValue('--tag-glyph-size')).toBe(`var(--icon-${size})`);
+    expect(host.style.width).toBe('');
+    expect(host.style.height).toBe('');
   });
 });

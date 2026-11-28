@@ -85,9 +85,10 @@
     margin-block: calc(var(--icon-lead-self) / -2);
     margin-inline-end: 0;
 
+    // Important, so no consumer rule drops the strut; alone() overrides it by coming later.
     &::before {
-      content: '';
-      block-size: var(--icon-lead-cap);
+      content: '' !important;
+      block-size: var(--icon-lead-cap) !important;
     }
   }
 }
@@ -106,7 +107,7 @@
     margin-inline-end: 0;
 
     &::before {
-      content: none;
+      content: none !important;
     }
   }
 }

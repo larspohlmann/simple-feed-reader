@@ -1,3 +1,5 @@
+@use '../../theme/icon-lead';
+
 :host {
   display: inline-flex;
   flex: 0 0 auto;
@@ -8,6 +10,8 @@
      in IconComponent. A tag glyph is nearly always beside a tag name, so this
      is the common case, not the exception. */
   vertical-align: middle;
+
+  @include icon-lead.self-sized(var(--tag-glyph-size));
 }
 
 /* Half the box, not a fixed 8px: a fixed dot only agreed with the host's
