@@ -37,6 +37,7 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LanguageWiring;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RequiresServices;
 use App\Tests\Support\StateMarks;
@@ -209,7 +210,11 @@ final class YourStreamWordSweepTest extends DbTestCase
             ),
             $builder ?? new YourStreamWordBuilder(
                 $sources,
-                new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
+                new SearchTermStems(
+                    StemmingWiring::equivalents(),
+                    StemmingWiring::stopWordStems(),
+                    LanguageWiring::stopWords(),
+                ),
                 $background,
                 new YourStreamWordSelection(),
             ),

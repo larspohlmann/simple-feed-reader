@@ -64,6 +64,16 @@ final class BundledStopWordsDataTest extends TestCase
         }
     }
 
+    public function testAStopWordIsAStopWordOnlyInTheLanguageThatListsIt(): void
+    {
+        $stopWords = self::bundled();
+
+        $this->assertTrue($stopWords->isStopWord('war', FeedLanguage::German));
+        $this->assertFalse($stopWords->isStopWord('war', FeedLanguage::English));
+        $this->assertTrue($stopWords->isStopWord('über', FeedLanguage::German));
+        $this->assertFalse($stopWords->isStopWord('solar', FeedLanguage::Spanish));
+    }
+
     private static function bundled(): BundledStopWords
     {
         return new BundledStopWords(dirname(__DIR__, 5) . '/resources/stopwords/stopwords.php');

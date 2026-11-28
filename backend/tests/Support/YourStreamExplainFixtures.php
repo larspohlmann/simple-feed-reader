@@ -49,7 +49,11 @@ final class YourStreamExplainFixtures
         );
         $builder = new YourStreamWordBuilder(
             $sources,
-            new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
+            new SearchTermStems(
+                StemmingWiring::equivalents(),
+                StemmingWiring::stopWordStems(),
+                LanguageWiring::stopWords(),
+            ),
             $background,
             new YourStreamWordSelection(),
         );

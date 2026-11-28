@@ -55,14 +55,6 @@ final class StopWordStemsTest extends TestCase
         }
     }
 
-    public function testAStopWordIsAStopWordOnlyInTheLanguageThatListsIt(): void
-    {
-        self::assertTrue($this->stopWordStems->isStopWord('war', FeedLanguage::German));
-        self::assertFalse($this->stopWordStems->isStopWord('war', FeedLanguage::English));
-        self::assertTrue($this->stopWordStems->isStopWord('über', FeedLanguage::German));
-        self::assertFalse($this->stopWordStems->isStopWord('solar', FeedLanguage::Spanish));
-    }
-
     public function testAWordInNoListIsNoStopWordStemWithoutALanguage(): void
     {
         foreach (['storm', 'guerre', 'sturm'] as $word) {

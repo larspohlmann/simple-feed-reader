@@ -21,6 +21,7 @@ use App\Service\Curation\YourStream\YourStreamWordBuilder\YourStreamWordBuilder;
 use App\Service\Curation\YourStream\YourStreamWordSelection;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LanguageWiring;
 use App\Tests\Support\StateMarks;
 use App\Tests\Support\StemmingWiring;
 use Symfony\Component\Clock\MockClock;
@@ -48,7 +49,11 @@ final class YourStreamWordBuilderTest extends DbTestCase
         );
         $this->builder = new YourStreamWordBuilder(
             $sources,
-            new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems()),
+            new SearchTermStems(
+                StemmingWiring::equivalents(),
+                StemmingWiring::stopWordStems(),
+                LanguageWiring::stopWords(),
+            ),
             $this->background,
             new YourStreamWordSelection(),
         );

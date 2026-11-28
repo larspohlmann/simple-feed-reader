@@ -8,13 +8,17 @@ use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Foundation\Stemming\StopWordStems;
 use App\Service\Foundation\Stemming\WordEquivalents;
+use App\Service\Foundation\Text\StopWords\StopWordsInterface;
 
 final readonly class SearchTermStems
 {
     public const float PART_WEIGHT_SHARE = 0.5;
 
-    public function __construct(private WordEquivalents $equivalents, private StopWordStems $stopWordStems)
-    {
+    public function __construct(
+        private WordEquivalents $equivalents,
+        private StopWordStems $stopWordStems,
+        private StopWordsInterface $stopWords,
+    ) {
     }
 
     /** @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's */
@@ -53,7 +57,7 @@ final readonly class SearchTermStems
             FeedLanguage::cases(),
             fn (FeedLanguage $language): bool => array_all(
                 $words,
-                fn (array $word): bool => $this->stopWordStems->isStopWord($word[0], $language),
+                fn (array $word): bool => $this->stopWords->isStopWord($word[0], $language),
             ),
         );
     }

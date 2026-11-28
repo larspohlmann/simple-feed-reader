@@ -8,6 +8,7 @@ use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\SearchTermStems;
 use App\Service\Foundation\Stemming\Support\WordStems;
+use App\Tests\Support\LanguageWiring;
 use App\Tests\Support\StemmingWiring;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +18,11 @@ final class SearchTermStemsTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->stems = new SearchTermStems(StemmingWiring::equivalents(), StemmingWiring::stopWordStems());
+        $this->stems = new SearchTermStems(
+            StemmingWiring::equivalents(),
+            StemmingWiring::stopWordStems(),
+            LanguageWiring::stopWords(),
+        );
     }
 
     public function testACompoundSearchTermStemsItsPartsAtHalfWeight(): void
