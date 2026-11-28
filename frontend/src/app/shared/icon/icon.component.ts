@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { ICON_INK_SHIFTS } from './icon-ink-shifts';
 
 export type IconSize = 'text' | 'xs' | 'sm' | 'dense' | 'md' | 'lg' | 'xl' | '2xl';
@@ -52,8 +52,8 @@ export class IconComponent {
     return ICON_SIZE_TOKEN[this.size()];
   }
 
-  protected inkShift(): string | null {
+  protected readonly inkShift = computed(() => {
     const shift = ICON_INK_SHIFTS[this.name()]?.[this.fill() ? 1 : 0];
     return shift ? `0 ${shift}em` : null;
-  }
+  });
 }

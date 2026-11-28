@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { compileScssFile, cssRules } from '../../theme/sass-testing';
+import { compileScssFile, rulesBySelector } from '../../theme/sass-testing';
 import { ICON_VARIATIONS, installedFontVersion, scanIconNames } from '../../../testing/icon-names';
 import { ICON_INK_SHIFTS, ICON_INK_SHIFTS_FONT_VERSION } from './icon-ink-shifts';
 
@@ -37,10 +37,9 @@ describe('icon ink shifts', () => {
   });
 
   it('measured the font variations icon.component.scss renders with', () => {
-    const rules = cssRules(compileScssFile(join(__dirname, 'icon.component.scss')));
+    const rules = rulesBySelector(compileScssFile(join(__dirname, 'icon.component.scss')));
     const declared = ['span', ':host(.filled) span'].map(
-      (selector) =>
-        rules.find((rule) => rule.selector === selector)?.declarations['font-variation-settings'],
+      (selector) => rules[selector]?.['font-variation-settings'],
     );
     expect({ declared, fix: STALE }).toEqual({
       declared: ICON_VARIATIONS.map(({ variation }) => variation),

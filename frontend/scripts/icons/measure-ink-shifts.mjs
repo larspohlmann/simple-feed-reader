@@ -24,8 +24,7 @@ const PAGE = `<!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/outlined.css">
 <style>
   body { margin: 0; background: #fff; color: #000; }
-  .host { position: absolute; display: inline-flex; align-items: center;
-    vertical-align: middle; font-size: ${SIZE}px; }
+  .host { position: absolute; display: inline-flex; align-items: center; font-size: ${SIZE}px; }
   .host span { display: inline-flex; align-items: center; justify-content: center;
     width: 1em; height: 1em; line-height: 1; overflow: hidden; user-select: none; }
 </style></head><body></body></html>`;

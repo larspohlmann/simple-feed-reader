@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { listFiles } from './list-files';
 
 const QUOTED_NAME = /['"`]([a-z0-9_]+)['"`]/g;
-const GLYPH_NAMES_PATH = ['scripts', 'icons', 'glyph-names.txt'];
 const HEADER = /^# material-symbols (\S+)$/;
 
 export const ICON_VARIATIONS = [
@@ -17,9 +16,8 @@ export interface GlyphNames {
 }
 
 export function readGlyphNames(frontendRoot: string): GlyphNames {
-  const [header, ...lines] = readFileSync(join(frontendRoot, ...GLYPH_NAMES_PATH), 'utf8').split(
-    '\n',
-  );
+  const path = join(frontendRoot, 'scripts', 'icons', 'glyph-names.txt');
+  const [header, ...lines] = readFileSync(path, 'utf8').split('\n');
   const version = HEADER.exec(header)?.[1];
   if (version === undefined) {
     throw new Error(
@@ -49,12 +47,12 @@ export function requireMatchingGlyphNames(frontendRoot: string): void {
 }
 
 export function iconSourceFiles(frontendRoot: string): string[] {
-  return listFiles(join(frontendRoot, 'src'), (path) => {
-    if (path.startsWith('testing/')) {
-      return false;
-    }
-    return (path.endsWith('.ts') && !path.endsWith('.spec.ts')) || path.endsWith('.html');
-  });
+  return listFiles(
+    join(frontendRoot, 'src'),
+    (path) =>
+      !path.startsWith('testing/') &&
+      (path.endsWith('.html') || (path.endsWith('.ts') && !path.endsWith('.spec.ts'))),
+  );
 }
 
 export function scanIconNames(frontendRoot: string): string[] {
