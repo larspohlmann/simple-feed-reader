@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
+use App\Service\Curation\YourStream\Model\StreamWordModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -68,13 +69,18 @@ final class YourStreamWordRepository extends ServiceEntityRepository
             return [];
         }
 
-        $strengths = array_fill_keys($userIds, []);
+        $wordsByUserId = array_fill_keys($userIds, []);
         foreach ($this->readStrengthRows($userIds) as $row) {
-            $key = StreamStrengthsModel::languageKey($row['language']);
-            $strengths[(int) $row['userId']][$key][$row['stem']] = (float) $row['weight'] * (float) $row['rarity'];
+            $wordsByUserId[(int) $row['userId']][] = new StreamWordModel(
+                $row['language'],
+                $row['stem'],
+                $row['word'],
+                (float) $row['weight'],
+                (float) $row['rarity'],
+            );
         }
 
-        return array_map(StreamStrengthsModel::fromStrengths(...), $strengths);
+        return array_map(StreamStrengthsModel::fromWords(...), $wordsByUserId);
     }
 
     private function detachManagedForUser(int $userId): void
@@ -91,14 +97,14 @@ final class YourStreamWordRepository extends ServiceEntityRepository
      * @param list<int> $userIds
      *
      * @return list<array{
-     *     userId: int|string, stem: string, language: ?FeedLanguage, weight: float, rarity: float
+     *     userId: int|string, stem: string, word: string, language: ?FeedLanguage, weight: float, rarity: float
      * }>
      */
     private function readStrengthRows(array $userIds): array
     {
-        /** @var list<array{userId: int|string, stem: string, language: ?FeedLanguage, weight: float, rarity: float}> $rows */
+        /** @var list<array{userId: int|string, stem: string, word: string, language: ?FeedLanguage, weight: float, rarity: float}> $rows */
         $rows = $this->createQueryBuilder('w')
-            ->select('IDENTITY(w.user) AS userId', 'w.stem', 'w.language', 'w.weight', 'w.rarity')
+            ->select('IDENTITY(w.user) AS userId', 'w.stem', 'w.word', 'w.language', 'w.weight', 'w.rarity')
             ->andWhere('IDENTITY(w.user) IN (:userIds)')
             ->setParameter('userIds', $userIds)
             ->getQuery()

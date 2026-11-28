@@ -10,7 +10,6 @@ use App\Service\Curation\YourStream\Model\EntryStemsModel;
 use App\Service\Curation\YourStream\Model\RarityWindowModel;
 use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
-use App\Service\Curation\YourStream\Model\StreamWordModel;
 use App\Service\Curation\YourStream\Model\YourStreamExplanationModel;
 use App\Service\Curation\YourStream\YourStreamWordBuilder\YourStreamWordBuilderInterface;
 use App\Service\Foundation\Clock\NaiveUtcClock;
@@ -37,7 +36,7 @@ final readonly class YourStreamExplainer
             static fn (StreamEntryModel $entry): EntryStemsModel => $pass->stemming->collectStems($entry),
             $entries,
         );
-        $matches = $this->tallyMatches(self::buildStoredStrengths($words), $stems);
+        $matches = $this->tallyMatches(StreamStrengthsModel::fromWords($words), $stems);
 
         return new YourStreamExplanationModel($words, $days, \count($entries), $matches);
     }
@@ -69,16 +68,5 @@ final readonly class YourStreamExplainer
         }
 
         return $matches;
-    }
-
-    /** @param list<StreamWordModel> $words */
-    private static function buildStoredStrengths(array $words): StreamStrengthsModel
-    {
-        $strengths = [];
-        foreach ($words as $word) {
-            $strengths[StreamStrengthsModel::languageKey($word->language)][$word->stem] = $word->weight * $word->rarity;
-        }
-
-        return StreamStrengthsModel::fromStrengths($strengths);
     }
 }

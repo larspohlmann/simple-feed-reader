@@ -8,6 +8,7 @@ use App\Enum\FeedLanguage;
 use App\Enum\YourStreamPrecision;
 use App\Service\Curation\YourStream\Model\EntryStemsModel;
 use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
+use App\Service\Curation\YourStream\Model\StreamWordModel;
 use App\Service\Curation\YourStream\YourStreamScorer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -25,7 +26,7 @@ final class YourStreamScorerTest extends TestCase
 
     public function testTheScoreSumsStrengthTimesPositionOverMatchedStems(): void
     {
-        $terms = StreamStrengthsModel::fromStrengths(['en' => ['solar' => 2.0, 'grid' => 1.0]]);
+        $terms = self::strengths(['en' => ['solar' => 2.0, 'grid' => 1.0]]);
         $stems = new EntryStemsModel(FeedLanguage::English, ['solar' => 1.0, 'grid' => 0.5, 'other' => 1.0]);
 
         $score = $this->scorer->findMatch($terms, $stems, self::THRESHOLD);
@@ -36,7 +37,7 @@ final class YourStreamScorerTest extends TestCase
 
     public function testTheStrongestContributionComesFirst(): void
     {
-        $terms = StreamStrengthsModel::fromStrengths(['en' => ['grid' => 3.0, 'solar' => 2.0]]);
+        $terms = self::strengths(['en' => ['grid' => 3.0, 'solar' => 2.0]]);
         $stems = new EntryStemsModel(FeedLanguage::English, ['solar' => 1.0, 'grid' => 1.0]);
 
         self::assertSame(['grid', 'solar'], $this->scorer->findMatch($terms, $stems, self::THRESHOLD)?->matchedStems);
@@ -44,7 +45,7 @@ final class YourStreamScorerTest extends TestCase
 
     public function testANumericStemComesBackAsAString(): void
     {
-        $terms = StreamStrengthsModel::fromStrengths(['en' => ['2026' => 2.0]]);
+        $terms = self::strengths(['en' => ['2026' => 2.0]]);
         $stems = new EntryStemsModel(FeedLanguage::English, ['2026' => 1.0]);
 
         self::assertSame(['2026'], $this->scorer->findMatch($terms, $stems, self::THRESHOLD)?->matchedStems);
@@ -55,8 +56,8 @@ final class YourStreamScorerTest extends TestCase
     {
         $minimumScore = $precision->minimumScore();
         $stems = new EntryStemsModel(FeedLanguage::English, ['solar' => 1.0]);
-        $onTheThreshold = StreamStrengthsModel::fromStrengths(['en' => ['solar' => $minimumScore]]);
-        $justBelow = StreamStrengthsModel::fromStrengths(['en' => ['solar' => $minimumScore - 0.01]]);
+        $onTheThreshold = self::strengths(['en' => ['solar' => $minimumScore]]);
+        $justBelow = self::strengths(['en' => ['solar' => $minimumScore - 0.01]]);
 
         $match = $this->scorer->findMatch($onTheThreshold, $stems, $minimumScore);
 
@@ -74,7 +75,7 @@ final class YourStreamScorerTest extends TestCase
 
     public function testStemsAreLookedUpInTheEntrysLanguageOnly(): void
     {
-        $terms = StreamStrengthsModel::fromStrengths(['de' => ['solar' => 5.0]]);
+        $terms = self::strengths(['de' => ['solar' => 5.0]]);
 
         $english = new EntryStemsModel(FeedLanguage::English, ['solar' => 1.0]);
         $german = new EntryStemsModel(FeedLanguage::German, ['solar' => 1.0]);
@@ -85,10 +86,24 @@ final class YourStreamScorerTest extends TestCase
 
     public function testAnEntryWithoutALanguageIsScoredAgainstTheCutForm(): void
     {
-        $terms = StreamStrengthsModel::fromStrengths(['' => ['sola' => 2.0]]);
+        $terms = self::strengths(['' => ['sola' => 2.0]]);
 
         $stems = new EntryStemsModel(null, ['sola' => 1.0]);
 
         self::assertNotNull($this->scorer->findMatch($terms, $stems, self::THRESHOLD));
+    }
+
+    /** @param array<string, array<array-key, float>> $strengthsByLanguageKey each at rarity 1, so weight is strength */
+    private static function strengths(array $strengthsByLanguageKey): StreamStrengthsModel
+    {
+        $words = [];
+        foreach ($strengthsByLanguageKey as $languageKey => $strengths) {
+            foreach ($strengths as $stem => $strength) {
+                $language = FeedLanguage::tryFrom($languageKey);
+                $words[] = new StreamWordModel($language, (string) $stem, (string) $stem, $strength, 1.0);
+            }
+        }
+
+        return StreamStrengthsModel::fromWords($words);
     }
 }

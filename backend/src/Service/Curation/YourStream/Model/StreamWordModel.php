@@ -18,6 +18,11 @@ final readonly class StreamWordModel
     ) {
     }
 
+    public function strength(): float
+    {
+        return $this->weight * $this->rarity;
+    }
+
     #[\NoDiscard]
     public function withWeight(float $weight): self
     {

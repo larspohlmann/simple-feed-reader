@@ -13,10 +13,15 @@ final readonly class StreamStrengthsModel
     {
     }
 
-    /** @param array<string, array<array-key, float>> $strengthsByLanguageKey */
-    public static function fromStrengths(array $strengthsByLanguageKey): self
+    /** @param list<StreamWordModel> $words */
+    public static function fromWords(array $words): self
     {
-        return new self($strengthsByLanguageKey);
+        $strengths = [];
+        foreach ($words as $word) {
+            $strengths[self::languageKey($word->language)][$word->stem] = $word->strength();
+        }
+
+        return new self($strengths);
     }
 
     public static function languageKey(?FeedLanguage $language): string
