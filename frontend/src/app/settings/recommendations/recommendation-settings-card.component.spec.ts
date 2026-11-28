@@ -791,8 +791,9 @@ describe('RecommendationSettingsCardComponent', () => {
       queryIn(fixture, '[data-testid="for-you-stream-precision"]');
     const click = (fixture: Fixture, selector: string): void =>
       (queryIn(fixture, selector) as HTMLButtonElement).click();
-    const streamPut = (): { body: { forYouStream: unknown }; flush: (body: object) => void } => {
-      const request = http.expectOne('/api/me/ai/recommendations');
+    const STREAM_URL = '/api/me/ai/recommendations/for-you-stream';
+    const streamPut = (): { body: unknown; flush: (body: object) => void } => {
+      const request = http.expectOne(STREAM_URL);
       expect(request.request.method).toBe('PUT');
       return { body: request.request.body, flush: (body) => request.flush(body) };
     };
@@ -816,7 +817,7 @@ describe('RecommendationSettingsCardComponent', () => {
       toggle.dispatchEvent(new Event('change'));
 
       const put = streamPut();
-      expect(put.body.forYouStream).toEqual({ enabled: false, precision: 'balanced' });
+      expect(put.body).toEqual({ enabled: false, precision: 'balanced' });
       put.flush(streamState({ enabled: false }));
       fixture.detectChanges();
       expect(precisionRow(fixture)).toBeNull();
@@ -827,14 +828,14 @@ describe('RecommendationSettingsCardComponent', () => {
 
       click(fixture, '[data-testid="for-you-stream-precision"] button.wider');
       const wider = streamPut();
-      expect(wider.body.forYouStream).toEqual({ enabled: true, precision: 'wide' });
+      expect(wider.body).toEqual({ enabled: true, precision: 'wide' });
       wider.flush(streamState({ precision: 'wide' }));
       fixture.detectChanges();
 
       click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
       click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
-      const [, last] = http.match('/api/me/ai/recommendations');
-      expect(last.request.body.forYouStream).toEqual({ enabled: true, precision: 'narrow' });
+      const [, last] = http.match(STREAM_URL);
+      expect(last.request.body).toEqual({ enabled: true, precision: 'narrow' });
       last.flush(streamState({ precision: 'narrow' }));
     });
 
@@ -844,7 +845,7 @@ describe('RecommendationSettingsCardComponent', () => {
       click(fixture, '[data-testid="for-you-stream-precision"] button.bar');
 
       const put = streamPut();
-      expect(put.body.forYouStream).toEqual({ enabled: true, precision: 'wide' });
+      expect(put.body).toEqual({ enabled: true, precision: 'wide' });
       put.flush(streamState({ precision: 'wide' }));
     });
 
@@ -904,7 +905,7 @@ describe('RecommendationSettingsCardComponent', () => {
         queryIn(fixture, '[data-testid="for-you-stream-precision"] .fill')!.style.inlineSize,
       ).toBe('75%');
       http
-        .expectOne('/api/me/ai/recommendations')
+        .expectOne(STREAM_URL)
         .flush({ title: 'boom' }, { status: 500, statusText: 'Server Error' });
       fixture.detectChanges();
 

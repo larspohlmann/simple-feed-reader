@@ -15,12 +15,12 @@
     />
     <app-toggle
       [label]="'settings.ai.recommendations.forYouStream.enabled' | transloco"
-      [checked]="enabled()"
+      [checked]="stream().enabled"
       (toggled)="onEnabled($event)"
     />
   </app-settings-row>
 
-  @if (enabled()) {
+  @if (stream().enabled) {
     <app-settings-row
       data-testid="for-you-stream-precision"
       [stackable]="true"
@@ -29,7 +29,7 @@
     >
       <app-stepper-bar
         class="precision-bar"
-        [step]="precisionStep()"
+        [step]="precisionIndex() + 1"
         [min]="1"
         [max]="precisionSteps"
         decreaseIcon="zoom_in_map"
@@ -45,7 +45,7 @@
             | transloco
               : {
                   label:
-                    'settings.ai.recommendations.forYouStream.precisionLabel.' + precision()
+                    'settings.ai.recommendations.forYouStream.precisionLabel.' + stream().precision
                     | transloco,
                 }
         "
@@ -59,7 +59,7 @@
       <h3 class="stream-phrases-title">
         {{ 'settings.ai.recommendations.forYouStream.phrases' | transloco }}
       </h3>
-      @for (group of phrases(); track group.language) {
+      @for (group of stream().phrases; track group.language) {
         <div class="stream-language">
           <h4 class="stream-language-name">
             {{ 'reader.feedLanguage.' + group.language | transloco }}
