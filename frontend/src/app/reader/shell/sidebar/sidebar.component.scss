@@ -437,3 +437,7 @@
   margin: calc(var(--space-0) / 2) var(--space-3) calc(var(--space-0) / 2)
     calc(var(--name-x) + #{icon-lead.space(var(--tap-target))});
 }
+
+.organising .card.collections-card {
+  padding: var(--card-pad-y) var(--sidebar-card-pad);
+}

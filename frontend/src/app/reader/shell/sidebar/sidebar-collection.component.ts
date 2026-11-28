@@ -61,6 +61,7 @@ const isCollectionSelection = (selection: Selection): selection is CollectionSel
 export class SidebarCollectionComponent {
   readonly collection = input.required<LabelCollection>();
   readonly selection = input.required<Selection>();
+  readonly organising = input(false);
 
   private readonly labels = inject(LabelsStore);
   private readonly subscriptions = inject(SubscriptionsStore);

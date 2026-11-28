@@ -38,6 +38,14 @@
   <div class="sidebar-body" [appScrollOutsideZone]="onScroll">
     @if (organising()) {
       <p class="organise-hint">{{ 'reader.organiseHint' | transloco }}</p>
+      <div class="card collections-card">
+        <app-sidebar-collection
+          collection="favorites"
+          [selection]="selection()"
+          [organising]="true"
+        />
+        <app-sidebar-collection collection="kept" [selection]="selection()" [organising]="true" />
+      </div>
     } @else {
       @if (screen.isNarrow()) {
         <div class="drawer-head">

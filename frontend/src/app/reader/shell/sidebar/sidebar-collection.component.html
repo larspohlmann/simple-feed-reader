@@ -1,19 +1,11 @@
 @let hasFolders = folders().length > 0;
-@let shown = hasFolders && folder.expanded();
-<div class="folder-head collection-head" [class.current]="headCurrent()">
-  <a
-    class="section-link"
-    [routerLink]="['/']"
-    [queryParams]="selectionQueryParams({ view: collection() })"
-    queryParamsHandling="merge"
-  >
-    <app-icon [name]="icon()" size="md" />
-    <span class="label">{{ 'reader.' + collection() | transloco }}</span>
-    @if (total() > 0) {
-      <span class="section-count">{{ total() }}</span>
-    }
-  </a>
-  @if (screen.isCoarse()) {
+@let shown = hasFolders && (organising() || folder.expanded());
+@if (organising()) {
+  <div class="folder-head collection-head">
+    <span class="section-link">
+      <app-icon [name]="icon()" size="md" />
+      <span class="label">{{ 'reader.' + collection() | transloco }}</span>
+    </span>
     <button
       class="dots"
       type="button"
@@ -23,32 +15,49 @@
     >
       <app-icon name="more_horiz" size="md" />
     </button>
-  } @else {
-    <app-sidebar-row-menu
-      [menuKey]="'collection-' + collection()"
-      [label]="'reader.manage' | transloco: { name: listName() }"
-    >
-      <ng-template>
-        <button role="menuitem" (click)="exportCollection()">
-          {{ 'reader.export.action' | transloco }}
-        </button>
-      </ng-template>
-    </app-sidebar-row-menu>
-  }
-  @if (hasFolders) {
-    <button
-      class="chevzone"
-      type="button"
-      [attr.aria-expanded]="shown"
-      [attr.aria-label]="toggleLabel() | transloco"
-      (click)="folder.toggle()"
-    >
-      <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
-    </button>
-  } @else {
     <span class="trail" aria-hidden="true"></span>
-  }
-</div>
+  </div>
+} @else {
+  <div class="folder-head collection-head" [class.current]="headCurrent()">
+    <a
+      class="section-link"
+      [routerLink]="['/']"
+      [queryParams]="selectionQueryParams({ view: collection() })"
+      queryParamsHandling="merge"
+    >
+      <app-icon [name]="icon()" size="md" />
+      <span class="label">{{ 'reader.' + collection() | transloco }}</span>
+      @if (total() > 0) {
+        <span class="section-count">{{ total() }}</span>
+      }
+    </a>
+    @if (!screen.isCoarse()) {
+      <app-sidebar-row-menu
+        [menuKey]="'collection-' + collection()"
+        [label]="'reader.manage' | transloco: { name: listName() }"
+      >
+        <ng-template>
+          <button role="menuitem" (click)="exportCollection()">
+            {{ 'reader.export.action' | transloco }}
+          </button>
+        </ng-template>
+      </app-sidebar-row-menu>
+    }
+    @if (hasFolders) {
+      <button
+        class="chevzone"
+        type="button"
+        [attr.aria-expanded]="shown"
+        [attr.aria-label]="toggleLabel() | transloco"
+        (click)="folder.toggle()"
+      >
+        <app-icon [name]="shown ? 'expand_more' : 'chevron_right'" size="dense" />
+      </button>
+    } @else {
+      <span class="trail" aria-hidden="true"></span>
+    }
+  </div>
+}
 @if (shown) {
   <div class="sublist">
     @for (folder of folders(); track folder.filter) {
@@ -67,6 +76,11 @@
             (keydown.escape)="cancelRename()"
             (blur)="cancelRename()"
           />
+        } @else if (organising()) {
+          <span class="nav">
+            <app-icon name="label" size="md" />
+            <span class="name">{{ label?.name ?? ('reader.labels.unlabeled' | transloco) }}</span>
+          </span>
         } @else {
           <a
             class="nav"
@@ -82,7 +96,7 @@
           </a>
         }
         @let folderLabel = folderName(folder);
-        @if (screen.isCoarse()) {
+        @if (organising()) {
           <button
             class="dots"
             type="button"
@@ -92,7 +106,7 @@
           >
             <app-icon name="more_horiz" size="md" />
           </button>
-        } @else {
+        } @else if (!screen.isCoarse()) {
           <app-sidebar-row-menu
             [menuKey]="menuKey(folder)"
             [label]="'reader.manage' | transloco: { name: folderLabel }"

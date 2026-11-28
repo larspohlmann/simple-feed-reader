@@ -41,6 +41,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
   function mount(
     collection: LabelCollection,
     selection: Selection = { kind: 'all', unread: false },
+    organising = false,
   ): ComponentFixture<SidebarCollectionComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -70,6 +71,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
     const fixture = TestBed.createComponent(SidebarCollectionComponent);
     fixture.componentRef.setInput('collection', collection);
     fixture.componentRef.setInput('selection', selection);
+    fixture.componentRef.setInput('organising', organising);
     fixture.detectChanges();
     return fixture;
   }
@@ -570,12 +572,40 @@ describe('SidebarCollectionComponent (#2581)', () => {
   });
 
   describe('on a coarse pointer', () => {
-    it('opens the label actions as a sheet', () => {
+    const dotsIn = (fixture: ComponentFixture<unknown>): number =>
+      root(fixture).querySelectorAll('.dots').length;
+    const organise = (
+      collection: LabelCollection,
+    ): ComponentFixture<SidebarCollectionComponent> => {
       coarse.set(true);
-      openSheet.mockReturnValue(of('rename'));
+      return mount(collection, { kind: 'all', unread: false }, true);
+    };
+
+    it('shows no ⋯ on the head, a label or Unlabeled while not organising', () => {
+      coarse.set(true);
       labels.set([tally(1, 'Home')]);
       const fixture = mount('favorites');
       toggle(fixture);
+
+      expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
+      expect(dotsIn(fixture)).toBe(0);
+      expect(root(fixture).querySelector('app-sidebar-row-menu')).toBeNull();
+    });
+
+    it('keeps the hover menus on a fine pointer', () => {
+      coarse.set(false);
+      labels.set([tally(1, 'Home')]);
+      const fixture = mount('favorites');
+      toggle(fixture);
+
+      expect(root(fixture).querySelectorAll('app-sidebar-row-menu')).toHaveLength(3);
+      expect(dotsIn(fixture)).toBe(3);
+    });
+
+    it('opens the label actions as a sheet while organising', () => {
+      openSheet.mockReturnValue(of('rename'));
+      labels.set([tally(1, 'Home')]);
+      const fixture = organise('favorites');
 
       expect(root(fixture).querySelector('app-sidebar-row-menu')).toBeNull();
       root(fixture).querySelector<HTMLButtonElement>('.label-row .dots')!.click();
@@ -596,14 +626,33 @@ describe('SidebarCollectionComponent (#2581)', () => {
       );
     });
 
+    it('lists the labels without a toggle, a link or a count while organising', () => {
+      labels.set([tally(1, 'Home')]);
+      const fixture = organise('favorites');
+
+      expect(rowNames(fixture)).toEqual(['Home', 'Unlabeled']);
+      expect(root(fixture).querySelector('.chevzone')).toBeNull();
+      expect(root(fixture).querySelector('a')).toBeNull();
+      expect(root(fixture).querySelector('.count, .section-count')).toBeNull();
+      expect(root(fixture).querySelectorAll('.handle-gap')).toHaveLength(0);
+    });
+
+    it('still shows the head of an empty collection while organising', () => {
+      unlabeled.set({ favoriteCount: 0, keptCount: 0 });
+      const fixture = organise('favorites');
+
+      expect(root(fixture).querySelector('.collection-head .label')?.textContent).toContain(
+        'Favorites',
+      );
+      expect(dotsIn(fixture)).toBe(1);
+    });
+
     it('confirms a delete chosen from the sheet', () => {
-      coarse.set(true);
       openSheet.mockReturnValue(of('delete'));
       ask.mockReturnValue(of(true));
       remove.mockReturnValue(of(undefined));
       labels.set([tally(1, 'Home', { articleCount: 3 })]);
-      const fixture = mount('favorites');
-      toggle(fixture);
+      const fixture = organise('favorites');
 
       root(fixture).querySelector<HTMLButtonElement>('.label-row .dots')!.click();
 
@@ -614,11 +663,9 @@ describe('SidebarCollectionComponent (#2581)', () => {
     });
 
     it('exports a label chosen from the sheet', () => {
-      coarse.set(true);
       openSheet.mockReturnValue(of('export'));
       labels.set([tally(4, 'Home')]);
-      const fixture = mount('kept');
-      toggle(fixture);
+      const fixture = organise('kept');
 
       root(fixture).querySelector<HTMLButtonElement>('.label-row .dots')!.click();
 
@@ -630,11 +677,9 @@ describe('SidebarCollectionComponent (#2581)', () => {
     });
 
     it('opens an export-only sheet from the head and from Unlabeled', () => {
-      coarse.set(true);
       openSheet.mockReturnValue(of('export'));
       labels.set([tally(4, 'Home')]);
-      const fixture = mount('favorites');
-      toggle(fixture);
+      const fixture = organise('favorites');
 
       root(fixture).querySelector<HTMLButtonElement>('.collection-head .dots')!.click();
       const rows = root(fixture).querySelectorAll<HTMLButtonElement>('.label-row .dots');
