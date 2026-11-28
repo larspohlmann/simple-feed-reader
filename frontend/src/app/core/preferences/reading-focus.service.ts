@@ -4,7 +4,7 @@ const KEY = 'sfr.readingFocus';
 
 @Injectable({ providedIn: 'root' })
 export class ReadingFocusService {
-  readonly enabled = signal(localStorage.getItem(KEY) !== 'false');
+  readonly enabled = signal(localStorage.getItem(KEY) === 'true');
 
   setEnabled(enabled: boolean): void {
     localStorage.setItem(KEY, String(enabled));

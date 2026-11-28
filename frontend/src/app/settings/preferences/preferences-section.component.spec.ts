@@ -150,12 +150,12 @@ describe('PreferencesSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('app-toggle')).not.toBeNull();
   });
 
-  it('offers reading focus enabled by default', () => {
+  it('offers reading focus disabled by default (#2602)', () => {
     const fixture = mount();
     const toggle = fixture.nativeElement.querySelector('#reading-focus-toggle') as HTMLInputElement;
 
     expect(fixture.nativeElement.textContent).toContain('Reading focus');
-    expect(toggle.checked).toBe(true);
+    expect(toggle.checked).toBe(false);
   });
 
   it('stores the reading focus setting when toggled', () => {
@@ -165,8 +165,8 @@ describe('PreferencesSectionComponent', () => {
     toggle.click();
     fixture.detectChanges();
 
-    expect(toggle.checked).toBe(false);
-    expect(localStorage.getItem('sfr.readingFocus')).toBe('false');
+    expect(toggle.checked).toBe(true);
+    expect(localStorage.getItem('sfr.readingFocus')).toBe('true');
   });
 
   it('writes the preference when toggled', () => {
