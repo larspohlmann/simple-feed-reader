@@ -41,13 +41,6 @@ function loadIconNames() {
   });
 }
 
-function buildFills(variations) {
-  return [
-    { name: 'outlined', variation: variations.outlined },
-    { name: 'filled', variation: variations.filled },
-  ];
-}
-
 async function serveAssets(page) {
   await page.route(`${ORIGIN}/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -173,16 +166,14 @@ function formatTable(version, names, shiftsByFill) {
   ].join('\n');
 }
 
-function reportLargest(names, fills, shiftsByFill) {
-  const measured = names.flatMap((name, index) =>
-    fills.map((fill, fillIndex) => ({
-      name,
-      fill: fill.name,
-      shift: shiftsByFill[fillIndex][index],
-    })),
+function reportLargest(names, variations, shiftsByFill) {
+  const measured = variations.flatMap((fill, fillIndex) =>
+    names.map((name, index) => ({ name, fill: fill.name, shift: shiftsByFill[fillIndex][index] })),
   );
   measured.sort((left, right) => Math.abs(right.shift) - Math.abs(left.shift));
-  console.log(`Measured ${names.length} glyphs, ${fills.map((fill) => fill.name).join(' and ')}.`);
+  console.log(
+    `Measured ${names.length} glyphs, ${variations.map((fill) => fill.name).join(' and ')}.`,
+  );
   for (const { name, fill, shift } of measured.slice(0, REPORTED_LARGEST)) {
     console.log(`  ${name} (${fill}): ${shift}em`);
   }
@@ -191,7 +182,6 @@ function reportLargest(names, fills, shiftsByFill) {
 async function main() {
   const iconNames = await loadIconNames();
   iconNames.requireMatchingGlyphNames(FRONTEND);
-  const fills = buildFills(iconNames.ICON_VARIATIONS);
   const names = iconNames.scanIconNames(FRONTEND);
   const browser = await chromium.launch();
   try {
@@ -199,15 +189,15 @@ async function main() {
     await serveAssets(page);
     await page.goto(`${ORIGIN}/`);
     const shiftsByFill = [];
-    for (const fill of fills) {
-      shiftsByFill.push(await measureShifts(page, names, fill.variation));
+    for (const { variation } of iconNames.ICON_VARIATIONS) {
+      shiftsByFill.push(await measureShifts(page, names, variation));
     }
     writeFileSync(
       OUTPUT,
       formatTable(iconNames.installedFontVersion(FRONTEND), names, shiftsByFill),
     );
     execFileSync(join(FRONTEND, 'node_modules', '.bin', 'prettier'), ['--write', OUTPUT]);
-    reportLargest(names, fills, shiftsByFill);
+    reportLargest(names, iconNames.ICON_VARIATIONS, shiftsByFill);
   } finally {
     await browser.close();
   }

@@ -7,10 +7,10 @@ const QUOTED_NAME = /['"`]([a-z0-9_]+)['"`]/g;
 const GLYPH_NAMES_PATH = ['scripts', 'icons', 'glyph-names.txt'];
 const HEADER = /^# material-symbols (\S+)$/;
 
-export const ICON_VARIATIONS = {
-  outlined: "'opsz' 20",
-  filled: "'opsz' 20, 'FILL' 1",
-} as const;
+export const ICON_VARIATIONS = [
+  { name: 'outlined', variation: '"opsz" 20' },
+  { name: 'filled', variation: '"opsz" 20, "FILL" 1' },
+] as const;
 
 export interface GlyphNames {
   version: string;
