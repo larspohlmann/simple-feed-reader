@@ -12,6 +12,7 @@ import { LabelCollection, LabelTally, UnlabeledTally } from '../../labels/labels
 import { LabelsStore } from '../../labels/labels.store';
 import { Selection } from '../../query/query';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { ExportDialogService } from '../../export/export-dialog.service';
 import { SidebarCollectionComponent } from './sidebar-collection.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
@@ -34,6 +35,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
   const openSheet = jest.fn();
   const menuFor = signal<string | null>(null);
   const coarse = signal(false);
+  const openExport = jest.fn();
 
   function mount(
     collection: LabelCollection,
@@ -52,6 +54,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
         { provide: ConfirmService, useValue: { ask } },
         { provide: ToastService, useValue: { showProblem } },
         { provide: ActionSheet, useValue: { open: openSheet } },
+        { provide: ExportDialogService, useValue: { open: openExport } },
         { provide: LayoutService, useValue: { isCoarse: coarse } },
         {
           provide: SidebarRowActions,
@@ -301,17 +304,73 @@ describe('SidebarCollectionComponent (#2581)', () => {
     expect(rowNames(fixture)).toEqual(['Home', 'Work', 'Unlabeled']);
   });
 
-  it('offers Rename and Delete on a label row, and nothing on Unlabeled', () => {
+  it('offers Rename, Delete and Export on a label row', () => {
     labels.set([tally(1, 'Home')]);
     const fixture = mount('favorites');
     toggle(fixture);
 
-    expect(root(fixture).querySelectorAll('.label-row app-sidebar-row-menu')).toHaveLength(1);
+    expect(root(fixture).querySelectorAll('.label-row app-sidebar-row-menu')).toHaveLength(2);
     openMenu(fixture, 1);
     const items = Array.from(root(fixture).querySelectorAll('[role="menuitem"]')).map((item) =>
       item.textContent?.trim(),
     );
-    expect(items).toEqual(['Rename', 'Delete']);
+    expect(items).toEqual(['Rename', 'Delete', 'Export']);
+  });
+
+  describe('export', () => {
+    const openMenuKey = (fixture: ComponentFixture<unknown>, key: string): void => {
+      menuFor.set(key);
+      fixture.detectChanges();
+    };
+
+    it('offers only Export on the head and opens the whole collection', () => {
+      const fixture = mount('kept');
+
+      expect(root(fixture).querySelectorAll('.collection-head app-sidebar-row-menu')).toHaveLength(
+        1,
+      );
+      openMenuKey(fixture, 'collection-kept');
+      const items = Array.from(root(fixture).querySelectorAll('[role="menuitem"]'));
+      expect(items.map((item) => item.textContent?.trim())).toEqual(['Export']);
+      menuItem(fixture, 'Export').click();
+
+      expect(openExport).toHaveBeenCalledWith({ collection: 'kept', label: null, title: 'Kept' });
+      expect(menuFor()).toBeNull();
+    });
+
+    it('exports a label with the list and its name as the title', () => {
+      labels.set([tally(4, 'Home')]);
+      const fixture = mount('kept');
+      toggle(fixture);
+
+      openMenuKey(fixture, 'label-kept-4');
+      menuItem(fixture, 'Export').click();
+
+      expect(openExport).toHaveBeenCalledWith({
+        collection: 'kept',
+        label: 4,
+        title: 'Kept – Home',
+      });
+      expect(menuFor()).toBeNull();
+    });
+
+    it('offers only Export on Unlabeled', () => {
+      labels.set([tally(4, 'Home')]);
+      const fixture = mount('favorites');
+      toggle(fixture);
+
+      openMenuKey(fixture, 'label-favorites-unlabeled');
+      const items = Array.from(root(fixture).querySelectorAll('[role="menuitem"]'));
+      expect(items.map((item) => item.textContent?.trim())).toEqual(['Export']);
+      menuItem(fixture, 'Export').click();
+
+      expect(openExport).toHaveBeenCalledWith({
+        collection: 'favorites',
+        label: 'unlabeled',
+        title: 'Favorites – Unlabeled',
+      });
+      expect(menuFor()).toBeNull();
+    });
   });
 
   describe('rename', () => {
@@ -502,6 +561,7 @@ describe('SidebarCollectionComponent (#2581)', () => {
           actions: [
             expect.objectContaining({ id: 'rename', label: 'Rename' }),
             expect.objectContaining({ id: 'delete', label: 'Delete', danger: true }),
+            expect.objectContaining({ id: 'export', label: 'Export' }),
           ],
         }),
       );
@@ -525,6 +585,44 @@ describe('SidebarCollectionComponent (#2581)', () => {
         expect.objectContaining({ message: "Delete “Home”? It's on 3 articles." }),
       );
       expect(remove).toHaveBeenCalledWith(1);
+    });
+
+    it('exports a label chosen from the sheet', () => {
+      coarse.set(true);
+      openSheet.mockReturnValue(of('export'));
+      labels.set([tally(4, 'Home')]);
+      const fixture = mount('kept');
+      toggle(fixture);
+
+      root(fixture).querySelector<HTMLButtonElement>('.label-row .dots')!.click();
+
+      expect(openExport).toHaveBeenCalledWith({
+        collection: 'kept',
+        label: 4,
+        title: 'Kept – Home',
+      });
+    });
+
+    it('opens an export-only sheet from the head and from Unlabeled', () => {
+      coarse.set(true);
+      openSheet.mockReturnValue(of('export'));
+      labels.set([tally(4, 'Home')]);
+      const fixture = mount('favorites');
+      toggle(fixture);
+
+      root(fixture).querySelector<HTMLButtonElement>('.collection-head .dots')!.click();
+      const rows = root(fixture).querySelectorAll<HTMLButtonElement>('.label-row .dots');
+      rows[rows.length - 1].click();
+
+      expect(
+        openSheet.mock.calls.map(([config]) =>
+          config.actions.map((action: { id: string }) => action.id),
+        ),
+      ).toEqual([['export'], ['export']]);
+      expect(openExport.mock.calls.map(([target]) => target)).toEqual([
+        { collection: 'favorites', label: null, title: 'Favorites' },
+        { collection: 'favorites', label: 'unlabeled', title: 'Favorites – Unlabeled' },
+      ]);
     });
   });
 });
