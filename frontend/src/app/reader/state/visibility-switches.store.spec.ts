@@ -13,6 +13,7 @@ describe('VisibilitySwitchesStore', () => {
   const tags = signal<TagDto[]>([]);
   const allItemsExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
   const forYouExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
+  const yourStreamExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
   const savedSearchesExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
   const trendingExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
 
@@ -25,6 +26,7 @@ describe('VisibilitySwitchesStore', () => {
           useValue: {
             allItems: { excludedNetworks: allItemsExcluded },
             forYou: { excludedNetworks: forYouExcluded },
+            yourStream: { excludedNetworks: yourStreamExcluded },
             trending: { excludedNetworks: trendingExcluded },
           },
         },
@@ -38,6 +40,7 @@ describe('VisibilitySwitchesStore', () => {
     tags.set([makeTag(1, 'Reading')]);
     allItemsExcluded.set(new Set(['bluesky']));
     forYouExcluded.set(new Set(['mastodon']));
+    yourStreamExcluded.set(new Set(['bluesky']));
     savedSearchesExcluded.set(new Set());
     trendingExcluded.set(new Set(['bluesky', 'mastodon']));
 
@@ -46,6 +49,7 @@ describe('VisibilitySwitchesStore', () => {
     expect([...switches.tagsById.values()].map((tag) => tag.name)).toEqual(['Reading']);
     expect([...switches.excludedNetworks.allItems]).toEqual(['bluesky']);
     expect([...switches.excludedNetworks.forYou]).toEqual(['mastodon']);
+    expect([...switches.excludedNetworks.yourStream]).toEqual(['bluesky']);
     expect(switches.excludedNetworks.savedSearches.size).toBe(0);
     expect([...switches.excludedNetworks.trending]).toEqual(['bluesky', 'mastodon']);
   });

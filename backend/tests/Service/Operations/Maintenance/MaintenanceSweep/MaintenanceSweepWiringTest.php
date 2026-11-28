@@ -8,10 +8,8 @@ use App\Http\MaintenanceTickJson;
 use App\Service\Ingestion\Refresh\Model\RefreshReportModel;
 use App\Service\Operations\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Operations\Maintenance\MaintenanceSweep\DigestsTickSweep;
-use App\Service\Operations\Maintenance\MaintenanceSweep\ForYouStreamTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\HiddenProfilesTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\ImageVerificationTickSweep;
-use App\Service\Operations\Maintenance\MaintenanceSweep\InterestTermsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkCardsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\LinkResolutionsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\MaintenanceSweepInterface;
@@ -23,6 +21,8 @@ use App\Service\Operations\Maintenance\MaintenanceSweep\SavedSearchMembershipsTi
 use App\Service\Operations\Maintenance\MaintenanceSweep\StoryAiTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TranscriptsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceSweep\TrendingTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\YourStreamTickSweep;
+use App\Service\Operations\Maintenance\MaintenanceSweep\YourStreamWordsTickSweep;
 use App\Service\Operations\Maintenance\MaintenanceTick;
 use App\Service\Operations\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Operations\Maintenance\Model\MaintenanceTickReportModel;
@@ -44,11 +44,11 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'profileImages' => ProfileImagesTickSweep::class,
             'hiddenProfiles' => HiddenProfilesTickSweep::class,
             'savedSearchMemberships' => SavedSearchMembershipsTickSweep::class,
-            'forYouStream' => ForYouStreamTickSweep::class,
+            'yourStream' => YourStreamTickSweep::class,
             'privateFeedSync' => PrivateFeedSyncTickSweep::class,
             'notificationPoll' => NotificationPollTickSweep::class,
             'trending' => TrendingTickSweep::class,
-            'interestTerms' => InterestTermsTickSweep::class,
+            'yourStreamWords' => YourStreamWordsTickSweep::class,
             'storyAi' => StoryAiTickSweep::class,
         ], $this->wiredSweeps());
     }

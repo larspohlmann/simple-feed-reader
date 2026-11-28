@@ -14,6 +14,11 @@ const LISTS = [
 ];
 const WORD = '/^\p{L}+$/u';
 
+/** Feed footers ("Der Beitrag … erschien zuerst auf …") and read-more links, seen in Your stream (#2601). */
+const BOILERPLATE = [
+    'de' => ['erschien', 'weiterlesen'],
+];
+
 /** Google Books Ngram v3 1-gram shards, by language: the closed-class supplement (#2231). */
 const SHARDS = [
     'fr' => [
@@ -151,7 +156,7 @@ $lists = [];
 foreach (LISTS as $language => [$name, $sha256]) {
     $snowball = sortedDistinct(snowballWords(fetchedList($name, $sha256)));
     $closedClass = closedClassWords($shardDirectory, $language);
-    $lists[$language] = sortedDistinct([...$snowball, ...$closedClass]);
+    $lists[$language] = sortedDistinct([...$snowball, ...$closedClass, ...BOILERPLATE[$language] ?? []]);
     printf(
         "%s: %d words (Snowball %d, closed-class %d, of them new %d)\n",
         $language,

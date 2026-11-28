@@ -1,0 +1,122 @@
+.precision-bar {
+  inline-size: 16rem;
+  max-inline-size: 100%;
+}
+
+// The word list is read-only reference text, set in the rows' muted voice.
+.stream-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.stream-words-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.stream-language-name {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 550;
+  line-height: inherit;
+}
+
+.stream-language-name,
+.stream-words-empty {
+  color: var(--text-muted);
+}
+
+.stream-words-empty {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.stream-word-clip {
+  --word-lines: 5;
+
+  align-self: stretch;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  overflow: hidden;
+  max-block-size: calc(var(--word-lines) * 1lh);
+  position: relative;
+
+  &.expanded {
+    max-block-size: none;
+  }
+}
+
+.stream-word-limit {
+  position: absolute;
+  inline-size: 0;
+  block-size: calc(var(--word-lines) * 1lh);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stream-words-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.stream-language {
+  display: flex;
+  flex-direction: column;
+}
+
+.stream-word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  list-style: none;
+}
+
+.stream-word {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  gap: var(--space-1);
+  align-items: baseline;
+}
+
+.stream-word-text,
+.stream-word-weight {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.stream-word-weight {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stream-loading {
+  display: flex;
+  align-items: center;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.panel-banner {
+  padding: 0 var(--panel-inset-x) var(--panel-inset-y);
+}

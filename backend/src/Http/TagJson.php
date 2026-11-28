@@ -12,7 +12,8 @@ final class TagJson
     /**
      * @return array{
      *   id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
-     *   includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool
+     *   includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool,
+     *   includeInYourStream: bool
      * }
      */
     public static function one(Tag $tag): array
@@ -28,6 +29,7 @@ final class TagJson
             'includeInForYou' => $tag->isIncludedIn(InclusionSurface::ForYou),
             'includeInSavedSearches' => $tag->isIncludedIn(InclusionSurface::SavedSearches),
             'includeInTrending' => $tag->isIncludedIn(InclusionSurface::Trending),
+            'includeInYourStream' => $tag->isIncludedIn(InclusionSurface::YourStream),
         ];
     }
 }

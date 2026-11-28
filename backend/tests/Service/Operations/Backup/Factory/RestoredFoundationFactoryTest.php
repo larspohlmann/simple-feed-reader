@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Backup\Factory;
 
 use App\Entity\Feed;
+use App\Entity\InclusionSwitches;
 use App\Entity\User;
 use App\Enum\FeedLanguage;
 use App\Enum\InclusionSurface;
@@ -37,10 +38,7 @@ final class RestoredFoundationFactoryTest extends TestCase
                 color: null,
                 icon: null,
                 position: 0,
-                includeInAllItems: false,
-                includeInForYou: true,
-                includeInSavedSearches: false,
-                includeInTrending: false,
+                inclusions: new InclusionSwitches(false, true, false, false, true),
             ),
             null,
         );
@@ -49,6 +47,7 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertTrue($tag->isIncludedIn(InclusionSurface::ForYou));
         self::assertFalse($tag->isIncludedIn(InclusionSurface::SavedSearches));
         self::assertFalse($tag->isIncludedIn(InclusionSurface::Trending));
+        self::assertTrue($tag->isIncludedIn(InclusionSurface::YourStream));
     }
 
     public function testATagIsRestoredUnderTheParentItNames(): void
@@ -99,10 +98,7 @@ final class RestoredFoundationFactoryTest extends TestCase
                 markedReadUntil: $readUntil,
                 createdAt: $createdAt,
                 tags: [],
-                includeInAllItems: false,
-                includeInForYou: false,
-                includeInSavedSearches: false,
-                includeInTrending: false,
+                inclusions: new InclusionSwitches(false, true, false, false, false),
             ),
         );
 
@@ -111,9 +107,10 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertSame($readUntil, $subscription->getMarkedReadUntil());
         self::assertSame($createdAt, $subscription->getCreatedAt());
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
-        self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::ForYou));
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::SavedSearches));
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::Trending));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::YourStream));
     }
 
     private function factory(): RestoredFoundationFactory

@@ -60,14 +60,21 @@ final class BackupFieldDeclarations
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
             'inclusions.allItems' => 'includeInAllItems', 'inclusions.forYou' => 'includeInForYou',
             'inclusions.savedSearches' => 'includeInSavedSearches', 'inclusions.trending' => 'includeInTrending',
+            'inclusions.yourStream' => 'includeInYourStream',
         ],
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
         ],
         SavedSearchNetworkInclusion::class => ['network' => 'savedSearchIncludedNetworks'],
         NetworkExclusion::class => [
-            'network' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks'],
-            'surface' => ['forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks'],
+            'network' => [
+                'forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks',
+                'yourStreamExcludedNetworks',
+            ],
+            'surface' => [
+                'forYouExcludedNetworks', 'allItemsExcludedNetworks', 'trendingExcludedNetworks',
+                'yourStreamExcludedNetworks',
+            ],
         ],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
@@ -87,6 +94,7 @@ final class BackupFieldDeclarations
             'inclusions.forYou' => 'includeInForYou',
             'inclusions.savedSearches' => 'includeInSavedSearches',
             'inclusions.trending' => 'includeInTrending',
+            'inclusions.yourStream' => 'includeInYourStream',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',

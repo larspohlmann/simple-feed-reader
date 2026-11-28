@@ -875,7 +875,7 @@ These deliberately stay out and own their markup and styles:
 - the entry row's read toggle
 - the view-controls segmented control
 - the sidebar's brightness stepper (`<app-brightness-control>`)
-- `<app-stepper-bar>`, the dial the brightness control and the For you precision share
+- `<app-stepper-bar>`, the dial the brightness control and the Your stream precision share
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -1252,7 +1252,7 @@ knows no translation keys, so every text arrives already translated.
 | `step` | `number` (required) | — the current step |
 | `min`, `max` | `number` (required) | — the bar is empty at `min` and full at `max`; the end buttons disable there |
 | `decreaseIcon`, `increaseIcon` | `string` | — icon names; each end needs an icon or a text |
-| `decreaseText`, `increaseText` | `string` | — a word on that end instead of its icon (the For you precision reads "Narrow" / "Wide"); the button sizes to the word with the `--space-3` inline padding |
+| `decreaseText`, `increaseText` | `string` | — a word on that end instead of its icon (the Your stream precision reads "Narrow" / "Wide"); the button sizes to the word with the `--space-3` inline padding |
 | `groupLabel` | `string` (required) | — the group's accessible name |
 | `decreaseLabel`, `increaseLabel`, `resetLabel` | `string` (required) | — title and `aria-label` of the buttons |
 | `readout` | `string` (required) | — the sentence a screen reader hears on change |
@@ -1278,7 +1278,7 @@ knows no translation keys, so every text arrives already translated.
 
 The host is `display: flex`; the frame inside grows to the host's width, so the
 caller sizes the host. Its two users are the sidebar's brightness control and the
-For you stream's precision. `<app-text-size-control>` is the same pattern with a
+Settings → Your stream section's precision. `<app-text-size-control>` is the same pattern with a
 visible value in the bar and has not been migrated.
 
 ---
@@ -2025,7 +2025,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one. The Favorites and Kept heads and their label rows (#2585) carry a ⋯ only there: organise mode draws them in their normal-mode geometry, so nothing moves when it toggles, as plain text with no count, labels always shown, and the ⋯ in the chevron column.
 
-**The view groups** (#2593). Two `.card.views-group` cards in `sidebar.component.html`: All items (a folder over Recently read, Liked and Shared), Favorites, Kept; then Saved searches, Followed stories, For you, For you stream, Trending. A group with no view showing is `display: none`. Under the airy style each group is a section with the faint rule above it, except the first, which sits under the search band. A view head (`row.folder-head`: `.folder-head` with a `.section-link`, a bare `size="md"` icon, `.label`, `.section-count`, `.slot`, then `.chevzone` or `.trail`) is a view row in everything: height, inset, type size, weight 400 (600 when current, like an active row), muted lead, the same states, and its count in the plain rows' column. It draws no band when open.
+**The view groups** (#2593). Two `.card.views-group` cards in `sidebar.component.html`: All items (a folder over Recently read, Liked and Shared), Favorites, Kept; then Saved searches, Followed stories, For you, Your stream, Trending. A group with no view showing is `display: none`. Under the airy style each group is a section with the faint rule above it, except the first, which sits under the search band. A view head (`row.folder-head`: `.folder-head` with a `.section-link`, a bare `size="md"` icon, `.label`, `.section-count`, `.slot`, then `.chevzone` or `.trail`) is a view row in everything: height, inset, type size, weight 400 (600 when current, like an active row), muted lead, the same states, and its count in the plain rows' column. It draws no band when open.
 
 **Collection blocks** (#2581, #2585). Favorites and Kept (`app-sidebar-collection`) are view heads with the star or bookmark lead, the collection's total, and a chevron only while a label subfolder shows (open state in `localStorage`, collapsed by default). A subfolder is a sub-row with the `label` glyph and its count in that collection, alphabetical, "Unlabeled" last. Each label row and the Unlabeled row carry a ⋯, and so does each head: heads offer Export; labels Rename (in place), Delete and Export; Unlabeled Export. On a fine pointer they are row menus. On a coarse pointer the ⋯ exist only in organise mode, where Favorites and Kept get their own card (after the hint, before Tags) in their normal-mode geometry, the ⋯ in the chevron column, and open sheets on every pointer.
 

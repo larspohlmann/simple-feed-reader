@@ -1,6 +1,6 @@
 Stopword lists (stopwords.php)
 
-stopwords.php merges two sources per language.
+stopwords.php merges three sources per language.
 
 1. Snowball stopword lists for German, English, French and Spanish.
   https://github.com/snowballstem/snowball-website, commit dc14fb462784e5bdf90f3210022b0f91d3881ffd,
@@ -17,6 +17,9 @@ stopwords.php merges two sources per language.
   legal code is in LICENSE-CC-BY-3.0.txt.
   Changes: part-of-speech counts aggregated per casefolded form over 1950–2019; the 1,000 most frequent forms kept
   when at least half their tagged count is a closed-class tag; written as word lists.
+
+3. German tokens of the footers and read-more links feeds append to their summaries ("erschien", "weiterlesen"),
+  added by this project; MIT like the repository's code.
 
 generate.php makes these changes; SOURCE pins every input file.
 

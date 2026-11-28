@@ -14,7 +14,19 @@ final readonly class InclusionChange
         public ?bool $forYou = null,
         public ?bool $savedSearches = null,
         public ?bool $trending = null,
+        public ?bool $yourStream = null,
     ) {
+    }
+
+    public static function fromSwitches(InclusionSwitches $switches): self
+    {
+        return new self(
+            allItems: $switches->isIncludedIn(InclusionSurface::AllItems),
+            forYou: $switches->isIncludedIn(InclusionSurface::ForYou),
+            savedSearches: $switches->isIncludedIn(InclusionSurface::SavedSearches),
+            trending: $switches->isIncludedIn(InclusionSurface::Trending),
+            yourStream: $switches->isIncludedIn(InclusionSurface::YourStream),
+        );
     }
 
     public function getSwitch(InclusionSurface $surface): ?bool
@@ -24,6 +36,7 @@ final readonly class InclusionChange
             InclusionSurface::ForYou => $this->forYou,
             InclusionSurface::SavedSearches => $this->savedSearches,
             InclusionSurface::Trending => $this->trending,
+            InclusionSurface::YourStream => $this->yourStream,
         };
     }
 }

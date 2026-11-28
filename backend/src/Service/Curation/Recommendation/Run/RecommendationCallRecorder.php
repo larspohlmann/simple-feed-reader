@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Run;
 
-use App\Entity\InterestTermRun;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -44,14 +43,6 @@ final readonly class RecommendationCallRecorder
         return $this->opened(
             $this->logFactory->createForProfileRun($profileRun, $renderedRequest),
             CallingRun::profileRun($profileRun->requireId()),
-        );
-    }
-
-    public function beginForInterestTermRun(InterestTermRun $run, string $renderedRequest): RecordedCall
-    {
-        return $this->opened(
-            $this->logFactory->createForInterestTermRun($run, $renderedRequest),
-            CallingRun::interestTermRun($run->requireId()),
         );
     }
 

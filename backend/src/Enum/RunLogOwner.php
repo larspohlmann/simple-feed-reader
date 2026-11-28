@@ -10,5 +10,4 @@ enum RunLogOwner: string
     case Run = 'run';
     case ProfileRun = 'profileRun';
     case StoryAiRun = 'storyAiRun';
-    case InterestTermRun = 'interestTermRun';
 }

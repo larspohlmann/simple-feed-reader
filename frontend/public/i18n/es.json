@@ -207,6 +207,32 @@
       "testMailRateLimited": "Demasiados correos de prueba en poco tiempo. Espera unos minutos y vuelve a intentarlo.",
       "testMailFailed": "No se pudo enviar el correo de prueba. Puede que el servidor de correo esté mal configurado o no sea accesible; revisa el registro del servidor."
     },
+    "yourStream": {
+      "title": "Tu flujo",
+      "caption": "Entradas de tus feeds que encajan con lo que marcas como favorito, guardas, te gusta y compartes, nada más llegar.",
+      "enabled": "Tu flujo",
+      "enabledDesc": "Si lo desactivas, no se asocian entradas nuevas y el flujo desaparece de la barra lateral. Las entradas que ya contiene se conservan.",
+      "precision": "Precisión",
+      "precisionDesc": "Cuánto debe encajar una entrada con tus intereses para aparecer.",
+      "narrower": "Más estrecha",
+      "wider": "Más amplia",
+      "narrowEnd": "Estrecho",
+      "wideEnd": "Amplio",
+      "resetPrecision": "Restablecer la precisión",
+      "precisionReadout": "Precisión: {{label}}",
+      "precisionLabel": {
+        "narrowest": "La más estrecha",
+        "narrow": "Estrecha",
+        "balanced": "Equilibrada",
+        "wide": "Amplia",
+        "widest": "La más amplia"
+      },
+      "words": "Tus palabras",
+      "wordsEmpty": "Aún no hay lista de palabras. Marca como favoritos, guarda, da me gusta o comparte artículos para llenar tu flujo.",
+      "noLanguage": "Feeds sin idioma",
+      "info": "Tu flujo elige las palabras que destacan en los artículos que marcas como favoritos, guardas, te gustan y compartes, y en tus búsquedas guardadas. El titular y el texto de cada entrada nueva se comparan con ellas, y si aparecen suficientes, la entrada llega a tu flujo. Las palabras poco frecuentes en tus feeds cuentan más que las comunes. La precisión fija lo cerca que debe estar la coincidencia: estrecha solo deja pasar las coincidencias fuertes, amplia deja pasar más. Los cambios solo afectan a las entradas nuevas.",
+      "saved": "Guardado."
+    },
     "ai": {
       "title": "IA",
       "lead": "Conecta un endpoint compatible con OpenAI. La clave se guarda cifrada y no se vuelve a mostrar.",
@@ -313,8 +339,7 @@
         "contextWindow": "El presupuesto de tokens que puede usar una solicitud. La línea de abajo indica de dónde viene el valor actual: tu valor personalizado aquí, el límite que informa tu proveedor o el predeterminado. Deja el campo vacío para usar el valor del proveedor o el predeterminado.",
         "fixedPrompt": "El rol y el formato de salida que envía cada ejecución. Son fijos para que la respuesta siga siendo legible por la máquina; el prompt de orientación de arriba es el lugar para tus propias instrucciones.",
         "debug": "Si está activado, cada ejecución guarda su registro completo de solicitudes y respuestas. El registro aparece en el panel “Registro de depuración” de abajo en cuanto una ejecución ha generado entradas. El modo de depuración no cambia lo que muestra la lista de recomendaciones; eso lo controla “Mostrar por qué se eligieron los artículos”.",
-        "purge": "Elimina de “Para ti” todos los artículos recomendados de esta cuenta. Los artículos en sí y su estado de lectura no se tocan. No se puede deshacer: la próxima ejecución crea una lista nueva.",
-        "forYouStream": "La IA lee tu perfil y elige palabras y frases cortas que describen tus intereses (listadas abajo). El titular y el texto de cada entrada nueva se comparan con ellas, y si aparecen suficientes, la entrada llega a tu flujo. Las palabras poco frecuentes en tus feeds cuentan más que las comunes. La precisión fija lo cerca que debe estar la coincidencia: estrecha solo deja pasar las coincidencias fuertes, amplia deja pasar más. Los cambios solo afectan a las entradas nuevas."
+        "purge": "Elimina de “Para ti” todos los artículos recomendados de esta cuenta. Los artículos en sí y su estado de lectura no se tocan. No se puede deshacer: la próxima ejecución crea una lista nueva."
       },
       "guide": {
         "title": "Configuración paso a paso",
@@ -347,29 +372,6 @@
         "title": "Recomendaciones",
         "forYouTitle": "Para ti",
         "forYouCaption": "Cómo se crea tu feed personal.",
-        "forYouStream": {
-          "title": "Flujo Para ti",
-          "caption": "Entradas de tus feeds que encajan con tus intereses, nada más llegar.",
-          "enabled": "Flujo Para ti",
-          "enabledDesc": "Si lo desactivas, no se asocian entradas nuevas y el flujo desaparece de la barra lateral. Las entradas que ya contiene se conservan.",
-          "precision": "Precisión",
-          "precisionDesc": "Cuánto debe encajar una entrada con tus intereses para aparecer.",
-          "narrower": "Más estrecha",
-          "wider": "Más amplia",
-          "narrowEnd": "Estrecho",
-          "wideEnd": "Amplio",
-          "resetPrecision": "Restablecer la precisión",
-          "precisionReadout": "Precisión: {{label}}",
-          "precisionLabel": {
-            "narrowest": "La más estrecha",
-            "narrow": "Estrecha",
-            "balanced": "Equilibrada",
-            "wide": "Amplia",
-            "widest": "La más amplia"
-          },
-          "phrases": "Palabras elegidas por la IA",
-          "phrasesEmpty": "Aún no hay lista de palabras. Aparece unos minutos después de actualizar tu perfil."
-        },
         "showScoreAndReasons": "Mostrar puntuación y motivos",
         "showScoreAndReasonsDesc": "Añade la puntuación de cada selección y, si el modelo lo escribe, su motivo.",
         "autoGenerate": "Generar Para ti automáticamente",
@@ -931,6 +933,8 @@
       "hideFromAllItems": "Ocultar de “Todo”",
       "showInForYou": "Mostrar en Para ti",
       "hideFromForYou": "Ocultar de Para ti",
+      "showInYourStream": "Mostrar en Tu flujo",
+      "hideFromYourStream": "Ocultar de Tu flujo",
       "showInSavedSearches": "Mostrar en búsquedas guardadas",
       "hideFromSavedSearches": "Ocultar de búsquedas guardadas",
       "showInTrending": "Mostrar en Tendencias",
@@ -1144,6 +1148,7 @@
       "tags": "Etiquetas",
       "showInAllItems": "Mostrar en “Todo”",
       "showInForYou": "Mostrar en Para ti",
+      "showInYourStream": "Mostrar en Tu flujo",
       "showInSavedSearches": "Mostrar en búsquedas guardadas",
       "showInTrending": "Mostrar en Tendencias",
       "saving": "Guardando…",
@@ -1401,8 +1406,8 @@
     "liked": "Me gusta",
     "viewed": "Leídos recientemente",
     "forYou": "Para ti",
-    "forYouStream": "Flujo Para ti",
-    "forYouStreamEmpty": "Aún no hay nada que encaje con tus intereses. Las nuevas publicaciones que encajen llegarán aquí en cuanto aparezcan.",
+    "yourStream": "Tu flujo",
+    "yourStreamEmpty": "Aún no hay nada que encaje con tus intereses. Las nuevas publicaciones que encajen llegarán aquí en cuanto aparezcan.",
     "trending": "Tendencias",
     "alsoCoveredBy": "También lo cubren",
     "trendingSources": "{{count}} fuentes",
@@ -1635,6 +1640,7 @@
     "unsubscribe": "Cancelar suscripción",
     "includeInAllItems": "Mostrar en “Todo”",
     "includeInForYou": "Mostrar en Para ti",
+    "includeInYourStream": "Mostrar en Tu flujo",
     "includeInSavedSearches": "Mostrar en búsquedas guardadas",
     "includeInTrending": "Mostrar en Tendencias",
     "feedLanguage": {

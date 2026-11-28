@@ -40,6 +40,7 @@ final class TagRequestsTest extends TestCase
             includeInAllItems: false,
             includeInSavedSearches: true,
             includeInTrending: false,
+            includeInYourStream: true,
         );
 
         self::assertSame(
@@ -48,6 +49,7 @@ final class TagRequestsTest extends TestCase
                 'forYou' => null,
                 'savedSearches' => true,
                 'trending' => false,
+                'yourStream' => true,
             ],
             get_object_vars($request->toInclusions()),
         );

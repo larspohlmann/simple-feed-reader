@@ -11,15 +11,15 @@ use App\Service\Operations\Worker\Message\PollSocialNotifications;
 use App\Service\Operations\Worker\Message\PurgeFailedMessages;
 use App\Service\Operations\Worker\Message\RebuildDueTrendingStories;
 use App\Service\Operations\Worker\Message\RefreshDueFeeds;
-use App\Service\Operations\Worker\Message\RefreshDueInterestTerms;
 use App\Service\Operations\Worker\Message\RefreshProfileImages;
+use App\Service\Operations\Worker\Message\RefreshYourStreamWords;
 use App\Service\Operations\Worker\Message\ResolvePendingLinks;
 use App\Service\Operations\Worker\Message\RunDueStoryAiTasks;
 use App\Service\Operations\Worker\Message\SendDueDigests;
 use App\Service\Operations\Worker\Message\StartDueProfileRuns;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
-use App\Service\Operations\Worker\Message\SweepForYouStream;
 use App\Service\Operations\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Operations\Worker\Message\SweepYourStream;
 use App\Service\Operations\Worker\Message\SwitchHiddenProfileFeeds;
 use App\Service\Operations\Worker\Message\SyncPrivateFeeds;
 use App\Service\Operations\Worker\Message\VerifyPendingImages;
@@ -66,8 +66,8 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 ResolvePendingLinks::class,
                 PollSocialNotifications::class,
                 RunDueStoryAiTasks::class,
-                RefreshDueInterestTerms::class,
-                SweepForYouStream::class,
+                RefreshYourStreamWords::class,
+                SweepYourStream::class,
             ],
             $classes,
         );
@@ -103,7 +103,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         );
     }
 
-    public function testTheForYouStreamSweepIsScheduledLast(): void
+    public function testTheYourStreamSweepIsScheduledLast(): void
     {
         self::bootKernel();
         $provider = self::getContainer()->get(WorkerSchedule::class);
@@ -112,7 +112,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         $last = array_last($provider->getSchedule()->getRecurringMessages());
         self::assertNotNull($last);
 
-        self::assertSame(SweepForYouStream::class, self::firstMessageClass($last));
+        self::assertSame(SweepYourStream::class, self::firstMessageClass($last));
         self::assertSame('every 1 minute', (string) $last->getTrigger());
     }
 

@@ -207,6 +207,32 @@
       "testMailRateLimited": "Trop d'e-mails de test en peu de temps. Patientez quelques minutes, puis réessayez.",
       "testMailFailed": "L'e-mail de test n'a pas pu être envoyé. Le serveur de messagerie est peut-être mal configuré ou injoignable — consultez le journal du serveur."
     },
+    "yourStream": {
+      "title": "Votre fil",
+      "caption": "Les articles de vos flux qui correspondent à ce que vous mettez en favori, conservez, aimez et partagez, dès leur arrivée.",
+      "enabled": "Votre fil",
+      "enabledDesc": "Désactivé, aucun nouvel article n'est associé et le flux quitte la barre latérale. Les articles déjà présents sont conservés.",
+      "precision": "Précision",
+      "precisionDesc": "À quel point un article doit correspondre à vos centres d'intérêt pour apparaître.",
+      "narrower": "Plus étroit",
+      "wider": "Plus large",
+      "narrowEnd": "Étroit",
+      "wideEnd": "Large",
+      "resetPrecision": "Réinitialiser la précision",
+      "precisionReadout": "Précision : {{label}}",
+      "precisionLabel": {
+        "narrowest": "La plus étroite",
+        "narrow": "Étroite",
+        "balanced": "Équilibrée",
+        "wide": "Large",
+        "widest": "La plus large"
+      },
+      "words": "Vos mots",
+      "wordsEmpty": "Pas encore de liste de mots. Mettez en favori, conservez, aimez ou partagez des articles pour remplir votre fil.",
+      "noLanguage": "Flux sans langue",
+      "info": "Votre fil retient les mots qui ressortent dans les articles que vous mettez en favori, conservez, aimez et partagez, ainsi que dans vos recherches enregistrées. Le titre et le texte de chaque nouvel article sont comparés à ces mots, et si assez d'entre eux apparaissent, l'article arrive dans votre fil. Les mots rares dans vos flux comptent davantage que les courants. La précision règle la proximité exigée : étroite ne laisse passer que les correspondances fortes, large en laisse passer davantage. Les modifications n'affectent que les nouveaux articles.",
+      "saved": "Enregistré."
+    },
     "ai": {
       "title": "IA",
       "lead": "Connectez un point de terminaison compatible OpenAI. La clé est stockée chiffrée et n'est plus jamais affichée.",
@@ -313,8 +339,7 @@
         "contextWindow": "Le budget de jetons qu'une requête peut utiliser. La ligne ci-dessous indique d'où vient la valeur actuelle : votre valeur personnalisée ici, la limite indiquée par votre fournisseur, ou la valeur par défaut intégrée. Laissez le champ vide pour utiliser la valeur du fournisseur ou la valeur par défaut.",
         "fixedPrompt": "Le rôle et le format de sortie que chaque cycle envoie. Ils sont fixes pour que la réponse reste lisible par la machine — le prompt d'orientation ci-dessus est l'endroit pour vos propres instructions.",
         "debug": "Lorsqu'il est activé, chaque cycle conserve son journal complet de requêtes et de réponses. Le journal apparaît dans le panneau « Journal de débogage » ci-dessous dès qu'un cycle a produit des entrées. Le mode débogage ne change pas ce qu'affiche la liste de recommandations — c'est le rôle de « Afficher la note et la justification ».",
-        "purge": "Supprime tous les articles recommandés de « Pour vous » pour ce compte. Les articles eux-mêmes et leur état de lecture ne sont pas touchés. Cette action est irréversible — le prochain cycle construit une nouvelle liste.",
-        "forYouStream": "L'IA lit votre profil et choisit des mots et de courtes expressions qui décrivent vos centres d'intérêt (listés ci-dessous). Le titre et le texte de chaque nouvel article sont comparés à ces termes, et si assez d'entre eux apparaissent, l'article arrive dans votre flux. Les termes rares dans vos flux comptent davantage que les courants. La précision règle la proximité exigée : étroite ne laisse passer que les correspondances fortes, large en laisse passer davantage. Les modifications n'affectent que les nouveaux articles."
+        "purge": "Supprime tous les articles recommandés de « Pour vous » pour ce compte. Les articles eux-mêmes et leur état de lecture ne sont pas touchés. Cette action est irréversible — le prochain cycle construit une nouvelle liste."
       },
       "guide": {
         "title": "Configuration pas à pas",
@@ -347,29 +372,6 @@
         "title": "Recommandations",
         "forYouTitle": "Pour vous",
         "forYouCaption": "Comment votre flux personnel est construit.",
-        "forYouStream": {
-          "title": "Flux Pour vous",
-          "caption": "Les articles de vos flux qui correspondent à vos centres d'intérêt, dès leur arrivée.",
-          "enabled": "Flux Pour vous",
-          "enabledDesc": "Désactivé, aucun nouvel article n'est associé et le flux quitte la barre latérale. Les articles déjà présents sont conservés.",
-          "precision": "Précision",
-          "precisionDesc": "À quel point un article doit correspondre à vos centres d'intérêt pour apparaître.",
-          "narrower": "Plus étroit",
-          "wider": "Plus large",
-          "narrowEnd": "Étroit",
-          "wideEnd": "Large",
-          "resetPrecision": "Réinitialiser la précision",
-          "precisionReadout": "Précision : {{label}}",
-          "precisionLabel": {
-            "narrowest": "La plus étroite",
-            "narrow": "Étroite",
-            "balanced": "Équilibrée",
-            "wide": "Large",
-            "widest": "La plus large"
-          },
-          "phrases": "Termes choisis par l'IA",
-          "phrasesEmpty": "Pas encore de liste de termes. Elle apparaît quelques minutes après la mise à jour de votre profil."
-        },
         "showScoreAndReasons": "Afficher la note et la justification",
         "showScoreAndReasonsDesc": "Ajoute la note de chaque sélection et, quand le modèle en rédige une, sa justification.",
         "autoGenerate": "Générer Pour vous automatiquement",
@@ -931,6 +933,8 @@
       "hideFromAllItems": "Masquer de « Tout »",
       "showInForYou": "Afficher dans Pour vous",
       "hideFromForYou": "Masquer de Pour vous",
+      "showInYourStream": "Afficher dans Votre fil",
+      "hideFromYourStream": "Masquer de Votre fil",
       "showInSavedSearches": "Afficher dans les recherches enregistrées",
       "hideFromSavedSearches": "Masquer des recherches enregistrées",
       "showInTrending": "Afficher dans Tendances",
@@ -1144,6 +1148,7 @@
       "tags": "Étiquettes",
       "showInAllItems": "Afficher dans « Tout »",
       "showInForYou": "Afficher dans Pour vous",
+      "showInYourStream": "Afficher dans Votre fil",
       "showInSavedSearches": "Afficher dans les recherches enregistrées",
       "showInTrending": "Afficher dans Tendances",
       "saving": "Enregistrement…",
@@ -1401,8 +1406,8 @@
     "liked": "J'aime",
     "viewed": "Lus récemment",
     "forYou": "Pour vous",
-    "forYouStream": "Flux Pour vous",
-    "forYouStreamEmpty": "Rien ne correspond encore à vos centres d'intérêt. Les nouveaux articles qui vous correspondent arrivent ici dès leur publication.",
+    "yourStream": "Votre fil",
+    "yourStreamEmpty": "Rien ne correspond encore à vos centres d'intérêt. Les nouveaux articles qui vous correspondent arrivent ici dès leur publication.",
     "trending": "Tendances",
     "alsoCoveredBy": "Aussi couvert par",
     "trendingSources": "{{count}} sources",
@@ -1635,6 +1640,7 @@
     "unsubscribe": "Se désabonner",
     "includeInAllItems": "Afficher dans « Tout »",
     "includeInForYou": "Afficher dans Pour vous",
+    "includeInYourStream": "Afficher dans Votre fil",
     "includeInSavedSearches": "Afficher dans les recherches enregistrées",
     "includeInTrending": "Afficher dans Tendances",
     "feedLanguage": {

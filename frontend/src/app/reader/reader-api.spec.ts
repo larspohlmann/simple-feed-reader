@@ -348,18 +348,18 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
-  it('POSTs For you stream mark-read with until alone', () => {
-    api.markForYouStreamRead('2026-11-27T10:00:00Z').subscribe();
-    const testRequest = ctrl.expectOne('https://api.test/api/entries/for-you-stream/mark-read');
+  it('POSTs Your stream mark-read with until alone', () => {
+    api.markYourStreamRead('2026-11-27T10:00:00Z').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/your-stream/mark-read');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.body).toEqual({ until: '2026-11-27T10:00:00Z' });
     testRequest.flush(null);
   });
 
-  it('reads the For you stream from its own endpoint with the unread flag', () => {
-    api.entries({ view: 'for-you-stream', unread: true }).subscribe();
+  it('reads Your stream from its own endpoint with the unread flag', () => {
+    api.entries({ view: 'your-stream', unread: true }).subscribe();
     const testRequest = ctrl.expectOne((request) =>
-      request.url.endsWith('/api/entries/for-you-stream'),
+      request.url.endsWith('/api/entries/your-stream'),
     );
     expect(testRequest.request.params.get('unread')).toBe('1');
     expect(testRequest.request.params.get('view')).toBeNull();

@@ -88,7 +88,7 @@ describe('SidebarRowActions', () => {
       return checksOf(sheetOpen.mock.calls[0][0]);
     };
 
-    it('offers edit, the four switches between dividers, and unsubscribe', () => {
+    it('offers edit, the five switches between dividers, and unsubscribe', () => {
       openedChecks();
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -98,6 +98,7 @@ describe('SidebarRowActions', () => {
           ACTION_SHEET_DIVIDER,
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
           expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
           ACTION_SHEET_DIVIDER,
@@ -172,6 +173,8 @@ describe('SidebarRowActions', () => {
     const forYouToggle = jest.fn();
     const allItemsExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
     const allItemsToggle = jest.fn();
+    const yourStreamExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
+    const yourStreamToggle = jest.fn();
     const trendingExcluded = signal<ReadonlySet<SocialNetworkName>>(new Set());
     const trendingToggle = jest.fn();
 
@@ -179,6 +182,8 @@ describe('SidebarRowActions', () => {
       forYouToggle.mockClear();
       allItemsToggle.mockClear();
       trendingToggle.mockClear();
+      yourStreamToggle.mockClear();
+      yourStreamExcluded.set(new Set());
       trendingExcluded.set(new Set());
       allItemsExcluded.set(new Set());
       excludedNetworks.set(new Set());
@@ -209,6 +214,7 @@ describe('SidebarRowActions', () => {
             useValue: {
               allItems: { excludedNetworks: allItemsExcluded, toggleNetwork: allItemsToggle },
               forYou: { excludedNetworks, toggleNetwork: forYouToggle },
+              yourStream: { excludedNetworks: yourStreamExcluded, toggleNetwork: yourStreamToggle },
               trending: { excludedNetworks: trendingExcluded, toggleNetwork: trendingToggle },
             },
           },
@@ -235,7 +241,7 @@ describe('SidebarRowActions', () => {
 
     const checksOf = (rows: SidebarRowActions) => rows.networkSurfaceChecks(sectionOf([]));
 
-    it('offers each account on the network sheet, then its four switches, and opens the picked one', () => {
+    it('offers each account on the network sheet, then its five switches, and opens the picked one', () => {
       TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([bob, reconnect]));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -246,6 +252,7 @@ describe('SidebarRowActions', () => {
           ACTION_SHEET_DIVIDER,
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
           expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ],
@@ -261,6 +268,7 @@ describe('SidebarRowActions', () => {
           actions: [
             expect.objectContaining({ id: 'allItems' }),
             expect.objectContaining({ id: 'forYou' }),
+            expect.objectContaining({ id: 'yourStream' }),
             expect.objectContaining({ id: 'savedSearches' }),
             expect.objectContaining({ id: 'trending' }),
           ],
@@ -268,32 +276,35 @@ describe('SidebarRowActions', () => {
       );
     });
 
-    it('gives a network four checks, All items, For You, saved searches and Trending, that follow the stores', () => {
+    it('gives a network five checks, All items, For You, Your stream, saved searches and Trending, that follow the stores', () => {
       const checks = checksOf(TestBed.inject(SidebarRowActions));
 
-      expect(checks.map((check) => check.checked())).toEqual([true, true, false, true]);
+      expect(checks.map((check) => check.checked())).toEqual([true, true, true, false, true]);
 
       allItemsExcluded.set(new Set(['bluesky']));
       excludedNetworks.set(new Set(['bluesky']));
+      yourStreamExcluded.set(new Set(['bluesky']));
       includedNetworks.set(new Set(['bluesky']));
       trendingExcluded.set(new Set(['bluesky']));
 
-      expect(checks.map((check) => check.checked())).toEqual([false, false, true, false]);
+      expect(checks.map((check) => check.checked())).toEqual([false, false, false, true, false]);
     });
 
     it('switches the network in each surface from its check and keeps the menu open', () => {
       const rows = TestBed.inject(SidebarRowActions);
       rows.menuFor.set('social-bluesky');
-      const [allItems, forYou, savedSearches, trending] = checksOf(rows);
+      const [allItems, forYou, yourStream, savedSearches, trending] = checksOf(rows);
 
       allItems.toggle();
       forYou.toggle();
+      yourStream.toggle();
       savedSearches.toggle();
       trending.toggle();
 
       expect(trendingToggle).toHaveBeenCalledWith('bluesky');
       expect(allItemsToggle).toHaveBeenCalledWith('bluesky');
       expect(forYouToggle).toHaveBeenCalledWith('bluesky');
+      expect(yourStreamToggle).toHaveBeenCalledWith('bluesky');
       expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
       expect(rows.menuFor()).toBe('social-bluesky');
     });
@@ -301,11 +312,13 @@ describe('SidebarRowActions', () => {
     it('names every surface that leaves the network out, in title order', () => {
       allItemsExcluded.set(new Set(['bluesky']));
       excludedNetworks.set(new Set(['bluesky']));
+      yourStreamExcluded.set(new Set(['bluesky']));
       trendingExcluded.set(new Set(['bluesky']));
 
       expect(TestBed.inject(SidebarRowActions).networkExcludedSurfaces('bluesky')).toEqual([
         'allItems',
         'forYou',
+        'yourStream',
         'savedSearches',
         'trending',
       ]);
@@ -368,7 +381,7 @@ describe('SidebarRowActions', () => {
       return sheetOpen.mock.calls[0][0].actions as { id?: string; disabled?: boolean }[];
     };
 
-    it('offers edit, create here, the moves, the four switches and, after a divider, delete', () => {
+    it('offers edit, create here, the moves, the five switches and, after a divider, delete', () => {
       TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
 
       expect(sheetOpen).toHaveBeenCalledWith({
@@ -381,6 +394,7 @@ describe('SidebarRowActions', () => {
           ACTION_SHEET_DIVIDER,
           expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
           expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+          expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
           expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
           expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
           ACTION_SHEET_DIVIDER,
@@ -389,10 +403,10 @@ describe('SidebarRowActions', () => {
       });
     });
 
-    it('gives a tag four checks that follow the live tag in TagsStore', () => {
+    it('gives a tag five checks that follow the live tag in TagsStore', () => {
       const checks = TestBed.inject(SidebarRowActions).tagSurfaceChecks(tag(2, 1));
 
-      expect(checks.map((check) => check.checked())).toEqual([true, true, true, true]);
+      expect(checks.map((check) => check.checked())).toEqual([true, true, true, true, true]);
 
       tags.update((current) =>
         current.map((listed) =>
@@ -402,7 +416,7 @@ describe('SidebarRowActions', () => {
         ),
       );
 
-      expect(checks.map((check) => check.checked())).toEqual([true, false, true, false]);
+      expect(checks.map((check) => check.checked())).toEqual([true, false, true, true, false]);
     });
 
     it('switches the tag from its check against the live tag, keeping the menu open', () => {

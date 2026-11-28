@@ -21,7 +21,7 @@ import { SocialSection, socialFeedGroup } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
+import { YourStreamTallyDto, NO_YOUR_STREAM_TALLY } from '../../sidebar-totals';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -124,6 +124,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInYourStream: true,
   includeInSavedSearches: true,
   includeInTrending: true,
   language: null,
@@ -145,7 +146,7 @@ function inputDefaults() {
     sharedCount: 0,
     likedCount: 0,
     trendingUnopened: { window: 'day', unopened: 0 } as TrendingUnopened,
-    forYouStream: NO_FOR_YOU_STREAM_TALLY,
+    yourStream: NO_YOUR_STREAM_TALLY,
     groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', unread: true } satisfies Selection,
     loading: false,
@@ -179,7 +180,7 @@ function mount(
     sharedCount: number;
     likedCount: number;
     trendingUnopened: TrendingUnopened;
-    forYouStream: ForYouStreamTallyDto;
+    yourStream: YourStreamTallyDto;
     groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
@@ -272,9 +273,9 @@ describe('SidebarComponent', () => {
       return element;
     };
 
-    it('orders the first group All items, Favorites, Kept and the second Saved searches, Followed stories, For you, For you stream, Trending', () => {
+    it('orders the first group All items, Favorites, Kept and the second Saved searches, Followed stories, For you, Your stream, Trending', () => {
       const fixture = mount({
-        forYouStream: { available: true, unreadCount: 0, entryCount: 9 },
+        yourStream: { available: true, unreadCount: 0, entryCount: 9 },
         savedSearches: [
           {
             id: 1,
@@ -305,7 +306,7 @@ describe('SidebarComponent', () => {
         'Saved searches',
         'Followed stories',
         'For you',
-        'For you stream',
+        'Your stream',
         'Trending',
       ]);
     });
@@ -436,28 +437,28 @@ describe('SidebarComponent', () => {
     });
   });
 
-  describe('the For you stream item (#2582)', () => {
+  describe('Your stream item (#2582)', () => {
     const streamNav = (element: HTMLElement) =>
-      element.querySelector<HTMLAnchorElement>('.nav.for-you-stream');
+      element.querySelector<HTMLAnchorElement>('.nav.your-stream');
 
     it('is hidden while the stream is unavailable', () => {
       const element = mount({
-        forYouStream: { available: false, unreadCount: 4, entryCount: 4 },
+        yourStream: { available: false, unreadCount: 4, entryCount: 4 },
       }).nativeElement as HTMLElement;
       expect(streamNav(element)).toBeNull();
     });
 
     it('shows its unread count and links to the stream once available', () => {
       const element = mount({
-        forYouStream: { available: true, unreadCount: 4, entryCount: 9 },
+        yourStream: { available: true, unreadCount: 4, entryCount: 9 },
       }).nativeElement as HTMLElement;
       expect(streamNav(element)?.querySelector('.count')?.textContent?.trim()).toBe('4');
-      expect(streamNav(element)?.getAttribute('href')).toContain('view=for-you-stream');
+      expect(streamNav(element)?.getAttribute('href')).toContain('view=your-stream');
     });
 
     it('shows when it is the only view of the second group', () => {
       const fixture = mount({
-        forYouStream: { available: true, unreadCount: 2, entryCount: 9 },
+        yourStream: { available: true, unreadCount: 2, entryCount: 9 },
       });
       TestBed.inject(PreferencesService).setTrendingEnabled(false);
       fixture.detectChanges();
@@ -470,8 +471,8 @@ describe('SidebarComponent', () => {
 
     it('is active on the stream selection and shows no count at zero', () => {
       const element = mount({
-        forYouStream: { available: true, unreadCount: 0, entryCount: 9 },
-        selection: { kind: 'for-you-stream', unread: false },
+        yourStream: { available: true, unreadCount: 0, entryCount: 9 },
+        selection: { kind: 'your-stream', unread: false },
       }).nativeElement as HTMLElement;
       expect(streamNav(element)?.classList).toContain('active');
       expect(streamNav(element)?.querySelector('.count')).toBeNull();
@@ -1177,7 +1178,7 @@ describe('SidebarComponent', () => {
   const popoverItems = (pop: Element) =>
     [...pop.children].map((item) => (item.tagName === 'HR' ? '<hr>' : item.textContent?.trim()));
 
-  it('lists the four switches as checkboxes in the untagged feed row menu', () => {
+  it('lists the five switches as checkboxes in the untagged feed row menu', () => {
     const fixture = mount({ untagged: [{ ...sub(1, 0), includeInForYou: false }] });
     const element = fixture.nativeElement as HTMLElement;
 
@@ -1190,6 +1191,7 @@ describe('SidebarComponent', () => {
       '<hr>',
       'Show in All items',
       'Show in For You',
+      'Show in Your stream',
       'Show in saved searches',
       'Show in Trending',
       '<hr>',
@@ -1199,7 +1201,7 @@ describe('SidebarComponent', () => {
       [...pop.querySelectorAll<HTMLInputElement>('[role="menuitemcheckbox"]')].map(
         (box) => box.checked,
       ),
-    ).toEqual([true, false, true, true]);
+    ).toEqual([true, false, true, true, true]);
   });
 
   it('keeps the feed row menu open once a tick has patched and re-rendered the row', () => {
@@ -1227,12 +1229,12 @@ describe('SidebarComponent', () => {
     const boxes = element.querySelectorAll<HTMLInputElement>(
       '.feedrow .pop [role="menuitemcheckbox"]',
     );
-    expect(boxes).toHaveLength(4);
+    expect(boxes).toHaveLength(5);
     expect(boxes[1].checked).toBe(false);
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).not.toBeNull();
   });
 
-  it('lists the four switches in the tagged feed row menu and switches the feed', () => {
+  it('lists the five switches in the tagged feed row menu and switches the feed', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
       tag: {
@@ -1263,6 +1265,7 @@ describe('SidebarComponent', () => {
       '<hr>',
       'Show in All items',
       'Show in For You',
+      'Show in Your stream',
       'Show in saved searches',
       'Show in Trending',
       '<hr>',
@@ -2847,6 +2850,7 @@ describe('organise mode', () => {
         ACTION_SHEET_DIVIDER,
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
         expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
@@ -2856,7 +2860,7 @@ describe('organise mode', () => {
     expect(deleted).toHaveBeenCalledWith(tag);
   });
 
-  it('the feed dots offer edit, the four switches, and unsubscribe', () => {
+  it('the feed dots offer edit, the five switches, and unsubscribe', () => {
     const fixture = mount({
       coarse: true,
       organising: true,
@@ -2874,6 +2878,7 @@ describe('organise mode', () => {
         ACTION_SHEET_DIVIDER,
         expect.objectContaining({ id: 'allItems', label: 'Show in All items' }),
         expect.objectContaining({ id: 'forYou', label: 'Show in For You' }),
+        expect.objectContaining({ id: 'yourStream', label: 'Show in Your stream' }),
         expect.objectContaining({ id: 'savedSearches', label: 'Show in saved searches' }),
         expect.objectContaining({ id: 'trending', label: 'Show in Trending' }),
         ACTION_SHEET_DIVIDER,
@@ -2900,6 +2905,11 @@ describe('organise mode', () => {
     expect(manageActions.setInclusion).toHaveBeenCalledWith(
       expect.objectContaining({ id: 9 }),
       'forYou',
+      false,
+    );
+    expect(manageActions.setInclusion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 9 }),
+      'yourStream',
       false,
     );
     expect(manageActions.setInclusion).toHaveBeenCalledWith(

@@ -45,6 +45,7 @@ describe('VisibilitySectionComponent', () => {
   let tagActions: { setTagInclusion: jest.Mock };
   let allItemsNetworks: ReturnType<typeof networkStore>;
   let forYouNetworks: ReturnType<typeof networkStore>;
+  let yourStreamNetworks: ReturnType<typeof networkStore>;
   let trendingNetworks: ReturnType<typeof networkStore>;
   let savedSearches: {
     excludedNetworks: ReturnType<typeof signal<ReadonlySet<SocialNetworkName>>>;
@@ -68,6 +69,7 @@ describe('VisibilitySectionComponent', () => {
     tagActions = { setTagInclusion: jest.fn() };
     allItemsNetworks = networkStore(options.excludedFromAllItems);
     forYouNetworks = networkStore();
+    yourStreamNetworks = networkStore();
     trendingNetworks = networkStore(options.excludedFromTrending);
     savedSearches = {
       excludedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set(['mastodon'])),
@@ -84,6 +86,7 @@ describe('VisibilitySectionComponent', () => {
           useValue: {
             allItems: allItemsNetworks,
             forYou: forYouNetworks,
+            yourStream: yourStreamNetworks,
             trending: trendingNetworks,
           },
         },
@@ -176,7 +179,7 @@ describe('VisibilitySectionComponent', () => {
     const heads = [...element.querySelectorAll('.head-surface')].map((head) =>
       head.textContent!.trim(),
     );
-    expect(heads).toEqual(['All items', 'For you', 'Saved searches', 'Trending']);
+    expect(heads).toEqual(['All items', 'For you', 'Your stream', 'Saved searches', 'Trending']);
     expect(heads).toHaveLength(SURFACE_DESCRIPTORS.length);
     expect(row('tag:3/feed:11').querySelectorAll('input')).toHaveLength(SURFACE_DESCRIPTORS.length);
   });

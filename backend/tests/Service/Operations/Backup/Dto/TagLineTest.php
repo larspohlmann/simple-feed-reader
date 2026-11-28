@@ -6,6 +6,7 @@ namespace App\Tests\Service\Operations\Backup\Dto;
 
 use App\Entity\InclusionChange;
 use App\Entity\Tag;
+use App\Enum\InclusionSurface;
 use App\Service\Operations\Backup\Dto\TagLine;
 use App\Tests\Support\BackupLineRecords;
 use PHPUnit\Framework\TestCase;
@@ -39,20 +40,18 @@ final class TagLineTest extends TestCase
             ['kind' => 'tag', 'name' => 'Reading', 'color' => null, 'icon' => null, 'position' => 0],
         );
 
-        self::assertTrue($line->includeInAllItems);
-        self::assertTrue($line->includeInForYou);
-        self::assertTrue($line->includeInSavedSearches);
-        self::assertTrue($line->includeInTrending);
+        foreach (InclusionSurface::cases() as $surface) {
+            self::assertTrue($line->inclusions->isIncludedIn($surface), $surface->name);
+        }
     }
 
     public function testALineBuiltWithoutSwitchesIsIncludedEverywhere(): void
     {
         $line = new TagLine('Reading', null, null, 0);
 
-        self::assertTrue($line->includeInAllItems);
-        self::assertTrue($line->includeInForYou);
-        self::assertTrue($line->includeInSavedSearches);
-        self::assertTrue($line->includeInTrending);
+        foreach (InclusionSurface::cases() as $surface) {
+            self::assertTrue($line->inclusions->isIncludedIn($surface), $surface->name);
+        }
     }
 
     public function testItReadsTheSwitchesTheLineStates(): void
@@ -60,13 +59,14 @@ final class TagLineTest extends TestCase
         $line = TagLine::fromLine([
             'kind' => 'tag', 'name' => 'Noise', 'color' => null, 'icon' => null, 'position' => 0,
             'includeInAllItems' => false, 'includeInForYou' => true, 'includeInSavedSearches' => false,
-            'includeInTrending' => false,
+            'includeInTrending' => false, 'includeInYourStream' => true,
         ]);
 
-        self::assertFalse($line->includeInAllItems);
-        self::assertTrue($line->includeInForYou);
-        self::assertFalse($line->includeInSavedSearches);
-        self::assertFalse($line->includeInTrending);
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::AllItems));
+        self::assertTrue($line->inclusions->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::SavedSearches));
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::Trending));
+        self::assertTrue($line->inclusions->isIncludedIn(InclusionSurface::YourStream));
     }
 
     public function testItWritesTheTagsSwitches(): void
@@ -79,7 +79,7 @@ final class TagLineTest extends TestCase
         self::assertSame(
             '{"kind":"tag","name":"Noise","color":null,"icon":null,"position":0,"parent":null,'
             . '"includeInAllItems":false,"includeInForYou":true,"includeInSavedSearches":false,'
-            . '"includeInTrending":false}',
+            . '"includeInTrending":false,"includeInYourStream":true}',
             TagLine::fromTag($tag)->toBackupLine(),
         );
     }
@@ -95,7 +95,8 @@ final class TagLineTest extends TestCase
 
         self::assertSame(
             '{"kind":"tag","name":"Long reads","color":"#123456","icon":"flask","position":2,"parent":"Reading",'
-            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true}',
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true,'
+            . '"includeInYourStream":true}',
             TagLine::fromTag($tag)->toBackupLine(),
         );
     }
@@ -104,8 +105,32 @@ final class TagLineTest extends TestCase
     {
         self::assertSame(
             '{"kind":"tag","name":"Reading","color":null,"icon":null,"position":0,"parent":null,'
-            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true}',
+            . '"includeInAllItems":true,"includeInForYou":true,"includeInSavedSearches":true,"includeInTrending":true,'
+            . '"includeInYourStream":true}',
             TagLine::fromTag(new Tag(BackupLineRecords::user(), 'Reading'))->toBackupLine(),
         );
+    }
+
+    public function testAnOlderLineTakesYourStreamFromForYou(): void
+    {
+        $line = TagLine::fromLine([
+            'kind' => 'tag', 'name' => 'Noise', 'color' => null, 'icon' => null, 'position' => 0,
+            'includeInForYou' => false,
+        ]);
+
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::YourStream));
+    }
+
+    public function testALineRoundTripsYourStreamApartFromForYou(): void
+    {
+        $tag = new Tag(BackupLineRecords::user(), 'Noise');
+        $tag->changeInclusions(new InclusionChange(forYou: true, yourStream: false));
+
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode(TagLine::fromTag($tag)->toBackupLine(), true, flags: \JSON_THROW_ON_ERROR);
+        $line = TagLine::fromLine($decoded);
+
+        self::assertTrue($line->inclusions->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($line->inclusions->isIncludedIn(InclusionSurface::YourStream));
     }
 }

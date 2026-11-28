@@ -48,7 +48,7 @@ const LIST_ICON: Record<SelectionKind, string | null> = {
   'for-you': 'auto_awesome',
   trending: 'trending_up',
   notifications: null,
-  'for-you-stream': 'stream',
+  'your-stream': 'stream',
   'saved-searches': 'saved_search',
   'saved-search': null,
   'trending-story': STORY_ICON,

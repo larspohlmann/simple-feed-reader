@@ -128,7 +128,7 @@ describe('ReaderShellComponent', () => {
     keptCount: 0,
     viewedCount: 0,
     trending: { window: 'day', unopened: 0 },
-    forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+    yourStream: { available: false, unreadCount: 0, entryCount: 0 },
     unreadTotals: NO_UNREAD_TOTALS_DTO,
     notifications: [],
   };
@@ -151,6 +151,7 @@ describe('ReaderShellComponent', () => {
         entryCount: 9,
         includeInAllItems: true,
         includeInForYou: true,
+        includeInYourStream: true,
         includeInSavedSearches: true,
         includeInTrending: true,
         language: null,
@@ -161,7 +162,7 @@ describe('ReaderShellComponent', () => {
     unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
     notifications: [],
     trending: { window: 'day', unopened: 0 },
-    forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+    yourStream: { available: false, unreadCount: 0, entryCount: 0 },
   };
   const entry = anEntry({
     title: 'e1',
@@ -276,6 +277,9 @@ describe('ReaderShellComponent', () => {
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne('https://api.test/api/all-items/excluded-networks')
+      .flush({ excludedNetworks: [] });
+    ctrl
+      .expectOne('https://api.test/api/your-stream/excluded-networks')
       .flush({ excludedNetworks: [] });
     ctrl
       .expectOne('https://api.test/api/trending/excluded-networks')
@@ -495,7 +499,7 @@ describe('ReaderShellComponent', () => {
       unreadTotals: NO_UNREAD_TOTALS_DTO,
       notifications: [],
       trending: { window: 'day', unopened: 0 },
-      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+      yourStream: { available: false, unreadCount: 0, entryCount: 0 },
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
@@ -1233,7 +1237,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       viewedCount: 1,
       trending: { window: 'day', unopened: 0 },
-      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+      yourStream: { available: false, unreadCount: 0, entryCount: 0 },
       unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
       notifications: [],
     });
@@ -1787,7 +1791,7 @@ describe('ReaderShellComponent', () => {
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
             trending: { window: 'day', unopened: 0 },
-            forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+            yourStream: { available: false, unreadCount: 0, entryCount: 0 },
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1826,7 +1830,7 @@ describe('ReaderShellComponent', () => {
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
             trending: { window: 'day', unopened: 0 },
-            forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+            yourStream: { available: false, unreadCount: 0, entryCount: 0 },
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -2961,7 +2965,7 @@ describe('ReaderShellComponent', () => {
         keptCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
-        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+        yourStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
 
       tokens.set('user-b.jwt');
@@ -3008,7 +3012,7 @@ describe('ReaderShellComponent', () => {
         keptCount: 0,
         viewedCount: 0,
         trending: { window: 'day', unopened: 0 },
-        forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+        yourStream: { available: false, unreadCount: 0, entryCount: 0 },
       });
       await fixture.whenStable();
       fixture.detectChanges();
@@ -3453,7 +3457,7 @@ describe('ReaderShellComponent', () => {
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
             trending: { window: 'day', unopened: 0 },
-            forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+            yourStream: { available: false, unreadCount: 0, entryCount: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3510,7 +3514,7 @@ describe('ReaderShellComponent', () => {
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
             trending: { window: 'day', unopened: 0 },
-            forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+            yourStream: { available: false, unreadCount: 0, entryCount: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3639,7 +3643,7 @@ describe('ReaderShellComponent', () => {
             unreadTotals: NO_UNREAD_TOTALS_DTO,
             notifications: [],
             trending: { window: 'day', unopened: 0 },
-            forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+            yourStream: { available: false, unreadCount: 0, entryCount: 0 },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4822,7 +4826,7 @@ describe('ReaderShellComponent', () => {
       keptCount: 0,
       viewedCount: 0,
       trending: { window: 'day', unopened: 0 },
-      forYouStream: { available: false, unreadCount: 0, entryCount: 0 },
+      yourStream: { available: false, unreadCount: 0, entryCount: 0 },
     };
 
     afterEach(() => {

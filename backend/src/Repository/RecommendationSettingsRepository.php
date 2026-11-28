@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\InterestTermSet;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -50,31 +49,6 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
     public function findWithProfileInterval(\DateTimeImmutable $now): array
     {
         $qb = $this->withOwner()->andWhere('s.profileTuning.intervalHours IS NOT NULL');
-        ActiveAccountDql::restrict($qb, 'owner', $now);
-
-        /** @var list<RecommendationSettings> $rows */
-        $rows = $qb->getQuery()->getResult();
-
-        return $rows;
-    }
-
-    /**
-     * Every active, stream-enabled account holding a stored profile newer than its interest terms, or without any; the
-     * finder decides which of them are due.
-     *
-     * @return list<RecommendationSettings>
-     */
-    public function findWithProfileNewerThanInterestTerms(\DateTimeImmutable $now): array
-    {
-        $qb = $this->withOwner()
-            ->andWhere('s.storedProfile.text IS NOT NULL')
-            ->andWhere('s.storedProfile.generatedAt IS NOT NULL')
-            ->andWhere('s.forYouStream.enabled = true')
-            ->andWhere(\sprintf(
-                'NOT EXISTS (SELECT 1 FROM %s termSet WHERE termSet.user = s.user'
-                . ' AND termSet.profileGeneratedAt >= s.storedProfile.generatedAt)',
-                InterestTermSet::class,
-            ));
         ActiveAccountDql::restrict($qb, 'owner', $now);
 
         /** @var list<RecommendationSettings> $rows */

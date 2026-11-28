@@ -61,6 +61,7 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame('https://bsky.app/profile/did:plc:alice', $feed->getSiteUrl());
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::YourStream));
         self::assertCount(0, $subscription->getTags());
         $socialFeed = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$feed->requireId()])[
             $feed->requireId()
@@ -259,6 +260,7 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame('https://bsky.app/profile/' . BlueskyProfiles::RUSTY, $feed->getSiteUrl());
         self::assertTrue($subscription->isIncludedIn(InclusionSurface::AllItems));
         self::assertTrue($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertTrue($subscription->isIncludedIn(InclusionSurface::YourStream));
         $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $subscription->getTags()->toArray());
         self::assertSame(['People'], $tagNames);
         $socialFeed = SocialFeeds::repository($this->entityManager)

@@ -55,7 +55,7 @@ import {
 } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
+import { YourStreamTallyDto, NO_YOUR_STREAM_TALLY } from '../../sidebar-totals';
 import { FollowedStoryDto, TrendingUnopened } from '../../trending/trending.models';
 import { NO_TRENDING_UNOPENED } from '../../trending/trending-window';
 import { isSubscriptionDrag } from '../../drag-payload';
@@ -145,7 +145,7 @@ export class SidebarComponent {
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
-  readonly forYouStream = input<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY);
+  readonly yourStream = input<YourStreamTallyDto>(NO_YOUR_STREAM_TALLY);
   readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly activeStoryId = input<number | null>(null);
   readonly followedStories = input<FollowedStoryDto[]>([]);

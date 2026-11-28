@@ -99,6 +99,11 @@ final class StopWordVoteTest extends TestCase
             {
                 return FeedLanguage::German === $language ? ['zz'] : ['yy'];
             }
+
+            public function isStopWord(string $casefoldedWord, FeedLanguage $language): bool
+            {
+                return \in_array($casefoldedWord, $this->listWords($language), true);
+            }
         };
 
         self::assertSame(FeedLanguage::German, new StopWordVote($stopWords)->detectLanguage('zz zz yy'));

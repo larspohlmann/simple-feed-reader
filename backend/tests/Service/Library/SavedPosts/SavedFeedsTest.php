@@ -44,6 +44,7 @@ final class SavedFeedsTest extends DbTestCase
         self::assertSame(SocialNetwork::Bluesky, $feed->getNetwork());
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::AllItems));
         self::assertFalse($subscription->isIncludedIn(InclusionSurface::ForYou));
+        self::assertFalse($subscription->isIncludedIn(InclusionSurface::YourStream));
         self::assertCount(0, $subscription->getTags());
     }
 

@@ -12,9 +12,9 @@ use App\Http\SubscriptionJson;
 use App\Http\UnreadTotalsJson;
 use App\Service\Curation\Trending\Model\SurfaceTalliesModel;
 use App\Service\Curation\Trending\Model\TrendingUnopenedModel;
-use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
+use App\Service\Library\Subscription\Model\YourStreamTallyModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 
@@ -33,7 +33,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 ['favorites' => 8, 'kept' => 2, 'shared' => 0, 'viewed' => 41, 'liked' => 0],
                 new UnreadTotalsModel(7, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                 [],
-                ForYouStreamTallyModel::unavailable(),
+                YourStreamTallyModel::unavailable(),
             ),
             new TrendingUnopenedModel(TrendingWindow::Day, 0),
         );
@@ -43,7 +43,7 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(
             [
                 'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'likedCount', 'viewedCount',
-                'trending', 'unreadTotals', 'notifications', 'forYouStream', 'socialAccounts', 'lemmyHosts',
+                'trending', 'unreadTotals', 'notifications', 'yourStream', 'socialAccounts', 'lemmyHosts',
             ],
             array_keys($payload),
         );
@@ -78,7 +78,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                     ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
-                    ForYouStreamTallyModel::unavailable(),
+                    YourStreamTallyModel::unavailable(),
                 ),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),
@@ -126,7 +126,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                     ['favorites' => 0, 'kept' => 0, 'shared' => 0, 'viewed' => 0, 'liked' => 0],
                     new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
                     [],
-                    ForYouStreamTallyModel::unavailable(),
+                    YourStreamTallyModel::unavailable(),
                 ),
                 new TrendingUnopenedModel(TrendingWindow::Day, 0),
             ),

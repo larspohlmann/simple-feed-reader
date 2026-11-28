@@ -18,8 +18,8 @@ final readonly class StopWordStems
 
     public function __construct(WordStemmer $stemmer, StopWordsInterface $stopWords)
     {
-        $this->stemsByLanguage = self::stemsByLanguage($stemmer, $stopWords);
-        $this->cutStems = self::cutStems($stopWords);
+        $this->stemsByLanguage = self::buildStemsByLanguage($stemmer, $stopWords);
+        $this->cutStems = self::buildCutStems($stopWords);
     }
 
     public function isStopWordStem(string $stem, ?FeedLanguage $language): bool
@@ -30,7 +30,7 @@ final readonly class StopWordStems
     }
 
     /** @return array<string, array<string, true>> */
-    private static function stemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
+    private static function buildStemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
     {
         $stemsByLanguage = [];
         foreach (FeedLanguage::cases() as $language) {
@@ -45,7 +45,7 @@ final readonly class StopWordStems
     }
 
     /** @return array<string, true> */
-    private static function cutStems(StopWordsInterface $stopWords): array
+    private static function buildCutStems(StopWordsInterface $stopWords): array
     {
         $cutStems = [];
         foreach (FeedLanguage::cases() as $language) {

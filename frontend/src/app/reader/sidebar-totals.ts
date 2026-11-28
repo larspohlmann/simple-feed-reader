@@ -12,27 +12,24 @@ export interface SidebarTotalsDto {
   unreadTotals: UnreadTotalsDto;
   /** Unopened Trending stories in the window the request asked for (#2017). */
   trending: TrendingUnopened;
-  forYouStream: ForYouStreamTallyDto;
+  yourStream: YourStreamTallyDto;
   notifications: NotificationCountDto[];
 }
 
-/** The For you stream's tally; the sidebar row shows only while it is available. */
-export interface ForYouStreamTallyDto {
+/** Your stream's tally; the sidebar row shows only while it is available. */
+export interface YourStreamTallyDto {
   available: boolean;
   unreadCount: number;
   entryCount: number;
 }
 
-export const NO_FOR_YOU_STREAM_TALLY: ForYouStreamTallyDto = {
+export const NO_YOUR_STREAM_TALLY: YourStreamTallyDto = {
   available: false,
   unreadCount: 0,
   entryCount: 0,
 };
 
-export function sameForYouStreamTally(
-  left: ForYouStreamTallyDto,
-  right: ForYouStreamTallyDto,
-): boolean {
+export function sameYourStreamTally(left: YourStreamTallyDto, right: YourStreamTallyDto): boolean {
   return (
     left.available === right.available &&
     left.unreadCount === right.unreadCount &&
@@ -41,8 +38,8 @@ export function sameForYouStreamTally(
 }
 
 /** A signal that notifies only when the tally changed, so a poll that found the same counts redraws nothing. */
-export function createForYouStreamSignal(): WritableSignal<ForYouStreamTallyDto> {
-  return signal(NO_FOR_YOU_STREAM_TALLY, { equal: sameForYouStreamTally });
+export function createYourStreamSignal(): WritableSignal<YourStreamTallyDto> {
+  return signal(NO_YOUR_STREAM_TALLY, { equal: sameYourStreamTally });
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed

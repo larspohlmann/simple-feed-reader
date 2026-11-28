@@ -1,4 +1,4 @@
-Two sources, merged per language into stopwords.php by generate.php.
+Three sources, merged per language into stopwords.php by generate.php.
 
 1. Snowball stopword lists (all four languages)
 repository: https://github.com/snowballstem/snowball-website
@@ -37,9 +37,17 @@ rule: the part-of-speech-tagged lines (form_TAG) only, match_count summed over 1
   and PRT together hold at least half the form's tagged count, and it matches ^\p{L}+$
 closed-class words: fr 186 (123 not in Snowball's list), es 203 (108 not in Snowball's list)
 
+3. Feed boilerplate (German only)
+source: this project; generate.php's BOILERPLATE constant, tokens of the read-more links and the WordPress
+  "Der Beitrag … erschien zuerst auf …" footers feeds append to their summaries, seen in the Your stream word lists
+  of the dev data (#2601)
+words: de 2 (erschien, weiterlesen)
+
 stopwords.php
-words: de 231, en 124, fr 277, es 416 (each list the distinct union of both sources, sorted byte-wise, SORT_STRING)
-size: 20,856 bytes
+words: de 233, en 124, fr 277, es 416 (each list the distinct union of the sources, sorted byte-wise, SORT_STRING)
+size: 20,905 bytes
+boilerplate added 2026-11-28 by inserting it into the reproduced file (the same var_export round trip reproduces the
+  previous file byte for byte); the generator now adds it on its own
 generator: php resources/stopwords/generate.php <directory holding fre/ and spa/ with the nine shards> (from backend/);
   about 150 s and 1.2 GB peak RSS; fetches the Snowball lists over HTTPS; aborts on any SHA-256 mismatch
 reproduced: 2026-11-15, generated twice, cmp identical

@@ -20,11 +20,18 @@ describe('ownExcludedSurfaces', () => {
     const feed = makeSubscription({
       includeInAllItems: false,
       includeInForYou: false,
+      includeInYourStream: false,
       includeInSavedSearches: false,
       includeInTrending: false,
     });
 
-    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches', 'trending']);
+    expect(ownExcludedSurfaces(feed)).toEqual([
+      'allItems',
+      'forYou',
+      'yourStream',
+      'savedSearches',
+      'trending',
+    ]);
   });
 
   it('ignores the network a social feed belongs to', () => {
@@ -49,23 +56,25 @@ describe('exclusionTitle', () => {
 });
 
 describe('SURFACE_DESCRIPTORS', () => {
-  it('lists All items, For you, saved searches and Trending, in menu order', () => {
+  it('lists All items, For you, Your stream, saved searches and Trending, in menu order', () => {
     expect(SURFACE_DESCRIPTORS.map((descriptor) => descriptor.surface)).toEqual([
       'allItems',
       'forYou',
+      'yourStream',
       'savedSearches',
       'trending',
     ]);
   });
 
   it('labels the Trending switch', () => {
-    expect(SURFACE_DESCRIPTORS[3].includeKey).toBe('reader.includeInTrending');
+    expect(SURFACE_DESCRIPTORS[4].includeKey).toBe('reader.includeInTrending');
   });
 
   it('flips each flag through ManageActions.setInclusion', () => {
     const feed = makeSubscription({
       includeInAllItems: true,
       includeInForYou: false,
+      includeInYourStream: true,
       includeInSavedSearches: true,
       includeInTrending: false,
     });
@@ -78,6 +87,7 @@ describe('SURFACE_DESCRIPTORS', () => {
     expect(actions.setInclusion.mock.calls).toEqual([
       [feed, 'allItems', false],
       [feed, 'forYou', true],
+      [feed, 'yourStream', false],
       [feed, 'savedSearches', false],
       [feed, 'trending', true],
     ]);

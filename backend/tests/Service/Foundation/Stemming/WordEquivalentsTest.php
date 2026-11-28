@@ -29,6 +29,26 @@ final class WordEquivalentsTest extends TestCase
         );
     }
 
+    public function testACanonicalKeepsTheWordsTheTextSpelledIt(): void
+    {
+        $text = 'Die European Union und Bundesliga-Clubs, EU';
+
+        $words = $this->equivalents->canonicalizeWordsWithSurfaces($text);
+
+        self::assertSame([
+            ['die', 'die', 'Die'],
+            ['eunion', 'eunion', 'European Union'],
+            ['und', 'und', 'und'],
+            ['bundesliga', 'bundesliga', 'Bundesliga'],
+            ['clubs', 'clubs', 'Clubs'],
+            ['eunion', 'eunion', 'EU'],
+        ], $words);
+        self::assertSame(
+            $this->equivalents->canonicalizeWords($text),
+            array_map(static fn (array $word): array => [$word[0], $word[1]], $words),
+        );
+    }
+
     public function testNatoAndOtanShareOneStem(): void
     {
         self::assertSame(['nato'], $this->stemsOf('NATO', null));

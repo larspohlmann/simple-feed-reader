@@ -56,7 +56,7 @@ async function stubViews(page: Page, style: SidebarStyle, { everyView }: Views):
     likedCount: 3,
     viewedCount: 788,
     trending: { window: 'day', unopened: everyView ? 8 : 0 },
-    forYouStream: { available: everyView, unreadCount: 18, entryCount: 18 },
+    yourStream: { available: everyView, unreadCount: 18, entryCount: 18 },
     unreadTotals: { ...base.unreadTotals, forYou: 46 },
   });
   await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
@@ -91,7 +91,7 @@ async function openSidebar(page: Page, style: SidebarStyle, views: Views): Promi
   else await expect(aside).not.toHaveClass(/\bsidebar-airy\b/);
   if (views.everyView) {
     await expect(sidebar.getByRole('link', { name: /Trending/ })).toBeVisible();
-    await expect(sidebar.getByRole('link', { name: /For you stream/ })).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: /Your stream/ })).toBeVisible();
     await expect(sidebar.locator('.followed-head')).toBeVisible();
   }
   await page.evaluate(() => document.fonts.ready);

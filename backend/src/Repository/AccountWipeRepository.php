@@ -6,10 +6,6 @@ namespace App\Repository;
 
 use App\Entity\EntryShare;
 use App\Entity\EntryState;
-use App\Entity\ForYouStreamEntry;
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermRun;
-use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
 use App\Entity\NetworkExclusion;
 use App\Entity\PrivateFeedSyncChange;
@@ -30,6 +26,10 @@ use App\Entity\TrendingStory;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
+use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamSettings;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamWord;
 use App\Enum\RunLogOwner;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -54,14 +54,13 @@ final readonly class AccountWipeRepository
             ))->setParameter('user', $user)->execute();
         }
         $this->logs->deleteForUserOutside($user, RunLogOwner::StoryAiRun, []);
-        $this->logs->deleteForUserOutside($user, RunLogOwner::InterestTermRun, []);
         $this->deleteByUser(RecommendationRun::class, $user);
         $this->deleteByUser(StoryAiRun::class, $user);
         $this->deleteByUser(ProfileRun::class, $user);
-        $this->deleteByUser(InterestTermRun::class, $user);
-        $this->deleteByUser(InterestTerm::class, $user);
-        $this->deleteByUser(InterestTermSet::class, $user);
-        $this->deleteByUser(ForYouStreamEntry::class, $user);
+        $this->deleteByUser(YourStreamEntry::class, $user);
+        $this->deleteByUser(YourStreamWord::class, $user);
+        $this->deleteByUser(YourStreamSettings::class, $user);
+        $this->deleteByUser(YourStreamState::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
         $this->deleteByUser(StorySettings::class, $user);
     }

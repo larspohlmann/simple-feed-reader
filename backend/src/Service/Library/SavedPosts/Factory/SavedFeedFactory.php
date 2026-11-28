@@ -35,7 +35,7 @@ final readonly class SavedFeedFactory
     {
         $subscription = new Subscription($user, $feed, $this->clock->now());
         $subscription->setPosition($position);
-        $subscription->changeInclusions(new InclusionChange(allItems: false, forYou: false));
+        $subscription->changeInclusions(new InclusionChange(allItems: false, forYou: false, yourStream: false));
 
         return $subscription;
     }

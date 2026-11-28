@@ -122,6 +122,11 @@ final class Subscription implements PositionedInterface
         return $this->inclusions->isIncludedIn($surface);
     }
 
+    public function getInclusions(): InclusionSwitches
+    {
+        return $this->inclusions;
+    }
+
     public function changeInclusions(InclusionChange $change): void
     {
         $this->inclusions = $this->inclusions->changedBy($change);

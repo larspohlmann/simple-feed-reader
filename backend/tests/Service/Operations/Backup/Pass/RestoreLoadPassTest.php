@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Operations\Backup\Pass;
 
 use App\Entity\Feed;
+use App\Entity\InclusionSwitches;
 use App\Entity\User;
 use App\Service\Ingestion\Feed\Factory\FeedFactory;
 use App\Service\Library\Search\SavedSearchSlug;
@@ -107,10 +108,7 @@ final class RestoreLoadPassTest extends TestCase
             markedReadUntil: null,
             createdAt: new \DateTimeImmutable('2026-07-01 08:00:00'),
             tags: [],
-            includeInAllItems: true,
-            includeInForYou: true,
-            includeInSavedSearches: true,
-            includeInTrending: true,
+            inclusions: new InclusionSwitches(),
         );
     }
 

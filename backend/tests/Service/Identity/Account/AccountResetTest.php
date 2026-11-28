@@ -7,10 +7,6 @@ namespace App\Tests\Service\Identity\Account;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
-use App\Entity\InterestTerm;
-use App\Entity\InterestTermRun;
-use App\Entity\InterestTermSet;
 use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
@@ -33,6 +29,11 @@ use App\Entity\TrendingStoryEntry;
 use App\Entity\TrendingStoryFollow;
 use App\Entity\TrendingStoryHide;
 use App\Entity\User;
+use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamSettings;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamTuning;
+use App\Entity\YourStreamWord;
 use App\Enum\CallPhase;
 use App\Enum\FeedLanguage;
 use App\Enum\PrivateFeedSyncReason;
@@ -41,6 +42,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\SocialFeedKind;
 use App\Enum\StoryAiTask;
 use App\Enum\TrendingWindow;
+use App\Enum\YourStreamPrecision;
 use App\Service\Identity\Account\AccountReset;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -274,50 +276,61 @@ final class AccountResetTest extends DbTestCase
         );
     }
 
-    public function testAResetForgetsTheInterestTermsTheirRunsTheirCallsAndTheStreamMatches(): void
+    public function testAResetForgetsTheStreamSettingsAndMatches(): void
     {
-        $user = $this->user('reset-terms@example.com');
-        $bystander = $this->user('reset-terms-bystander@example.com');
-        [$userRun, $bystanderRun] = [$this->seedInterestTerms($user), $this->seedInterestTerms($bystander)];
+        $user = $this->user('reset-stream@example.com');
+        $bystander = $this->user('reset-stream-bystander@example.com');
+        $this->seedStreamSettingsAndMatch($user);
+        $this->seedStreamSettingsAndMatch($bystander);
         $userId = $user->requireId();
         $bystanderId = $bystander->requireId();
-        $userRunId = $userRun->requireId();
-        $bystanderRunId = $bystanderRun->requireId();
 
         $this->reset()->reset($user);
 
         $this->entityManager->clear();
-        $logs = $this->entityManager->getRepository(RecommendationRunLog::class);
-        self::assertSame([], $logs->findBy(['interestTermRun' => $userRunId]));
-        self::assertNull($this->entityManager->find(InterestTermRun::class, $userRunId));
-        self::assertSame([], $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $userId]));
-        self::assertNull($this->entityManager->find(InterestTermSet::class, $userId));
-        $streamEntries = $this->entityManager->getRepository(ForYouStreamEntry::class);
+        self::assertNull($this->entityManager->find(YourStreamSettings::class, $userId));
+        self::assertNotNull($this->entityManager->find(YourStreamSettings::class, $bystanderId));
+        $streamEntries = $this->entityManager->getRepository(YourStreamEntry::class);
         self::assertSame([], $streamEntries->findBy(['user' => $userId]));
         self::assertCount(1, $streamEntries->findBy(['user' => $bystanderId]));
-        self::assertCount(1, $logs->findBy(['interestTermRun' => $bystanderRunId]));
-        self::assertNotNull($this->entityManager->find(InterestTermRun::class, $bystanderRunId));
-        $bystanderTerms = $this->entityManager->getRepository(InterestTerm::class)->findBy(['user' => $bystanderId]);
-        self::assertCount(1, $bystanderTerms);
-        self::assertNotNull($this->entityManager->find(InterestTermSet::class, $bystanderId));
     }
 
-    private function seedInterestTerms(User $user): InterestTermRun
+    public function testAResetForgetsTheStreamWordsAndState(): void
     {
-        $profileAt = new \DateTimeImmutable('2026-08-05T00:00:00Z');
-        $run = new InterestTermRun($user, $profileAt, $profileAt, 'api.example.test', 'm');
-        $this->entityManager->persist($run);
-        $this->entityManager->persist(RecommendationRunLog::forInterestTermRun($run, 1, '{}', $profileAt));
-        $this->entityManager->persist(new InterestTerm($user, 'solar', FeedLanguage::English, 0.8));
-        $this->entityManager->persist(new InterestTermSet($user, $profileAt, $profileAt, 0));
+        $user = $this->user('reset-words@example.com');
+        $bystander = $this->user('reset-words-bystander@example.com');
+        foreach ([$user, $bystander] as $account) {
+            $this->entityManager->persist(
+                new YourStreamWord($account, FeedLanguage::English, 'solar', 'solar', 1.0, 1.0),
+            );
+            $this->entityManager->persist(new YourStreamState($account, 0));
+        }
+        $this->entityManager->flush();
+        $userId = $user->requireId();
+        $bystanderId = $bystander->requireId();
+
+        $this->reset()->reset($user);
+
+        $this->entityManager->clear();
+        $words = $this->entityManager->getRepository(YourStreamWord::class);
+        self::assertSame([], $words->findBy(['user' => $userId]));
+        self::assertNull($this->entityManager->find(YourStreamState::class, $userId));
+        self::assertCount(1, $words->findBy(['user' => $bystanderId]));
+        self::assertNotNull($this->entityManager->find(YourStreamState::class, $bystanderId));
+    }
+
+    private function seedStreamSettingsAndMatch(User $user): void
+    {
+        $matchedAt = new \DateTimeImmutable('2026-08-05T00:00:00Z');
+        $this->entityManager->persist(
+            new YourStreamSettings($user, new YourStreamTuning(false, YourStreamPrecision::Narrow)),
+        );
         $feed = new Feed('https://example.com/stream-' . $user->getEmail() . '.xml');
         $this->entityManager->persist($feed);
-        $entry = new Entry($feed, 'stream', null, 'Solar', $profileAt, $profileAt);
+        $entry = new Entry($feed, 'stream', null, 'Solar', $matchedAt, $matchedAt);
         $this->entityManager->persist($entry);
-        $this->entityManager->persist(new ForYouStreamEntry($user, $entry, $profileAt, 2.0, 'solar'));
+        $this->entityManager->persist(new YourStreamEntry($user, $entry, $matchedAt, 2.0, 'solar'));
         $this->entityManager->flush();
-
-        return $run;
     }
 
     public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void

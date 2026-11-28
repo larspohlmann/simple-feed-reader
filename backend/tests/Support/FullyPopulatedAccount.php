@@ -88,6 +88,9 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist(
             new NetworkExclusion($user, SocialNetwork::Mastodon, InclusionSurface::Trending),
         );
+        $this->entityManager->persist(
+            new NetworkExclusion($user, SocialNetwork::Lemmy, InclusionSurface::YourStream),
+        );
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);
@@ -145,6 +148,7 @@ final readonly class FullyPopulatedAccount
         $tag->changeInclusions(new InclusionChange(forYou: false));
         $tag->changeInclusions(new InclusionChange(savedSearches: false));
         $tag->changeInclusions(new InclusionChange(trending: false));
+        $tag->changeInclusions(new InclusionChange(yourStream: false));
 
         return $tag;
     }
@@ -173,6 +177,7 @@ final readonly class FullyPopulatedAccount
         $subscription->changeInclusions(new InclusionChange(forYou: false));
         $subscription->changeInclusions(new InclusionChange(savedSearches: false));
         $subscription->changeInclusions(new InclusionChange(trending: false));
+        $subscription->changeInclusions(new InclusionChange(yourStream: false));
         $subscription->addTag($tag, 5);
 
         return $subscription;

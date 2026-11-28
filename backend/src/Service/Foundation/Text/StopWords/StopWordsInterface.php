@@ -10,4 +10,6 @@ interface StopWordsInterface
 {
     /** @return list<string> casefolded, diacritics kept */
     public function listWords(FeedLanguage $language): array;
+
+    public function isStopWord(string $casefoldedWord, FeedLanguage $language): bool;
 }

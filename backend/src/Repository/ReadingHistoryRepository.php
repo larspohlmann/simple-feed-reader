@@ -10,6 +10,7 @@ use App\Entity\EntryShare;
 use App\Entity\EntryState;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
+use App\Enum\InclusionSurface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -19,6 +20,7 @@ use Doctrine\ORM\QueryBuilder;
  * liked, kept, viewed). Liked and viewed take one line per post, from its lowest-id followed copy, and leave the
  * post out when any followed copy ranks in a higher section. Favorites and kept order by effectiveDate, since
  * EntryState has no favorited-at; shared orders by sharedAt, liked by likedAt or votedAt, and viewed by viewedAt.
+ * The id reads take only entries of subscriptions that count in a surface; which section is highest stays blind to it.
  */
 final readonly class ReadingHistoryRepository
 {
@@ -29,67 +31,30 @@ final readonly class ReadingHistoryRepository
     /** @return list<TitledEntry> */
     public function favorites(int $userId, int $cap): array
     {
-        $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isFavorite = :true')
-            ->orderBy('e.dates.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($cap)
-            ->setParameter('true', true, Types::BOOLEAN);
-
-        return $this->titledEntries($qb);
+        return $this->titledEntries($this->favoritesQueryBuilder($userId, $cap));
     }
 
     /** @return list<TitledEntry> */
     public function shared(int $userId, int $cap): array
     {
-        $qb = $this->subscribedEntriesQueryBuilder($userId, EntryShare::class, 'share')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->andWhere('es.isFavorite IS NULL OR es.isFavorite = :false')
-            ->orderBy('share.sharedAt', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($cap)
-            ->setParameter('false', false, Types::BOOLEAN);
-
-        return $this->titledEntries($qb);
+        return $this->titledEntries($this->sharedQueryBuilder($userId, $cap));
     }
 
     /** @return list<TitledEntry> */
     public function liked(int $userId, int $cap): array
     {
-        $likes = $this->likedEntriesQueryBuilder($userId, SocialLike::class, 'likedAt')->setMaxResults($cap);
-        $upvotes = $this->likedEntriesQueryBuilder($userId, DiscussionVote::class, 'votedAt')
-            ->andWhere(EntryLikeDql::buildUpvoteCondition('liking'))
-            ->setMaxResults($cap);
-        $rows = [
-            ...$this->readLikedRows($likes),
-            ...$this->readLikedRows($upvotes),
-            ...$this->readLikedRows($this->locallyLikedEntriesQueryBuilder($userId)->setMaxResults($cap)),
-        ];
+        $rows = [];
+        foreach ($this->likedQueries($userId, $cap) as [$qb, $likedAt]) {
+            $rows = [...$rows, ...$this->readLikedRows($qb->addSelect($likedAt . ' AS likedAt'))];
+        }
 
-        $newestFirst = self::keepNewestLikePerPost($rows);
-        usort(
-            $newestFirst,
-            static fn (array $left, array $right): int => [$right['likedAt'], $right['titled']->entry->requireId()]
-                <=> [$left['likedAt'], $left['titled']->entry->requireId()],
-        );
-
-        return array_column(array_slice($newestFirst, 0, $cap), 'titled');
+        return self::pickNewestLikes($rows, $cap);
     }
 
     /** @return list<TitledEntry> */
     public function kept(int $userId, int $cap): array
     {
-        $qb = $this->historyQueryBuilder($userId)
-            ->andWhere('es.isKept = :true AND es.isFavorite = :false')
-            ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
-            ->andWhere('NOT ' . EntryLikeDql::existsOnJoinedState(EntryAliases::primary()))
-            ->orderBy('e.dates.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($cap)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->setParameter('false', false, Types::BOOLEAN);
-
-        return $this->titledEntries($qb);
+        return $this->titledEntries($this->keptQueryBuilder($userId, $cap));
     }
 
     /** @return list<TitledEntry> */
@@ -117,6 +82,79 @@ final readonly class ReadingHistoryRepository
         return $this->titledEntries($qb);
     }
 
+    /**
+     * @return list<int> the entry ids of every section but viewed, each section's newest $cap, favorites, kept, liked
+     *                   then shared, only of subscriptions that count in $surface
+     */
+    public function findInterestEntryIds(int $userId, int $cap, InclusionSurface $surface): array
+    {
+        $likedRows = [];
+        foreach ($this->likedQueries($userId, $cap) as [$qb, $likedAt]) {
+            InclusionScopeDql::restrict($qb, 's', $surface);
+            $qb->select('e.id AS entryId', 'IDENTITY(e.canonicalItem) AS canonicalItemId', $likedAt . ' AS likedAt');
+            $likedRows = [...$likedRows, ...self::readLikedIdRows($qb)];
+        }
+
+        return array_values(array_unique([
+            ...$this->readEntryIds($this->favoritesQueryBuilder($userId, $cap), $surface),
+            ...$this->readEntryIds($this->keptQueryBuilder($userId, $cap), $surface),
+            ...self::pickNewestLikes($likedRows, $cap),
+            ...$this->readEntryIds($this->sharedQueryBuilder($userId, $cap), $surface),
+        ]));
+    }
+
+    private function favoritesQueryBuilder(int $userId, int $cap): QueryBuilder
+    {
+        return $this->historyQueryBuilder($userId)
+            ->andWhere('es.isFavorite = :true')
+            ->orderBy('e.dates.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setMaxResults($cap)
+            ->setParameter('true', true, Types::BOOLEAN);
+    }
+
+    private function sharedQueryBuilder(int $userId, int $cap): QueryBuilder
+    {
+        return $this->subscribedEntriesQueryBuilder($userId, EntryShare::class, 'share')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->andWhere('es.isFavorite IS NULL OR es.isFavorite = :false')
+            ->orderBy('share.sharedAt', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setMaxResults($cap)
+            ->setParameter('false', false, Types::BOOLEAN);
+    }
+
+    /** @return list<array{QueryBuilder, string}> each like source with the expression of its liked-at instant */
+    private function likedQueries(int $userId, int $cap): array
+    {
+        return [
+            [
+                $this->likedEntriesQueryBuilder($userId, SocialLike::class, 'likedAt')->setMaxResults($cap),
+                'liking.likedAt',
+            ],
+            [
+                $this->likedEntriesQueryBuilder($userId, DiscussionVote::class, 'votedAt')
+                    ->andWhere(EntryLikeDql::buildUpvoteCondition('liking'))
+                    ->setMaxResults($cap),
+                'liking.votedAt',
+            ],
+            [$this->locallyLikedEntriesQueryBuilder($userId)->setMaxResults($cap), 'es.likedAt'],
+        ];
+    }
+
+    private function keptQueryBuilder(int $userId, int $cap): QueryBuilder
+    {
+        return $this->historyQueryBuilder($userId)
+            ->andWhere('es.isKept = :true AND es.isFavorite = :false')
+            ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
+            ->andWhere('NOT ' . EntryLikeDql::existsOnJoinedState(EntryAliases::primary()))
+            ->orderBy('e.dates.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC')
+            ->setMaxResults($cap)
+            ->setParameter('true', true, Types::BOOLEAN)
+            ->setParameter('false', false, Types::BOOLEAN);
+    }
+
     private function historyQueryBuilder(int $userId): QueryBuilder
     {
         return $this->subscribedEntriesQueryBuilder($userId, EntryState::class, 'es');
@@ -142,7 +180,6 @@ final readonly class ReadingHistoryRepository
         return $this->entityManager->createQueryBuilder()
             ->select('e', 'f')
             ->addSelect('s.customTitle AS customTitle')
-            ->addSelect(sprintf('liking.%s AS likedAt', $instantField))
             ->from($rootClass, 'liking')
             ->join(Entry::class, 'e', 'ON', 'e.canonicalItem = liking.canonicalItem')
             ->join('e.feed', 'f')
@@ -168,7 +205,6 @@ final readonly class ReadingHistoryRepository
     private function locallyLikedEntriesQueryBuilder(int $userId): QueryBuilder
     {
         return $this->historyQueryBuilder($userId)
-            ->addSelect('es.likedAt AS likedAt')
             ->andWhere(EntryLikeDql::buildLocalLikeCondition('es'))
             ->andWhere('es.isFavorite = :false')
             ->andWhere('NOT ' . EntryShareDql::exists(EntryAliases::primary()))
@@ -185,23 +221,33 @@ final readonly class ReadingHistoryRepository
     }
 
     /**
-     * @param list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> $rows
-     * @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}>
+     * @template T
+     *
+     * @param list<array{post: string, entryId: int, likedAt: \DateTimeImmutable, line: T}> $rows
+     *
+     * @return list<T> newest first, one line per post: its newest like
      */
-    private static function keepNewestLikePerPost(array $rows): array
+    private static function pickNewestLikes(array $rows, int $cap): array
     {
         $newest = [];
         foreach ($rows as $row) {
-            $entry = $row['titled']->entry;
-            $post = null === $entry->getCanonicalItemId()
-                ? 'entry' . $entry->requireId()
-                : 'item' . $entry->getCanonicalItemId();
-            if (!isset($newest[$post]) || $newest[$post]['likedAt'] < $row['likedAt']) {
-                $newest[$post] = $row;
+            if (!isset($newest[$row['post']]) || $newest[$row['post']]['likedAt'] < $row['likedAt']) {
+                $newest[$row['post']] = $row;
             }
         }
+        $newestFirst = array_values($newest);
+        usort(
+            $newestFirst,
+            static fn (array $left, array $right): int => [$right['likedAt'], $right['entryId']]
+                <=> [$left['likedAt'], $left['entryId']],
+        );
 
-        return array_values($newest);
+        return array_column(array_slice($newestFirst, 0, $cap), 'line');
+    }
+
+    private static function buildPostKey(int $entryId, ?int $canonicalItemId): string
+    {
+        return null === $canonicalItemId ? 'entry' . $entryId : 'item' . $canonicalItemId;
     }
 
     /** A copy of the item, in a feed the reader follows, that meets $copyCondition. */
@@ -236,22 +282,57 @@ final readonly class ReadingHistoryRepository
         );
     }
 
-    /** @return list<array{titled: TitledEntry, likedAt: \DateTimeImmutable}> */
+    /** @return list<array{post: string, entryId: int, likedAt: \DateTimeImmutable, line: TitledEntry}> */
     private function readLikedRows(QueryBuilder $qb): array
     {
         /** @var list<array{0: Entry|EntryState, customTitle: ?string, likedAt: \DateTimeImmutable}> $rows */
         $rows = $qb->getQuery()->getResult();
 
         return array_map(
-            static fn (array $row): array => [
-                'titled' => TitledEntry::fromEntry(
-                    $row[0] instanceof EntryState ? $row[0]->getEntry() : $row[0],
-                    $row['customTitle'],
-                ),
-                'likedAt' => $row['likedAt'],
-            ],
+            static function (array $row): array {
+                $entry = $row[0] instanceof EntryState ? $row[0]->getEntry() : $row[0];
+
+                return [
+                    'post' => self::buildPostKey($entry->requireId(), $entry->getCanonicalItemId()),
+                    'entryId' => $entry->requireId(),
+                    'likedAt' => $row['likedAt'],
+                    'line' => TitledEntry::fromEntry($entry, $row['customTitle']),
+                ];
+            },
             $rows,
         );
+    }
+
+    /** @return list<array{post: string, entryId: int, likedAt: \DateTimeImmutable, line: int}> */
+    private static function readLikedIdRows(QueryBuilder $qb): array
+    {
+        /** @var list<array{entryId: int|string, canonicalItemId: int|string|null, likedAt: \DateTimeImmutable}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        return array_map(
+            static function (array $row): array {
+                $entryId = (int) $row['entryId'];
+                $canonicalItemId = null === $row['canonicalItemId'] ? null : (int) $row['canonicalItemId'];
+
+                return [
+                    'post' => self::buildPostKey($entryId, $canonicalItemId),
+                    'entryId' => $entryId,
+                    'likedAt' => $row['likedAt'],
+                    'line' => $entryId,
+                ];
+            },
+            $rows,
+        );
+    }
+
+    /** @return list<int> */
+    private function readEntryIds(QueryBuilder $qb, InclusionSurface $surface): array
+    {
+        InclusionScopeDql::restrict($qb, 's', $surface);
+        /** @var list<array{entryId: int|string}> $rows */
+        $rows = $qb->select('e.id AS entryId')->getQuery()->getArrayResult();
+
+        return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
     }
 
     /** @return list<TitledEntry> */

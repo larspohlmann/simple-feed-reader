@@ -28,12 +28,7 @@ final readonly class RestoredFoundationFactory
         $details = new TagDetailsModel($line->name, $line->color, $line->icon);
         $tag = $this->tagFactory->create($user, $details, $line->position);
         $tag->setParent($parent);
-        $tag->changeInclusions(new InclusionChange(
-            $line->includeInAllItems,
-            $line->includeInForYou,
-            $line->includeInSavedSearches,
-            $line->includeInTrending,
-        ));
+        $tag->changeInclusions(InclusionChange::fromSwitches($line->inclusions));
 
         return $tag;
     }
@@ -57,12 +52,7 @@ final readonly class RestoredFoundationFactory
         $subscription->setCustomTitle($line->customTitle);
         $subscription->setPosition($line->position);
         $subscription->setMarkedReadUntil($line->markedReadUntil);
-        $subscription->changeInclusions(new InclusionChange(
-            $line->includeInAllItems,
-            $line->includeInForYou,
-            $line->includeInSavedSearches,
-            $line->includeInTrending,
-        ));
+        $subscription->changeInclusions(InclusionChange::fromSwitches($line->inclusions));
 
         return $subscription;
     }

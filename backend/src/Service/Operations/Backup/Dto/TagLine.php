@@ -4,28 +4,26 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Backup\Dto;
 
+use App\Entity\InclusionSwitches;
 use App\Entity\Tag;
-use App\Enum\InclusionSurface;
+use App\Service\Operations\Backup\Support\BackupInclusions;
 use App\Service\Operations\Backup\Support\BackupLineFormat;
 use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Service\Operations\Backup\Support\LineField;
-use App\Service\Operations\Backup\Support\LineFieldWithDefault;
 
 /**
  * One of the account's tags.
  */
 final readonly class TagLine
 {
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         public string $name,
         public ?string $color,
         public ?string $icon,
         public int $position,
         public ?string $parent = null,
-        public bool $includeInAllItems = true,
-        public bool $includeInForYou = true,
-        public bool $includeInSavedSearches = true,
-        public bool $includeInTrending = true,
+        public InclusionSwitches $inclusions = new InclusionSwitches(),
     ) {
     }
 
@@ -40,10 +38,7 @@ final readonly class TagLine
             icon: LineField::stringOrNull($line, 'icon'),
             position: LineField::int($line, 'position'),
             parent: LineField::stringOrNull($line, 'parent'),
-            includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
-            includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
-            includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
-            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
+            inclusions: BackupInclusions::fromLine($line),
         );
     }
 
@@ -55,10 +50,7 @@ final readonly class TagLine
             icon: $tag->getIcon(),
             position: $tag->getPosition(),
             parent: $tag->getParent()?->getName(),
-            includeInAllItems: $tag->isIncludedIn(InclusionSurface::AllItems),
-            includeInForYou: $tag->isIncludedIn(InclusionSurface::ForYou),
-            includeInSavedSearches: $tag->isIncludedIn(InclusionSurface::SavedSearches),
-            includeInTrending: $tag->isIncludedIn(InclusionSurface::Trending),
+            inclusions: $tag->getInclusions(),
         );
     }
 
@@ -71,10 +63,7 @@ final readonly class TagLine
             'icon' => $this->icon,
             'position' => $this->position,
             'parent' => $this->parent,
-            'includeInAllItems' => $this->includeInAllItems,
-            'includeInForYou' => $this->includeInForYou,
-            'includeInSavedSearches' => $this->includeInSavedSearches,
-            'includeInTrending' => $this->includeInTrending,
+            ...BackupInclusions::toFields($this->inclusions),
         ]);
     }
 }

@@ -358,6 +358,36 @@ final class AccountLineTest extends TestCase
         self::assertSame([], $line->networks->excludedFrom(InclusionSurface::Trending));
     }
 
+    public function testAnOlderAccountLineExcludesFromYourStreamWhatForYouExcluded(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'forYouExcludedNetworks' => ['bluesky'],
+        ]);
+
+        self::assertSame([SocialNetwork::Bluesky], $line->networks->excludedFrom(InclusionSurface::YourStream));
+    }
+
+    public function testAYourStreamExclusionRoundTripsOnItsOwn(): void
+    {
+        $user = BackupLineRecords::user();
+        $networks = new AccountNetworkSwitchesModel([], [
+            InclusionSurface::YourStream->value => [SocialNetwork::Mastodon],
+            InclusionSurface::ForYou->value => [],
+        ]);
+
+        $encoded = AccountLine::fromAccount($user, UnsavedUserSettings::of($user), $networks)->toBackupLine();
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($encoded, true, flags: \JSON_THROW_ON_ERROR);
+        $line = AccountLine::fromLine($decoded);
+
+        self::assertSame(['mastodon'], $decoded['yourStreamExcludedNetworks']);
+        self::assertSame([], $decoded['forYouExcludedNetworks']);
+        self::assertSame([SocialNetwork::Mastodon], $line->networks->excludedFrom(InclusionSurface::YourStream));
+        self::assertSame([], $line->networks->excludedFrom(InclusionSurface::ForYou));
+    }
+
     public function testANonStringMagazineStyleIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
@@ -396,7 +426,8 @@ final class AccountLineTest extends TestCase
             . '"savedSearchIncludedNetworks":["bluesky"],'
             . '"forYouExcludedNetworks":["mastodon"],'
             . '"allItemsExcludedNetworks":["bluesky"],'
-            . '"trendingExcludedNetworks":["mastodon"]}',
+            . '"trendingExcludedNetworks":["mastodon"],'
+            . '"yourStreamExcludedNetworks":[]}',
             AccountLine::fromAccount($user, $settings, $networks)->toBackupLine(),
         );
     }

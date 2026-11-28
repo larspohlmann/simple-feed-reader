@@ -9,7 +9,6 @@ use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamTuning;
 use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
@@ -200,12 +199,6 @@ final readonly class RecommendationRunFixtures
         $this->settingsRowOf($user)->storeProfile(
             new StoredProfile($text, new \DateTimeImmutable($generatedAt), 'api.example.test', 'm'),
         );
-        $this->entityManager->flush();
-    }
-
-    public function storeForYouStreamTuning(User $user, ForYouStreamTuning $tuning): void
-    {
-        $this->settingsRowOf($user)->updateForYouStream($tuning);
         $this->entityManager->flush();
     }
 

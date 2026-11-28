@@ -54,12 +54,12 @@ describe('queryFromSelection', () => {
       unread: true,
     });
   });
-  it('asks the For you stream by its own view, the unread switch as a flag', () => {
-    expect(queryFromSelection({ kind: 'for-you-stream', unread: false })).toEqual({
-      view: 'for-you-stream',
+  it('asks Your stream by its own view, the unread switch as a flag', () => {
+    expect(queryFromSelection({ kind: 'your-stream', unread: false })).toEqual({
+      view: 'your-stream',
     });
-    expect(queryFromSelection({ kind: 'for-you-stream', unread: true })).toEqual({
-      view: 'for-you-stream',
+    expect(queryFromSelection({ kind: 'your-stream', unread: true })).toEqual({
+      view: 'your-stream',
       unread: true,
     });
   });

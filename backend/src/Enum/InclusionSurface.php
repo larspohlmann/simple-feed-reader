@@ -10,6 +10,7 @@ enum InclusionSurface: string
     case ForYou = 'for-you';
     case SavedSearches = 'saved-searches';
     case Trending = 'trending';
+    case YourStream = 'your-stream';
 
     /** Saved searches let networks in through SavedSearchNetworkInclusion instead. */
     public function hasNetworkExclusions(): bool
@@ -24,6 +25,7 @@ enum InclusionSurface: string
             self::ForYou => 'forYou',
             self::SavedSearches => 'savedSearches',
             self::Trending => 'trending',
+            self::YourStream => 'yourStream',
         };
     }
 

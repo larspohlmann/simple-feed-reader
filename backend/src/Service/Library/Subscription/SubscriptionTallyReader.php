@@ -8,15 +8,16 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryShareRepository;
 use App\Repository\EntryStateRepository;
-use App\Repository\ForYouStreamEntryRepository;
-use App\Repository\InterestTermSetRepository;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\SocialNotificationRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
-use App\Service\Library\Subscription\Model\ForYouStreamTallyModel;
+use App\Repository\YourStreamEntryRepository;
+use App\Repository\YourStreamSettingsRepository;
+use App\Repository\YourStreamWordRepository;
 use App\Service\Library\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Library\Subscription\Model\UnreadTotalsModel;
+use App\Service\Library\Subscription\Model\YourStreamTallyModel;
 
 final readonly class SubscriptionTallyReader
 {
@@ -28,8 +29,9 @@ final readonly class SubscriptionTallyReader
         private EntryShareRepository $entryShares,
         private EntryListRepository $entryList,
         private SocialNotificationRepository $socialNotifications,
-        private InterestTermSetRepository $interestTermSets,
-        private ForYouStreamEntryRepository $streamEntries,
+        private YourStreamSettingsRepository $streamSettings,
+        private YourStreamEntryRepository $streamEntries,
+        private YourStreamWordRepository $streamWords,
     ) {
     }
 
@@ -55,13 +57,18 @@ final readonly class SubscriptionTallyReader
         );
     }
 
-    private function countStream(int $userId): ForYouStreamTallyModel
+    private function countStream(int $userId): YourStreamTallyModel
     {
-        if (!$this->interestTermSets->hasEnabledStreamForUser($userId)) {
-            return ForYouStreamTallyModel::unavailable();
+        if (!$this->streamSettings->findTuningForUser($userId)->isEnabled()) {
+            return YourStreamTallyModel::unavailable();
         }
 
-        return $this->streamEntries->countMembersAndUnread($userId);
+        $tally = $this->streamEntries->countMembersAndUnread($userId);
+        if (0 === $tally->entryCount && !$this->streamWords->hasWordsForUser($userId)) {
+            return YourStreamTallyModel::unavailable();
+        }
+
+        return $tally;
     }
 
     /** @return array{favorites: int, kept: int, shared: int, viewed: int, liked: int} */

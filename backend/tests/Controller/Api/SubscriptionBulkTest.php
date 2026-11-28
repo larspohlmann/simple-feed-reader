@@ -153,6 +153,30 @@ final class SubscriptionBulkTest extends ApiTestCase
         self::assertTrue($body['subscriptions'][0]['includeInAllItems']);
     }
 
+    public function testABulkChangeSwitchesYourStreamOnly(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-your-stream@example.com');
+        $first = $this->makeSubscription($user, 'https://your-stream-a.example/feed.xml');
+        $second = $this->makeSubscription($user, 'https://your-stream-b.example/feed.xml');
+        $this->entityManager()->flush();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [$first->requireId(), $second->requireId()],
+            'includeInYourStream' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['subscriptions']);
+        self::assertCount(2, $body['subscriptions']);
+        foreach ($body['subscriptions'] as $subscription) {
+            self::assertIsArray($subscription);
+            self::assertFalse($subscription['includeInYourStream']);
+            self::assertTrue($subscription['includeInForYou']);
+        }
+    }
+
     public function testRejectsAForeignSubscriptionAndWritesNothing(): void
     {
         $client = self::createClient();

@@ -129,7 +129,11 @@ final readonly class PrivateFeeds
             $privateFeed->name,
         );
         $followsOnePerson = $privateFeed->kind->followsOnePerson();
-        $subscription->changeInclusions(new InclusionChange(allItems: $followsOnePerson, forYou: $followsOnePerson));
+        $subscription->changeInclusions(new InclusionChange(
+            allItems: $followsOnePerson,
+            forYou: $followsOnePerson,
+            yourStream: $followsOnePerson,
+        ));
         $feed = $subscription->getFeed();
         $feed->setSiteUrl($rule->buildSiteUrl($account, $privateFeed));
         $this->recordSocialFeed($account, $feed, $privateFeed);

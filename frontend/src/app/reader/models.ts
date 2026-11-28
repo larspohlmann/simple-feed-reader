@@ -43,6 +43,7 @@ export interface SavedSearchMembershipDto {
 export interface TagInclusion {
   includeInAllItems: boolean;
   includeInForYou: boolean;
+  includeInYourStream: boolean;
   includeInSavedSearches: boolean;
   includeInTrending: boolean;
 }
@@ -152,6 +153,8 @@ export interface SubscriptionDto {
   includeInAllItems: boolean;
   /** False excludes this feed's entries from For-you recommendations. */
   includeInForYou: boolean;
+  /** False excludes this feed's entries from Your stream. */
+  includeInYourStream: boolean;
   /** False excludes this feed's entries from saved-search matches and counts. */
   includeInSavedSearches: boolean;
   /** False keeps this feed's shares out of Trending. */
@@ -364,7 +367,7 @@ export type EntryView =
   | 'liked'
   | 'viewed'
   | 'for-you'
-  | 'for-you-stream'
+  | 'your-stream'
   | 'saved-searches'
   | 'trending';
 
@@ -428,6 +431,7 @@ export interface SubscriptionUpdate {
   tagIds: number[];
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
+  includeInYourStream?: boolean;
   includeInSavedSearches?: boolean;
   includeInTrending?: boolean;
   /** Absent leaves the feed's language as it is. */

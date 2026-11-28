@@ -3,6 +3,7 @@
 export interface SubscriptionFlags {
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
+  includeInYourStream?: boolean;
   includeInSavedSearches?: boolean;
   includeInTrending?: boolean;
 }

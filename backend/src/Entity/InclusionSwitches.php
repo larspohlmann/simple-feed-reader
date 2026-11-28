@@ -20,6 +20,8 @@ final readonly class InclusionSwitches
         private bool $savedSearches = true,
         #[ORM\Column(name: 'trending', options: ['default' => true])]
         private bool $trending = true,
+        #[ORM\Column(name: 'your_stream', options: ['default' => true])]
+        private bool $yourStream = true,
     ) {
     }
 
@@ -30,6 +32,7 @@ final readonly class InclusionSwitches
             InclusionSurface::ForYou => $this->forYou,
             InclusionSurface::SavedSearches => $this->savedSearches,
             InclusionSurface::Trending => $this->trending,
+            InclusionSurface::YourStream => $this->yourStream,
         };
     }
 

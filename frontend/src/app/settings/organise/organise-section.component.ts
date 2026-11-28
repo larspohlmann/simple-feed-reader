@@ -128,6 +128,12 @@ export class OrganiseSectionComponent implements OnInit {
     { flag: 'includeInAllItems', value: false, labelKey: 'settings.organise.hideFromAllItems' },
     { flag: 'includeInForYou', value: true, labelKey: 'settings.organise.showInForYou' },
     { flag: 'includeInForYou', value: false, labelKey: 'settings.organise.hideFromForYou' },
+    { flag: 'includeInYourStream', value: true, labelKey: 'settings.organise.showInYourStream' },
+    {
+      flag: 'includeInYourStream',
+      value: false,
+      labelKey: 'settings.organise.hideFromYourStream',
+    },
     {
       flag: 'includeInSavedSearches',
       value: true,

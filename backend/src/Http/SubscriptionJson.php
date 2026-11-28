@@ -72,10 +72,11 @@ final class SubscriptionJson
      *   position: int,
      *   tags: list<array{
      *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null,
-     *     includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool
+     *     includeInAllItems: bool, includeInForYou: bool, includeInSavedSearches: bool, includeInTrending: bool,
+     *     includeInYourStream: bool
      *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
-     *   includeInSavedSearches: bool, includeInTrending: bool,
+     *   includeInSavedSearches: bool, includeInTrending: bool, includeInYourStream: bool,
      *   social: array{network: string, accountId: int|null, kind: string, query?: string}|null
      * }
      */
@@ -119,6 +120,7 @@ final class SubscriptionJson
             'includeInForYou' => $subscription->isIncludedIn(InclusionSurface::ForYou),
             'includeInSavedSearches' => $subscription->isIncludedIn(InclusionSurface::SavedSearches),
             'includeInTrending' => $subscription->isIncludedIn(InclusionSurface::Trending),
+            'includeInYourStream' => $subscription->isIncludedIn(InclusionSurface::YourStream),
             'social' => self::social($feed),
         ];
     }

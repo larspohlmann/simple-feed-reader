@@ -11,7 +11,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a run, recommendation, profile, interest-term or story AI: the request as sent, the
+ * One provider-call attempt of a run, recommendation, profile or story AI: the request as sent, the
  * response as it streams (RecordedCall writes it straight to the database) and the verdict. Kept for the newest
  * RunLogRetention::RUNS runs, debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a
  * large context window passes MySQL TEXT's 64 KB.
@@ -21,7 +21,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_recommendation_run_log_run', columns: ['run_id'])]
 #[ORM\Index(name: 'idx_recommendation_run_log_profile_run', columns: ['profile_run_id'])]
 #[ORM\Index(name: 'idx_recommendation_run_log_story_ai_run', columns: ['story_ai_run_id'])]
-#[ORM\Index(name: 'idx_recommendation_run_log_interest_term_run', columns: ['interest_term_run_id'])]
 final class RecommendationRunLog
 {
     use PersistedId;
@@ -44,10 +43,6 @@ final class RecommendationRunLog
     #[ORM\ManyToOne(targetEntity: StoryAiRun::class)]
     #[ORM\JoinColumn(name: 'story_ai_run_id', nullable: true, onDelete: 'CASCADE')]
     private ?StoryAiRun $storyAiRun;
-
-    #[ORM\ManyToOne(targetEntity: InterestTermRun::class)]
-    #[ORM\JoinColumn(name: 'interest_term_run_id', nullable: true, onDelete: 'CASCADE')]
-    private ?InterestTermRun $interestTermRun;
 
     #[ORM\Column(length: 16, enumType: CallPhase::class)]
     private CallPhase $phase;
@@ -82,7 +77,6 @@ final class RecommendationRunLog
         ?RecommendationRun $run,
         ?ProfileRun $profileRun,
         ?StoryAiRun $storyAiRun,
-        ?InterestTermRun $interestTermRun,
         CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
@@ -92,7 +86,6 @@ final class RecommendationRunLog
         $this->run = $run;
         $this->profileRun = $profileRun;
         $this->storyAiRun = $storyAiRun;
-        $this->interestTermRun = $interestTermRun;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
@@ -111,7 +104,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self($run, null, null, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
+        return new self($run, null, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
     }
 
     public static function forProfileRun(
@@ -120,7 +113,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self(null, $profileRun, null, null, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
+        return new self(null, $profileRun, null, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
     }
 
     public static function forStoryAiRun(
@@ -128,16 +121,7 @@ final class RecommendationRunLog
         string $requestBody,
         \DateTimeImmutable $createdAt,
     ): self {
-        return new self(null, null, $run, null, $run->getTask()->phase(), null, 1, $requestBody, $createdAt);
-    }
-
-    public static function forInterestTermRun(
-        InterestTermRun $run,
-        int $attempt,
-        string $requestBody,
-        \DateTimeImmutable $createdAt,
-    ): self {
-        return new self(null, null, null, $run, CallPhase::InterestTerms, null, $attempt, $requestBody, $createdAt);
+        return new self(null, null, $run, $run->getTask()->phase(), null, 1, $requestBody, $createdAt);
     }
 
     public function getId(): ?int

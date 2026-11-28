@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Operations\Backup\Dto;
 
-use App\Enum\InclusionSurface;
+use App\Entity\InclusionSwitches;
+use App\Service\Operations\Backup\Support\BackupInclusions;
 use App\Service\Operations\Backup\Support\BackupLineFormat;
 use App\Service\Operations\Backup\Support\BackupSchema;
 use App\Service\Operations\Backup\Support\LineField;
-use App\Service\Operations\Backup\Support\LineFieldWithDefault;
 use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 
 /**
@@ -17,6 +17,7 @@ use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 final readonly class SubscriptionLine
 {
     /**
+     * @noinspection AutowireWrongClass Built with new, never autowired
      * @param list<SubscriptionTagReference> $tags
      */
     public function __construct(
@@ -26,10 +27,7 @@ final readonly class SubscriptionLine
         public ?\DateTimeImmutable $markedReadUntil,
         public \DateTimeImmutable $createdAt,
         public array $tags,
-        public bool $includeInAllItems,
-        public bool $includeInForYou,
-        public bool $includeInSavedSearches,
-        public bool $includeInTrending,
+        public InclusionSwitches $inclusions,
     ) {
     }
 
@@ -45,10 +43,7 @@ final readonly class SubscriptionLine
             markedReadUntil: LineField::dateOrNull($line, 'markedReadUntil'),
             createdAt: LineField::date($line, 'createdAt'),
             tags: self::tagsFromLine($line),
-            includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
-            includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
-            includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
-            includeInTrending: LineFieldWithDefault::bool($line, 'includeInTrending', true),
+            inclusions: BackupInclusions::fromLine($line),
         );
     }
 
@@ -63,10 +58,7 @@ final readonly class SubscriptionLine
             markedReadUntil: $subscription->getMarkedReadUntil(),
             createdAt: $subscription->getCreatedAt(),
             tags: array_map(SubscriptionTagReference::fromSubscriptionTag(...), $subscription->getSubscriptionTags()),
-            includeInAllItems: $subscription->isIncludedIn(InclusionSurface::AllItems),
-            includeInForYou: $subscription->isIncludedIn(InclusionSurface::ForYou),
-            includeInSavedSearches: $subscription->isIncludedIn(InclusionSurface::SavedSearches),
-            includeInTrending: $subscription->isIncludedIn(InclusionSurface::Trending),
+            inclusions: $subscription->getInclusions(),
         );
     }
 
@@ -83,10 +75,7 @@ final readonly class SubscriptionLine
                 static fn (SubscriptionTagReference $tag): array => $tag->toBackupFields(),
                 $this->tags,
             ),
-            'includeInAllItems' => $this->includeInAllItems,
-            'includeInForYou' => $this->includeInForYou,
-            'includeInSavedSearches' => $this->includeInSavedSearches,
-            'includeInTrending' => $this->includeInTrending,
+            ...BackupInclusions::toFields($this->inclusions),
         ]);
     }
 

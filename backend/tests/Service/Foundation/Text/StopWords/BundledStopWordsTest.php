@@ -46,6 +46,18 @@ final class BundledStopWordsTest extends TestCase
         $this->assertSame(['oder'], $afterReset);
     }
 
+    public function testTheStopWordCheckReloadsAfterReset(): void
+    {
+        $stopWords = $this->stopWordsReturning("['de' => ['und']]");
+        $beforeReset = $stopWords->isStopWord('und', FeedLanguage::German);
+        $this->stopWordsReturning("['de' => ['oder']]");
+        $stopWords->reset();
+
+        $this->assertTrue($beforeReset);
+        $this->assertFalse($stopWords->isStopWord('und', FeedLanguage::German));
+        $this->assertTrue($stopWords->isStopWord('oder', FeedLanguage::German));
+    }
+
     public function testAFileOfTheWrongShapeIsRefused(): void
     {
         $stopWords = $this->stopWordsReturning("['de' => 'und']");

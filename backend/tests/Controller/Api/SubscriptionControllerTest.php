@@ -7,14 +7,14 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\ForYouStreamEntry;
-use App\Entity\ForYouStreamTuning;
 use App\Entity\InclusionChange;
-use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\ForYouStreamPrecision;
+use App\Entity\YourStreamEntry;
+use App\Entity\YourStreamState;
+use App\Entity\YourStreamTuning;
+use App\Enum\YourStreamPrecision;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -22,14 +22,16 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\StoresYourStreamTuning;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SubscriptionControllerTest extends ApiTestCase
 {
+    use StoresYourStreamTuning;
+
     /**
      * Swaps the SSRF-guarded fetcher for a stub, so the real FeedDiscovery runs (it is final and cannot be stubbed).
      * Call it before the request that fetches, while the kernel is still on its first boot.
@@ -186,13 +188,13 @@ final class SubscriptionControllerTest extends ApiTestCase
         $feed = new Feed('https://example.com/stream-counts.xml');
         $entityManager->persist($feed);
         $entityManager->persist(new Subscription($user, $feed, $at));
-        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entityManager->persist(new YourStreamState($user, 0));
         $entries = [];
         foreach (['one', 'two', 'three'] as $guid) {
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);
             $entityManager->persist($entry);
             $matchedAt = new \DateTimeImmutable('2026-11-27 12:00:00');
-            $entityManager->persist(new ForYouStreamEntry($user, $entry, $matchedAt, 1.0, 'stem'));
+            $entityManager->persist(new YourStreamEntry($user, $entry, $matchedAt, 1.0, 'stem'));
             $entries[] = $entry;
         }
         $state = new EntryState($user, $entries[0]);
@@ -205,7 +207,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
-        self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['forYouStream']);
+        self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['yourStream']);
     }
 
     public function testTheCountsPayloadMarksADisabledStreamUnavailable(): void
@@ -217,13 +219,13 @@ final class SubscriptionControllerTest extends ApiTestCase
         $feed = new Feed('https://example.com/stream-off-counts.xml');
         $entityManager->persist($feed);
         $entityManager->persist(new Subscription($user, $feed, $at));
-        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entityManager->persist(new YourStreamState($user, 0));
         $entries = [];
         foreach (['alpha', 'beta', 'gamma'] as $guid) {
             $entry = new Entry($feed, $guid, null, $guid, $at, $at);
             $entityManager->persist($entry);
             $entityManager->persist(
-                new ForYouStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
+                new YourStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
             );
             $entries[] = $entry;
         }
@@ -231,15 +233,14 @@ final class SubscriptionControllerTest extends ApiTestCase
         $state->hide($at);
         $entityManager->persist($state);
         $entityManager->flush();
-        RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeForYouStreamTuning($user, new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced));
+        $this->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
 
         $client->request('GET', '/api/subscriptions/counts', server: $this->bearerFor($user));
 
         self::assertResponseIsSuccessful();
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
-        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $counts['forYouStream']);
+        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $counts['yourStream']);
     }
 
     public function testCountsRejectsAnonymous(): void
@@ -692,6 +693,36 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertIsArray($body['subscription']);
         self::assertFalse($body['subscription']['includeInTrending']);
         self::assertTrue($body['subscription']['includeInAllItems']);
+    }
+
+    public function testPatchingIncludeInYourStreamLeavesTheOtherSwitches(): void
+    {
+        $client = self::createClient();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        $user = $this->factory()->create('your-stream-flag@example.com');
+        $feed = new Feed('https://your-stream-flag.example.com/rss');
+        $entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $entityManager->persist($subscription);
+        $entityManager->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $subscription->getId(),
+            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['customTitle' => null, 'tagIds' => [], 'includeInYourStream' => false],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertFalse($body['subscription']['includeInYourStream']);
+        self::assertTrue($body['subscription']['includeInForYou']);
     }
 
     public function testOmittingAFlagLeavesItUnchanged(): void

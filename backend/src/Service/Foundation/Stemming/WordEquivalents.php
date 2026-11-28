@@ -45,8 +45,6 @@ final readonly class WordEquivalents
         ],
     ];
 
-    private string $exactWordPattern;
-
     /** @var array<string, list<array{list<string>, string}>> first word => phrase words and canonical */
     private array $phrasesByFirstWord;
 
@@ -55,7 +53,6 @@ final readonly class WordEquivalents
 
     public function __construct(private WordStemmer $stemmer, private GermanCompoundSplitter $splitter)
     {
-        $this->exactWordPattern = self::exactWordPattern();
         $this->phrasesByFirstWord = self::phrasesByFirstWord();
         $this->canonicals = self::canonicals();
     }
@@ -63,8 +60,17 @@ final readonly class WordEquivalents
     /** @return list<array{string, string}> each kept word or phrase canonical, with its bare form */
     public function canonicalizeWords(string $text): array
     {
+        return array_map(
+            static fn (array $word): array => [$word[0], $word[1]],
+            $this->canonicalizeWordsWithSurfaces($text),
+        );
+    }
+
+    /** @return list<array{string, string, string}> each kept word or phrase canonical, its bare form, and its spelling */
+    public function canonicalizeWordsWithSurfaces(string $text): array
+    {
         return array_values(array_filter(
-            $this->collapsePhrases(CasefoldedWords::splitWords($this->replaceExactWords($text))),
+            $this->collapsePhrases($this->replaceExactWords(CasefoldedWords::collectWordsWithSurfaces($text))),
             static fn (array $word): bool => WordStems::isKept($word[1]),
         ));
     }
@@ -99,30 +105,34 @@ final readonly class WordEquivalents
         return $language === null ? self::CUT_STEMS : self::STEMS_BY_LANGUAGE[$language->value];
     }
 
-    private function replaceExactWords(string $text): string
+    /**
+     * @param list<array{string, string}> $words each casefolded, with its spelling
+     *
+     * @return list<array{string, string}>
+     */
+    private function replaceExactWords(array $words): array
     {
-        preg_match_all($this->exactWordPattern, $text, $matches, \PREG_OFFSET_CAPTURE | \PREG_SET_ORDER);
-        $replaced = $text;
-        foreach (array_reverse($matches) as [[$word, $offset]]) {
-            if (isset(self::SHOUTABLE_WORDS[$word]) && self::isInAllCapsRun($text, $offset, \strlen($word))) {
-                continue;
-            }
-            $replaced = substr_replace($replaced, self::EXACT_WORDS[$word], $offset, \strlen($word));
+        $replaced = [];
+        foreach ($words as $index => [$folded, $surface]) {
+            $isExact = isset(self::EXACT_WORDS[$surface])
+                && !(isset(self::SHOUTABLE_WORDS[$surface]) && self::isInAllCapsRun($words, $index));
+            $replaced[] = [$isExact ? self::EXACT_WORDS[$surface] : $folded, $surface];
         }
 
         return $replaced;
     }
 
-    /** Every word next to it is all-caps: the abbreviation stands in a shouted run (LET US GO), not in a sentence. */
-    private static function isInAllCapsRun(string $text, int $offset, int $length): bool
+    /**
+     * Every word next to it is all-caps: the abbreviation stands in a shouted run (LET US GO), not in a sentence.
+     *
+     * @param list<array{string, string}> $words
+     */
+    private static function isInAllCapsRun(array $words, int $index): bool
     {
-        $neighbours = [];
-        if (preg_match('/[\p{L}\p{N}]+(?=[^\p{L}\p{N}]*$)/u', substr($text, 0, $offset), $previous) === 1) {
-            $neighbours[] = $previous[0];
-        }
-        if (preg_match('/^[^\p{L}\p{N}]*\K[\p{L}\p{N}]+/u', substr($text, $offset + $length), $next) === 1) {
-            $neighbours[] = $next[0];
-        }
+        $neighbours = array_column(
+            array_filter([$words[$index - 1] ?? null, $words[$index + 1] ?? null]),
+            1,
+        );
 
         return $neighbours !== [] && array_all($neighbours, self::isAllCaps(...));
     }
@@ -133,18 +143,21 @@ final readonly class WordEquivalents
     }
 
     /**
-     * @param list<string> $words
+     * @param list<array{string, string}> $words each casefolded, with its spelling
      *
-     * @return list<array{string, string}> each word or phrase canonical, with its bare form
+     * @return list<array{string, string, string}> each word or phrase canonical, with its bare form and spelling
      */
     private function collapsePhrases(array $words): array
     {
-        $bareWords = array_map(WordStems::bare(...), $words);
+        $bareWords = array_map(static fn (array $word): string => WordStems::bare($word[0]), $words);
         $collapsed = [];
         $index = 0;
         while ($index < \count($words)) {
             [$length, $canonical] = $this->matchPhrase($bareWords, $index);
-            $collapsed[] = $canonical === null ? [$words[$index], $bareWords[$index]] : [$canonical, $canonical];
+            $spelling = implode(' ', array_column(\array_slice($words, $index, $length), 1));
+            $collapsed[] = $canonical === null
+                ? [$words[$index][0], $bareWords[$index], $spelling]
+                : [$canonical, $canonical, $spelling];
             $index += $length;
         }
 
@@ -165,11 +178,6 @@ final readonly class WordEquivalents
         }
 
         return [1, null];
-    }
-
-    private static function exactWordPattern(): string
-    {
-        return '/(?<![\p{L}\p{N}])(?:' . implode('|', array_keys(self::EXACT_WORDS)) . ')(?![\p{L}\p{N}])/u';
     }
 
     /** @return array<string, true> */

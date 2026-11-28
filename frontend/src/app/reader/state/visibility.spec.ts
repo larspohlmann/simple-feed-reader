@@ -18,6 +18,7 @@ function switchesWith(
     excludedNetworks: {
       allItems: new Set(allItemsExcluded),
       forYou: new Set(),
+      yourStream: new Set(),
       savedSearches: new Set(),
       trending: new Set(trendingExcluded),
     },
