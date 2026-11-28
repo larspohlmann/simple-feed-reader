@@ -83,16 +83,16 @@ describe('ArticlePageComponent', () => {
 
   const rerender = (): void => fixture.detectChanges();
 
-  it('sets the article to the standard width, then to the one the reader picks', () => {
+  it('sets the article and its sheet to the standard width, then to the one the reader picks', () => {
     const element = mount();
-    const article = element.querySelector('article')!;
+    const layer = element.querySelector<HTMLElement>('app-article-layer')!;
 
-    expect(article.dataset['readingWidth']).toBe('standard');
+    expect(layer.dataset['readingWidth']).toBe('standard');
 
     TestBed.inject(ReadingWidthService).set('full');
     rerender();
 
-    expect(article.dataset['readingWidth']).toBe('full');
+    expect(layer.dataset['readingWidth']).toBe('full');
   });
 
   it('offers no sharing at all while sharing is switched off', () => {

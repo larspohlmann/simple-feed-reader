@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { CachedAccountChoice } from './cached-account-choice';
 import { DEFAULT_READING_WIDTH, READING_WIDTHS, READING_WIDTH_KEY } from './reading-width';
 
-/** How wide an article runs on a large screen. */
 @Injectable({ providedIn: 'root' })
 export class ReadingWidthService extends CachedAccountChoice<'readingWidth'> {
   readonly width = this.value;

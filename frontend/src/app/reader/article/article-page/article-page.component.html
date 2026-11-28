@@ -1,4 +1,5 @@
 <app-article-layer
+  [attr.data-reading-width]="readingWidth()"
   [fullscreen]="fullscreen()"
   [resetKey]="source.key()"
   [progressRail]="progressRail"
@@ -43,11 +44,7 @@
     }
     <ng-content select="[pageBarFlags]" />
   </div>
-  <article
-    class="text-scaled"
-    [attr.data-reading-width]="readingWidth()"
-    [attr.aria-busy]="source.loading() ? 'true' : null"
-  >
+  <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
     <div class="title-row">
       <h1 class="title" [class.sr-only]="source.titleHidden()" #titleHeading tabindex="-1">
         {{ source.title() }}

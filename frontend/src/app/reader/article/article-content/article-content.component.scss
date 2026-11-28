@@ -407,30 +407,22 @@ $prose: ':where(:not(.reader-island *))';
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
   /* Cinema mode (#1479): the widened box fills the pane but stays short enough for
      the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */
-  :host {
-    --fit-width: calc(
-      (100cqb - var(--reader-top) - var(--tap-target) - 2 * var(--space-5)) * 16 / 9
-    );
-  }
-
   :host ::ng-deep .reader-cinema--on {
     --cinema-width: max(100%, min(100cqi - 2 * var(--space-4), var(--fit-width)));
 
     width: var(--cinema-width);
     margin-inline: calc((100% - var(--cinema-width)) / 2);
   }
+}
 
-  /* At full the column outgrows the pane: 16:9 media stop where the whole frame fits it, centred. */
-  :host-context(article[data-reading-width='full'])
-    ::ng-deep
-    :is(
-      .reader-embed:not(.reader-embed--portrait, .reader-embed--tall, .reader-embed--strip),
-      video#{$prose}:not(.post-video video),
-      .reader-cinema--on
-    ) {
-    width: min(100%, var(--fit-width));
-    margin-inline: auto;
-  }
+:host
+  ::ng-deep
+  :is(
+    .reader-embed:not(.reader-embed--portrait, .reader-embed--tall, .reader-embed--strip),
+    video#{$prose}:not(.post-video video)
+  ) {
+  max-width: var(--reading-media-max, 100%);
+  margin-inline: auto;
 }
 
 :host ::ng-deep audio.reader-narration:not(.reader-narration--open) {
