@@ -148,9 +148,9 @@ describe('selectionFromParams', () => {
     });
   });
 
-  it('reads for-you-stream with the unread switch off', () => {
-    expect(selectionFromParams(pm({ view: 'for-you-stream' }), ON).selection).toEqual({
-      kind: 'for-you-stream',
+  it('reads your-stream with the unread switch off', () => {
+    expect(selectionFromParams(pm({ view: 'your-stream' }), ON).selection).toEqual({
+      kind: 'your-stream',
       unread: false,
     });
   });

@@ -15,7 +15,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The For you stream's list and mark-read reads: the entries the sweep matched for the caller, while the
+ * Your stream's list and mark-read reads: the entries the sweep matched for the caller, while the
  * subscription, its network and its tags are switched in for For you.
  *
  * @extends ServiceEntityRepository<Entry>

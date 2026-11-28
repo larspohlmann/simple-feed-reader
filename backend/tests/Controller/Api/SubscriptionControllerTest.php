@@ -205,7 +205,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
-        self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['forYouStream']);
+        self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['yourStream']);
     }
 
     public function testTheCountsPayloadMarksADisabledStreamUnavailable(): void
@@ -239,7 +239,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
-        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $counts['forYouStream']);
+        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $counts['yourStream']);
     }
 
     public function testCountsRejectsAnonymous(): void

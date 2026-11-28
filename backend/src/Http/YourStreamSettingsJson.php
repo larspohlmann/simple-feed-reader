@@ -9,7 +9,7 @@ use App\Enum\FeedLanguage;
 use App\Enum\YourStreamPrecision;
 use App\Service\Curation\YourStream\Model\YourStreamSettingsStateModel;
 
-/** The For you stream's switch, precision and the AI's phrases, grouped by language for the settings card. */
+/** Your stream's switch, precision and the AI's phrases, grouped by language for the settings card. */
 final class YourStreamSettingsJson
 {
     /**

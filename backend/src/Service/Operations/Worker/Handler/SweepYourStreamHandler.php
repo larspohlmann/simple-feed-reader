@@ -24,6 +24,6 @@ final readonly class SweepYourStreamHandler
     public function __invoke(SweepYourStream $message): void
     {
         $report = $this->sweep->sweep(SweepBudgetModel::seconds(self::BUDGET_SECONDS));
-        $this->logger->info('Worker For you stream sweep finished.', ['report' => $report->toLogContext()]);
+        $this->logger->info('Worker Your stream sweep finished.', ['report' => $report->toLogContext()]);
     }
 }

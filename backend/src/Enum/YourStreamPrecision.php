@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enum;
 
-/** How selective the For you stream is, narrow to wide: the lowest article score it still accepts. */
+/** How selective Your stream is, narrow to wide: the lowest article score it still accepts. */
 enum YourStreamPrecision: string
 {
     case Narrowest = 'narrowest';

@@ -129,8 +129,8 @@ export class ReaderApi {
     return this.http.post<void>(`${this.base}/api/entries/for-you/mark-read`, { until });
   }
 
-  markForYouStreamRead(until: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/api/entries/for-you-stream/mark-read`, { until });
+  markYourStreamRead(until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/your-stream/mark-read`, { until });
   }
 
   /** The combined saved-search list names no scope: the backend marks the
@@ -369,7 +369,7 @@ function listRequest(query: EntryQuery, page: HttpParams): { path: string; param
     return { path: `/saved-searches/${query.savedSearchId}`, params: page };
   }
   if (query.q) return { path: '/search', params: page.set('q', query.q) };
-  if (query.view === 'for-you-stream') return { path: '/for-you-stream', params: page };
+  if (query.view === 'your-stream') return { path: '/your-stream', params: page };
   if (query.view === 'saved-searches') return { path: '/saved-searches', params: page };
   return { path: '', params: mainListParams(query, page) };
 }

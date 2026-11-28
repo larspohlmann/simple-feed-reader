@@ -15,7 +15,7 @@ use App\Service\Library\Search\Membership\Pass\MarkGroupWalk\MarkGroupWalkInterf
 use Psr\Log\LoggerInterface;
 
 /**
- * One For you stream walk over the accounts' term sets, the members being user ids.
+ * One Your stream walk over the accounts' term sets, the members being user ids.
  *
  * @implements MarkGroupWalkInterface<int, list<YourStreamMatchModel>>
  */
@@ -58,7 +58,7 @@ final readonly class YourStreamMarkGroupWalk implements MarkGroupWalkInterface
 
     public function logChunkFailure(\Throwable $exception): void
     {
-        $this->logger->error('The For you stream sweep failed on a chunk; it stops here and retries next run.', [
+        $this->logger->error('Your stream sweep failed on a chunk; it stops here and retries next run.', [
             'exception' => $exception,
         ]);
     }

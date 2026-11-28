@@ -44,11 +44,11 @@ final class MaintenanceSweepWiringTest extends KernelTestCase
             'profileImages' => ProfileImagesTickSweep::class,
             'hiddenProfiles' => HiddenProfilesTickSweep::class,
             'savedSearchMemberships' => SavedSearchMembershipsTickSweep::class,
-            'forYouStream' => YourStreamTickSweep::class,
+            'yourStream' => YourStreamTickSweep::class,
             'privateFeedSync' => PrivateFeedSyncTickSweep::class,
             'notificationPoll' => NotificationPollTickSweep::class,
             'trending' => TrendingTickSweep::class,
-            'interestTerms' => YourStreamWordsTickSweep::class,
+            'yourStreamWords' => YourStreamWordsTickSweep::class,
             'storyAi' => StoryAiTickSweep::class,
         ], $this->wiredSweeps());
     }

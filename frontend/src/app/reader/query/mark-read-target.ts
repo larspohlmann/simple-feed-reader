@@ -17,7 +17,7 @@ export type MarkReadTarget =
   | { scope: Extract<MarkReadScope, 'group'>; group: FeedGroupName }
   | { scope: 'search'; term: string }
   | { scope: 'for-you' }
-  | { scope: 'for-you-stream' }
+  | { scope: 'your-stream' }
   | { scope: 'saved-searches' }
   | { scope: 'saved-search'; id: number }
   | { scope: 'trending-story'; id: number };
@@ -43,7 +43,7 @@ const MARK_READ_TARGET: BySelectionKind<MarkReadTarget | null> = {
   // No id and no term: the list is the reader's own ranked feed, so the
   // endpoint needs nothing beyond who is asking (#710).
   'for-you': () => ({ scope: 'for-you' }),
-  'for-you-stream': () => ({ scope: 'for-you-stream' }),
+  'your-stream': () => ({ scope: 'your-stream' }),
   'saved-searches': () => ({ scope: 'saved-searches' }),
   'saved-search': (selection) => ({ scope: 'saved-search', id: selection.id }),
   favorites: () => null,

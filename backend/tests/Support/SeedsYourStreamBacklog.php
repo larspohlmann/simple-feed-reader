@@ -25,7 +25,7 @@ use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Psr\Clock\ClockInterface;
 
-/** One account with one settled entry the For you stream has not yet walked, and a container sweep on a given clock. */
+/** One account with one settled entry Your stream has not yet walked, and a container sweep on a given clock. */
 trait SeedsYourStreamBacklog
 {
     private function seedOneEntryBacklog(string $email): void

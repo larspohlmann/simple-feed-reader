@@ -14,7 +14,7 @@ use App\Service\Curation\YourStream\Model\StreamEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
-/** What the For you stream reads about the feeds an account has switched into For you. */
+/** What Your stream reads about the feeds an account has switched into For you. */
 final readonly class YourStreamSourceRepository
 {
     public function __construct(private EntityManagerInterface $entityManager)

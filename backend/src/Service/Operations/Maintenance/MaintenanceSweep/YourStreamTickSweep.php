@@ -10,7 +10,7 @@ use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-#[AsTaggedItem(index: 'forYouStream', priority: 25)]
+#[AsTaggedItem(index: 'yourStream', priority: 25)]
 final readonly class YourStreamTickSweep implements MaintenanceSweepInterface
 {
     private const int BUDGET_SECONDS = 10;

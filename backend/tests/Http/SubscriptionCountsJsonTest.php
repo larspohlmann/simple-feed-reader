@@ -48,7 +48,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 'groups' => ['tags' => 0, 'feeds' => 0],
             ],
             'notifications' => [],
-            'forYouStream' => ['available' => true, 'unreadCount' => 4, 'entryCount' => 9],
+            'yourStream' => ['available' => true, 'unreadCount' => 4, 'entryCount' => 9],
         ], $payload);
     }
 
@@ -73,7 +73,7 @@ final class SubscriptionCountsJsonTest extends TestCase
         self::assertSame(['window' => 'day', 'unopened' => 0], $payload['trending']);
         self::assertSame(0, $payload['unreadTotals']['allItems']);
         self::assertSame(0, $payload['unreadTotals']['forYou']);
-        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $payload['forYouStream']);
+        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $payload['yourStream']);
     }
 
     public function testCarriesNotificationCounts(): void

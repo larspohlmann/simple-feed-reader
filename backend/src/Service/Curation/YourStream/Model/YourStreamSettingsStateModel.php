@@ -7,7 +7,7 @@ namespace App\Service\Curation\YourStream\Model;
 use App\Entity\InterestPhrase;
 use App\Entity\YourStreamTuning;
 
-/** What the settings card shows of the For you stream: its tuning and the phrases the AI last stored. */
+/** What the settings card shows of Your stream: its tuning and the phrases the AI last stored. */
 final readonly class YourStreamSettingsStateModel
 {
     /** @param list<InterestPhrase> $phrases */

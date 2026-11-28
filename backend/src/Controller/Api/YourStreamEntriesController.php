@@ -19,8 +19,8 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** The For you stream: every entry the caller's interests matched, as an entry list that can be cleared. */
-#[Route('/api/entries/for-you-stream')]
+/** Your stream: every entry the caller's interests matched, as an entry list that can be cleared. */
+#[Route('/api/entries/your-stream')]
 final readonly class YourStreamEntriesController
 {
     public function __construct(
@@ -31,7 +31,7 @@ final readonly class YourStreamEntriesController
     ) {
     }
 
-    #[Route('', name: 'api_entries_for_you_stream', methods: ['GET'])]
+    #[Route('', name: 'api_entries_your_stream', methods: ['GET'])]
     public function list(
         #[CurrentUser] User $user,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
@@ -44,7 +44,7 @@ final readonly class YourStreamEntriesController
         return new JsonResponse($this->entryPage->from($rows, $listPage->limit, EntryListSort::PublishedDate));
     }
 
-    #[Route('/mark-read', name: 'api_entries_for_you_stream_mark_read', methods: ['POST'])]
+    #[Route('/mark-read', name: 'api_entries_your_stream_mark_read', methods: ['POST'])]
     public function markRead(
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkYourStreamReadRequest $request,

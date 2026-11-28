@@ -8,7 +8,7 @@ use App\Repository\YourStreamMembershipRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** One entry the For you stream matched for one account. A derived row: the sweep writes it. Naive UTC. */
+/** One entry Your stream matched for one account. A derived row: the sweep writes it. Naive UTC. */
 #[ORM\Entity(repositoryClass: YourStreamMembershipRepository::class)]
 #[ORM\Table(name: 'for_you_stream_entry')]
 #[ORM\Index(name: 'idx_for_you_stream_entry_entry', columns: ['entry_id'])]

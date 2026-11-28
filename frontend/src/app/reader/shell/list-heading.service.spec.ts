@@ -406,15 +406,15 @@ describe('ListHeading for a child tag (#1736)', () => {
   });
 });
 
-describe('ListHeading for the For you stream (#2582)', () => {
+describe('ListHeading for Your stream (#2582)', () => {
   const streamHeading = (unread: boolean) =>
     headingWith(
-      { kind: 'for-you-stream', unread },
-      { forYouStream: signal({ available: true, unreadCount: 2, entryCount: 9 }) },
+      { kind: 'your-stream', unread },
+      { yourStream: signal({ available: true, unreadCount: 2, entryCount: 9 }) },
     );
 
-  it('is titled For you stream', () => {
-    expect(streamHeading(false).title()).toBe('For you stream');
+  it('is titled Your stream', () => {
+    expect(streamHeading(false).title()).toBe('Your stream');
   });
 
   it('counts the unread entries behind the unread switch', () => {

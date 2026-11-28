@@ -7,7 +7,7 @@ namespace App\Entity;
 use App\Enum\YourStreamPrecision;
 use Doctrine\ORM\Mapping as ORM;
 
-/** Whether the For you stream runs and how selective it is, embedded in the settings row. */
+/** Whether Your stream runs and how selective it is, embedded in the settings row. */
 #[ORM\Embeddable]
 final readonly class YourStreamTuning
 {

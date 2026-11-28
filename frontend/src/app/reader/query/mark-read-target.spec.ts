@@ -22,9 +22,9 @@ describe('markReadTarget', () => {
     });
   });
 
-  it('maps the For you stream selection to its own scope', () => {
-    expect(markReadTarget({ kind: 'for-you-stream', unread: false })).toEqual({
-      scope: 'for-you-stream',
+  it('maps Your stream selection to its own scope', () => {
+    expect(markReadTarget({ kind: 'your-stream', unread: false })).toEqual({
+      scope: 'your-stream',
     });
   });
 

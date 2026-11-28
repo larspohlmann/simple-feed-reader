@@ -43,7 +43,7 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(
             [
                 'subscriptions', 'favoritesCount', 'keptCount', 'sharedCount', 'likedCount', 'viewedCount',
-                'trending', 'unreadTotals', 'notifications', 'forYouStream', 'socialAccounts', 'lemmyHosts',
+                'trending', 'unreadTotals', 'notifications', 'yourStream', 'socialAccounts', 'lemmyHosts',
             ],
             array_keys($payload),
         );

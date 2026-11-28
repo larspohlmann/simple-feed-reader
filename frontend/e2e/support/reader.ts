@@ -9,7 +9,7 @@ import type {
   UnreadTotalsDto,
 } from '../../src/app/reader/models';
 import type { TrackDetails } from '../../src/app/reader/audio/audio-track';
-import { NO_FOR_YOU_STREAM_TALLY } from '../../src/app/reader/sidebar-totals';
+import { NO_YOUR_STREAM_TALLY } from '../../src/app/reader/sidebar-totals';
 import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
 import { anEntry } from '../../src/testing/entry-testing';
 import { aSubscription } from '../../src/testing/subscription-testing';
@@ -151,7 +151,7 @@ export function subscriptionsJson(
     lemmyHosts: [],
     unreadTotals: unreadTotalsOf(subscriptions),
     notifications: [],
-    forYouStream: NO_FOR_YOU_STREAM_TALLY,
+    yourStream: NO_YOUR_STREAM_TALLY,
     ...totals,
   };
 }

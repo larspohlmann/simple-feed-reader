@@ -44,7 +44,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'profileImages' => new ProfileImageSweepReportModel(18, 19),
                 'hiddenProfiles' => new HiddenProfileSwitchReportModel(24, 25),
                 'savedSearchMemberships' => new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
-                'forYouStream' => new YourStreamSweepReportModel(5, 6, 7, true),
+                'yourStream' => new YourStreamSweepReportModel(5, 6, 7, true),
                 'privateFeedSync' => new PrivateFeedSyncReportModel(20, 21, 22, 23),
                 'notificationPoll' => new NotificationPollReportModel(40, 41, 42, 43),
                 'trending' => new TrendingRebuildReportModel([
@@ -73,7 +73,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                         0,
                     ),
                 ]),
-                'interestTerms' => new YourStreamWordSweepReportModel(3),
+                'yourStreamWords' => new YourStreamWordSweepReportModel(3),
             ]),
             new LokiSpoolReportModel(14, 15),
         );
@@ -118,7 +118,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                     'matchesInserted' => 13,
                     'caughtUp' => true,
                 ],
-                'forYouStream' => [
+                'yourStream' => [
                     'usersSwept' => 5,
                     'entriesScanned' => 6,
                     'matchesInserted' => 7,
@@ -127,7 +127,7 @@ final class MaintenanceTickJsonTest extends KernelTestCase
                 'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
                 'notificationPoll' => ['accountsChecked' => 40, 'failed' => 41, 'newRows' => 42, 'pruned' => 43],
                 'trending' => ['windowsRebuilt' => 2, 'storiesBuilt' => 57],
-                'interestTerms' => ['raritiesRefreshed' => 3],
+                'yourStreamWords' => ['raritiesRefreshed' => 3],
                 'logShipping' => ['shipped' => 14, 'failed' => 15],
             ],
             $this->json()->report($report),

@@ -34,7 +34,7 @@ const VIEW_QUERY: BySelectionKind<EntryQuery | null> = {
   group: (selection) => ({ view: unreadAsView(selection), group: selection.group }),
   subscription: (selection) => ({ view: unreadAsView(selection), subscription: selection.id }),
   all: (selection) => ({ view: unreadAsView(selection) }),
-  'for-you-stream': (selection) => unreadAsFlag({ view: 'for-you-stream' }, selection),
+  'your-stream': (selection) => unreadAsFlag({ view: 'your-stream' }, selection),
   'saved-searches': (selection) => unreadAsFlag({ view: 'saved-searches' }, selection),
   // A single saved search reads the membership table by id, not a live
   // query, so it carries the id and takes the unread refinement like any list.

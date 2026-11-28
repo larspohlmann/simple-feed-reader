@@ -5,7 +5,7 @@ import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { folderToggle } from '../../../core/preferences/folder-toggle';
 import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { ForYouStreamTallyDto, NO_FOR_YOU_STREAM_TALLY } from '../../sidebar-totals';
+import { YourStreamTallyDto, NO_YOUR_STREAM_TALLY } from '../../sidebar-totals';
 import { TrendingUnopened } from '../../trending/trending.models';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { RecommendationsService } from '../../state/recommendations.service';
@@ -42,7 +42,7 @@ export class SidebarViewsComponent {
   readonly forYouUnread = input(0);
   /** Unopened stories in the window the Trending link opens (#2017, decision 8). */
   readonly trendingUnopened = input<TrendingUnopened>(NO_TRENDING_UNOPENED);
-  readonly forYouStream = input<ForYouStreamTallyDto>(NO_FOR_YOU_STREAM_TALLY);
+  readonly yourStream = input<YourStreamTallyDto>(NO_YOUR_STREAM_TALLY);
 
   protected readonly children = computed((): AllItemsChild[] => {
     const children: AllItemsChild[] = [

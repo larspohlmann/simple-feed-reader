@@ -25,7 +25,7 @@ final class SweepYourStreamHandlerTest extends DbTestCase
         (new SweepYourStreamHandler($sweep, $logger))(new SweepYourStream());
 
         self::assertCount(1, $logger->records);
-        self::assertSame('Worker For you stream sweep finished.', $logger->records[0]['message']);
+        self::assertSame('Worker Your stream sweep finished.', $logger->records[0]['message']);
         self::assertSame(
             ['usersSwept' => 0, 'entriesScanned' => 0, 'matchesInserted' => 0, 'caughtUp' => true],
             $logger->records[0]['context']['report'],
