@@ -65,6 +65,12 @@ final class InterestTally
         );
     }
 
+    /** @return list<string> */
+    public function listStems(string $languageKey): array
+    {
+        return array_map(strval(...), array_keys($this->supports[$languageKey] ?? []));
+    }
+
     /** @return list<string> in FeedLanguage::cases() order, the cut form last */
     public function collectLanguageKeys(): array
     {

@@ -42,8 +42,7 @@ final readonly class YourStreamWordSelection
         $articles = $interests->countArticles($languageKey);
         $counted = max($background->countEntries($languageKey), self::COUNTED_ENTRIES_FLOOR);
         $words = [];
-        foreach (array_keys($interests->collectWantedStems()[$languageKey] ?? []) as $stemKey) {
-            $stem = (string) $stemKey;
+        foreach ($interests->listStems($languageKey) as $stem) {
             if ($interests->countArticlesWith($languageKey, $stem) < self::MIN_ARTICLES) {
                 continue;
             }
