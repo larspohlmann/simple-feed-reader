@@ -1,6 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component } from '@angular/core';
 import { IconComponent } from './icon.component';
+import { ICON_INK_SHIFTS } from './icon-ink-shifts';
 
 @Component({ imports: [IconComponent], template: `<app-icon name="settings" />` })
 class Host {}
@@ -23,6 +24,27 @@ class DenseHost {}
 })
 class FillHost {
   filled = false;
+}
+
+@Component({ imports: [IconComponent], template: `<app-icon name="home" />` })
+class HomeHost {}
+
+@Component({ imports: [IconComponent], template: `<app-icon name="home" [fill]="filled" />` })
+class FilledHomeHost {
+  filled = true;
+}
+
+@Component({ imports: [IconComponent], template: `<app-icon name="no_such_glyph" />` })
+class UnknownHost {}
+
+@Component({ imports: [IconComponent], template: `<app-icon name="add" />` })
+class ZeroShiftHost {}
+
+function spanOf<T>(host: new () => T): { fixture: ComponentFixture<T>; span: HTMLElement } {
+  TestBed.configureTestingModule({ imports: [host] });
+  const fixture = TestBed.createComponent(host);
+  fixture.detectChanges();
+  return { fixture, span: fixture.nativeElement.querySelector('span.material-symbols-outlined') };
 }
 
 describe('IconComponent', () => {
@@ -72,5 +94,40 @@ describe('IconComponent', () => {
     fixture.componentInstance.filled = true;
     fixture.detectChanges();
     expect(host.classList.contains('filled')).toBe(true);
+  });
+
+  describe('ink centring', () => {
+    it('lifts the glyph by its measured outlined shift', () => {
+      expect(spanOf(HomeHost).span.style.transform).toBe(
+        `translateY(${ICON_INK_SHIFTS['home'][0]}em)`,
+      );
+    });
+
+    it('uses the filled shift when filled', () => {
+      expect(spanOf(FilledHomeHost).span.style.transform).toBe(
+        `translateY(${ICON_INK_SHIFTS['home'][1]}em)`,
+      );
+    });
+
+    it('follows the fill input when it toggles', () => {
+      const { fixture, span } = spanOf(FilledHomeHost);
+      fixture.componentInstance.filled = false;
+      fixture.detectChanges();
+      expect(span.style.transform).toBe(`translateY(${ICON_INK_SHIFTS['home'][0]}em)`);
+    });
+
+    it('leaves an unmeasured glyph untransformed', () => {
+      expect(spanOf(UnknownHost).span.style.transform).toBe('');
+    });
+
+    it('leaves a zero-shift glyph untransformed', () => {
+      expect(spanOf(ZeroShiftHost).span.style.transform).toBe('');
+    });
+
+    it('keeps the inline font-size beside the transform', () => {
+      const { span } = spanOf(HomeHost);
+      expect(span.style.transform).not.toBe('');
+      expect(span.style.fontSize).toBe('inherit');
+    });
   });
 });
