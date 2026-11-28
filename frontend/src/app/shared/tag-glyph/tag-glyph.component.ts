@@ -20,7 +20,7 @@ import { ICON_SIZE_TOKEN, IconComponent, IconSize } from '../icon/icon.component
   imports: [IconComponent],
   templateUrl: './tag-glyph.component.html',
   styleUrl: './tag-glyph.component.scss',
-  host: { '[style.width]': 'box()', '[style.height]': 'box()' },
+  host: { '[style.--tag-glyph-size]': 'box()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagGlyphComponent {
