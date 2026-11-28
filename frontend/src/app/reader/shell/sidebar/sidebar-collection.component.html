@@ -62,7 +62,7 @@
   <div class="sublist">
     @for (folder of folders(); track folder.filter) {
       @let label = folder.label;
-      <div class="label-row" [class.active]="folder.filter === activeFilter()">
+      <div class="label-row" [class.active]="!organising() && folder.filter === activeFilter()">
         @if (label !== null && renamingId() === label.id) {
           <app-icon name="label" size="md" />
           <input

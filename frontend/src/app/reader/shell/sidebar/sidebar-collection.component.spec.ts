@@ -637,6 +637,14 @@ describe('SidebarCollectionComponent (#2581)', () => {
       expect(root(fixture).querySelectorAll('.handle-gap')).toHaveLength(0);
     });
 
+    it('highlights no row while organising, whatever the selection filters by', () => {
+      labels.set([tally(1, 'Home'), tally(2, 'Work')]);
+      coarse.set(true);
+      const fixture = mount('favorites', { kind: 'favorites', label: 2 }, true);
+
+      expect(root(fixture).querySelectorAll('.label-row.active')).toHaveLength(0);
+    });
+
     it('still shows the head of an empty collection while organising', () => {
       unlabeled.set({ favoriteCount: 0, keptCount: 0 });
       const fixture = organise('favorites');
