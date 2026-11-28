@@ -64,6 +64,23 @@ final class InterestTermSetRepositoryTest extends DbTestCase
         self::assertSame([], $this->sets()->findStreamTunings([]));
     }
 
+    public function testHasEnabledStreamHoldsForATermSetWithoutSettingsOrWithTheSwitchOn(): void
+    {
+        $unset = $this->accountAtMark('unset@example.com', 0);
+        $enabled = $this->accountAtMark('enabled@example.com', 0);
+        $this->storeTuning($enabled, true);
+        $disabled = $this->accountAtMark('disabled@example.com', 0);
+        $this->storeTuning($disabled, false);
+        $withoutTerms = new User('no-terms@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($withoutTerms);
+        $this->entityManager->flush();
+
+        self::assertTrue($this->sets()->hasEnabledStreamForUser($unset->requireId()));
+        self::assertTrue($this->sets()->hasEnabledStreamForUser($enabled->requireId()));
+        self::assertFalse($this->sets()->hasEnabledStreamForUser($disabled->requireId()));
+        self::assertFalse($this->sets()->hasEnabledStreamForUser($withoutTerms->requireId()));
+    }
+
     private function sets(): InterestTermSetRepository
     {
         $sets = self::getContainer()->get(InterestTermSetRepository::class);

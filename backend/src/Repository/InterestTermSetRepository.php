@@ -6,11 +6,9 @@ namespace App\Repository;
 
 use App\Entity\ForYouStreamTuning;
 use App\Entity\InterestTermSet;
-use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\ForYouStreamPrecision;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<InterestTermSet> */
@@ -33,8 +31,9 @@ final class InterestTermSetRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(s.user) = :userId')
             ->setParameter('userId', $userId)
             ->setMaxResults(1);
+        ForYouStreamSettingsDql::restrictToEnabled($qb, 's.user');
 
-        return $this->restrictToEnabledStream($qb)->getQuery()->getOneOrNullResult() !== null;
+        return $qb->getQuery()->getOneOrNullResult() !== null;
     }
 
     /** @return array<int, int> user id => mark, for the active accounts whose mark is below the ceiling */
@@ -65,18 +64,18 @@ final class InterestTermSetRepository extends ServiceEntityRepository
      */
     public function findStreamTunings(array $userIds): array
     {
-        /** @var list<array{userId: int|string, enabled: ?bool, precision: ?ForYouStreamPrecision}> $rows */
-        $rows = $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->select(
                 'IDENTITY(s.user) AS userId',
-                'settings.forYouStream.enabled AS enabled',
-                'settings.forYouStream.precision AS precision',
+                \sprintf('%s.forYouStream.enabled AS enabled', ForYouStreamSettingsDql::ALIAS),
+                \sprintf('%s.forYouStream.precision AS precision', ForYouStreamSettingsDql::ALIAS),
             )
-            ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
             ->andWhere('IDENTITY(s.user) IN (:userIds)')
-            ->setParameter('userIds', $userIds)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('userIds', $userIds);
+        ForYouStreamSettingsDql::joinSettingsRow($qb, 's.user');
+
+        /** @var list<array{userId: int|string, enabled: ?bool, precision: ?ForYouStreamPrecision}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
 
         $tuningsByUserId = [];
         foreach ($rows as $row) {
@@ -121,12 +120,5 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         $sets = $qb->getQuery()->getResult();
 
         return $sets;
-    }
-
-    private function restrictToEnabledStream(QueryBuilder $qb): QueryBuilder
-    {
-        return $qb
-            ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
-            ->andWhere('settings.id IS NULL OR settings.forYouStream.enabled = true');
     }
 }
