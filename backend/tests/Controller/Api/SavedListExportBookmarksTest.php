@@ -88,12 +88,13 @@ final class SavedListExportBookmarksTest extends ApiTestCase
     public function testMarkupInTitlesUrlsAndLabelsIsEscaped(): void
     {
         [$headers, $user] = $this->bearerAndUser('export-bookmarks-escape@example.com');
-        $entry = $this->keptEntry($user, $this->subscribe($user), 'Tom & "Jerry" <b>', 'https://x.example/?a=1&b=2');
+        $entry = $this->keptEntry($user, $this->subscribe($user), 'Don\'t "x" & <y>', 'https://x.example/?a=1&b=2');
         $label = $this->label($user, $entry, 'A, "B" & <C>');
 
         $body = $this->download($headers, 'view=kept&label=' . $label->requireId());
 
-        self::assertStringContainsString('Tom &amp; &quot;Jerry&quot; &lt;b&gt;</A>', $body);
+        self::assertStringContainsString('Don\'t &quot;x&quot; &amp; &lt;y&gt;</A>', $body);
+        self::assertStringNotContainsString('&apos;', $body);
         self::assertStringContainsString('HREF="https://x.example/?a=1&amp;b=2"', $body);
         self::assertStringContainsString('TAGS="A  &quot;B&quot; &amp; &lt;C&gt;"', $body);
         self::assertStringContainsString('<H3>Kept – A, &quot;B&quot; &amp; &lt;C&gt;</H3>', $body);

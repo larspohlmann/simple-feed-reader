@@ -69,6 +69,6 @@ final readonly class BookmarkFileResponseFactory
 
     private static function escaped(string $text): string
     {
-        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+        return htmlspecialchars($text, ENT_COMPAT | ENT_SUBSTITUTE | ENT_HTML401, 'UTF-8');
     }
 }
