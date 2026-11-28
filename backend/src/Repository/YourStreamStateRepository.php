@@ -25,18 +25,6 @@ final class YourStreamStateRepository extends ServiceEntityRepository
         return $this->find($user);
     }
 
-    public function hasEnabledStreamForUser(int $userId): bool
-    {
-        $qb = $this->createQueryBuilder('s')
-            ->select('1')
-            ->andWhere('IDENTITY(s.user) = :userId')
-            ->setParameter('userId', $userId)
-            ->setMaxResults(1);
-        YourStreamSettingsDql::restrictToEnabled($qb, 's.user');
-
-        return $qb->getQuery()->getOneOrNullResult() !== null;
-    }
-
     /** @return array<int, int> user id => mark, for the active accounts whose mark is below the ceiling */
     public function findBelowMark(int $ceiling, \DateTimeImmutable $now): array
     {
@@ -68,8 +56,8 @@ final class YourStreamStateRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('s')
             ->select(
                 'IDENTITY(s.user) AS userId',
-                \sprintf('%s.forYouStream.enabled AS enabled', YourStreamSettingsDql::ALIAS),
-                \sprintf('%s.forYouStream.precision AS precision', YourStreamSettingsDql::ALIAS),
+                \sprintf('%s.tuning.enabled AS enabled', YourStreamSettingsDql::ALIAS),
+                \sprintf('%s.tuning.precision AS precision', YourStreamSettingsDql::ALIAS),
             )
             ->andWhere('IDENTITY(s.user) IN (:userIds)')
             ->setParameter('userIds', $userIds);

@@ -22,14 +22,16 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StoredUserSettings;
+use App\Tests\Support\StoresYourStreamTuning;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 final class SubscriptionControllerTest extends ApiTestCase
 {
+    use StoresYourStreamTuning;
+
     /**
      * Swaps the SSRF-guarded fetcher for a stub, so the real FeedDiscovery runs (it is final and cannot be stubbed).
      * Call it before the request that fetches, while the kernel is still on its first boot.
@@ -231,8 +233,7 @@ final class SubscriptionControllerTest extends ApiTestCase
         $state->hide($at);
         $entityManager->persist($state);
         $entityManager->flush();
-        RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
+        $this->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
 
         $client->request('GET', '/api/subscriptions/counts', server: $this->bearerFor($user));
 

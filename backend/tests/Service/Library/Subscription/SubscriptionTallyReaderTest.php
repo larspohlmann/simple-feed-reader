@@ -15,17 +15,23 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\YourStreamEntry;
 use App\Entity\YourStreamState;
+use App\Entity\YourStreamTuning;
+use App\Entity\YourStreamWord;
+use App\Enum\FeedLanguage;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
+use App\Enum\YourStreamPrecision;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordsQueries;
 use App\Tests\Support\StateMarks;
+use App\Tests\Support\StoresYourStreamTuning;
 
 final class SubscriptionTallyReaderTest extends DbTestCase
 {
     use RecordsQueries;
+    use StoresYourStreamTuning;
 
     public function testReadsUnreadEntryAndSurfaceCountsForTheUser(): void
     {
@@ -118,16 +124,14 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertSame(1, $reader->countTallies($user)->unreadTotals->forYou);
     }
 
-    public function testAUserWithoutATermSetHasNoStream(): void
+    public function testADisabledStreamIsUnavailable(): void
     {
-        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $user = new User('tallies-no-terms@example.com', $when);
-        $this->entityManager->persist($user);
-        $feed = new Feed('https://example.com/no-terms.xml');
-        $this->entityManager->persist($feed);
-        $this->entityManager->persist(new Subscription($user, $feed, $when));
-        $this->streamMember($user, $this->entry($feed, 'orphan-member'));
+        [$user, $feed] = $this->streamReader('tallies-stream-off@example.com');
+        $this->streamWord($user, 'solar');
+        $this->streamWord($user, 'wind');
+        $this->streamMember($user, $this->entry($feed, 'off-member'));
         $this->entityManager->flush();
+        $this->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::DEFAULT));
         $reader = $this->reader();
         $this->startRecordingQueries();
 
@@ -137,6 +141,39 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertSame(0, $stream->unreadCount);
         self::assertSame(0, $stream->entryCount);
         self::assertSame([], $this->recordedQueriesMatching('/your_stream_entry/'));
+    }
+
+    public function testAnEnabledStreamWithoutWordsOrMembersIsUnavailable(): void
+    {
+        [$user] = $this->streamReader('tallies-stream-empty@example.com');
+        $this->entityManager->flush();
+
+        self::assertFalse($this->reader()->countTallies($user)->yourStream->available);
+    }
+
+    public function testAnEnabledStreamWithoutWordsButWithMembersStaysAvailable(): void
+    {
+        [$user, $feed] = $this->streamReader('tallies-stream-members@example.com');
+        $this->streamMember($user, $this->entry($feed, 'kept-member'));
+        $this->entityManager->flush();
+
+        $stream = $this->reader()->countTallies($user)->yourStream;
+
+        self::assertTrue($stream->available);
+        self::assertSame(1, $stream->unreadCount);
+        self::assertSame(1, $stream->entryCount);
+    }
+
+    public function testAnEnabledStreamWithWordsAndNoMembersIsAvailable(): void
+    {
+        [$user] = $this->streamReader('tallies-stream-words@example.com');
+        $this->streamWord($user, 'solar');
+        $this->entityManager->flush();
+
+        $stream = $this->reader()->countTallies($user)->yourStream;
+
+        self::assertTrue($stream->available);
+        self::assertSame(0, $stream->entryCount);
     }
 
     public function testTheStreamCountsItsUnreadAndAllMatches(): void
@@ -175,6 +212,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $subscription->changeInclusions(new InclusionChange(yourStream: false));
         $this->entityManager->persist($subscription);
         $this->entityManager->persist(new YourStreamState($user, 0));
+        $this->streamWord($user, 'solar');
         $this->streamMember($user, $this->entry($feed, 'hidden-member'));
         $this->entityManager->flush();
 
@@ -183,6 +221,25 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         self::assertTrue($stream->available);
         self::assertSame(0, $stream->unreadCount);
         self::assertSame(0, $stream->entryCount);
+    }
+
+    /** @return array{User, Feed} */
+    private function streamReader(string $email): array
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User($email, $when);
+        $this->entityManager->persist($user);
+        $feed = new Feed('https://example.com/' . $email . '.xml');
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, $when));
+        $this->entityManager->persist(new YourStreamState($user, 0));
+
+        return [$user, $feed];
+    }
+
+    private function streamWord(User $user, string $stem): void
+    {
+        $this->entityManager->persist(new YourStreamWord($user, FeedLanguage::English, $stem, $stem, 1.0, 1.0));
     }
 
     private function reader(): SubscriptionTallyReader

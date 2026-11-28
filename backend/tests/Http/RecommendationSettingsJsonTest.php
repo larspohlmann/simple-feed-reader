@@ -6,17 +6,14 @@ namespace App\Tests\Http;
 
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
-use App\Entity\YourStreamTuning;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
-use App\Enum\YourStreamPrecision;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
-use App\Service\Curation\YourStream\Model\YourStreamSettingsStateModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase
@@ -53,7 +50,6 @@ final class RecommendationSettingsJsonTest extends TestCase
             $this->effectiveSettings(),
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
             workerAlive: true,
-            yourStream: self::yourStream(),
         ));
 
         self::assertArrayHasKey('defaultGuidancePrompt', $state);
@@ -68,7 +64,6 @@ final class RecommendationSettingsJsonTest extends TestCase
             $this->effectiveSettings(showScoreAndReasons: true),
             self::llm(),
             workerAlive: true,
-            yourStream: self::yourStream(),
         ));
 
         self::assertTrue($state['showScoreAndReasons']);
@@ -127,21 +122,6 @@ final class RecommendationSettingsJsonTest extends TestCase
         }
     }
 
-    public function testStateCarriesTheYourStreamSettings(): void
-    {
-        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
-            $this->effectiveSettings(),
-            self::llm(),
-            workerAlive: true,
-            yourStream: new YourStreamSettingsStateModel(new YourStreamTuning(false, YourStreamPrecision::Narrow), []),
-        ));
-
-        self::assertSame(
-            ['enabled' => false, 'precision' => 'narrow', 'defaultPrecision' => 'wide', 'phrases' => []],
-            $state['forYouStream'],
-        );
-    }
-
     /** @return array<string, mixed> */
     private function defaultState(): array
     {
@@ -149,13 +129,7 @@ final class RecommendationSettingsJsonTest extends TestCase
             $this->effectiveSettings(),
             self::llm(),
             workerAlive: true,
-            yourStream: self::yourStream(),
         ));
-    }
-
-    private static function yourStream(): YourStreamSettingsStateModel
-    {
-        return new YourStreamSettingsStateModel(YourStreamTuning::defaults(), []);
     }
 
     private static function llm(): RecommendationEngineCapabilitiesModel

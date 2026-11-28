@@ -19,7 +19,6 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Entity\YourStreamTuning;
 use App\Enum\CallPhase;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\ScoringProtocol;
@@ -200,12 +199,6 @@ final readonly class RecommendationRunFixtures
         $this->settingsRowOf($user)->storeProfile(
             new StoredProfile($text, new \DateTimeImmutable($generatedAt), 'api.example.test', 'm'),
         );
-        $this->entityManager->flush();
-    }
-
-    public function storeYourStreamTuning(User $user, YourStreamTuning $tuning): void
-    {
-        $this->settingsRowOf($user)->updateYourStream($tuning);
         $this->entityManager->flush();
     }
 

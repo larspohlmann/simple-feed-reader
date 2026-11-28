@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Curation\Recommendation\Settings;
 
 use App\Entity\User;
-use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Curation\Recommendation\Run\WorkerPresence;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
-use App\Service\Curation\YourStream\Model\YourStreamSettingsStateModel;
 
 final readonly class RecommendationSettingsStateReader
 {
@@ -17,7 +15,6 @@ final readonly class RecommendationSettingsStateReader
         private RecommendationSettingsResolver $resolver,
         private RecommendationEngineResolver $engines,
         private WorkerPresence $presence,
-        private InterestTermSetRepository $termSets,
     ) {
     }
 
@@ -29,10 +26,6 @@ final readonly class RecommendationSettingsStateReader
             $account->forConnection($user->getActiveAiProviderSettings()),
             $this->engines->resolveAccountCapabilities($user),
             $this->presence->hasPersistentRecommendationWorker(),
-            new YourStreamSettingsStateModel(
-                $account->yourStreamTuning(),
-                $this->termSets->findForUser($user)?->getPhrases() ?? [],
-            ),
         );
     }
 }

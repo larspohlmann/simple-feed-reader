@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\YourStream;
 
-use App\Entity\InterestTerm;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\SearchTermStems;
 use App\Service\Foundation\Stemming\Support\WordStems;
@@ -80,7 +80,7 @@ final class SearchTermStemsTest extends TestCase
 
     public function testAStemAtTheLengthLimitIsKept(): void
     {
-        $fits = str_repeat('q', InterestTerm::STEM_MAX_LENGTH);
+        $fits = str_repeat('q', YourStreamWord::STEM_MAX_LENGTH);
 
         self::assertSame([$fits => 1.0], $this->stems->collectStems($fits, FeedLanguage::English));
     }

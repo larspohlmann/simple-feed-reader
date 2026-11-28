@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Dto\Recommendation;
+namespace App\Dto\YourStream;
 
 use App\Entity\YourStreamTuning;
 use App\Enum\YourStreamPrecision;

@@ -21,19 +21,19 @@ final readonly class YourStreamWordSweepReportModel
     }
 
     #[\NoDiscard]
-    public function addingChecked(): self
+    public function withOneMoreChecked(): self
     {
         return clone($this, ['checked' => $this->checked + 1]);
     }
 
     #[\NoDiscard]
-    public function addingBuilt(): self
+    public function withOneMoreBuilt(): self
     {
         return clone($this, ['built' => $this->built + 1]);
     }
 
     #[\NoDiscard]
-    public function addingFailed(): self
+    public function withOneMoreFailed(): self
     {
         return clone($this, ['failed' => $this->failed + 1]);
     }

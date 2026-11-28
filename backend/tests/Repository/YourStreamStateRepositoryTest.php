@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Entity\YourStreamState;
 use App\Entity\YourStreamTuning;
 use App\Enum\YourStreamPrecision;
 use App\Repository\YourStreamStateRepository;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\StoresYourStreamTuning;
 
 final class YourStreamStateRepositoryTest extends DbTestCase
 {
+    use StoresYourStreamTuning;
+
     private const int CEILING = 10;
     private const string NOW = '2026-11-27 10:00:00';
 
@@ -40,21 +41,18 @@ final class YourStreamStateRepositoryTest extends DbTestCase
     {
         $narrowest = $this->accountAtMark('narrowest@example.com', 0);
         $this->storeTuning($narrowest, false, YourStreamPrecision::Narrowest);
-        $defaulted = $this->accountAtMark('defaulted@example.com', 0);
-        $this->entityManager->persist(new RecommendationSettings($defaulted));
         $unset = $this->accountAtMark('unset@example.com', 0);
         $this->storeTuning($this->accountAtMark('not-asked@example.com', 0), true, YourStreamPrecision::Widest);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
         $tunings = $this->sets()->findStreamTunings(
-            [$narrowest->requireId(), $defaulted->requireId(), $unset->requireId()],
+            [$narrowest->requireId(), $unset->requireId()],
         );
         ksort($tunings);
 
         self::assertEquals([
             $narrowest->requireId() => new YourStreamTuning(false, YourStreamPrecision::Narrowest),
-            $defaulted->requireId() => YourStreamTuning::defaults(),
             $unset->requireId() => YourStreamTuning::defaults(),
         ], $tunings);
     }
@@ -62,23 +60,6 @@ final class YourStreamStateRepositoryTest extends DbTestCase
     public function testFindStreamTuningsForNoOwnersIsEmpty(): void
     {
         self::assertSame([], $this->sets()->findStreamTunings([]));
-    }
-
-    public function testHasEnabledStreamHoldsForAStateWithoutSettingsOrWithTheSwitchOn(): void
-    {
-        $unset = $this->accountAtMark('unset@example.com', 0);
-        $enabled = $this->accountAtMark('enabled@example.com', 0);
-        $this->storeTuning($enabled, true);
-        $disabled = $this->accountAtMark('disabled@example.com', 0);
-        $this->storeTuning($disabled, false);
-        $withoutState = new User('no-state@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($withoutState);
-        $this->entityManager->flush();
-
-        self::assertTrue($this->sets()->hasEnabledStreamForUser($unset->requireId()));
-        self::assertTrue($this->sets()->hasEnabledStreamForUser($enabled->requireId()));
-        self::assertFalse($this->sets()->hasEnabledStreamForUser($disabled->requireId()));
-        self::assertFalse($this->sets()->hasEnabledStreamForUser($withoutState->requireId()));
     }
 
     public function testFindUserIdsDueForCheckHoldsActiveEnabledAccountsNotCheckedSinceTheCutoffOldestFirst(): void
@@ -161,7 +142,6 @@ final class YourStreamStateRepositoryTest extends DbTestCase
         bool $enabled,
         YourStreamPrecision $precision = YourStreamPrecision::Balanced,
     ): void {
-        RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeYourStreamTuning($user, new YourStreamTuning($enabled, $precision));
+        $this->storeYourStreamTuning($user, new YourStreamTuning($enabled, $precision));
     }
 }

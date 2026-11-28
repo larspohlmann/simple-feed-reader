@@ -9,7 +9,6 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
-use App\Entity\YourStreamTuning;
 use App\Repository\RecommendationSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -28,12 +27,6 @@ final readonly class RecommendationSettingsWriter
     public function save(User $user, RecommendationSettingsValues $values): void
     {
         $this->loadOrCreate($user)->update($this->withNormalisedGuidance($values));
-        $this->entityManager->flush();
-    }
-
-    public function saveYourStream(User $user, YourStreamTuning $tuning): void
-    {
-        $this->loadOrCreate($user)->updateYourStream($tuning);
         $this->entityManager->flush();
     }
 

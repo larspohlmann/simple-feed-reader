@@ -12,10 +12,10 @@ use Doctrine\ORM\Mapping as ORM;
 final readonly class YourStreamTuning
 {
     public function __construct(
-        #[ORM\Column(name: 'for_you_stream_enabled', options: ['default' => true])]
+        #[ORM\Column(name: 'enabled', options: ['default' => true])]
         private bool $enabled,
         #[ORM\Column(
-            name: 'for_you_stream_precision',
+            name: 'match_precision',
             length: 10,
             enumType: YourStreamPrecision::class,
             options: ['default' => 'wide'],

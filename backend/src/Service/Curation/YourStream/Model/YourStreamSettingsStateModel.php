@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\YourStream\Model;
 
-use App\Entity\InterestPhrase;
 use App\Entity\YourStreamTuning;
+use App\Entity\YourStreamWord;
 
-/** What the settings card shows of Your stream: its tuning and the phrases the AI last stored. */
+/** What the settings page shows of Your stream: its tuning and its current word list. */
 final readonly class YourStreamSettingsStateModel
 {
-    /** @param list<InterestPhrase> $phrases */
-    public function __construct(public YourStreamTuning $tuning, public array $phrases)
+    /** @param list<YourStreamWord> $words */
+    public function __construct(public YourStreamTuning $tuning, public array $words)
     {
     }
 }

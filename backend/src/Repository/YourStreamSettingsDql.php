@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\RecommendationSettings;
+use App\Entity\YourStreamSettings;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 
@@ -16,7 +16,7 @@ final class YourStreamSettingsDql
     public static function joinSettingsRow(QueryBuilder $qb, string $userExpression): void
     {
         $qb->leftJoin(
-            RecommendationSettings::class,
+            YourStreamSettings::class,
             self::ALIAS,
             Join::ON,
             \sprintf('%s.user = %s', self::ALIAS, $userExpression),
@@ -26,7 +26,7 @@ final class YourStreamSettingsDql
     public static function restrictToEnabled(QueryBuilder $qb, string $userExpression): void
     {
         self::joinSettingsRow($qb, $userExpression);
-        $qb->andWhere(\sprintf('%1$s.id IS NULL OR %1$s.forYouStream.enabled = true', self::ALIAS));
+        $qb->andWhere(\sprintf('%1$s.user IS NULL OR %1$s.tuning.enabled = true', self::ALIAS));
     }
 
     private function __construct()

@@ -246,8 +246,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `DigestSettings` | Your email digest settings: on or off, how often, the format, the hour and the weekday, and when the last digest went out. The backup format does not carry them yet. A restored "last sent" date would only delay the next send. |
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
 | `ProfileRun` | The history of your interest-profile generations. Run it again to get a new profile. It has no meaning without the entries it was built from, which the restore replaces. |
-| `InterestTerm` | The terms an AI once extracted from your interest profile for the stream. Nothing writes them any more, and the table is being removed. |
-| `InterestTermSet` | When those AI terms were last extracted. Nothing writes it any more, and the table is being removed. |
+| `YourStreamSettings` | Whether "Your stream" is on, and how selective it is. They are quick to set again after a restore, as with your "For you" settings. |
 | `YourStreamWord` | The words "Your stream" matches articles on. They are derived from the articles you favourite, keep, like or share and from your saved searches, so the file leaves them out, and the next hourly check rebuilds them from what you restored. |
 | `YourStreamState` | How far "Your stream" has matched articles, and what its words were last built from. It is derived, and a restore leaves it out: the first check after a restore starts its mark at the newest article, so restored articles are not matched back. |
 | `YourStreamEntry` | The articles "Your stream" matched for you. It is derived, and it points at articles the restore replaces. The stream starts empty and fills with articles that arrive after the restore. |

@@ -10,9 +10,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
-use App\Entity\YourStreamTuning;
 use App\Enum\RecommendationBatchSize;
-use App\Enum\YourStreamPrecision;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
@@ -108,48 +106,6 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(6, $profileSettings->intervalHours);
         self::assertSame(7, $profileSettings->keptCap);
         self::assertSame(9, $profileSettings->viewedCap);
-    }
-
-    public function testSaveYourStreamCreatesTheRowWithTheTuningAndDefaultSettings(): void
-    {
-        $this->writer->saveYourStream($this->user, new YourStreamTuning(false, YourStreamPrecision::Narrow));
-
-        $reloaded = $this->reloaded();
-        self::assertFalse($reloaded->getYourStreamTuning()->isEnabled());
-        self::assertSame(YourStreamPrecision::Narrow, $reloaded->getYourStreamTuning()->getPrecision());
-        self::assertSame(RecommendationSettings::DEFAULT_FAVORITES_CAP, $reloaded->values()->favoritesCap);
-    }
-
-    public function testSaveYourStreamKeepsTheOtherSettings(): void
-    {
-        $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
-
-        $this->writer->saveYourStream($this->user, new YourStreamTuning(true, YourStreamPrecision::Narrowest));
-
-        $reloaded = $this->reloaded();
-        self::assertTrue($reloaded->values()->showScoreAndReasons);
-        self::assertSame(10, $reloaded->values()->favoritesCap);
-        self::assertSame(YourStreamPrecision::Narrowest, $reloaded->getYourStreamTuning()->getPrecision());
-    }
-
-    public function testSavingTheSettingsKeepsTheStoredStreamTuning(): void
-    {
-        $this->writer->saveYourStream($this->user, new YourStreamTuning(false, YourStreamPrecision::Balanced));
-
-        $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
-
-        $reloaded = $this->reloaded();
-        self::assertTrue($reloaded->values()->showScoreAndReasons);
-        self::assertFalse($reloaded->getYourStreamTuning()->isEnabled());
-        self::assertSame(YourStreamPrecision::Balanced, $reloaded->getYourStreamTuning()->getPrecision());
-    }
-
-    public function testANewRowStreamsAtTheDefaultPrecision(): void
-    {
-        $tuning = (new RecommendationSettings($this->user))->getYourStreamTuning();
-
-        self::assertTrue($tuning->isEnabled());
-        self::assertSame(YourStreamPrecision::Wide, $tuning->getPrecision());
     }
 
     private function values(bool $showScoreAndReasons): RecommendationSettingsValues

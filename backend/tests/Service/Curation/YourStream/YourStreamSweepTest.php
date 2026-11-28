@@ -34,15 +34,17 @@ use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StemmingWiring;
+use App\Tests\Support\StoresYourStreamTuning;
 use App\Tests\Support\TickingClock;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
 final class YourStreamSweepTest extends DbTestCase
 {
+    use StoresYourStreamTuning;
+
     private const string NOW = '2026-11-27T10:00:00';
     private const string SETTLED = '2026-11-27 09:00:00';
     private const string RECENT = '2026-11-27 08:00:00';
@@ -393,8 +395,8 @@ final class YourStreamSweepTest extends DbTestCase
     {
         $balanced = $this->subscriber('balanced@example.com');
         $narrow = $this->subscriber('narrow@example.com');
-        $this->storeTuning($balanced, new YourStreamTuning(true, YourStreamPrecision::Balanced));
-        $this->storeTuning($narrow, new YourStreamTuning(true, YourStreamPrecision::Narrow));
+        $this->storeYourStreamTuning($balanced, new YourStreamTuning(true, YourStreamPrecision::Balanced));
+        $this->storeYourStreamTuning($narrow, new YourStreamTuning(true, YourStreamPrecision::Narrow));
         $this->term($balanced, 'solar', 2.5);
         $this->term($narrow, 'solar', 2.5);
         $entry = $this->entry('Solar panels');
@@ -406,11 +408,11 @@ final class YourStreamSweepTest extends DbTestCase
         self::assertSame($entry->requireId(), $this->readMark($narrow));
     }
 
-    public function testAnAccountWithoutSettingsRowMatchesAtTheDefaultPrecision(): void
+    public function testAnAccountWithoutASettingsRowMatchesAtTheDefaultPrecision(): void
     {
         $unset = $this->subscriber('unset@example.com');
         $narrowest = $this->subscriber('narrowest@example.com');
-        $this->storeTuning($narrowest, new YourStreamTuning(true, YourStreamPrecision::Narrowest));
+        $this->storeYourStreamTuning($narrowest, new YourStreamTuning(true, YourStreamPrecision::Narrowest));
         foreach ([$unset, $narrowest] as $user) {
             $this->term($user, 'solar', 1.6);
             $this->term($user, 'wind', 1.2);
@@ -432,7 +434,7 @@ final class YourStreamSweepTest extends DbTestCase
         $this->term($enabled, 'solar', 2.0);
         $kept = $this->entry('Solar panels');
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
-        $this->storeTuning($disabled, new YourStreamTuning(false, YourStreamPrecision::DEFAULT));
+        $this->storeYourStreamTuning($disabled, new YourStreamTuning(false, YourStreamPrecision::DEFAULT));
         $fresh = $this->entry('Solar roofs');
 
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
@@ -448,7 +450,7 @@ final class YourStreamSweepTest extends DbTestCase
     public function testADisabledAccountsMarkMovesToTheCeilingUnmatched(): void
     {
         $user = $this->subscriber('paused@example.com');
-        $this->storeTuning($user, new YourStreamTuning(false, YourStreamPrecision::DEFAULT));
+        $this->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::DEFAULT));
         $this->term($user, 'solar', 2.0);
         $entries = [$this->entry('Solar panels', effectiveAt: self::SETTLED), $this->entry('Solar roofs')];
 
@@ -458,7 +460,7 @@ final class YourStreamSweepTest extends DbTestCase
         self::assertSame($entries[1]->requireId(), $this->readMark($user));
         self::assertSame([], $this->readRows($user));
 
-        $this->storeTuning($user, new YourStreamTuning(true, YourStreamPrecision::DEFAULT));
+        $this->storeYourStreamTuning($user, new YourStreamTuning(true, YourStreamPrecision::DEFAULT));
         $newer = $this->entry('Solar farms', effectiveAt: self::SETTLED);
 
         $this->sweep()->sweep(SweepBudgetModel::seconds(10));
@@ -584,11 +586,6 @@ final class YourStreamSweepTest extends DbTestCase
         $this->entityManager->persist($entry);
 
         return $entry;
-    }
-
-    private function storeTuning(User $user, YourStreamTuning $tuning): void
-    {
-        RecommendationRunFixtures::fromContainer(self::getContainer())->storeYourStreamTuning($user, $tuning);
     }
 
     private function countWords(User $user): int

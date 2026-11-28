@@ -73,7 +73,7 @@ final readonly class YourStreamWordSweep
                 'exception' => $exception,
             ]);
 
-            return $report->addingFailed();
+            return $report->withOneMoreFailed();
         }
     }
 
@@ -93,10 +93,10 @@ final readonly class YourStreamWordSweep
         $fingerprint = $inputs->fingerprint();
         $builtAfter = $this->clock->now()->modify(\sprintf('-%d hours', self::REBUILD_HOURS));
         if ($state->isBuiltFrom($fingerprint, $builtAfter)) {
-            return $report->addingChecked();
+            return $report->withOneMoreChecked();
         }
         $this->store->replaceWords($state, $fingerprint, $this->builder->buildWords($inputs, $pass));
 
-        return $report->addingBuilt();
+        return $report->withOneMoreBuilt();
     }
 }

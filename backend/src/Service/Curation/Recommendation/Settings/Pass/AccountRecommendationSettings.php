@@ -10,7 +10,6 @@ use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
-use App\Entity\YourStreamTuning;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
@@ -51,11 +50,6 @@ final readonly class AccountRecommendationSettings
             autoGenerateIntervalHours: $values?->autoGenerateIntervalHours,
             showScoreAndReasons: $values->showScoreAndReasons ?? false,
         );
-    }
-
-    public function yourStreamTuning(): YourStreamTuning
-    {
-        return $this->row?->getYourStreamTuning() ?? YourStreamTuning::defaults();
     }
 
     /** The favorites cap is the recommendation form's; kept and viewed are the profile section's. */

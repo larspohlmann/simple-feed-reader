@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\YourStream;
 
-use App\Entity\InterestTerm;
+use App\Entity\YourStreamWord;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\YourStream\Model\EntryStemsModel;
 use App\Service\Curation\YourStream\Model\StreamWordModel;
@@ -142,8 +142,8 @@ final class YourStreamWordSelectionTest extends TestCase
 
     public function testAStemTooLongToStoreIsNotKept(): void
     {
-        $tooLong = str_repeat('q', InterestTerm::STEM_MAX_LENGTH + 1);
-        $fits = str_repeat('q', InterestTerm::STEM_MAX_LENGTH);
+        $tooLong = str_repeat('q', YourStreamWord::STEM_MAX_LENGTH + 1);
+        $fits = str_repeat('q', YourStreamWord::STEM_MAX_LENGTH);
         $this->articles(FeedLanguage::English, 2, [$tooLong => 1.0, $fits => 1.0]);
 
         self::assertSame([$fits], $this->stems($this->pickWords(FeedLanguage::English, 600, [])));

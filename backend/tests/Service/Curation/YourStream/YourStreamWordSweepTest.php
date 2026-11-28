@@ -37,17 +37,18 @@ use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RequiresServices;
 use App\Tests\Support\StateMarks;
 use App\Tests\Support\StemmingWiring;
+use App\Tests\Support\StoresYourStreamTuning;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\MockClock;
 
 final class YourStreamWordSweepTest extends DbTestCase
 {
     use RequiresServices;
+    use StoresYourStreamTuning;
 
     private MockClock $clock;
     private RecordingLogger $logger;
@@ -121,7 +122,9 @@ final class YourStreamWordSweepTest extends DbTestCase
         foreach ($states as $state) {
             StateMarks::clearFavorite($state);
         }
+        $this->entry($this->requireFeed($user), 'Wetterbericht', '2026-11-20 10:00:00');
         $this->entityManager->flush();
+        self::assertGreaterThan($mark, $this->lastEntryId());
         $this->clock->modify('+61 minutes');
 
         $report = $this->sweep();
@@ -134,8 +137,7 @@ final class YourStreamWordSweepTest extends DbTestCase
     public function testADisabledAccountIsNeitherCheckedNorBuilt(): void
     {
         $user = $this->readerOfBundesliga('disabled@example.com');
-        RecommendationRunFixtures::fromContainer(self::getContainer())
-            ->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Wide));
+        $this->storeYourStreamTuning($user, new YourStreamTuning(false, YourStreamPrecision::Wide));
 
         $report = $this->sweep();
 
