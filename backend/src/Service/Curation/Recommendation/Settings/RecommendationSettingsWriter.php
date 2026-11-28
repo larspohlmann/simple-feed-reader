@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Settings;
 
+use App\Entity\ForYouStreamTuning;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
@@ -27,6 +28,12 @@ final readonly class RecommendationSettingsWriter
     public function save(User $user, RecommendationSettingsValues $values): void
     {
         $this->loadOrCreate($user)->update($this->withNormalisedGuidance($values));
+        $this->entityManager->flush();
+    }
+
+    public function saveForYouStream(User $user, ForYouStreamTuning $tuning): void
+    {
+        $this->loadOrCreate($user)->updateForYouStream($tuning);
         $this->entityManager->flush();
     }
 
@@ -73,7 +80,6 @@ final readonly class RecommendationSettingsWriter
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
             showScoreAndReasons: $values->showScoreAndReasons,
-            forYouStream: $values->forYouStream,
         );
     }
 }

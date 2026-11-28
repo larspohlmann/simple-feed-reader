@@ -99,10 +99,11 @@ final class RecommendationSettings
         $this->debugEnabled = $values->debugEnabled;
         $this->autoGenerateIntervalHours = $values->autoGenerateIntervalHours;
         $this->showScoreAndReasons = $values->showScoreAndReasons;
+    }
 
-        if (null !== $values->forYouStream) {
-            $this->forYouStream = $values->forYouStream;
-        }
+    public function updateForYouStream(ForYouStreamTuning $tuning): void
+    {
+        $this->forYouStream = $tuning;
     }
 
     public function getForYouStreamTuning(): ForYouStreamTuning

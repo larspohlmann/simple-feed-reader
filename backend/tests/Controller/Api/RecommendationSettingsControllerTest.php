@@ -27,6 +27,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     use ProvidesWorkerHeartbeats;
 
     private const string URI = '/api/me/ai/recommendations';
+    private const string STREAM_URI = '/api/me/ai/recommendations/for-you-stream';
 
     private function fullPayloadJson(): string
     {
@@ -81,33 +82,39 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         );
     }
 
-    public function testPutStoresTheStreamSwitchAndPrecision(): void
+    public function testAFirstStreamPutStoresTheSwitchAndPrecisionAndAnswersWithTheWholeState(): void
     {
         $client = static::createClient();
         $headers = $this->bearerFor($this->factory()->create('recsettings-stream-put@example.test'));
 
-        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'narrow']);
+        $this->putStream($client, $headers, ['enabled' => false, 'precision' => 'narrow']);
 
         self::assertResponseIsSuccessful();
-        $saved = $this->payload($client)['forYouStream'];
-        self::assertIsArray($saved);
-        self::assertFalse($saved['enabled']);
-        self::assertSame('narrow', $saved['precision']);
+        $saved = $this->payload($client);
+        $stream = $saved['forYouStream'];
+        self::assertIsArray($stream);
+        self::assertFalse($stream['enabled']);
+        self::assertSame('narrow', $stream['precision']);
 
         $client->request('GET', self::URI, server: $headers);
-        $shown = $this->payload($client)['forYouStream'];
-        self::assertIsArray($shown);
-        self::assertFalse($shown['enabled']);
-        self::assertSame('narrow', $shown['precision']);
+        self::assertSame($this->payload($client), $saved);
     }
 
-    public function testAPutWithoutForYouStreamKeepsTheStoredSettings(): void
+    public function testTheSettingsPutIgnoresAForYouStreamKey(): void
     {
         $client = static::createClient();
-        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-keep@example.test'));
-        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'balanced']);
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-ignored@example.test'));
+        $this->putStream($client, $headers, ['enabled' => false, 'precision' => 'balanced']);
 
-        $this->putWithStream($client, $headers, null);
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode(
+                [...$this->fullPayload(), 'forYouStream' => ['enabled' => true, 'precision' => 'narrowest']],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
 
         self::assertResponseIsSuccessful();
         $kept = $this->payload($client)['forYouStream'];
@@ -116,45 +123,43 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         self::assertSame('balanced', $kept['precision']);
     }
 
-    public function testAPutWithANullForYouStreamKeepsTheStoredSettings(): void
-    {
-        $client = static::createClient();
-        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-null@example.test'));
-        $this->putWithStream($client, $headers, ['enabled' => false, 'precision' => 'widest']);
-
-        $client->request(
-            'PUT',
-            self::URI,
-            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
-            content: json_encode([...$this->fullPayload(), 'forYouStream' => null], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertResponseIsSuccessful();
-        $kept = $this->payload($client)['forYouStream'];
-        self::assertIsArray($kept);
-        self::assertFalse($kept['enabled']);
-        self::assertSame('widest', $kept['precision']);
-    }
-
-    public function testAPutWithAnUnknownPrecisionIsRejected(): void
+    public function testAStreamPutWithAnUnknownPrecisionIsRejected(): void
     {
         $client = static::createClient();
         $headers = $this->bearerFor($this->factory()->create('recsettings-stream-unknown@example.test'));
 
-        $this->putWithStream($client, $headers, ['enabled' => true, 'precision' => 'sharpest']);
+        $this->putStream($client, $headers, ['enabled' => true, 'precision' => 'sharpest']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
-    public function testAPutWithAStreamMissingItsPrecisionIsRejected(): void
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function incompleteStreamBodies(): iterable
+    {
+        yield 'no precision' => [['enabled' => false]];
+        yield 'no switch' => [['precision' => 'widest']];
+    }
+
+    /** @param array<string, mixed> $body */
+    #[DataProvider('incompleteStreamBodies')]
+    public function testAStreamPutMissingAFieldIsRejected(array $body): void
     {
         $client = static::createClient();
         $headers = $this->bearerFor($this->factory()->create('recsettings-stream-partial@example.test'));
 
-        $this->putWithStream($client, $headers, ['enabled' => false]);
+        $this->putStream($client, $headers, $body);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testTheStreamEndpointRefusesAnAnonymousCaller(): void
+    {
+        $client = static::createClient();
+
+        $this->putStream($client, [], ['enabled' => false, 'precision' => 'narrow']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testShowListsTheStoredPhrases(): void
@@ -189,18 +194,13 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
 
     /**
      * @param array<string, string> $headers
-     * @param array<string, mixed>|null $forYouStream
+     * @param array<string, mixed> $body
      */
-    private function putWithStream(KernelBrowser $client, array $headers, ?array $forYouStream): void
+    private function putStream(KernelBrowser $client, array $headers, array $body): void
     {
-        $body = $this->fullPayload();
-        if (null !== $forYouStream) {
-            $body['forYouStream'] = $forYouStream;
-        }
-
         $client->request(
             'PUT',
-            self::URI,
+            self::STREAM_URI,
             server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );

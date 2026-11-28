@@ -43,8 +43,10 @@ and tune how strict the matching is.
   score; the scorer takes the account's threshold instead of the constant.
 - Phrases are stored with the account's term set, replaced together with the stems in `InterestTermStore`.
   The data is develop/Strato-only, so existing rows simply start with none.
-- The settings and the word list travel through the existing recommendation settings endpoint pair (read and
-  patch), JSON in, JSON out — nothing browser-coupled, fits the iOS constraint.
+- `GET /api/me/ai/recommendations` carries the settings and the word list; the switch and precision are written
+  through their own sub-resource, `PUT /api/me/ai/recommendations/for-you-stream` (`{enabled, precision}`, both
+  required), which answers with the same JSON as the GET. The whole-settings PUT ignores a `forYouStream` key.
+  JSON in, JSON out — nothing browser-coupled, fits the iOS constraint.
 - Copy in all four languages (de/en/fr/es) per the glossary.
 
 ## Left to the builder

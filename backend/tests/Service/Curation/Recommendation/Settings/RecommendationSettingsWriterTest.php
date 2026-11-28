@@ -110,26 +110,31 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(9, $profileSettings->viewedCap);
     }
 
-    public function testSavingStoresTheStreamTuningThroughTheGuidanceNormalisation(): void
+    public function testSaveForYouStreamCreatesTheRowWithTheTuningAndDefaultSettings(): void
     {
-        $this->writer->save($this->user, $this->values(
-            showScoreAndReasons: false,
-            guidancePrompt: '   ',
-            forYouStream: new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow),
-        ));
+        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow));
 
         $reloaded = $this->reloaded();
-        self::assertNull($reloaded->values()->guidancePrompt);
         self::assertFalse($reloaded->getForYouStreamTuning()->isEnabled());
         self::assertSame(ForYouStreamPrecision::Narrow, $reloaded->getForYouStreamTuning()->getPrecision());
+        self::assertSame(RecommendationSettings::DEFAULT_FAVORITES_CAP, $reloaded->values()->favoritesCap);
     }
 
-    public function testSavingWithoutStreamTuningKeepsTheStoredOne(): void
+    public function testSaveForYouStreamKeepsTheOtherSettings(): void
     {
-        $this->writer->save($this->user, $this->values(
-            showScoreAndReasons: false,
-            forYouStream: new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced),
-        ));
+        $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
+
+        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(true, ForYouStreamPrecision::Narrowest));
+
+        $reloaded = $this->reloaded();
+        self::assertTrue($reloaded->values()->showScoreAndReasons);
+        self::assertSame(10, $reloaded->values()->favoritesCap);
+        self::assertSame(ForYouStreamPrecision::Narrowest, $reloaded->getForYouStreamTuning()->getPrecision());
+    }
+
+    public function testSavingTheSettingsKeepsTheStoredStreamTuning(): void
+    {
+        $this->writer->saveForYouStream($this->user, new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced));
 
         $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
 
@@ -147,20 +152,16 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(ForYouStreamPrecision::Wide, $tuning->getPrecision());
     }
 
-    private function values(
-        bool $showScoreAndReasons,
-        string $guidancePrompt = 'Only cats.',
-        ?ForYouStreamTuning $forYouStream = null,
-    ): RecommendationSettingsValues {
+    private function values(bool $showScoreAndReasons): RecommendationSettingsValues
+    {
         return new RecommendationSettingsValues(
-            guidancePrompt: $guidancePrompt,
+            guidancePrompt: 'Only cats.',
             favoritesCap: 10,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
             showScoreAndReasons: $showScoreAndReasons,
-            forYouStream: $forYouStream,
         );
     }
 

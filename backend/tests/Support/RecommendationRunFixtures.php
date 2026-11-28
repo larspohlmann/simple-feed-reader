@@ -205,19 +205,7 @@ final readonly class RecommendationRunFixtures
 
     public function storeForYouStreamTuning(User $user, ForYouStreamTuning $tuning): void
     {
-        $row = $this->settingsRowOf($user);
-        $values = $row->values();
-        $row->update(new RecommendationSettingsValues(
-            $values->guidancePrompt,
-            $values->favoritesCap,
-            $values->poolLimits,
-            $values->contextWindow,
-            $values->batchSize,
-            $values->debugEnabled,
-            $values->autoGenerateIntervalHours,
-            $values->showScoreAndReasons,
-            $tuning,
-        ));
+        $this->settingsRowOf($user)->updateForYouStream($tuning);
         $this->entityManager->flush();
     }
 
