@@ -48,9 +48,6 @@ final class EntryStemming
         $stemWords = [];
         foreach ([$entry->title, EntryPlainText::cut($entry->summary, self::BODY_CHARACTERS)] as $text) {
             foreach ($this->equivalents->canonicalizeWordsWithSurfaces($text) as [$word, $bare, $surface]) {
-                if ($surface === null) {
-                    continue;
-                }
                 foreach ($this->findWordStems($word, $bare, $entry->language) as $stem) {
                     $stemWords[$stem][] = $surface;
                 }

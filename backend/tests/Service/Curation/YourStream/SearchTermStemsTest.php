@@ -31,6 +31,22 @@ final class SearchTermStemsTest extends TestCase
         );
     }
 
+    public function testAStopWordOfAnyLanguageAddsNoStemInAnyLanguage(): void
+    {
+        foreach ([...FeedLanguage::cases(), null] as $language) {
+            self::assertSame([], $this->stems->collectStems('der die das', $language), $language->value ?? 'cut');
+        }
+    }
+
+    public function testAContentWordNextToTheStopWordsStillAddsItsStems(): void
+    {
+        foreach ([...FeedLanguage::cases(), null] as $language) {
+            $stems = $this->stems->collectStems('Wärmepumpe Förderung die', $language);
+
+            self::assertCount($language === FeedLanguage::German ? 4 : 2, $stems, $language->value ?? 'cut');
+        }
+    }
+
     public function testStopWordsAndOverlongStemsAreDropped(): void
     {
         self::assertSame([], $this->stems->collectStems('the ' . str_repeat('a', 70), FeedLanguage::English));

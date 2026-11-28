@@ -17,11 +17,18 @@ final readonly class SearchTermStems
     {
     }
 
-    /** @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's */
+    /**
+     * A term is typed in one language but stemmed in all, so a stop word of any language is dropped first.
+     *
+     * @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's
+     */
     public function collectStems(string $term, ?FeedLanguage $language): array
     {
         $shares = [];
         foreach ($this->equivalents->canonicalizeWords($term) as [$word, $bare]) {
+            if ($this->stopWordStems->isStopWordInAnyLanguage($word)) {
+                continue;
+            }
             foreach ($this->equivalents->stemWordAndParts($word, $bare, $language) as $position => $stem) {
                 if ($this->isStorable($stem, $language)) {
                     $share = $position === 0 ? 1.0 : self::PART_WEIGHT_SHARE;

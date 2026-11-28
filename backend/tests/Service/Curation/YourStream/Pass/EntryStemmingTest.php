@@ -112,12 +112,14 @@ final class EntryStemmingTest extends TestCase
         self::assertArrayNotHasKey('die', $words);
     }
 
-    public function testACollapsedPhraseLeavesItsStemWithoutASurface(): void
+    public function testACanonicalKeepsTheWordsTheEntrySpelledIt(): void
     {
-        $entry = new StreamEntryModel(1, FeedLanguage::English, 'European Union summit', null);
+        $words = $this->stemming->collectStemWords(
+            new StreamEntryModel(1, FeedLanguage::English, 'European Union summit', 'EU leaders meet NATO'),
+        );
 
-        self::assertArrayNotHasKey('eunion', $this->stemming->collectStemWords($entry));
-        self::assertArrayHasKey('eunion', $this->stemming->collectStems($entry)->positionWeights);
+        self::assertSame(['European Union', 'EU'], $words['eunion']);
+        self::assertSame(['NATO'], $words['nato']);
     }
 
     private function stem(string $word): string

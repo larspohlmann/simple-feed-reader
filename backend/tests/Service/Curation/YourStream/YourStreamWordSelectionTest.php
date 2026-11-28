@@ -125,6 +125,14 @@ final class YourStreamWordSelectionTest extends TestCase
         self::assertSame(['wind' => 'Wind', 'solar' => 'Solar'], array_column($wordsByStem, 1, 0));
     }
 
+    public function testOnATieTheShorterSurfaceWins(): void
+    {
+        $this->articles(FeedLanguage::English, 1, ['eunion' => 1.0], ['eunion' => ['European Union']]);
+        $this->articles(FeedLanguage::English, 1, ['eunion' => 1.0], ['eunion' => ['EU']]);
+
+        self::assertSame('EU', $this->pickWords(FeedLanguage::English, 600, [])[0]->word);
+    }
+
     public function testAStemWithoutASurfaceShowsTheStem(): void
     {
         $this->articles(FeedLanguage::English, 2, ['eunion' => 1.0]);

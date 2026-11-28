@@ -29,7 +29,7 @@ final class WordEquivalentsTest extends TestCase
         );
     }
 
-    public function testSurfacesSurviveCanonicalisationAndACollapsedPhraseShowsNone(): void
+    public function testACanonicalKeepsTheWordsTheTextSpelledIt(): void
     {
         $text = 'Die European Union und Bundesliga-Clubs, EU';
 
@@ -37,11 +37,11 @@ final class WordEquivalentsTest extends TestCase
 
         self::assertSame([
             ['die', 'die', 'Die'],
-            ['eunion', 'eunion', null],
+            ['eunion', 'eunion', 'European Union'],
             ['und', 'und', 'und'],
             ['bundesliga', 'bundesliga', 'Bundesliga'],
             ['clubs', 'clubs', 'Clubs'],
-            ['eunion', 'eunion', null],
+            ['eunion', 'eunion', 'EU'],
         ], $words);
         self::assertSame(
             $this->equivalents->canonicalizeWords($text),

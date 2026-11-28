@@ -7,6 +7,7 @@ namespace App\Service\Foundation\Stemming;
 use App\Enum\FeedLanguage;
 use App\Service\Foundation\Stemming\Support\WordStems;
 use App\Service\Foundation\Text\StopWords\StopWordsInterface;
+use App\Service\Foundation\Text\Support\CaseFold;
 
 final readonly class StopWordStems
 {
@@ -16,10 +17,19 @@ final readonly class StopWordStems
     /** @var array<string, true> the stop-word stems of text without a language, in WordStems' cut form */
     private array $cutStems;
 
+    /** @var array<string, true> every language's stop words, casefolded */
+    private array $wordsInAnyLanguage;
+
     public function __construct(WordStemmer $stemmer, StopWordsInterface $stopWords)
     {
         $this->stemsByLanguage = self::stemsByLanguage($stemmer, $stopWords);
         $this->cutStems = self::cutStems($stopWords);
+        $this->wordsInAnyLanguage = self::wordsInAnyLanguage($stopWords);
+    }
+
+    public function isStopWordInAnyLanguage(string $casefoldedWord): bool
+    {
+        return isset($this->wordsInAnyLanguage[$casefoldedWord]);
     }
 
     public function isStopWordStem(string $stem, ?FeedLanguage $language): bool
@@ -57,5 +67,18 @@ final readonly class StopWordStems
         }
 
         return array_fill_keys($cutStems, true);
+    }
+
+    /** @return array<string, true> */
+    private static function wordsInAnyLanguage(StopWordsInterface $stopWords): array
+    {
+        $words = [];
+        foreach (FeedLanguage::cases() as $language) {
+            foreach ($stopWords->listWords($language) as $word) {
+                $words[CaseFold::normalized($word, \Normalizer::FORM_KC)] = true;
+            }
+        }
+
+        return $words;
     }
 }

@@ -85,6 +85,33 @@ final class YourStreamWordBuilderTest extends DbTestCase
         self::assertSame(['de', 'en', ''], array_values(array_unique(array_column($this->rows($words), 0))));
     }
 
+    public function testACanonicalShowsTheWordsTheReaderSawMostOften(): void
+    {
+        $feed = $this->subscribedFeed('https://en.example.com/feed.xml', FeedLanguage::English);
+        $favourites = [
+            $this->favourite($feed, 'EU summit ends'),
+            $this->favourite($feed, 'EU budget talks'),
+            $this->favourite($feed, 'European Union rules'),
+            $this->favourite($feed, 'NATO summit'),
+            $this->favourite($feed, 'NATO talks'),
+        ];
+
+        $words = array_column($this->rows($this->buildWords($favourites, [])), 1);
+
+        self::assertContains('EU', $words);
+        self::assertContains('NATO', $words);
+        self::assertNotContains('eunion', $words);
+        self::assertNotContains('nato', $words);
+    }
+
+    public function testAStopWordSearchAddsNoWordInAnyLanguage(): void
+    {
+        $this->subscribedFeed('https://de.example.com/feed.xml', FeedLanguage::German);
+        $this->subscribedFeed('https://en.example.com/feed.xml', FeedLanguage::English);
+
+        self::assertSame([], $this->buildWords([], ['der die das']));
+    }
+
     public function testNoInterestsBuildNoWords(): void
     {
         $feed = $this->subscribedFeed('https://de.example.com/feed.xml', FeedLanguage::German);

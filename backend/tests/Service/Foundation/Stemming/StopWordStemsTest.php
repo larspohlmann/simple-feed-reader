@@ -55,6 +55,16 @@ final class StopWordStemsTest extends TestCase
         }
     }
 
+    public function testAStopWordOfAnyLanguageIsAStopWordInEveryLanguage(): void
+    {
+        foreach (['der', 'die', 'the', 'les', 'los', 'über'] as $word) {
+            self::assertTrue($this->stopWordStems->isStopWordInAnyLanguage($word), $word);
+        }
+        foreach (['wärmepumpe', 'förderung', 'climate', 'warm'] as $word) {
+            self::assertFalse($this->stopWordStems->isStopWordInAnyLanguage($word), $word);
+        }
+    }
+
     public function testAWordInNoListIsNoStopWordStemWithoutALanguage(): void
     {
         foreach (['storm', 'guerre', 'sturm'] as $word) {

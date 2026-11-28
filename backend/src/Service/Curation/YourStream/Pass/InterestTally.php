@@ -92,18 +92,29 @@ final class InterestTally
         return $this->supports[$languageKey][$stem] ?? 0.0;
     }
 
-    /** The first search's term as typed, else the surface seen most often, first seen on a tie, else the stem. */
+    /** The first search's term as typed, else the surface seen most often, else the stem. */
     public function readDisplayWord(string $languageKey, string $stem): string
     {
-        if (isset($this->searchTerms[$languageKey][$stem])) {
-            return $this->searchTerms[$languageKey][$stem];
-        }
-        $surfaces = $this->surfaceCounts[$languageKey][$stem] ?? [];
-        if ($surfaces === []) {
-            return $stem;
+        return $this->searchTerms[$languageKey][$stem]
+            ?? self::pickSurface($this->surfaceCounts[$languageKey][$stem] ?? [])
+            ?? $stem;
+    }
+
+    /** @param array<array-key, int> $surfaceCounts on a tie the shorter, then the first seen */
+    private static function pickSurface(array $surfaceCounts): ?string
+    {
+        $picked = null;
+        $pickedCount = 0;
+        foreach ($surfaceCounts as $surfaceKey => $count) {
+            $surface = (string) $surfaceKey;
+            $isShorter = $picked !== null && mb_strlen($surface) < mb_strlen($picked);
+            if ($count > $pickedCount || ($count === $pickedCount && $isShorter)) {
+                $picked = $surface;
+                $pickedCount = $count;
+            }
         }
 
-        return (string) array_search(max($surfaces), $surfaces, true);
+        return $picked;
     }
 
     private function recordStem(string $languageKey, string $stem, float $support, int $articles): void
