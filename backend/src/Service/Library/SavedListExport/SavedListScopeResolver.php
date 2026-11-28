@@ -7,7 +7,6 @@ namespace App\Service\Library\SavedListExport;
 use App\Enum\EntryView;
 use App\Enum\ListOrder;
 use App\Exception\ValidationException;
-use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\LabelRepository;
 use App\Repository\LabelScope;
 use App\Service\Library\SavedListExport\Model\SavedListScopeModel;
