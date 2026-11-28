@@ -230,7 +230,7 @@
       "words": "Your words",
       "wordsEmpty": "No word list yet. Favourite, keep, like or share articles to fill your stream.",
       "noLanguage": "Feeds without a language",
-      "info": "Your stream picks words that stand out in the articles you favourite, keep, like and share, and in your saved searches (listed below). Each new article is checked for them in its headline and text, and if enough of them appear, it lands in your stream. Words that are rare in your feeds count more than common ones. Precision sets how close the match must be: narrow lets in only strong matches, wide lets in more. Changes only affect new articles.",
+      "info": "Your stream picks words that stand out in the articles you favourite, keep, like and share, and in your saved searches. Each new article is checked for them in its headline and text, and if enough of them appear, it lands in your stream. Words that are rare in your feeds count more than common ones. Precision sets how close the match must be: narrow lets in only strong matches, wide lets in more. Changes only affect new articles.",
       "saved": "Saved."
     },
     "ai": {

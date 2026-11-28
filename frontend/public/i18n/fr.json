@@ -230,7 +230,7 @@
       "words": "Vos mots",
       "wordsEmpty": "Pas encore de liste de mots. Mettez en favori, conservez, aimez ou partagez des articles pour remplir votre fil.",
       "noLanguage": "Flux sans langue",
-      "info": "Votre fil retient les mots qui ressortent dans les articles que vous mettez en favori, conservez, aimez et partagez, ainsi que dans vos recherches enregistrées (listés ci-dessous). Le titre et le texte de chaque nouvel article sont comparés à ces mots, et si assez d'entre eux apparaissent, l'article arrive dans votre fil. Les mots rares dans vos flux comptent davantage que les courants. La précision règle la proximité exigée : étroite ne laisse passer que les correspondances fortes, large en laisse passer davantage. Les modifications n'affectent que les nouveaux articles.",
+      "info": "Votre fil retient les mots qui ressortent dans les articles que vous mettez en favori, conservez, aimez et partagez, ainsi que dans vos recherches enregistrées. Le titre et le texte de chaque nouvel article sont comparés à ces mots, et si assez d'entre eux apparaissent, l'article arrive dans votre fil. Les mots rares dans vos flux comptent davantage que les courants. La précision règle la proximité exigée : étroite ne laisse passer que les correspondances fortes, large en laisse passer davantage. Les modifications n'affectent que les nouveaux articles.",
       "saved": "Enregistré."
     },
     "ai": {

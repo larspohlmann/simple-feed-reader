@@ -230,7 +230,7 @@
       "words": "Tus palabras",
       "wordsEmpty": "Aún no hay lista de palabras. Marca como favoritos, guarda, da me gusta o comparte artículos para llenar tu flujo.",
       "noLanguage": "Feeds sin idioma",
-      "info": "Tu flujo elige las palabras que destacan en los artículos que marcas como favoritos, guardas, te gustan y compartes, y en tus búsquedas guardadas (listadas abajo). El titular y el texto de cada entrada nueva se comparan con ellas, y si aparecen suficientes, la entrada llega a tu flujo. Las palabras poco frecuentes en tus feeds cuentan más que las comunes. La precisión fija lo cerca que debe estar la coincidencia: estrecha solo deja pasar las coincidencias fuertes, amplia deja pasar más. Los cambios solo afectan a las entradas nuevas.",
+      "info": "Tu flujo elige las palabras que destacan en los artículos que marcas como favoritos, guardas, te gustan y compartes, y en tus búsquedas guardadas. El titular y el texto de cada entrada nueva se comparan con ellas, y si aparecen suficientes, la entrada llega a tu flujo. Las palabras poco frecuentes en tus feeds cuentan más que las comunes. La precisión fija lo cerca que debe estar la coincidencia: estrecha solo deja pasar las coincidencias fuertes, amplia deja pasar más. Los cambios solo afectan a las entradas nuevas.",
       "saved": "Guardado."
     },
     "ai": {

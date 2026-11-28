@@ -230,7 +230,7 @@
       "words": "Deine Wörter",
       "wordsEmpty": "Noch keine Wortliste. Favorisiere, behalte, markiere mit „Gefällt mir“ oder teile Artikel, um deinen Stream zu füllen.",
       "noLanguage": "Feeds ohne Sprache",
-      "info": "Dein Stream wählt Wörter, die in den Artikeln auffallen, die du favorisierst, behältst, mit „Gefällt mir“ markierst und teilst, sowie in deinen gespeicherten Suchen (unten aufgelistet). Jeder neue Eintrag wird in Überschrift und Text darauf geprüft, und kommen genug davon vor, landet er in deinem Stream. Wörter, die in deinen Feeds selten sind, zählen mehr als häufige. Die Genauigkeit legt fest, wie genau der Treffer sein muss: eng lässt nur starke Treffer durch, weit lässt mehr durch. Änderungen wirken sich nur auf neue Einträge aus.",
+      "info": "Dein Stream wählt Wörter, die in den Artikeln auffallen, die du favorisierst, behältst, mit „Gefällt mir“ markierst und teilst, sowie in deinen gespeicherten Suchen. Jeder neue Eintrag wird in Überschrift und Text darauf geprüft, und kommen genug davon vor, landet er in deinem Stream. Wörter, die in deinen Feeds selten sind, zählen mehr als häufige. Die Genauigkeit legt fest, wie genau der Treffer sein muss: eng lässt nur starke Treffer durch, weit lässt mehr durch. Änderungen wirken sich nur auf neue Einträge aus.",
       "saved": "Gespeichert."
     },
     "ai": {
