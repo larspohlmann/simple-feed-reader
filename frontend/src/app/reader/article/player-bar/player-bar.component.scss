@@ -54,4 +54,8 @@
   .reader-cinema__toggle {
     display: inline-flex;
   }
+
+  :host-context(article[data-reading-width='full']) .reader-cinema__toggle {
+    display: none;
+  }
 }

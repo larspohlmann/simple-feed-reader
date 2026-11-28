@@ -71,6 +71,12 @@ article[data-reading-width='full'] {
   margin-bottom: var(--space-5);
 }
 
+article[data-reading-width='full'] .lead-image {
+  width: auto;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
 /* The card chrome (amber ring, surface, padding) lives in app-warning-box; this
    owns only the note's place in the reader and its inner layout. The glyph sits
    in the box's gutter, the body hangs beside it — the paywall-notice pattern. */

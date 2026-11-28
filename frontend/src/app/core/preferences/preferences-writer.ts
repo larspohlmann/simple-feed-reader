@@ -1,8 +1,8 @@
 import { InjectionToken, WritableSignal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { Handedness } from './handedness';
-import { ReadingWidth } from './reading-width';
 import { MagazineStyle } from './magazine-style';
+import { ReadingWidth } from './reading-width';
 import { SidebarStyle } from './sidebar-style';
 import { ThemeName } from '../../theme/themes/registry';
 

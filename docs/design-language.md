@@ -61,9 +61,19 @@ discover panel and the auth card each arrived at 12px independently.
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
+| `--reading-measure` | `720px` | the article column at the standard Article width |
+| `--reading-measure-wide` | `960px` | the article column at wide, selected by `article[data-reading-width]` |
 | `--footer-chip-name-max` | `24ch` | the feed name in an "Also in" / "Also covered by" footer chip, which ellipsises past it; the chip's `title` carries the full name (#2017) |
 | `--mini-card-thumb-w` | `104px` | the picture width of a "more sources" mini card, at a 104 / 68 aspect ratio (#2055) |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
+
+**Article width** (Settings → Preferences, per account) has three steps, set on
+`<article data-reading-width>`: standard caps the column at `--reading-measure`
+(720px), wide at `--reading-measure-wide` (960px), and full fills the reader pane and
+keeps its side padding. At full, 16:9 media (embeds and the prose video) stop growing
+where the whole frame fits the visible pane height and are centred, the lead image
+never upscales past its own width, and the cinema toggle is hidden, as every video is
+already at cinema size.
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
 real app bar at runtime and writes it to `--app-bar-h`. Every consumer must read
@@ -2259,8 +2269,6 @@ the list's sidebar, the article's back).
 - **Handedness** (Settings → Preferences, per account): right puts the stack in the
   bottom-right corner; left mirrors all of it, the outer disc on the left edge. A fine
   pointer ignores it.
-- **Article width** (Settings → Preferences, per account): standard caps the article at
-  720px, wide at 960px, full lets it fill the reader pane and keeps its side padding.
 - Every disc is the same grey (`--text-muted`) at 35% over a frost, so the rows show
   through; only an active toggle (favourite or save when on) takes the accent.
 - On touch the list drops the column below `18rem` of list height
