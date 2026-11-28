@@ -9,7 +9,6 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Recommendation\Profile\ProfileRunAdvancer;
 use App\Service\Curation\Recommendation\Run\Model\TickDriver;
@@ -36,9 +35,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('profile-run-advancer@example.test');
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);

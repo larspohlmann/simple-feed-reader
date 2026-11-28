@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatLongDate,
   formatLongDateTime,
+  formatOneDecimal,
   formatRange,
   formatTime,
   relativeTime,
@@ -295,5 +296,13 @@ describe('entryRelativeTime', () => {
   it('dates an entry without a published time by when it was fetched', () => {
     const entry = { publishedAt: null, createdAt: minutesAgo(120) };
     expect(entryRelativeTime(entry, 'en')).toBe(relativeTime(entry.createdAt, 'en'));
+  });
+});
+
+describe('formatOneDecimal', () => {
+  it('always shows one decimal in the language of the page', () => {
+    expect(formatOneDecimal(0.85, 'en')).toBe('0.9');
+    expect(formatOneDecimal(3, 'en')).toBe('3.0');
+    expect(formatOneDecimal(1234.56, 'de')).toBe('1.234,6');
   });
 });

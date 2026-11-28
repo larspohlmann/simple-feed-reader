@@ -188,6 +188,14 @@ export function formatInteger(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
+/** A number with exactly one decimal in the active language -- `0.9` in English, `0,9` in German. */
+export function formatOneDecimal(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 /** An inclusive bound pair as `min–max`, each side grouped like `formatInteger`. */
 export function formatRange(
   bounds: { readonly min: number; readonly max: number },

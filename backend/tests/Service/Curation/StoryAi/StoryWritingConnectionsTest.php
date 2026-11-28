@@ -7,7 +7,6 @@ namespace App\Tests\Service\Curation\StoryAi;
 use App\Entity\AiProviderSettings;
 use App\Entity\StorySettings;
 use App\Entity\User;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\StoryAi\StoryWritingConnections;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -23,9 +22,7 @@ final class StoryWritingConnectionsTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('story-connections@example.test');
     }
 

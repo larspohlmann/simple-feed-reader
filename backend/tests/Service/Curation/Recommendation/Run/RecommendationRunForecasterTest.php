@@ -11,7 +11,6 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Curation\Recommendation\Run\RecommendationRunForecaster;
 use App\Tests\DbTestCase;
@@ -36,9 +35,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('eta-owner@example.test');
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testWeightsTheTailPhasesFromHistoryAndSubtractsElapsed(): void

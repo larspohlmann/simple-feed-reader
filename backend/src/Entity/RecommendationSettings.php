@@ -41,15 +41,8 @@ final class RecommendationSettings
     #[ORM\Column(options: ['default' => self::DEFAULT_FAVORITES_CAP])]
     private int $favoritesCap = self::DEFAULT_FAVORITES_CAP;
 
-    #[ORM\Column(options: ['default' => self::DEFAULT_CANDIDATE_POOL_SIZE])]
-    private int $candidatePoolSize = self::DEFAULT_CANDIDATE_POOL_SIZE;
-
-    /** How many days back a run's candidate pool reaches; candidatePoolSize caps the pool inside that window. */
-    #[ORM\Column(options: ['default' => self::DEFAULT_LOOKBACK_DAYS])]
-    private int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS;
-
-    #[ORM\Column(options: ['default' => self::DEFAULT_PICKS_LIMIT])]
-    private int $picksLimit = self::DEFAULT_PICKS_LIMIT;
+    #[ORM\Embedded(class: RecommendationPoolLimits::class, columnPrefix: false)]
+    private RecommendationPoolLimits $poolLimits;
 
     #[ORM\Column(nullable: true)]
     private ?int $contextWindow = null;
@@ -70,6 +63,9 @@ final class RecommendationSettings
     #[ORM\Embedded(class: ProfileTuning::class, columnPrefix: false)]
     private ProfileTuning $profileTuning;
 
+    #[ORM\Embedded(class: ForYouStreamTuning::class, columnPrefix: false)]
+    private ForYouStreamTuning $forYouStream;
+
     /** The connection that builds the profile; null means the active one. */
     #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
     #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
@@ -83,7 +79,9 @@ final class RecommendationSettings
     {
         $this->user = $user;
         $this->storedProfile = StoredProfile::none();
+        $this->poolLimits = RecommendationPoolLimits::defaults();
         $this->profileTuning = ProfileTuning::defaults();
+        $this->forYouStream = ForYouStreamTuning::defaults();
     }
 
     public function getUser(): User
@@ -95,9 +93,7 @@ final class RecommendationSettings
     {
         $this->guidancePrompt = $values->guidancePrompt;
         $this->favoritesCap = $values->favoritesCap;
-        $this->candidatePoolSize = $values->poolLimits->candidatePoolSize;
-        $this->lookbackDays = $values->poolLimits->lookbackDays;
-        $this->picksLimit = $values->poolLimits->picksLimit;
+        $this->poolLimits = $values->poolLimits;
         $this->contextWindow = $values->contextWindow;
         $this->batchSize = $values->batchSize;
         $this->debugEnabled = $values->debugEnabled;
@@ -105,12 +101,22 @@ final class RecommendationSettings
         $this->showScoreAndReasons = $values->showScoreAndReasons;
     }
 
+    public function updateForYouStream(ForYouStreamTuning $tuning): void
+    {
+        $this->forYouStream = $tuning;
+    }
+
+    public function getForYouStreamTuning(): ForYouStreamTuning
+    {
+        return $this->forYouStream;
+    }
+
     public function values(): RecommendationSettingsValues
     {
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
             favoritesCap: $this->favoritesCap,
-            poolLimits: new RecommendationPoolLimits($this->candidatePoolSize, $this->lookbackDays, $this->picksLimit),
+            poolLimits: $this->poolLimits,
             contextWindow: $this->contextWindow,
             batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,

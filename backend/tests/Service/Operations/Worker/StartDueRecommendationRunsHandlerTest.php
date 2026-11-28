@@ -11,7 +11,6 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Service\Operations\Worker\Handler\StartDueRecommendationRunsHandler;
 use App\Service\Operations\Worker\Message\StartDueRecommendationRuns;
@@ -28,9 +27,7 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
     {
         parent::setUp();
 
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     private function aiReadyUserWithCadence(string $email, ?int $hours): User

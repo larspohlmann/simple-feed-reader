@@ -17,7 +17,6 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Library\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -203,9 +202,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
     private function completedRun(User $user): RecommendationRun
     {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $run = (new RecommendationRunFixtures($this->entityManager, $cipher))->createRun($user);
+        $run = RecommendationRunFixtures::fromContainer(self::getContainer())->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 

@@ -8,11 +8,13 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ForYouStreamEntry;
+use App\Entity\ForYouStreamTuning;
 use App\Entity\InclusionChange;
 use App\Entity\InterestTermSet;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\ForYouStreamPrecision;
 use App\Service\Library\Subscription\SubscriptionService;
 use App\Service\Outbound\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Outbound\Fetch\Exception\FeedThrottledException;
@@ -20,6 +22,7 @@ use App\Service\Outbound\Fetch\Exception\FeedUnreachableException;
 use App\Service\Outbound\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Outbound\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StoredUserSettings;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
@@ -203,6 +206,40 @@ final class SubscriptionControllerTest extends ApiTestCase
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
         self::assertSame(['available' => true, 'unreadCount' => 2, 'entryCount' => 3], $counts['forYouStream']);
+    }
+
+    public function testTheCountsPayloadMarksADisabledStreamUnavailable(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('stream-off-counter@example.com');
+        $entityManager = $this->entityManager();
+        $at = new \DateTimeImmutable('2026-11-27T08:00:00Z');
+        $feed = new Feed('https://example.com/stream-off-counts.xml');
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, $at));
+        $entityManager->persist(new InterestTermSet($user, $at, $at, 0));
+        $entries = [];
+        foreach (['alpha', 'beta', 'gamma'] as $guid) {
+            $entry = new Entry($feed, $guid, null, $guid, $at, $at);
+            $entityManager->persist($entry);
+            $entityManager->persist(
+                new ForYouStreamEntry($user, $entry, new \DateTimeImmutable('2026-11-27 12:00:00'), 1.0, 'stem'),
+            );
+            $entries[] = $entry;
+        }
+        $state = new EntryState($user, $entries[0]);
+        $state->hide($at);
+        $entityManager->persist($state);
+        $entityManager->flush();
+        RecommendationRunFixtures::fromContainer(self::getContainer())
+            ->storeForYouStreamTuning($user, new ForYouStreamTuning(false, ForYouStreamPrecision::Balanced));
+
+        $client->request('GET', '/api/subscriptions/counts', server: $this->bearerFor($user));
+
+        self::assertResponseIsSuccessful();
+        $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($counts);
+        self::assertSame(['available' => false, 'unreadCount' => 0, 'entryCount' => 0], $counts['forYouStream']);
     }
 
     public function testCountsRejectsAnonymous(): void

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\InterestPhrase;
+use App\Entity\InterestTermSet;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\FeedLanguage;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Tests\Support\ApiTestCase;
@@ -14,7 +17,9 @@ use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 /** No AI provider row is seeded unless a case adds one, so the context window resolves to the fallback. */
 final class RecommendationSettingsControllerTest extends ApiTestCase
@@ -22,6 +27,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     use ProvidesWorkerHeartbeats;
 
     private const string URI = '/api/me/ai/recommendations';
+    private const string STREAM_URI = '/api/me/ai/recommendations/for-you-stream';
 
     private function fullPayloadJson(): string
     {
@@ -62,6 +68,154 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
         $entityManager->flush();
     }
 
+    public function testShowCarriesTheStreamDefaultsAndAnEmptyListWithoutTermSet(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-defaults@example.test'));
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['enabled' => true, 'precision' => 'wide', 'defaultPrecision' => 'wide', 'phrases' => []],
+            $this->payload($client)['forYouStream'],
+        );
+    }
+
+    public function testAFirstStreamPutStoresTheSwitchAndPrecisionAndAnswersWithTheWholeState(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-put@example.test'));
+
+        $this->putStream($client, $headers, ['enabled' => false, 'precision' => 'narrow']);
+
+        self::assertResponseIsSuccessful();
+        $saved = $this->payload($client);
+        $stream = $saved['forYouStream'];
+        self::assertIsArray($stream);
+        self::assertFalse($stream['enabled']);
+        self::assertSame('narrow', $stream['precision']);
+
+        $client->request('GET', self::URI, server: $headers);
+        self::assertSame($this->payload($client), $saved);
+    }
+
+    public function testTheSettingsPutIgnoresAForYouStreamKey(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-ignored@example.test'));
+        $this->putStream($client, $headers, ['enabled' => false, 'precision' => 'balanced']);
+
+        $client->request(
+            'PUT',
+            self::URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode(
+                [...$this->fullPayload(), 'forYouStream' => ['enabled' => true, 'precision' => 'narrowest']],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+
+        self::assertResponseIsSuccessful();
+        $kept = $this->payload($client)['forYouStream'];
+        self::assertIsArray($kept);
+        self::assertFalse($kept['enabled']);
+        self::assertSame('balanced', $kept['precision']);
+    }
+
+    public function testAStreamPutWithAnUnknownPrecisionIsRejected(): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-unknown@example.test'));
+
+        $this->putStream($client, $headers, ['enabled' => true, 'precision' => 'sharpest']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function incompleteStreamBodies(): iterable
+    {
+        yield 'no precision' => [['enabled' => false]];
+        yield 'no switch' => [['precision' => 'widest']];
+    }
+
+    /** @param array<string, mixed> $body */
+    #[DataProvider('incompleteStreamBodies')]
+    public function testAStreamPutMissingAFieldIsRejected(array $body): void
+    {
+        $client = static::createClient();
+        $headers = $this->bearerFor($this->factory()->create('recsettings-stream-partial@example.test'));
+
+        $this->putStream($client, $headers, $body);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testTheStreamEndpointRefusesAnAnonymousCaller(): void
+    {
+        $client = static::createClient();
+
+        $this->putStream($client, [], ['enabled' => false, 'precision' => 'narrow']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testShowListsTheStoredPhrases(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('recsettings-stream-phrases@example.test');
+        $headers = $this->bearerFor($user);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $at = new \DateTimeImmutable('2026-11-27 10:00:00');
+        $set = new InterestTermSet($user, $at, $at, 0);
+        $set->recordPhrases([
+            new InterestPhrase(FeedLanguage::English, 'heat pumps', 0.8),
+            new InterestPhrase(FeedLanguage::English, 'grid', 1.0),
+        ]);
+        $entityManager->persist($set);
+        $entityManager->flush();
+
+        $client->request('GET', self::URI, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $forYouStream = $this->payload($client)['forYouStream'];
+        self::assertIsArray($forYouStream);
+        self::assertEquals(
+            [['language' => 'en', 'phrases' => [
+                ['phrase' => 'grid', 'weight' => 1],
+                ['phrase' => 'heat pumps', 'weight' => 0.8],
+            ]]],
+            $forYouStream['phrases'],
+        );
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed> $body
+     */
+    private function putStream(KernelBrowser $client, array $headers, array $body): void
+    {
+        $client->request(
+            'PUT',
+            self::STREAM_URI,
+            server: array_merge($headers, ['CONTENT_TYPE' => 'application/json']),
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function fullPayload(): array
+    {
+        $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+
+        /** @var array<string, mixed> $body */
+        return $body;
+    }
+
     public function testAnUnconfiguredAccountReportsAllDefaults(): void
     {
         $client = static::createClient();
@@ -98,11 +252,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         [$headers, $user] = $this->bearerAndUser('recsettings-jev@example.test');
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        (new RecommendationRunFixtures($entityManager, $cipher))->seedReadyScoringSettings($user);
+        RecommendationRunFixtures::fromContainer(self::getContainer())->seedReadyScoringSettings($user);
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -133,7 +283,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
 
         $client->request('GET', self::URI);
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testSavingFullSettingsEchoesTheNewStateAndPersists(): void
@@ -210,7 +360,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testAnOutOfRangeCapIsUnprocessable(): void
@@ -229,7 +379,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -269,7 +419,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -515,7 +665,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $payload = $this->payload($client);
         self::assertSame('validation_error', $payload['type']);
         self::assertIsArray($payload['errors']);
@@ -590,7 +740,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $errors = $this->payload($client)['errors'];
         self::assertIsArray($errors);
         self::assertArrayHasKey('autoGenerateIntervalHours', $errors);

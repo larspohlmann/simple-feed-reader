@@ -7,6 +7,7 @@ namespace App\Tests\Service\Curation\Recommendation\Stream;
 use App\Entity\Entry;
 use App\Entity\EntryText;
 use App\Entity\Feed;
+use App\Entity\ForYouStreamTuning;
 use App\Entity\InclusionChange;
 use App\Entity\InterestTerm;
 use App\Entity\InterestTermSet;
@@ -14,6 +15,7 @@ use App\Entity\NetworkExclusion;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedLanguage;
+use App\Enum\ForYouStreamPrecision;
 use App\Enum\InclusionSurface;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryMembershipSweepRepository;
@@ -32,6 +34,7 @@ use App\Service\Library\Search\Membership\MarkGroupWalker;
 use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StemmingWiring;
 use App\Tests\Support\TickingClock;
@@ -360,6 +363,83 @@ final class ForYouStreamSweepTest extends DbTestCase
         );
     }
 
+    public function testEachAccountMatchesAtItsOwnPrecision(): void
+    {
+        $balanced = $this->subscriber('balanced@example.com');
+        $narrow = $this->subscriber('narrow@example.com');
+        $this->storeTuning($balanced, new ForYouStreamTuning(true, ForYouStreamPrecision::Balanced));
+        $this->storeTuning($narrow, new ForYouStreamTuning(true, ForYouStreamPrecision::Narrow));
+        $this->term($balanced, 'solar', 2.5);
+        $this->term($narrow, 'solar', 2.5);
+        $entry = $this->entry('Solar panels');
+
+        $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame([$entry->requireId()], $this->readEntryIds($balanced));
+        self::assertSame([], $this->readRows($narrow));
+        self::assertSame($entry->requireId(), $this->readMark($narrow));
+    }
+
+    public function testAnAccountWithoutSettingsRowMatchesAtTheDefaultPrecision(): void
+    {
+        $unset = $this->subscriber('unset@example.com');
+        $narrowest = $this->subscriber('narrowest@example.com');
+        $this->storeTuning($narrowest, new ForYouStreamTuning(true, ForYouStreamPrecision::Narrowest));
+        foreach ([$unset, $narrowest] as $user) {
+            $this->term($user, 'solar', 1.6);
+            $this->term($user, 'wind', 1.2);
+        }
+        $solar = $this->entry('Solar panels');
+        $this->entry('Wind farms');
+
+        $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame([$solar->requireId()], $this->readEntryIds($unset));
+        self::assertSame([], $this->readRows($narrowest));
+    }
+
+    public function testADisabledAccountIsNotMatchedAndKeepsItsEntries(): void
+    {
+        $disabled = $this->subscriber('disabled@example.com');
+        $enabled = $this->subscriber('enabled@example.com');
+        $this->term($disabled, 'solar', 2.0);
+        $this->term($enabled, 'solar', 2.0);
+        $kept = $this->entry('Solar panels');
+        $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+        $this->storeTuning($disabled, new ForYouStreamTuning(false, ForYouStreamPrecision::DEFAULT));
+        $fresh = $this->entry('Solar roofs');
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(2, $report->usersSwept);
+        self::assertSame([$kept->requireId()], $this->readEntryIds($disabled));
+        self::assertSame(1, $this->countTerms($disabled));
+        self::assertSame($fresh->requireId(), $this->readMark($disabled));
+        self::assertSame([$kept->requireId(), $fresh->requireId()], $this->readEntryIds($enabled));
+        self::assertSame($fresh->requireId(), $this->readMark($enabled));
+    }
+
+    public function testADisabledAccountsMarkMovesToTheCeilingUnmatched(): void
+    {
+        $user = $this->subscriber('paused@example.com');
+        $this->storeTuning($user, new ForYouStreamTuning(false, ForYouStreamPrecision::DEFAULT));
+        $this->term($user, 'solar', 2.0);
+        $entries = [$this->entry('Solar panels', effectiveAt: self::SETTLED), $this->entry('Solar roofs')];
+
+        $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame(1, $report->usersSwept);
+        self::assertSame($entries[1]->requireId(), $this->readMark($user));
+        self::assertSame([], $this->readRows($user));
+
+        $this->storeTuning($user, new ForYouStreamTuning(true, ForYouStreamPrecision::DEFAULT));
+        $newer = $this->entry('Solar farms', effectiveAt: self::SETTLED);
+
+        $this->sweep()->sweep(SweepBudgetModel::seconds(10));
+
+        self::assertSame([$newer->requireId()], $this->readEntryIds($user));
+    }
+
     private function sweep(
         ?ClockInterface $clock = null,
         ?ForYouStreamMembershipWriterInterface $writer = null,
@@ -471,6 +551,22 @@ final class ForYouStreamSweepTest extends DbTestCase
         $this->entityManager->persist($entry);
 
         return $entry;
+    }
+
+    private function storeTuning(User $user, ForYouStreamTuning $tuning): void
+    {
+        RecommendationRunFixtures::fromContainer(self::getContainer())->storeForYouStreamTuning($user, $tuning);
+    }
+
+    private function countTerms(User $user): int
+    {
+        $count = $this->entityManager->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM interest_term WHERE user_id = ?',
+            [$user->requireId()],
+        );
+        self::assertIsNumeric($count);
+
+        return (int) $count;
     }
 
     private function setMark(User $user, int $mark): void

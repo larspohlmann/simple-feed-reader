@@ -57,6 +57,12 @@ describe('RecommendationSettingsCardComponent', () => {
     lookbackDays: 2,
     workerAlive: true,
     showScoreAndReasons: false,
+    forYouStream: {
+      enabled: true,
+      precision: 'balanced',
+      defaultPrecision: 'wide',
+      phrases: [],
+    },
   };
 
   function guidanceInfo(fixture: ComponentFixture<RecommendationSettingsCardComponent>): string {
@@ -768,6 +774,145 @@ describe('RecommendationSettingsCardComponent', () => {
       expect(config.data.title).toBe('Clear all recommendations?');
       expect(config.data.confirmLabel).toBe('Clear');
       expect(config.data.danger).toBe(true);
+    });
+  });
+
+  describe('the For you stream group', () => {
+    type Fixture = ComponentFixture<RecommendationSettingsCardComponent>;
+    type Stream = RecommendationSettingsState['forYouStream'];
+
+    const streamState = (over: Partial<Stream> = {}): RecommendationSettingsState => ({
+      ...STATE,
+      forYouStream: { ...STATE.forYouStream, ...over },
+    });
+    const queryIn = (fixture: Fixture, selector: string): HTMLElement | null =>
+      fixture.nativeElement.querySelector(selector);
+    const precisionRow = (fixture: Fixture): HTMLElement | null =>
+      queryIn(fixture, '[data-testid="for-you-stream-precision"]');
+    const click = (fixture: Fixture, selector: string): void =>
+      (queryIn(fixture, selector) as HTMLButtonElement).click();
+    const STREAM_URL = '/api/me/ai/recommendations/for-you-stream';
+    const streamPut = (): { body: unknown; flush: (body: object) => void } => {
+      const request = http.expectOne(STREAM_URL);
+      expect(request.request.method).toBe('PUT');
+      return { body: request.request.body, flush: (body) => request.flush(body) };
+    };
+
+    it('hides precision and word list while the stream is off', () => {
+      const fixture = mount(streamState({ enabled: false }));
+
+      expect(queryIn(fixture, '[data-testid="for-you-stream-enabled"]')).not.toBeNull();
+      expect(precisionRow(fixture)).toBeNull();
+      expect(queryIn(fixture, '[data-testid="for-you-stream-phrases"]')).toBeNull();
+    });
+
+    it('saves the switch off through saveForYouStream and keeps the precision', () => {
+      const fixture = mount(streamState({ precision: 'balanced' }));
+      const toggle = queryIn(
+        fixture,
+        '[data-testid="for-you-stream-enabled"] app-toggle input[type="checkbox"]',
+      ) as HTMLInputElement;
+
+      toggle.checked = false;
+      toggle.dispatchEvent(new Event('change'));
+
+      const put = streamPut();
+      expect(put.body).toEqual({ enabled: false, precision: 'balanced' });
+      put.flush(streamState({ enabled: false }));
+      fixture.detectChanges();
+      expect(precisionRow(fixture)).toBeNull();
+    });
+
+    it('steps wider from balanced to wide and narrower to narrow', () => {
+      const fixture = mount(streamState({ precision: 'balanced' }));
+
+      click(fixture, '[data-testid="for-you-stream-precision"] button.wider');
+      const wider = streamPut();
+      expect(wider.body).toEqual({ enabled: true, precision: 'wide' });
+      wider.flush(streamState({ precision: 'wide' }));
+      fixture.detectChanges();
+
+      click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
+      fixture.detectChanges();
+      click(fixture, '[data-testid="for-you-stream-precision"] button.narrower');
+      const [, last] = http.match(STREAM_URL);
+      expect(last.request.body).toEqual({ enabled: true, precision: 'narrow' });
+      last.flush(streamState({ precision: 'narrow' }));
+    });
+
+    it('resets to the default precision from the bar', () => {
+      const fixture = mount(streamState({ precision: 'narrowest' }));
+
+      click(fixture, '[data-testid="for-you-stream-precision"] button.bar');
+
+      const put = streamPut();
+      expect(put.body).toEqual({ enabled: true, precision: 'wide' });
+      put.flush(streamState({ precision: 'wide' }));
+    });
+
+    it('fills the bar towards wide', () => {
+      const fill = (fixture: Fixture): string =>
+        (queryIn(fixture, '[data-testid="for-you-stream-precision"] .fill') as HTMLElement).style
+          .inlineSize;
+
+      expect(fill(mount(streamState({ precision: 'narrow' })))).toBe('25%');
+      expect(fill(mount(streamState({ precision: 'widest' })))).toBe('100%');
+    });
+
+    it('lists phrases per language, strongest first as served', () => {
+      const fixture = mount(
+        streamState({
+          phrases: [
+            {
+              language: 'de',
+              phrases: [
+                { phrase: 'Kernkraft', weight: 0.85 },
+                { phrase: 'Netz', weight: 0.31 },
+              ],
+            },
+            { language: 'fr', phrases: [{ phrase: 'énergie', weight: 0.4 }] },
+          ],
+        }),
+      );
+
+      const list = queryIn(fixture, '[data-testid="for-you-stream-phrases"]') as HTMLElement;
+      const text = list.textContent!.replace(/\s+/g, ' ');
+      expect(text.indexOf('German')).toBeLessThan(text.indexOf('Kernkraft'));
+      expect(text.indexOf('Kernkraft')).toBeLessThan(text.indexOf('Netz'));
+      expect(text.indexOf('Netz')).toBeLessThan(text.indexOf('French'));
+      const rows = Array.from(list.querySelectorAll('.stream-phrase')).map((row) =>
+        Array.from(row.children).map((cell) => cell.textContent),
+      );
+      expect(rows).toEqual([
+        ['Kernkraft', '0.9'],
+        ['Netz', '0.3'],
+        ['énergie', '0.4'],
+      ]);
+    });
+
+    it('shows the empty state without phrases', () => {
+      const fixture = mount(streamState({ phrases: [] }));
+
+      const list = queryIn(fixture, '[data-testid="for-you-stream-phrases"]') as HTMLElement;
+      expect(list.textContent).toContain('No word list yet');
+    });
+
+    it('snaps the bar back when the save fails', () => {
+      const fixture = mount(streamState({ precision: 'balanced' }));
+
+      click(fixture, '[data-testid="for-you-stream-precision"] button.wider');
+      fixture.detectChanges();
+      expect(
+        queryIn(fixture, '[data-testid="for-you-stream-precision"] .fill')!.style.inlineSize,
+      ).toBe('75%');
+      http
+        .expectOne(STREAM_URL)
+        .flush({ title: 'boom' }, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+
+      expect(
+        queryIn(fixture, '[data-testid="for-you-stream-precision"] .fill')!.style.inlineSize,
+      ).toBe('50%');
     });
   });
 });

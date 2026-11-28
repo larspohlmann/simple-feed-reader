@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\ProfileRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Curation\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Curation\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
@@ -36,9 +35,7 @@ final class SnapshotPhaseTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('snapshot-phase@example.test');
         $this->fixtures->seedReadyAiSettings($this->owner);
     }

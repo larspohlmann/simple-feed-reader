@@ -6,7 +6,6 @@ namespace App\Tests\Migrations;
 
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -27,9 +26,7 @@ final class Version20261005140100Test extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('kind-backfill@example.test');
     }
 

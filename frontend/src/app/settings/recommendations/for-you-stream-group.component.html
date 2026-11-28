@@ -1,0 +1,83 @@
+<app-settings-group
+  icon="stream"
+  [title]="'settings.ai.recommendations.forYouStream.title' | transloco"
+  [caption]="'settings.ai.recommendations.forYouStream.caption' | transloco"
+>
+  <app-settings-row
+    data-testid="for-you-stream-enabled"
+    [title]="'settings.ai.recommendations.forYouStream.enabled' | transloco"
+    [description]="'settings.ai.recommendations.forYouStream.enabledDesc' | transloco"
+  >
+    <app-info-tip
+      rowTitleTip
+      [text]="'settings.ai.info.forYouStream' | transloco"
+      [label]="'settings.ai.recommendations.forYouStream.enabled' | transloco"
+    />
+    <app-toggle
+      [label]="'settings.ai.recommendations.forYouStream.enabled' | transloco"
+      [checked]="stream().enabled"
+      (toggled)="onEnabled($event)"
+    />
+  </app-settings-row>
+
+  @if (stream().enabled) {
+    <app-settings-row
+      data-testid="for-you-stream-precision"
+      [stackable]="true"
+      [title]="'settings.ai.recommendations.forYouStream.precision' | transloco"
+      [description]="'settings.ai.recommendations.forYouStream.precisionDesc' | transloco"
+    >
+      <app-stepper-bar
+        class="precision-bar"
+        [step]="precisionIndex() + 1"
+        [min]="1"
+        [max]="precisionSteps"
+        decreaseIcon="zoom_in_map"
+        increaseIcon="zoom_out_map"
+        decreaseClass="narrower"
+        increaseClass="wider"
+        [groupLabel]="'settings.ai.recommendations.forYouStream.precision' | transloco"
+        [decreaseLabel]="'settings.ai.recommendations.forYouStream.narrower' | transloco"
+        [increaseLabel]="'settings.ai.recommendations.forYouStream.wider' | transloco"
+        [resetLabel]="'settings.ai.recommendations.forYouStream.resetPrecision' | transloco"
+        [readout]="
+          'settings.ai.recommendations.forYouStream.precisionReadout'
+            | transloco
+              : {
+                  label:
+                    'settings.ai.recommendations.forYouStream.precisionLabel.' + stream().precision
+                    | transloco,
+                }
+        "
+        (decrease)="step(-1)"
+        (increase)="step(1)"
+        (resetStep)="resetPrecision()"
+      />
+    </app-settings-row>
+
+    <section class="stream-phrases" data-testid="for-you-stream-phrases">
+      <h3 class="stream-phrases-title">
+        {{ 'settings.ai.recommendations.forYouStream.phrases' | transloco }}
+      </h3>
+      @for (group of stream().phrases; track group.language) {
+        <div class="stream-language">
+          <h4 class="stream-language-name">
+            {{ 'reader.feedLanguage.' + group.language | transloco }}
+          </h4>
+          <ul class="stream-phrase-list">
+            @for (entry of group.phrases; track $index) {
+              <li class="stream-phrase">
+                <span class="stream-phrase-text">{{ entry.phrase }}</span>
+                <span class="stream-phrase-weight">{{ formatWeight(entry.weight) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      } @empty {
+        <p class="stream-phrases-empty">
+          {{ 'settings.ai.recommendations.forYouStream.phrasesEmpty' | transloco }}
+        </p>
+      }
+    </section>
+  }
+</app-settings-group>

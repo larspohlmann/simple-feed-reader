@@ -6,7 +6,6 @@ namespace App\Tests\Service\Curation\StoryAi;
 
 use App\Entity\User;
 use App\Enum\StoryAiTask;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Ai\Exception\RetryableProviderException;
@@ -29,9 +28,7 @@ final class StoryAiCallsTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('story-ai-calls@example.test');
         $this->pass = new StoryAiPass(
             $this->owner,

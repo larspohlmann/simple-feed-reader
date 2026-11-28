@@ -856,6 +856,7 @@ These deliberately stay out and own their markup and styles:
 - the entry row's read toggle
 - the view-controls segmented control
 - the sidebar's brightness stepper (`<app-brightness-control>`)
+- `<app-stepper-bar>`, the dial the brightness control and the For you precision share
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -1215,6 +1216,46 @@ dialog's tabs).
 **Not inside `<app-field>`.** The field wraps its control in a `<label>`, and a
 click on the label's text presses the first button of the group. Name the group
 with `ariaLabelKey` and put a hint in a paragraph under it.
+
+### `<app-stepper-bar>`
+
+A stepped dial: two glyph buttons either side of a full-height accent bar that
+fills from `min` to `max` and resets the dial when clicked, plus a visually
+hidden live readout. The caller owns the step and passes it back; the component
+knows no translation keys, so every text arrives already translated.
+
+| Input | Type | Default |
+|---|---|---|
+| `step` | `number` (required) | — the current step |
+| `min`, `max` | `number` (required) | — the bar is empty at `min` and full at `max`; the end buttons disable there |
+| `decreaseIcon`, `increaseIcon` | `string` (required) | — icon names |
+| `groupLabel` | `string` (required) | — the group's accessible name |
+| `decreaseLabel`, `increaseLabel`, `resetLabel` | `string` (required) | — title and `aria-label` of the buttons |
+| `readout` | `string` (required) | — the sentence a screen reader hears on change |
+| `decreaseClass`, `increaseClass` | `string` | `'decrease'`, `'increase'` — a class on each end button for the caller's tests |
+
+| Output | Fires |
+|---|---|
+| `decrease`, `increase` | an end button is pressed |
+| `resetStep` | the bar is pressed (`reset` is a native DOM event name, which the lint rule forbids) |
+
+```html
+<app-stepper-bar
+  [step]="brightness.step()"
+  [min]="brightness.min()"
+  [max]="brightness.max()"
+  decreaseIcon="dark_mode"
+  increaseIcon="light_mode"
+  [groupLabel]="'reader.brightness.aria' | transloco"
+  ...
+  (decrease)="brightness.decrease()"
+/>
+```
+
+The host is `display: flex`; the frame inside grows to the host's width, so the
+caller sizes the host. Its two users are the sidebar's brightness control and the
+For you stream's precision. `<app-text-size-control>` is the same pattern with a
+visible value in the bar and has not been migrated.
 
 ---
 
@@ -2051,9 +2092,9 @@ avatars scale by the step, pictures and chrome stay, and nothing is cut at 150 %
 
 ### Brightness control
 
-`<app-brightness-control>` (local to the sidebar, #832) is a moon
-(`dark_mode`), a solid progress bar and a sun (`light_mode`) in the
-segmented frame it shares with the view-controls groups
+`<app-brightness-control>` (local to the sidebar, #832) renders
+`<app-stepper-bar>` with a moon (`dark_mode`), a solid progress bar and a sun
+(`light_mode`) in the segmented frame it shares with the view-controls groups
 (`theme/_segmented.scss`). The bar is one full-height fill over a track the
 same surface as the glyph buttons; the soft accent tint is the indicator. It
 fills with brightness — empty at the darkest step, full at the brightest — so

@@ -17,7 +17,6 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Curation\Recommendation\Run\DueRecommendationRunFinder;
 use App\Service\Curation\Recommendation\Run\ForYouSweep;
@@ -46,9 +45,7 @@ final class ForYouSweepTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testSweepOnceStartsAndTicksDueProfileRunsToo(): void

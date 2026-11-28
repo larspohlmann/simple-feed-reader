@@ -7,7 +7,6 @@ namespace App\Tests\Service\Curation\StoryAi;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\StoryAi\StoryAiSweep;
 use App\Service\Foundation\Clock\NaiveUtcClock;
 use App\Tests\DbTestCase;
@@ -26,9 +25,7 @@ final class StoryAiSweepTest extends DbTestCase
     {
         parent::setUp();
         $this->clock = new MockClock('2031-05-14 10:00:00', 'UTC');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testATaskRunsEachDueStoryOfAReaderWithAConnection(): void

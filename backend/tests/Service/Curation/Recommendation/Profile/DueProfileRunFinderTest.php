@@ -11,7 +11,6 @@ use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Profile\DueProfileRunFinder;
 use App\Service\Curation\Recommendation\Profile\ProfileConnections;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
@@ -31,9 +30,7 @@ final class DueProfileRunFinderTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testDueOneIntervalAfterTheNewestRunEvenWhenItFailed(): void

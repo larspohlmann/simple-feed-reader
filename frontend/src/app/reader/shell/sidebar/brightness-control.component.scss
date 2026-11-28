@@ -1,7 +1,7 @@
-@use '../../../theme/segmented';
-@include segmented.frame;
-@include segmented.stepper-bar;
-
 :host {
   display: flex;
+}
+
+app-stepper-bar {
+  flex: 1 1 auto;
 }

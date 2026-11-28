@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\FeedLanguage;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Llm\Run\LlmInterestTermExtractor;
@@ -34,9 +33,7 @@ final class LlmInterestTermExtractorTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
         $this->owner = $this->user('interest-terms@example.test');
         $this->connection = $fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->run = new InterestTermRun(
@@ -64,10 +61,15 @@ final class LlmInterestTermExtractorTest extends DbTestCase
             ['solar'],
             array_values(array_unique(array_map(
                 static fn (TermStemModel $stem): string => substr($stem->stem, 0, 5),
-                $outcome->stems,
+                $outcome->requireExtracted()->stems,
             ))),
         );
-        self::assertEqualsWithDelta(0.9, $outcome->stems[0]->weight, 1e-9);
+        self::assertEqualsWithDelta(0.9, $outcome->requireExtracted()->stems[0]->weight, 1e-9);
+        $phrases = $outcome->requireExtracted()->phrases;
+        self::assertCount(1, $phrases);
+        self::assertSame(FeedLanguage::English, $phrases[0]->language);
+        self::assertSame('solar', $phrases[0]->phrase);
+        self::assertEqualsWithDelta(0.9, $phrases[0]->weight, 1e-9);
         $log = $this->onlyLogRow();
         self::assertSame(CallPhase::InterestTerms, $log->getPhase());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());

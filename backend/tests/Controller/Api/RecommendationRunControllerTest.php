@@ -13,7 +13,6 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
 use App\Service\Curation\Ai\Exception\ModelNotOfferedException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
@@ -63,12 +62,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
 
     private function fixtures(): RecommendationRunFixtures
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-
-        return new RecommendationRunFixtures($entityManager, $cipher);
+        return RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     /**

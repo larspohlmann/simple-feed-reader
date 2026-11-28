@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\ForYouStreamTuning;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
+use App\Enum\ForYouStreamPrecision;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationSettingsJson;
@@ -13,6 +15,8 @@ use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabil
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Curation\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
+use App\Service\Curation\Recommendation\Stream\Model\ForYouStreamStateModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase
@@ -23,7 +27,7 @@ final class RecommendationSettingsJsonTest extends TestCase
      */
     public function testFixedPromptIsTheBatchPromptTheRunnerActuallySends(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         /** @var array{role: string, outputContract: string} $fixedPrompt */
         $fixedPrompt = $state['fixedPrompt'];
@@ -45,11 +49,12 @@ final class RecommendationSettingsJsonTest extends TestCase
     /** Only the LLM's own prompt pieces depend on the prompt capability. */
     public function testAnEngineWithoutAPromptShowsNoPromptPieces(): void
     {
-        $state = RecommendationSettingsJson::state(
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(),
             RecommendationEngineCapabilitiesModel::fromKind(RecommendationEngineKind::Scoring),
             workerAlive: true,
-        );
+            forYouStream: self::forYouStream(),
+        ));
 
         self::assertArrayHasKey('defaultGuidancePrompt', $state);
         self::assertArrayHasKey('fixedPrompt', $state);
@@ -59,25 +64,26 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateEmitsShowScoreAndReasons(): void
     {
-        $state = RecommendationSettingsJson::state(
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
             $this->effectiveSettings(showScoreAndReasons: true),
             self::llm(),
             workerAlive: true,
-        );
+            forYouStream: self::forYouStream(),
+        ));
 
         self::assertTrue($state['showScoreAndReasons']);
     }
 
     public function testStateEmitsShowScoreAndReasonsFalseByDefault(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         self::assertFalse($state['showScoreAndReasons']);
     }
 
     public function testStateEmitsFactoryDefaultsForTheExpertDraft(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         self::assertSame([
             'guidancePrompt' => null,
@@ -91,14 +97,14 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateEmitsTheEffectiveBatchSize(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         self::assertSame('medium', $state['batchSize']);
     }
 
     public function testStateEmitsTheExpertFieldBounds(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         self::assertSame([
             'favoritesCap' => ['min' => 0, 'max' => 500],
@@ -112,13 +118,44 @@ final class RecommendationSettingsJsonTest extends TestCase
     public function testStateCarriesNoProfileKeys(): void
     {
         /** @var array{expertDefaults: array<string, mixed>, expertBounds: array<string, mixed>} $state */
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+        $state = $this->defaultState();
 
         foreach (['profileText', 'keptCap', 'viewedCap'] as $key) {
             self::assertArrayNotHasKey($key, $state);
             self::assertArrayNotHasKey($key, $state['expertDefaults']);
             self::assertArrayNotHasKey($key, $state['expertBounds']);
         }
+    }
+
+    public function testStateCarriesTheForYouStreamSettings(): void
+    {
+        $state = RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
+            $this->effectiveSettings(),
+            self::llm(),
+            workerAlive: true,
+            forYouStream: new ForYouStreamStateModel(new ForYouStreamTuning(false, ForYouStreamPrecision::Narrow), []),
+        ));
+
+        self::assertSame(
+            ['enabled' => false, 'precision' => 'narrow', 'defaultPrecision' => 'wide', 'phrases' => []],
+            $state['forYouStream'],
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function defaultState(): array
+    {
+        return RecommendationSettingsJson::state(new RecommendationSettingsStateModel(
+            $this->effectiveSettings(),
+            self::llm(),
+            workerAlive: true,
+            forYouStream: self::forYouStream(),
+        ));
+    }
+
+    private static function forYouStream(): ForYouStreamStateModel
+    {
+        return new ForYouStreamStateModel(ForYouStreamTuning::defaults(), []);
     }
 
     private static function llm(): RecommendationEngineCapabilitiesModel

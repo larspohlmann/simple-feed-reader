@@ -16,7 +16,6 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Curation\Recommendation\Run\RecommendationRunPurger;
 use App\Tests\DbTestCase;
@@ -46,9 +45,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     private function entry(string $guid): Entry

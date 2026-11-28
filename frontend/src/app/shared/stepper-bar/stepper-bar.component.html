@@ -1,0 +1,32 @@
+<div class="seg" role="group" [attr.aria-label]="groupLabel()">
+  <button
+    type="button"
+    [class]="'end ' + decreaseClass()"
+    [title]="decreaseLabel()"
+    [attr.aria-label]="decreaseLabel()"
+    [disabled]="step() === min()"
+    (click)="decrease.emit()"
+  >
+    <app-icon [name]="decreaseIcon()" size="md" />
+  </button>
+  <button
+    type="button"
+    class="bar"
+    [title]="resetLabel()"
+    [attr.aria-label]="resetLabel()"
+    (click)="resetStep.emit()"
+  >
+    <span class="track"><span class="fill" [style.inline-size.%]="fillPercent()"></span></span>
+  </button>
+  <button
+    type="button"
+    [class]="'end ' + increaseClass()"
+    [title]="increaseLabel()"
+    [attr.aria-label]="increaseLabel()"
+    [disabled]="step() === max()"
+    (click)="increase.emit()"
+  >
+    <app-icon [name]="increaseIcon()" size="md" />
+  </button>
+  <output class="sr-only" aria-live="polite">{{ readout() }}</output>
+</div>

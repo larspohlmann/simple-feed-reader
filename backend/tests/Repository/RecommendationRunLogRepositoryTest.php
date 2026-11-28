@@ -19,7 +19,6 @@ use App\Enum\RunLogOwner;
 use App\Enum\StoryAiTask;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -44,9 +43,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         /** @var RecommendationRunLogRepository $logs */
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $this->logs = $logs;
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testListReturnsMetadataWithByteSizesButNoBodies(): void

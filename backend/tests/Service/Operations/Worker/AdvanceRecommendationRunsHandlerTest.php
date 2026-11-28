@@ -14,7 +14,6 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Ai\Exception\CredentialsRejectedException;
 use App\Service\Curation\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Curation\Ai\Exception\ProviderUnreachableException;
@@ -61,9 +60,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         parent::setUp();
 
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->fixtures = RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 
     public function testFiringTouchesTheHeartbeatEvenWithNoRuns(): void

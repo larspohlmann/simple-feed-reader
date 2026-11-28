@@ -12,10 +12,8 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\ScoringProtocol;
 use App\Repository\ProfileRunRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -363,11 +361,6 @@ final class ProfileControllerTest extends ApiTestCase
 
     private function fixtures(): RecommendationRunFixtures
     {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-
-        return new RecommendationRunFixtures($entityManager, $cipher);
+        return RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 }

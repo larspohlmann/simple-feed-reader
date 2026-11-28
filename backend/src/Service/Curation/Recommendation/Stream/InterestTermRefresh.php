@@ -91,7 +91,7 @@ final readonly class InterestTermRefresh
         $run->recordTransportFailure();
         $this->entityManager->flush();
 
-        $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->stems);
+        $this->store->replaceTerms($due->user, $due->profileGeneratedAt, $outcome->requireExtracted());
         $run->complete($this->clock->now());
         $this->entityManager->flush();
 

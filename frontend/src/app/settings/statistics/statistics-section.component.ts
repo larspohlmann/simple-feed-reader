@@ -13,6 +13,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SettingsApi } from '../settings-api';
+import { formatOneDecimal } from '../../reader/format';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { isSocialFeed } from '../../reader/state/social-sections';
 import { NetworkSurfaceSwitches } from '../../reader/state/network-surface-switches.service';
@@ -117,7 +118,7 @@ export class StatisticsSectionComponent implements OnInit {
   readonly arrivedAverage = computed(() => {
     const average = this.activity()?.arrivedDailyAverage ?? null;
 
-    return average === null ? null : this.oneDecimal(average);
+    return average === null ? null : formatOneDecimal(average, this.language.lang());
   });
 
   readonly topUnreadFeeds = computed<FeedBar[]>(() => {
@@ -181,7 +182,7 @@ export class StatisticsSectionComponent implements OnInit {
         : [];
     });
 
-    return this.toBars(ranked, (value) => this.oneDecimal(value));
+    return this.toBars(ranked, (value) => formatOneDecimal(value, this.language.lang()));
   });
 
   protected readonly feedLinkParams = selectionQueryParams;
@@ -224,13 +225,6 @@ export class StatisticsSectionComponent implements OnInit {
       shownValue: show(entry.value),
       widthPercent: Math.round((entry.value / busiest) * 100),
     }));
-  }
-
-  private oneDecimal(value: number): string {
-    return new Intl.NumberFormat(this.language.lang(), {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }).format(value);
   }
 
   private count(value: number): string {

@@ -8,7 +8,7 @@ use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Curation\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Curation\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Curation\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Curation\Recommendation\Settings\Model\RecommendationSettingsStateModel;
 use App\Service\Curation\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
@@ -21,14 +21,13 @@ final class RecommendationSettingsJson
     /**
      * @return array<string, mixed>
      */
-    public static function state(
-        EffectiveRecommendationSettingsModel $effective,
-        RecommendationEngineCapabilitiesModel $capabilities,
-        bool $workerAlive,
-    ): array {
+    public static function state(RecommendationSettingsStateModel $state): array
+    {
+        $effective = $state->effective;
+
         return [
             'guidancePrompt' => $effective->guidancePrompt,
-            ...self::promptPieces($capabilities),
+            ...self::promptPieces($state->capabilities),
             'expertDefaults' => [
                 'guidancePrompt' => null,
                 'favoritesCap' => RecommendationSettings::DEFAULT_FAVORITES_CAP,
@@ -51,7 +50,8 @@ final class RecommendationSettingsJson
             'debugEnabled' => $effective->debugEnabled,
             'showScoreAndReasons' => $effective->showScoreAndReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
-            'workerAlive' => $workerAlive,
+            'workerAlive' => $state->workerAlive,
+            'forYouStream' => ForYouStreamSettingsJson::state($state->forYouStream),
         ];
     }
 

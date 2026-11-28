@@ -9,6 +9,7 @@ use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ForYouStreamTuning;
 use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
@@ -26,6 +27,7 @@ use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerInterface;
 
 /**
  * The recommendation pipeline's shared fixtures (a ready AI connection, candidate entries, a run and its log rows), so
@@ -37,6 +39,11 @@ final readonly class RecommendationRunFixtures
         private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
     ) {
+    }
+
+    public static function fromContainer(ContainerInterface $container): self
+    {
+        return new self($container->get(EntityManagerInterface::class), $container->get(ApiKeyCipher::class));
     }
 
     public function seedReadyAiSettings(User $user): void
@@ -193,6 +200,12 @@ final readonly class RecommendationRunFixtures
         $this->settingsRowOf($user)->storeProfile(
             new StoredProfile($text, new \DateTimeImmutable($generatedAt), 'api.example.test', 'm'),
         );
+        $this->entityManager->flush();
+    }
+
+    public function storeForYouStreamTuning(User $user, ForYouStreamTuning $tuning): void
+    {
+        $this->settingsRowOf($user)->updateForYouStream($tuning);
         $this->entityManager->flush();
     }
 

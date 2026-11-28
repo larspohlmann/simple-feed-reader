@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -139,11 +137,6 @@ final class StorySettingsControllerTest extends ApiTestCase
 
     private function fixtures(): RecommendationRunFixtures
     {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-
-        return new RecommendationRunFixtures($entityManager, $cipher);
+        return RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 }

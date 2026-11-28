@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Recommendation\SaveForYouStreamRequest;
 use App\Dto\Recommendation\SaveRecommendationSettingsRequest;
 use App\Entity\User;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Curation\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Curation\Recommendation\Run\WorkerPresence;
-use App\Service\Curation\Recommendation\Settings\RecommendationSettingsResolver;
+use App\Service\Curation\Recommendation\Settings\RecommendationSettingsStateReader;
 use App\Service\Curation\Recommendation\Settings\RecommendationSettingsWriter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -20,21 +19,15 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class RecommendationSettingsController
 {
     public function __construct(
-        private RecommendationSettingsResolver $resolver,
+        private RecommendationSettingsStateReader $stateReader,
         private RecommendationSettingsWriter $writer,
-        private WorkerPresence $presence,
-        private RecommendationEngineResolver $engines,
     ) {
     }
 
     #[Route('', name: 'api_me_ai_recommendations_show', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(RecommendationSettingsJson::state(
-            $this->resolver->forUser($user),
-            $this->engines->resolveAccountCapabilities($user),
-            $this->presence->hasPersistentRecommendationWorker(),
-        ));
+        return new JsonResponse(RecommendationSettingsJson::state($this->stateReader->readState($user)));
     }
 
     #[Route('', name: 'api_me_ai_recommendations_save', methods: ['PUT'])]
@@ -44,10 +37,16 @@ final readonly class RecommendationSettingsController
     ): JsonResponse {
         $this->writer->save($user, $request->values());
 
-        return new JsonResponse(RecommendationSettingsJson::state(
-            $this->resolver->forUser($user),
-            $this->engines->resolveAccountCapabilities($user),
-            $this->presence->hasPersistentRecommendationWorker(),
-        ));
+        return new JsonResponse(RecommendationSettingsJson::state($this->stateReader->readState($user)));
+    }
+
+    #[Route('/for-you-stream', name: 'api_me_ai_recommendations_for_you_stream_save', methods: ['PUT'])]
+    public function saveForYouStream(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] SaveForYouStreamRequest $request,
+    ): JsonResponse {
+        $this->writer->saveForYouStream($user, $request->toTuning());
+
+        return new JsonResponse(RecommendationSettingsJson::state($this->stateReader->readState($user)));
     }
 }

@@ -12,7 +12,6 @@ use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\StoryAiTask;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Curation\Ai\Crypto\ApiKeyCipher;
 use App\Service\Curation\Recommendation\Feed\Model\MonthWindowModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryCursorModel;
 use App\Service\Curation\Recommendation\Feed\Model\RunHistoryFilterModel;
@@ -356,9 +355,6 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     private function fixtures(): RecommendationRunFixtures
     {
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-
-        return new RecommendationRunFixtures($this->entityManager, $cipher);
+        return RecommendationRunFixtures::fromContainer(self::getContainer());
     }
 }

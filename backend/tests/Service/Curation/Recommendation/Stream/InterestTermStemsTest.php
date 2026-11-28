@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Curation\Recommendation\Stream;
 
+use App\Entity\InterestPhrase;
 use App\Entity\InterestTerm;
 use App\Enum\FeedLanguage;
 use App\Service\Curation\Recommendation\Stream\InterestTermStems;
-use App\Service\Curation\Recommendation\Stream\Model\InterestTermModel;
 use App\Service\Curation\Recommendation\Stream\Model\TermStemModel;
 use App\Service\Foundation\Stemming\StopWordStems;
 use App\Service\Foundation\Stemming\Support\WordStems;
@@ -30,7 +30,7 @@ final class InterestTermStemsTest extends TestCase
 
     public function testATermIsStoredInItsLanguageAndInTheCutForm(): void
     {
-        $stems = $this->stems->buildTermStems([new InterestTermModel(FeedLanguage::English, 'climate', 0.8)]);
+        $stems = $this->stems->buildTermStems([new InterestPhrase(FeedLanguage::English, 'climate', 0.8)]);
 
         self::assertEqualsCanonicalizing([
             [FeedLanguage::English, $this->stemmer->stem('climate', FeedLanguage::English), 0.8],
@@ -40,7 +40,7 @@ final class InterestTermStemsTest extends TestCase
 
     public function testAPhraseSplitsIntoWordsThatEachCarryTheTermsWeight(): void
     {
-        $stems = $this->stems->buildTermStems([new InterestTermModel(FeedLanguage::English, 'heat pump policy', 0.6)]);
+        $stems = $this->stems->buildTermStems([new InterestPhrase(FeedLanguage::English, 'heat pump policy', 0.6)]);
 
         $expected = [];
         foreach (['heat', 'pump', 'policy'] as $word) {
@@ -52,7 +52,7 @@ final class InterestTermStemsTest extends TestCase
 
     public function testAGermanCompoundsPartsCarryHalfTheWeight(): void
     {
-        $stems = $this->stems->buildTermStems([new InterestTermModel(FeedLanguage::German, 'Feuerwehreinsatz', 1.0)]);
+        $stems = $this->stems->buildTermStems([new InterestPhrase(FeedLanguage::German, 'Feuerwehreinsatz', 1.0)]);
 
         self::assertEqualsCanonicalizing([
             [FeedLanguage::German, $this->stemmer->stem('Feuerwehreinsatz', FeedLanguage::German), 1.0],
@@ -65,7 +65,7 @@ final class InterestTermStemsTest extends TestCase
     public function testStopWordStemsAreDropped(): void
     {
         $stems = $this->stems->buildTermStems([
-            new InterestTermModel(FeedLanguage::English, 'the energy of the future', 0.7),
+            new InterestPhrase(FeedLanguage::English, 'the energy of the future', 0.7),
         ]);
 
         self::assertNotSame([], $stems);
@@ -78,8 +78,8 @@ final class InterestTermStemsTest extends TestCase
     {
         $fits = str_repeat('q', InterestTerm::STEM_MAX_LENGTH);
         $stems = $this->stems->buildTermStems([
-            new InterestTermModel(FeedLanguage::English, 'solar ' . $fits . 'q', 0.8),
-            new InterestTermModel(FeedLanguage::English, $fits, 0.7),
+            new InterestPhrase(FeedLanguage::English, 'solar ' . $fits . 'q', 0.8),
+            new InterestPhrase(FeedLanguage::English, $fits, 0.7),
         ]);
 
         self::assertNotSame([], $stems);
@@ -95,8 +95,8 @@ final class InterestTermStemsTest extends TestCase
     public function testADuplicateStemKeepsItsHighestWeight(): void
     {
         $stems = $this->stems->buildTermStems([
-            new InterestTermModel(FeedLanguage::English, 'solar', 0.4),
-            new InterestTermModel(FeedLanguage::English, 'solar power', 0.9),
+            new InterestPhrase(FeedLanguage::English, 'solar', 0.4),
+            new InterestPhrase(FeedLanguage::English, 'solar power', 0.9),
         ]);
 
         $solar = $this->stemmer->stem('solar', FeedLanguage::English);
@@ -111,8 +111,8 @@ final class InterestTermStemsTest extends TestCase
 
     public function testAnInstitutionsSpellingsShareTheCanonicalStem(): void
     {
-        $english = $this->stems->buildTermStems([new InterestTermModel(FeedLanguage::English, 'European Union', 0.5)]);
-        $german = $this->stems->buildTermStems([new InterestTermModel(FeedLanguage::German, 'Europäische Union', 0.5)]);
+        $english = $this->stems->buildTermStems([new InterestPhrase(FeedLanguage::English, 'European Union', 0.5)]);
+        $german = $this->stems->buildTermStems([new InterestPhrase(FeedLanguage::German, 'Europäische Union', 0.5)]);
 
         self::assertContains([FeedLanguage::English, 'eunion', 0.5], self::rows($english));
         self::assertContains([FeedLanguage::German, 'eunion', 0.5], self::rows($german));
