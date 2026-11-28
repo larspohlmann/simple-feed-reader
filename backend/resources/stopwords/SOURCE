@@ -38,13 +38,14 @@ rule: the part-of-speech-tagged lines (form_TAG) only, match_count summed over 1
 closed-class words: fr 186 (123 not in Snowball's list), es 203 (108 not in Snowball's list)
 
 3. Feed boilerplate (German only)
-source: this project; generate.php's BOILERPLATE constant, read-more tokens feeds append to their summaries,
-  seen in the Your stream word lists of the dev data (#2601)
-words: de 1 (weiterlesen)
+source: this project; generate.php's BOILERPLATE constant, tokens of the read-more links and the WordPress
+  "Der Beitrag … erschien zuerst auf …" footers feeds append to their summaries, seen in the Your stream word lists
+  of the dev data (#2601)
+words: de 2 (erschien, weiterlesen)
 
 stopwords.php
-words: de 232, en 124, fr 277, es 416 (each list the distinct union of the sources, sorted byte-wise, SORT_STRING)
-size: 20,882 bytes
+words: de 233, en 124, fr 277, es 416 (each list the distinct union of the sources, sorted byte-wise, SORT_STRING)
+size: 20,905 bytes
 boilerplate added 2026-11-28 by inserting it into the reproduced file (the same var_export round trip reproduces the
   previous file byte for byte); the generator now adds it on its own
 generator: php resources/stopwords/generate.php <directory holding fre/ and spa/ with the nine shards> (from backend/);

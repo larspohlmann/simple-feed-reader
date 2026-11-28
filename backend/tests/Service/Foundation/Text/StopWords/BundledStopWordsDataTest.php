@@ -57,9 +57,11 @@ final class BundledStopWordsDataTest extends TestCase
         }
     }
 
-    public function testTheGermanListHoldsTheReadMoreBoilerplateFeedsAppend(): void
+    public function testTheGermanListHoldsTheBoilerplateFeedsAppend(): void
     {
-        $this->assertContains('weiterlesen', self::bundled()->listWords(FeedLanguage::German));
+        foreach (['erschien', 'weiterlesen'] as $word) {
+            $this->assertContains($word, self::bundled()->listWords(FeedLanguage::German));
+        }
     }
 
     private static function bundled(): BundledStopWords

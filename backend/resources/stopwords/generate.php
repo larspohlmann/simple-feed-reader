@@ -14,9 +14,9 @@ const LISTS = [
 ];
 const WORD = '/^\p{L}+$/u';
 
-/** Read-more links feeds append to their summaries, seen in Your stream's word lists (#2601). */
+/** Feed footers ("Der Beitrag … erschien zuerst auf …") and read-more links, seen in Your stream (#2601). */
 const BOILERPLATE = [
-    'de' => ['weiterlesen'],
+    'de' => ['erschien', 'weiterlesen'],
 ];
 
 /** Google Books Ngram v3 1-gram shards, by language: the closed-class supplement (#2231). */
