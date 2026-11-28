@@ -9,7 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** No account has the stream yet (#2601), so the old switch and precision are dropped, not carried over. */
+/** Stream data exists only on develop/Strato; per #2601 it is dropped, not copied. */
 final class Version20261128150000 extends AbstractMigration
 {
     private const string MYSQL_TABLE_OPTIONS = ' DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci`'

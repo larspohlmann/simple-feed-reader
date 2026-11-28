@@ -9,7 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** No account has stream data yet (#2601), so the old memberships are dropped, not copied. */
+/** Stream data exists only on develop/Strato; per #2601 it is dropped, not copied. */
 final class Version20261128140000 extends AbstractMigration
 {
     private const array NEW_TABLES = ['your_stream_word', 'your_stream_state', 'your_stream_entry'];
