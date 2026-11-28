@@ -2,11 +2,11 @@
 // Measures where each Material Symbol's ink sits in its em box and writes the vertical shifts.
 // Usage: npm run icons:measure (run npm run icons:glyph-names first after a font update)
 import { chromium } from '@playwright/test';
-import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+import { importBundledTs } from '../lib/bundle-ts.mjs';
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PACKAGE = join(FRONTEND, 'node_modules', 'material-symbols');
@@ -34,17 +34,11 @@ const PAGE = `<!doctype html>
     width: 1em; height: 1em; line-height: 1; overflow: hidden; user-select: none; }
 </style></head><body></body></html>`;
 
-async function loadIconNames() {
-  const outfile = join(FRONTEND, 'node_modules', '.cache', 'measure-ink-shifts', 'icon-names.mjs');
-  await build({
-    entryPoints: [join(FRONTEND, 'src', 'testing', 'icon-names.ts')],
-    bundle: true,
-    format: 'esm',
-    platform: 'node',
-    outfile,
-    logLevel: 'warning',
+function loadIconNames() {
+  return importBundledTs({
+    contents: "export * from './src/testing/icon-names';",
+    cacheName: 'measure-ink-shifts',
   });
-  return import(pathToFileURL(outfile).href);
 }
 
 function buildFills(variations) {

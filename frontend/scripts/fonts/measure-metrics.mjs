@@ -2,10 +2,8 @@
 // Measures where classic's text sits against its icons, compared with graphite's.
 // Usage: node scripts/fonts/measure-metrics.mjs --browser chromium|webkit
 import { chromium, webkit } from '@playwright/test';
-import { build } from 'esbuild';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { importBundledTs } from '../lib/bundle-ts.mjs';
 
 const BASE_URL = 'http://localhost:4200';
 const VIEWPORT = { width: 1280, height: 900 };
@@ -15,7 +13,6 @@ const JUDGED_LINE = 15;
 const LINE_SIZES = [11, 13, JUDGED_LINE, 24];
 const FONT_TIMEOUT = 10_000;
 const CLASSIC_FACE = "16px 'Newsreader Classic'";
-const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BROWSERS = { chromium, webkit };
 
 const CONTROLS = [
@@ -63,27 +60,17 @@ const ARTICLE_BODY =
   '<h2>A section heading</h2><p>More of the article.</p>';
 
 async function loadFixtures() {
-  const outfile = join(FRONTEND, 'node_modules', '.cache', 'measure-metrics', 'fixtures.mjs');
-  await build({
-    stdin: {
-      contents: [
-        "export * from './e2e/support/icon-rows';",
-        "export { entryWire } from './e2e/support/reader';",
-        "export { presetLocalStorage } from './e2e/support/auth';",
-        "export { stubFixtureImages } from './e2e/support/images';",
-        "export { makeTag } from './src/app/reader/testing/tag.factory';",
-      ].join('\n'),
-      resolveDir: FRONTEND,
-      loader: 'ts',
-    },
-    bundle: true,
-    format: 'esm',
-    platform: 'node',
+  return importBundledTs({
+    contents: [
+      "export * from './e2e/support/icon-rows';",
+      "export { entryWire } from './e2e/support/reader';",
+      "export { presetLocalStorage } from './e2e/support/auth';",
+      "export { stubFixtureImages } from './e2e/support/images';",
+      "export { makeTag } from './src/app/reader/testing/tag.factory';",
+    ].join('\n'),
+    cacheName: 'measure-metrics',
     external: ['@playwright/test'],
-    outfile,
-    logLevel: 'warning',
   });
-  return import(pathToFileURL(outfile).href);
 }
 
 function magazineEntries(fixtures) {
