@@ -16,6 +16,7 @@ use App\Service\Operations\Backup\Support\LineField;
  */
 final readonly class TagLine
 {
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         public string $name,
         public ?string $color,

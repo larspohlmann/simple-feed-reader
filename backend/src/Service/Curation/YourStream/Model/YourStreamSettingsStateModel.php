@@ -9,7 +9,10 @@ use App\Entity\YourStreamWord;
 
 final readonly class YourStreamSettingsStateModel
 {
-    /** @param list<YourStreamWord> $words */
+    /**
+     * @noinspection AutowireWrongClass Built with new, never autowired
+     * @param list<YourStreamWord> $words
+     */
     public function __construct(public YourStreamTuning $tuning, public array $words)
     {
     }

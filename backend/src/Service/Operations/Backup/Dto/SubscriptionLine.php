@@ -17,6 +17,7 @@ use App\Service\Social\Social\Model\ExportedSubscriptionModel;
 final readonly class SubscriptionLine
 {
     /**
+     * @noinspection AutowireWrongClass Built with new, never autowired
      * @param list<SubscriptionTagReference> $tags
      */
     public function __construct(

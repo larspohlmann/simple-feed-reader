@@ -19,6 +19,7 @@ final class YourStreamSettings
     #[ORM\Embedded(class: YourStreamTuning::class, columnPrefix: false)]
     private YourStreamTuning $tuning;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, YourStreamTuning $tuning)
     {
         $this->user = $user;
