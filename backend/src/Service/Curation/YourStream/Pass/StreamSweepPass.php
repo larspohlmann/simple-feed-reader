@@ -13,9 +13,6 @@ use App\Service\Curation\YourStream\Model\StreamStrengthsModel;
  */
 final class StreamSweepPass
 {
-    /** @var list<int> */
-    private array $userIds = [];
-
     /** @var array<int, StreamStrengthsModel> */
     private array $termsByUserId = [];
 
@@ -29,13 +26,11 @@ final class StreamSweepPass
     }
 
     /**
-     * @param list<int> $group
      * @param array<int, StreamStrengthsModel> $termsByUserId
-     * @param array<int, YourStreamTuning> $tuningsByUserId
+     * @param array<int, YourStreamTuning>     $tuningsByUserId one per walking account
      */
-    public function join(array $group, array $termsByUserId, array $tuningsByUserId): void
+    public function join(array $termsByUserId, array $tuningsByUserId): void
     {
-        $this->userIds = [...$this->userIds, ...$group];
         $this->termsByUserId = $this->termsByUserId + $termsByUserId;
         $this->tuningsByUserId = $this->tuningsByUserId + $tuningsByUserId;
     }
@@ -43,7 +38,7 @@ final class StreamSweepPass
     /** @return list<int> */
     public function collectUserIds(): array
     {
-        return $this->userIds;
+        return array_keys($this->tuningsByUserId);
     }
 
     /** @return list<int> */

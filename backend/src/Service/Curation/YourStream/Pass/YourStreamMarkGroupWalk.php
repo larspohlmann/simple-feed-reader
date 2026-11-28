@@ -38,7 +38,7 @@ final readonly class YourStreamMarkGroupWalk implements MarkGroupWalkInterface
         $streaming = array_keys(
             array_filter($tunings, static fn (YourStreamTuning $tuning): bool => $tuning->isEnabled()),
         );
-        $this->pass->join($group, $this->words->findStrengthsForUsers($streaming), $tunings);
+        $this->pass->join($this->words->findStrengthsForUsers($streaming), $tunings);
     }
 
     public function matchChunk(array $chunk): array
