@@ -2351,6 +2351,12 @@ describe('SidebarComponent', () => {
       expect(element.querySelector('.tags .taghead')).not.toBeNull();
     });
 
+    it('leads the Tags head with the tag icon in the favicon slot, so its label aligns', () => {
+      const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      const leadIcon = element.querySelector('.tags-head .section-link > .favicon-slot');
+      expect(leadIcon?.textContent?.trim()).toBe('sell');
+    });
+
     it('collapses the list and points the chevron right when the chevron is clicked', () => {
       const fixture = mount({ tagTree: [tagNode] });
       const element = fixture.nativeElement as HTMLElement;
