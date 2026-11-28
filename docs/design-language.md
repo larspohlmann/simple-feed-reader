@@ -547,7 +547,7 @@ consumers with a genuinely fluid pixel box — `app-favicon` and `app-user-avata
 — can override it with a template style binding (which outranks a host binding).
 
 Each glyph is ink-centred by a measured vertical shift from the generated
-`icon-ink-shifts.ts` table; a new icon name needs `npm run icons:measure`.
+`icon-ink-shifts.json` table; a new icon name needs `npm run icons:measure`.
 
 **Not for:** a tag's or category's glyph — that is `<app-tag-glyph>`, which also
 owns the colour fallback and the square footprint.

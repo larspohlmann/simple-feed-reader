@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { listFiles } from './list-files';
 
-const GENERATED_TABLE = 'app/shared/icon/icon-ink-shifts.ts';
 const QUOTED_NAME = /['"`]([a-z0-9_]+)['"`]/g;
 const GLYPH_NAMES_PATH = ['scripts', 'icons', 'glyph-names.txt'];
 const HEADER = /^# material-symbols (\S+)$/;
@@ -51,7 +50,7 @@ export function requireMatchingGlyphNames(frontendRoot: string): void {
 
 export function iconSourceFiles(frontendRoot: string): string[] {
   return listFiles(join(frontendRoot, 'src'), (path) => {
-    if (path.startsWith('testing/') || path === GENERATED_TABLE) {
+    if (path.startsWith('testing/')) {
       return false;
     }
     return (path.endsWith('.ts') && !path.endsWith('.spec.ts')) || path.endsWith('.html');

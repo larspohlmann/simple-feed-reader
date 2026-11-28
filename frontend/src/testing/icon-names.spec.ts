@@ -26,16 +26,11 @@ describe('scanIconNames', () => {
     expect(names.filter((name) => !font.has(name))).toEqual([]);
   });
 
-  it('reads neither specs, test helpers nor the generated table', () => {
+  it('reads neither specs nor test helpers', () => {
     const files = iconSourceFiles(FRONTEND);
     expect(files).toContain('app/shared/icon-choices.ts');
     expect(
-      files.filter(
-        (path) =>
-          path.endsWith('.spec.ts') ||
-          path.startsWith('testing/') ||
-          path === 'app/shared/icon/icon-ink-shifts.ts',
-      ),
+      files.filter((path) => path.endsWith('.spec.ts') || path.startsWith('testing/')),
     ).toEqual([]);
   });
 
