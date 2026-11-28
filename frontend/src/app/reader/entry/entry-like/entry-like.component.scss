@@ -20,6 +20,11 @@ button {
   cursor: pointer;
 }
 
+/* thumb_up fills more of its box than the cluster's other glyphs; 90% matches the star's height. */
+app-icon {
+  transform: scale(0.9);
+}
+
 .likes {
   display: inline-flex;
   align-items: center;
