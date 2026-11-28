@@ -37,7 +37,7 @@ import {
   openShareMenu,
   openShareSheet,
 } from './support/menu-rows';
-import { entryDetailJson, entryWire } from './support/reader';
+import { entryDetailJson, entryWire, oneFeedJson, subscriptionsJson } from './support/reader';
 
 /**
  * #2558: an icon in front of text that can wrap hangs its centre on the cap middle of the text's
@@ -196,6 +196,33 @@ interface LeadCase extends Surface {
 const LEMMY_COMMENT = 'app-entry-comments li.comment:nth-child(2) app-social-counts-row';
 const BLUESKY_COMMENT = 'app-entry-comments li.comment:nth-child(1) app-social-counts-row';
 
+/** The edited feed carries no tags and a newer one carries TAGS, so the picker suggests them. */
+async function stubSuggestedTags(page: Page): Promise<void> {
+  await stubMagazine(page, ONE_ENTRY, { tags: [] });
+  const [edited] = oneFeedJson('Fixture feed').subscriptions;
+  const donor = { ...edited, id: 2, feedId: 2, title: 'Donor feed', tags: TAGS };
+  await page.route(/\/api\/subscriptions(?:[?#]|$)/, (route) =>
+    route.fulfill({ json: subscriptionsJson([edited, donor]) }),
+  );
+  await page.route(/\/api\/tags(?:[?#]|$)/, (route) => route.fulfill({ json: { tags: TAGS } }));
+}
+
+function suggestedChipCase(name: string, viewport: Surface['viewport'], touch: boolean): LeadCase {
+  return {
+    name,
+    viewport,
+    touch,
+    stub: stubSuggestedTags,
+    path: '/?subscription=1',
+    row: async (page) => {
+      await page.getByRole('button', { name: 'Edit feed' }).first().click();
+      return page.locator('app-tag-picker button.suggestion').first();
+    },
+    icon: 'app-tag-glyph',
+    text: '.label',
+  };
+}
+
 const PILL_CASES: LeadCase[] = [
   {
     name: 'an entry tag pill',
@@ -240,6 +267,8 @@ const PILL_CASES: LeadCase[] = [
     icon: 'app-tag-glyph',
     text: '.label',
   },
+  suggestedChipCase('a SUGGESTED tag chip', DESKTOP, false),
+  suggestedChipCase('a SUGGESTED tag chip on a phone', PHONE, true),
   {
     name: 'Reply',
     ...SCORED_ARTICLE,
