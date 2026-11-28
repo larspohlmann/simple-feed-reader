@@ -1,3 +1,15 @@
+@use '../../shared/settings/field-width' as field;
+
 :host {
   display: contents;
+}
+
+select {
+  @include field.credential-field;
+
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
