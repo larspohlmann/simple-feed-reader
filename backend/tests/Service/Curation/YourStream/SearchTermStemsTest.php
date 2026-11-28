@@ -31,17 +31,43 @@ final class SearchTermStemsTest extends TestCase
         );
     }
 
-    public function testAStopWordOfAnyLanguageAddsNoStemInAnyLanguage(): void
+    public function testASearchOfOnlyOneLanguagesStopWordsAddsNoStemInAnyLanguage(): void
     {
         foreach ([...FeedLanguage::cases(), null] as $language) {
             self::assertSame([], $this->stems->collectStems('der die das', $language), $language->value ?? 'cut');
         }
     }
 
-    public function testAContentWordNextToTheStopWordsStillAddsItsStems(): void
+    public function testAWordIsDroppedOnlyWhereItIsAStopWord(): void
+    {
+        $english = $this->stems->collectStems('Ukraine war', FeedLanguage::English);
+        $german = $this->stems->collectStems('Ukraine war', FeedLanguage::German);
+
+        self::assertArrayHasKey(StemmingWiring::stemmer()->stem('war', FeedLanguage::English), $english);
+        self::assertArrayNotHasKey(StemmingWiring::stemmer()->stem('war', FeedLanguage::German), $german);
+        self::assertArrayHasKey(StemmingWiring::stemmer()->stem('ukraine', FeedLanguage::German), $german);
+    }
+
+    public function testAStopWordBesideAContentWordStaysWhereItIsNoStopWord(): void
+    {
+        $english = $this->stems->collectStems('Die Hard', FeedLanguage::English);
+
+        self::assertArrayHasKey(StemmingWiring::stemmer()->stem('die', FeedLanguage::English), $english);
+        self::assertArrayNotHasKey('die', $this->stems->collectStems('Die Hard', FeedLanguage::German));
+    }
+
+    public function testAWordWhoseStemMatchesAStopWordStemIsNoStopWordSearch(): void
+    {
+        self::assertSame(
+            [StemmingWiring::stemmer()->stem('solar', FeedLanguage::English) => 1.0],
+            $this->stems->collectStems('solar', FeedLanguage::English),
+        );
+    }
+
+    public function testContentWordsKeepTheirStemsInEveryLanguage(): void
     {
         foreach ([...FeedLanguage::cases(), null] as $language) {
-            $stems = $this->stems->collectStems('Wärmepumpe Förderung die', $language);
+            $stems = $this->stems->collectStems('Wärmepumpe Förderung', $language);
 
             self::assertCount($language === FeedLanguage::German ? 4 : 2, $stems, $language->value ?? 'cut');
         }

@@ -17,19 +17,19 @@ final readonly class StopWordStems
     /** @var array<string, true> the stop-word stems of text without a language, in WordStems' cut form */
     private array $cutStems;
 
-    /** @var array<string, true> every language's stop words, casefolded */
-    private array $wordsInAnyLanguage;
+    /** @var array<string, array<string, true>> language => its stop words, casefolded */
+    private array $wordsByLanguage;
 
     public function __construct(WordStemmer $stemmer, StopWordsInterface $stopWords)
     {
-        $this->stemsByLanguage = self::stemsByLanguage($stemmer, $stopWords);
-        $this->cutStems = self::cutStems($stopWords);
-        $this->wordsInAnyLanguage = self::wordsInAnyLanguage($stopWords);
+        $this->stemsByLanguage = self::buildStemsByLanguage($stemmer, $stopWords);
+        $this->cutStems = self::buildCutStems($stopWords);
+        $this->wordsByLanguage = self::buildWordsByLanguage($stopWords);
     }
 
-    public function isStopWordInAnyLanguage(string $casefoldedWord): bool
+    public function isStopWord(string $casefoldedWord, FeedLanguage $language): bool
     {
-        return isset($this->wordsInAnyLanguage[$casefoldedWord]);
+        return isset($this->wordsByLanguage[$language->value][$casefoldedWord]);
     }
 
     public function isStopWordStem(string $stem, ?FeedLanguage $language): bool
@@ -40,7 +40,7 @@ final readonly class StopWordStems
     }
 
     /** @return array<string, array<string, true>> */
-    private static function stemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
+    private static function buildStemsByLanguage(WordStemmer $stemmer, StopWordsInterface $stopWords): array
     {
         $stemsByLanguage = [];
         foreach (FeedLanguage::cases() as $language) {
@@ -55,7 +55,7 @@ final readonly class StopWordStems
     }
 
     /** @return array<string, true> */
-    private static function cutStems(StopWordsInterface $stopWords): array
+    private static function buildCutStems(StopWordsInterface $stopWords): array
     {
         $cutStems = [];
         foreach (FeedLanguage::cases() as $language) {
@@ -69,16 +69,18 @@ final readonly class StopWordStems
         return array_fill_keys($cutStems, true);
     }
 
-    /** @return array<string, true> */
-    private static function wordsInAnyLanguage(StopWordsInterface $stopWords): array
+    /** @return array<string, array<string, true>> */
+    private static function buildWordsByLanguage(StopWordsInterface $stopWords): array
     {
-        $words = [];
+        $wordsByLanguage = [];
         foreach (FeedLanguage::cases() as $language) {
-            foreach ($stopWords->listWords($language) as $word) {
-                $words[CaseFold::normalized($word, \Normalizer::FORM_KC)] = true;
-            }
+            $words = array_map(
+                static fn (string $word): string => CaseFold::normalized($word, \Normalizer::FORM_KC),
+                $stopWords->listWords($language),
+            );
+            $wordsByLanguage[$language->value] = array_fill_keys($words, true);
         }
 
-        return $words;
+        return $wordsByLanguage;
     }
 }

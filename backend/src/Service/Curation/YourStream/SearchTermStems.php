@@ -17,18 +17,15 @@ final readonly class SearchTermStems
     {
     }
 
-    /**
-     * A term is typed in one language but stemmed in all, so a stop word of any language is dropped first.
-     *
-     * @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's
-     */
+    /** @return array<string, float> each stem with its share of the term: a whole word's, else a compound part's */
     public function collectStems(string $term, ?FeedLanguage $language): array
     {
+        $words = $this->equivalents->canonicalizeWords($term);
+        if ($this->isOnlyStopWordsOfOneLanguage($words)) {
+            return [];
+        }
         $shares = [];
-        foreach ($this->equivalents->canonicalizeWords($term) as [$word, $bare]) {
-            if ($this->stopWordStems->isStopWordInAnyLanguage($word)) {
-                continue;
-            }
+        foreach ($words as [$word, $bare]) {
             foreach ($this->equivalents->stemWordAndParts($word, $bare, $language) as $position => $stem) {
                 if ($this->isStorable($stem, $language)) {
                     $share = $position === 0 ? 1.0 : self::PART_WEIGHT_SHARE;
@@ -38,6 +35,22 @@ final readonly class SearchTermStems
         }
 
         return $shares;
+    }
+
+    /**
+     * A term is typed in one language but stemmed in all: "der die das" must not become English words.
+     *
+     * @param list<array{string, string}> $words
+     */
+    private function isOnlyStopWordsOfOneLanguage(array $words): bool
+    {
+        return $words !== [] && array_any(
+            FeedLanguage::cases(),
+            fn (FeedLanguage $language): bool => array_all(
+                $words,
+                fn (array $word): bool => $this->stopWordStems->isStopWord($word[0], $language),
+            ),
+        );
     }
 
     private function isStorable(string $stem, ?FeedLanguage $language): bool
