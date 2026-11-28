@@ -61,6 +61,22 @@ describe('ExportDialogComponent', () => {
     expect(text).toContain('FreshRSS subscribes');
   });
 
+  it('marks the chosen card as selected and moves the mark when another is clicked', () => {
+    download = jest.fn();
+    const fixture = mount();
+    const cards = (): HTMLLabelElement[] => [
+      ...fixture.nativeElement.querySelectorAll('label.format'),
+    ];
+    const selected = () => cards().map((card) => card.querySelector('input')?.checked);
+
+    expect(selected()).toEqual([true, false]);
+
+    cards()[1].querySelector('input')?.click();
+    fixture.detectChanges();
+
+    expect(selected()).toEqual([false, true]);
+  });
+
   it('names the target in the heading', () => {
     download = jest.fn();
     const fixture = mount();

@@ -12,6 +12,7 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { ListOrderService } from '../list/list-order.service';
 import { EXPORT_FORMATS, ExportFormat, ExportTarget } from './export-formats';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { ExportApi } from './export.api';
 
 @Component({
@@ -21,6 +22,7 @@ import { ExportApi } from './export.api';
     ButtonComponent,
     ErrorBannerComponent,
     FormsModule,
+    IconComponent,
     OverlayPanelComponent,
     TranslocoPipe,
   ],
