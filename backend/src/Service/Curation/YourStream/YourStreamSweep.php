@@ -19,7 +19,6 @@ use App\Service\Library\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Library\Search\Membership\SettledCeiling;
 use Psr\Log\LoggerInterface;
 
-/** Fills your_stream_entry incrementally: each account's state row carries a mark the shared walk advances. */
 final readonly class YourStreamSweep
 {
     public const int PUBLISHED_WINDOW_HOURS = 48;

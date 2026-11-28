@@ -7,7 +7,6 @@ namespace App\Entity;
 use App\Repository\YourStreamSettingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-/** No row means the stream runs at YourStreamTuning::defaults(). */
 #[ORM\Entity(repositoryClass: YourStreamSettingsRepository::class)]
 #[ORM\Table(name: 'your_stream_settings')]
 final class YourStreamSettings
@@ -24,11 +23,6 @@ final class YourStreamSettings
     {
         $this->user = $user;
         $this->tuning = $tuning;
-    }
-
-    public function getUser(): User
-    {
-        return $this->user;
     }
 
     public function getTuning(): YourStreamTuning

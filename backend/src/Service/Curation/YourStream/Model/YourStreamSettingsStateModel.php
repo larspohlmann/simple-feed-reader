@@ -7,7 +7,6 @@ namespace App\Service\Curation\YourStream\Model;
 use App\Entity\YourStreamTuning;
 use App\Entity\YourStreamWord;
 
-/** What the settings page shows of Your stream: its tuning and its current word list. */
 final readonly class YourStreamSettingsStateModel
 {
     /** @param list<YourStreamWord> $words */

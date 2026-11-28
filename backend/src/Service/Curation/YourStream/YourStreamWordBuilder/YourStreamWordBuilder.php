@@ -39,7 +39,6 @@ final readonly class YourStreamWordBuilder implements YourStreamWordBuilderInter
         }
     }
 
-    /** Each term in every language of the stream's feeds, and in the cut form. */
     private function recordSearchTerms(InterestTally $interests, InterestInputsModel $inputs): void
     {
         $languages = [...$this->sources->findFeedLanguages($inputs->userId), null];

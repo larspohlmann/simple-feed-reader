@@ -62,6 +62,5 @@ final class YourStreamState
     {
         $this->interestFingerprint = $fingerprint;
         $this->wordsBuiltAt = $builtAt;
-        $this->wordsCheckedAt = $builtAt;
     }
 }

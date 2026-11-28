@@ -123,7 +123,7 @@ final class InterestTally
     private function recordStem(string $languageKey, string $stem, float $support, int $articles): void
     {
         $this->supports[$languageKey][$stem] = ($this->supports[$languageKey][$stem] ?? 0.0) + $support;
-        $counted = $this->articleCountsWith[$languageKey][$stem] ?? 0;
-        $this->articleCountsWith[$languageKey][$stem] = $counted + $articles;
+        $this->articleCountsWith[$languageKey][$stem] ??= 0;
+        $this->articleCountsWith[$languageKey][$stem] += $articles;
     }
 }
