@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\ForYouStreamTuning;
 use App\Entity\InterestTermSet;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
@@ -36,13 +37,15 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         return $this->restrictToEnabledStream($qb)->getQuery()->getOneOrNullResult() !== null;
     }
 
-    /** @return array<int, int> user id => mark, for the active, stream-enabled accounts whose mark is below the ceiling */
+    /** @return array<int, int> user id => mark, for the active accounts whose mark is below the ceiling */
     public function findBelowMark(int $ceiling, \DateTimeImmutable $now): array
     {
-        $qb = $this->restrictToEnabledStream(
-            $this->buildBelowMarkQuery($ceiling, $now)
-                ->select('IDENTITY(s.user) AS userId', 's.matchedUpToEntryId AS mark'),
-        );
+        $qb = $this->createQueryBuilder('s')
+            ->select('IDENTITY(s.user) AS userId', 's.matchedUpToEntryId AS mark')
+            ->join('s.user', 'owner')
+            ->andWhere('s.matchedUpToEntryId < :ceiling')
+            ->setParameter('ceiling', $ceiling);
+        ActiveAccountDql::restrict($qb, 'owner', $now);
 
         /** @var list<array{userId: int|string, mark: int}> $rows */
         $rows = $qb->getQuery()->getArrayResult();
@@ -55,42 +58,34 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         return $marksByUserId;
     }
 
-    /** @return list<int> the active accounts that switched their stream off and whose mark is below the ceiling */
-    public function findDisabledBelowMark(int $ceiling, \DateTimeImmutable $now): array
-    {
-        /** @var list<int|string> $userIds */
-        $userIds = $this->buildBelowMarkQuery($ceiling, $now)
-            ->select('IDENTITY(s.user)')
-            ->join(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
-            ->andWhere('settings.forYouStream.enabled = false')
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        return array_map(intval(...), $userIds);
-    }
-
     /**
      * @param list<int> $userIds
      *
-     * @return array<int, ForYouStreamPrecision> only the owners that have a settings row
+     * @return array<int, ForYouStreamTuning> one per asked owner with a term set, the defaults without a settings row
      */
-    public function findStreamPrecisions(array $userIds): array
+    public function findStreamTunings(array $userIds): array
     {
-        /** @var list<array{userId: int|string, precision: ForYouStreamPrecision}> $rows */
+        /** @var list<array{userId: int|string, enabled: ?bool, precision: ?ForYouStreamPrecision}> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->select('IDENTITY(s.user) AS userId', 'settings.forYouStream.precision AS precision')
-            ->join(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
+            ->select(
+                'IDENTITY(s.user) AS userId',
+                'settings.forYouStream.enabled AS enabled',
+                'settings.forYouStream.precision AS precision',
+            )
+            ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
             ->andWhere('IDENTITY(s.user) IN (:userIds)')
             ->setParameter('userIds', $userIds)
             ->getQuery()
             ->getArrayResult();
 
-        $precisionsByUserId = [];
+        $tuningsByUserId = [];
         foreach ($rows as $row) {
-            $precisionsByUserId[(int) $row['userId']] = $row['precision'];
+            $tuningsByUserId[(int) $row['userId']] = null === $row['enabled'] || null === $row['precision']
+                ? ForYouStreamTuning::defaults()
+                : new ForYouStreamTuning($row['enabled'], $row['precision']);
         }
 
-        return $precisionsByUserId;
+        return $tuningsByUserId;
     }
 
     /** @param list<int> $userIds */
@@ -133,16 +128,5 @@ final class InterestTermSetRepository extends ServiceEntityRepository
         return $qb
             ->leftJoin(RecommendationSettings::class, 'settings', 'WITH', 'settings.user = s.user')
             ->andWhere('settings.id IS NULL OR settings.forYouStream.enabled = true');
-    }
-
-    private function buildBelowMarkQuery(int $ceiling, \DateTimeImmutable $now): QueryBuilder
-    {
-        $qb = $this->createQueryBuilder('s')
-            ->join('s.user', 'owner')
-            ->andWhere('s.matchedUpToEntryId < :ceiling')
-            ->setParameter('ceiling', $ceiling);
-        ActiveAccountDql::restrict($qb, 'owner', $now);
-
-        return $qb;
     }
 }

@@ -18,38 +18,25 @@ final class InterestTermSetRepositoryTest extends DbTestCase
     private const int CEILING = 10;
     private const string NOW = '2026-11-27 10:00:00';
 
-    public function testFindBelowMarkSkipsADisabledAccountAndKeepsOneWithoutSettings(): void
+    public function testFindBelowMarkHoldsEveryActiveAccountBelowTheCeilingWhateverItsSwitch(): void
     {
         $unset = $this->accountAtMark('unset@example.com', 3);
         $enabled = $this->accountAtMark('enabled@example.com', 5);
         $this->storeTuning($enabled, true);
-        $this->storeTuning($this->accountAtMark('disabled@example.com', 2), false);
+        $disabled = $this->accountAtMark('disabled@example.com', 2);
+        $this->storeTuning($disabled, false);
+        $suspended = $this->accountAtMark('suspended@example.com', 1);
+        $suspended->suspend();
         $this->accountAtMark('caught-up@example.com', self::CEILING);
+        $this->entityManager->flush();
 
         $marks = $this->sets()->findBelowMark(self::CEILING, new \DateTimeImmutable(self::NOW));
         ksort($marks);
 
-        self::assertSame([$unset->requireId() => 3, $enabled->requireId() => 5], $marks);
+        self::assertSame([$unset->requireId() => 3, $enabled->requireId() => 5, $disabled->requireId() => 2], $marks);
     }
 
-    public function testFindDisabledBelowMarkHoldsOnlyActiveDisabledAccountsBelowTheCeiling(): void
-    {
-        $disabled = $this->accountAtMark('disabled@example.com', 2);
-        $this->storeTuning($disabled, false);
-        $this->storeTuning($this->accountAtMark('disabled-caught-up@example.com', self::CEILING), false);
-        $suspended = $this->accountAtMark('disabled-suspended@example.com', 1);
-        $this->storeTuning($suspended, false);
-        $suspended->suspend();
-        $this->storeTuning($this->accountAtMark('enabled@example.com', 4), true);
-        $this->accountAtMark('unset@example.com', 3);
-        $this->entityManager->flush();
-
-        $userIds = $this->sets()->findDisabledBelowMark(self::CEILING, new \DateTimeImmutable(self::NOW));
-
-        self::assertSame([$disabled->requireId()], $userIds);
-    }
-
-    public function testFindStreamPrecisionsHoldsOnlyTheAskedOwnersThatHaveASettingsRow(): void
+    public function testFindStreamTuningsHoldsEachAskedOwnerAndTheDefaultsWithoutASettingsRow(): void
     {
         $narrowest = $this->accountAtMark('narrowest@example.com', 0);
         $this->storeTuning($narrowest, false, ForYouStreamPrecision::Narrowest);
@@ -60,20 +47,21 @@ final class InterestTermSetRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $precisions = $this->sets()->findStreamPrecisions(
+        $tunings = $this->sets()->findStreamTunings(
             [$narrowest->requireId(), $defaulted->requireId(), $unset->requireId()],
         );
-        ksort($precisions);
+        ksort($tunings);
 
-        self::assertSame([
-            $narrowest->requireId() => ForYouStreamPrecision::Narrowest,
-            $defaulted->requireId() => ForYouStreamPrecision::Wide,
-        ], $precisions);
+        self::assertEquals([
+            $narrowest->requireId() => new ForYouStreamTuning(false, ForYouStreamPrecision::Narrowest),
+            $defaulted->requireId() => ForYouStreamTuning::defaults(),
+            $unset->requireId() => ForYouStreamTuning::defaults(),
+        ], $tunings);
     }
 
-    public function testFindStreamPrecisionsForNoOwnersIsEmpty(): void
+    public function testFindStreamTuningsForNoOwnersIsEmpty(): void
     {
-        self::assertSame([], $this->sets()->findStreamPrecisions([]));
+        self::assertSame([], $this->sets()->findStreamTunings([]));
     }
 
     private function sets(): InterestTermSetRepository

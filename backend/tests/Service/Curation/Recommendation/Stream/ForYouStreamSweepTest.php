@@ -411,7 +411,7 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame(1, $report->usersSwept);
+        self::assertSame(2, $report->usersSwept);
         self::assertSame([$kept->requireId()], $this->readEntryIds($disabled));
         self::assertSame(1, $this->countTerms($disabled));
         self::assertSame($fresh->requireId(), $this->readMark($disabled));
@@ -428,7 +428,7 @@ final class ForYouStreamSweepTest extends DbTestCase
 
         $report = $this->sweep()->sweep(SweepBudgetModel::seconds(10));
 
-        self::assertSame(0, $report->usersSwept);
+        self::assertSame(1, $report->usersSwept);
         self::assertSame($entries[1]->requireId(), $this->readMark($user));
         self::assertSame([], $this->readRows($user));
 

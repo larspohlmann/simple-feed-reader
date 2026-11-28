@@ -22,7 +22,7 @@ final readonly class ForYouStreamChunkMatcher
     public function matchChunk(StreamSweepPass $pass, array $chunk): array
     {
         $matches = [];
-        $candidates = $this->sources->findCandidates($pass->collectUserIds(), $chunk, $pass->publishedSince);
+        $candidates = $this->sources->findCandidates($pass->collectMatchingUserIds(), $chunk, $pass->publishedSince);
         foreach ($candidates as $candidate) {
             $stems = $pass->stemming->collectStems($candidate->entry);
             foreach ($candidate->userIds as $userId) {

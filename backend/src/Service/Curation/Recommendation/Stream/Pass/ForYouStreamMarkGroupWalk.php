@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Curation\Recommendation\Stream\Pass;
 
+use App\Entity\ForYouStreamTuning;
 use App\Repository\InterestTermRepository;
 use App\Repository\InterestTermSetRepository;
 use App\Service\Curation\Recommendation\Stream\ForYouStreamChunkMatcher;
@@ -33,10 +34,11 @@ final readonly class ForYouStreamMarkGroupWalk implements MarkGroupWalkInterface
 
     public function joinGroup(array $group): void
     {
-        $this->pass->join(
-            $this->storedTerms->findTermsForUsers($group),
-            $this->sets->findStreamPrecisions($group),
+        $tunings = $this->sets->findStreamTunings($group);
+        $streaming = array_keys(
+            array_filter($tunings, static fn (ForYouStreamTuning $tuning): bool => $tuning->isEnabled()),
         );
+        $this->pass->join($group, $this->storedTerms->findTermsForUsers($streaming), $tunings);
     }
 
     public function matchChunk(array $chunk): array
